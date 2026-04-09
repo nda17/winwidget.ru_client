@@ -11,7 +11,7 @@ const Admin: NextPage = () => {
 		<div className={styles.wrapper}>
 			<Heading text="Панель администратора" />
 			<AdminNavigation />
-			<SubHeading text="Статистика" />
+			<SubHeading text="Дашборд" />
 			<Statistics />
 		</div>
 	)

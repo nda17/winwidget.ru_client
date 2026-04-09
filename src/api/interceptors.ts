@@ -1,5 +1,6 @@
 import { errorCatch, getContentType } from '@/api/api.helper'
 import { API_URL } from '@/config/api.config'
+import { PUBLIC_PAGES } from '@/config/pages/public.config'
 import {
 	getAccessToken,
 	removeFromStorage
@@ -18,6 +19,16 @@ export const axiosClassicRequest = axios.create(axiosOptions)
 
 // Requests using axios interceptors to update accessToken:
 export const axiosInterceptorsRequest = axios.create(axiosOptions)
+
+const redirectToLogin = () => {
+	if (typeof window === 'undefined') {
+		return
+	}
+
+	if (window.location.pathname !== PUBLIC_PAGES.LOGIN) {
+		window.location.href = PUBLIC_PAGES.LOGIN
+	}
+}
 
 axiosInterceptorsRequest.interceptors.request.use((config) => {
 	const accessToken = getAccessToken()
@@ -51,6 +62,7 @@ axiosInterceptorsRequest.interceptors.response.use(
 					errorCatch(error) === 'Refresh token not passed'
 				) {
 					removeFromStorage()
+					redirectToLogin()
 				}
 			}
 		}

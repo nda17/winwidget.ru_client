@@ -2,6 +2,7 @@ import { PUBLIC_PAGES } from '@/config/pages/public.config'
 import { useNavigationContext } from '@/providers/navigation-provider/NavigationProvider'
 import authService from '@/services/auth/auth.service'
 import { IFormData } from '@/shared/types/form.types'
+import { useAuthStore } from '@/store/auth-store/auth-store'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { useRouter } from 'next/navigation'
@@ -17,6 +18,8 @@ const DISABLE_RECAPTCHA =
 
 const useAuthForm = (isLogin: boolean) => {
 	const { previousRoute } = useNavigationContext()
+	const setAuth = useAuthStore((state) => state.setAuth)
+	const setAuthResolved = useAuthStore((state) => state.setAuthResolved)
 
 	const whiteListRedirect = ['/?', '/free-content?', '/premium-content?']
 
@@ -40,6 +43,8 @@ const useAuthForm = (isLogin: boolean) => {
 			authService.main('login', data, token),
 		onSuccess() {
 			startTransition(() => {
+				setAuth(true)
+				setAuthResolved(true)
 				toast.success('Успешный вход в аккаунт')
 				reset()
 				router.replace(
@@ -69,10 +74,12 @@ const useAuthForm = (isLogin: boolean) => {
 				token: string | null
 			}) =>
 				authService.main('register', data, token),
-			onSuccess() {
-				startTransition(() => {
-					toast.success(
-						'Регистрация прошла успешно. Ссылка для подтверждения email отправлена на вашу почту.'
+		onSuccess() {
+			startTransition(() => {
+				setAuth(true)
+				setAuthResolved(true)
+				toast.success(
+					'Регистрация прошла успешно. Ссылка для подтверждения email отправлена на вашу почту.'
 					)
 					reset()
 					router.replace('/profile')

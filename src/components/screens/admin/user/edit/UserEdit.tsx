@@ -39,9 +39,9 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 
 	return (
 		<div className={styles.wrapper}>
-			<Heading text="Admin page" />
+			<Heading text="Панель администратора" />
 			<AdminNavigation />
-			<SubHeading text="Edit user" />
+			<SubHeading text="Редактирование данных пользователя" />
 			<UserInfo
 				avatarPath={data?.avatarPath}
 				name={data?.name}
@@ -64,7 +64,7 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 										'/uploads/user-avatar/avatar-default.png'
 									}
 									folder="user-avatar"
-									placeholder="Avatar"
+									placeholder="Фото профиля"
 								/>
 							)}
 						/>
@@ -140,7 +140,7 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 								pattern: {
 									value: validId,
 									message:
-										'Min and max length 25 characters. First 2 characters of letters. Next are letters and numbers'
+										'Минимальная и максимальная длина - 25 символов. Первые 2 символа - буквы. Далее идут буквы и цифры.'
 								}
 							})}
 						/>
@@ -148,12 +148,12 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 							type="text"
 							error={errors.name}
 							defaultValue={data.name}
-							placeholder="Name"
+							placeholder="Имя"
 							{...register('name', {
 								pattern: {
 									value: validName,
 									message:
-										'Min length must be greater than 2 characters. Numbers from the second character and the special character "-" can be used'
+										'Минимальная длина должна быть более 2 символов. Можно использовать цифры, начиная со второго символа, и специальный символ «-».'
 								}
 							})}
 						/>
@@ -163,10 +163,10 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 							defaultValue={data?.email}
 							placeholder="Email"
 							{...register('email', {
-								required: 'Email is required!',
+								required: 'Обяательное поле!',
 								pattern: {
 									value: validEmail,
-									message: 'Please enter a valid email'
+									message: 'Проверьте правильность ввода email'
 								}
 							})}
 						/>
@@ -178,7 +178,7 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 								pattern: {
 									value: validPassword,
 									message:
-										'Min length should more 6 symbols. Contains 1 number 0-9, 1 Latin letter a-z, 1 Latin letter A-Z'
+										'Мин. длина 6 символов. Должен содержать 1 цифру 0-9, 1 строчную букву a-z и 1 заглавную букву A-Z.'
 								}
 							})}
 						/>

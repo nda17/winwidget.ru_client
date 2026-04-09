@@ -3,10 +3,16 @@ import MenuItem from '@/components/layout/nav-menu/mobile/menu/menu-item/MenuIte
 import { ADMIN_PAGES } from '@/config/pages/admin.config'
 import { PUBLIC_PAGES } from '@/config/pages/public.config'
 import useUser from '@/hooks/useUser'
+import { useAuthStore } from '@/store/auth-store/auth-store'
 import { NextPage } from 'next'
 
 const AuthItems: NextPage = () => {
-	const { user } = useUser()
+	const { user, isLoading } = useUser()
+	const isAuthResolved = useAuthStore((state) => state.isAuthResolved)
+
+	if (!isAuthResolved || isLoading) {
+		return null
+	}
 
 	return (
 		<>

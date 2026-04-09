@@ -9,15 +9,17 @@ import { useEffect } from 'react'
 
 const LogoutPage = () => {
 	const setAuth = useAuthStore((state) => state.setAuth)
+	const setAuthResolved = useAuthStore((state) => state.setAuthResolved)
 	const { replace } = useRouter()
 	const queryClient = useQueryClient()
 
 	const { mutate: mutateLogout } = useMutation({
 		mutationKey: ['logout'],
 		mutationFn: () => authService.logout(),
-		onSuccess() {
+		onMutate() {
 			queryClient.clear()
-			setAuth()
+			setAuth(false)
+			setAuthResolved(true)
 		}
 	})
 

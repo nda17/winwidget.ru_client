@@ -29,7 +29,7 @@ export const getServerAuth = async (): Promise<TUserDataState | null> => {
 	let accessToken = cookies().get(EnumTokens.ACCESS_TOKEN)?.value
 	const refreshToken = cookies().get(EnumTokens.REFRESH_TOKEN)?.value
 
-	if (!jwtSecret || !refreshToken) {
+	if (!jwtSecret) {
 		return null
 	}
 
@@ -39,6 +39,10 @@ export const getServerAuth = async (): Promise<TUserDataState | null> => {
 		} catch (error) {
 			accessToken = null
 		}
+	}
+
+	if (!refreshToken) {
+		return null
 	}
 
 	try {

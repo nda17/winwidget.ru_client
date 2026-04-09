@@ -17,9 +17,10 @@ const FieldName = forwardRef<HTMLInputElement, IField>(
 						autoComplete="on"
 					/>
 				</label>
-				{error?.message ===
-					'Min length must be greater than 2 characters. Numbers from the second character and the special character "-" can be used' && (
-					<p className={clsx(styles['error-message'])}>{error.message}</p>
+				{error?.message && (
+					<p className={clsx(styles['error-message'])}>
+						{String(error.message)}
+					</p>
 				)}
 			</div>
 		)

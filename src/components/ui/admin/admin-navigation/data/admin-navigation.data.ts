@@ -3,11 +3,11 @@ import { ADMIN_PAGES } from '@/config/pages/admin.config'
 
 export const navItems: INavItem[] = [
 	{
-		title: 'Statistics',
+		title: 'Статистика',
 		link: ADMIN_PAGES.HOME
 	},
 	{
-		title: 'User-list',
+		title: 'Пользователи',
 		link: ADMIN_PAGES.USER_LIST
 	}
 ]

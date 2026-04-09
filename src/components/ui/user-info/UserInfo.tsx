@@ -37,7 +37,7 @@ const UserInfo: NextPage<IUserInfo> = ({
 				<SkeletonLoader count={1} className="w-full h-full" />
 			</div>
 		) : (
-			<h2 className={styles.subtitle}>{name || 'User'}</h2>
+			<h2 className={styles.subtitle}>{name || 'Пользователь'}</h2>
 		)}
 	</div>
 )

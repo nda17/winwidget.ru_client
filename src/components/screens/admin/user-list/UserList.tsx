@@ -59,7 +59,7 @@ const UserList: NextPage = () => {
 
 	return (
 		<div className={styles.wrapper}>
-			<Heading text="Admin page" />
+			<Heading text="Панель администратора" />
 			<AlertPopup removeHandler={deleteAsync} text={textPopup} />
 			<AdminNavigation />
 			<AdminHeader
@@ -67,7 +67,7 @@ const UserList: NextPage = () => {
 				searchTerm={searchTerm}
 				handleClear={handleClear}
 			/>
-			<SubHeading text="A list of users" />
+			<SubHeading text="Список пользователей" />
 			{isLoading ? (
 				<CirclesLoader />
 			) : data?.length ? (
@@ -93,7 +93,7 @@ const UserList: NextPage = () => {
 								'border-b'
 							)}
 						>
-							Name:
+							Имя:
 						</p>
 						<p
 							className={clsx(
@@ -115,7 +115,7 @@ const UserList: NextPage = () => {
 								'border-b'
 							)}
 						>
-							Verified:
+							Статус:
 						</p>
 						<p
 							className={clsx(
@@ -126,7 +126,7 @@ const UserList: NextPage = () => {
 								'border-b'
 							)}
 						>
-							Role:
+							Роли:
 						</p>
 						<p
 							className={clsx(
@@ -137,7 +137,7 @@ const UserList: NextPage = () => {
 								'border-b'
 							)}
 						>
-							Registration date:
+							Дата регистрации:
 						</p>
 						<p
 							className={clsx(
@@ -149,7 +149,7 @@ const UserList: NextPage = () => {
 								'border-b'
 							)}
 						>
-							Actions:
+							Действия:
 						</p>
 					</div>
 
@@ -162,7 +162,7 @@ const UserList: NextPage = () => {
 									'border-b'
 								)}
 							>
-								{user.id || 'No data available'}
+								{user.id || 'Нет данных'}
 							</p>
 							<p
 								className={clsx(
@@ -171,7 +171,7 @@ const UserList: NextPage = () => {
 									'border-b'
 								)}
 							>
-								{user.name || 'No data available'}
+								{user.name || 'Нет данных'}
 							</p>
 							<p
 								className={clsx(
@@ -180,7 +180,7 @@ const UserList: NextPage = () => {
 									'border-b'
 								)}
 							>
-								{user.email || 'No data available'}
+								{user.email || 'Нет данных'}
 							</p>
 							<p
 								className={clsx(
@@ -189,7 +189,7 @@ const UserList: NextPage = () => {
 									'border-b'
 								)}
 							>
-								{!user.verificationToken ? 'verified' : 'not verified'}
+								{!user.verificationToken ? 'Подтвержден' : 'Не подтвержден'}
 							</p>
 
 							<p
@@ -201,7 +201,7 @@ const UserList: NextPage = () => {
 							>
 								{user.rights.length > 1
 									? user.rights?.join(', ')
-									: user.rights || 'No data available'}
+									: user.rights || 'Нет данных'}
 							</p>
 							<p
 								className={clsx(
@@ -210,7 +210,7 @@ const UserList: NextPage = () => {
 									'border-b'
 								)}
 							>
-								{user.createdAt.replace(/\T.*/, '') || 'No data available'}
+								{user.createdAt.replace(/\T.*/, '') || 'Нет данных'}
 							</p>
 							<div
 								className={clsx(

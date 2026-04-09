@@ -24,7 +24,7 @@ export const useUserEdit = (
 	})
 
 	if (isError) {
-		toast.error('Error, try later')
+		toast.error('Произошла ошибка, попробуйте позже')
 	}
 
 	const { mutateAsync } = useMutation({
@@ -32,12 +32,12 @@ export const useUserEdit = (
 		mutationFn: (data: IUserEditInput) =>
 			UserService.updateUser(userId, data),
 		onSuccess() {
-			toast.success('Update user was successful')
+			toast.success('Изменени данных пользователя сохранены')
 			router.push('/admin/user-list')
 			queryClient.invalidateQueries({ queryKey: ['get-user-by-id'] })
 		},
 		onError(error) {
-			toast.error(`Update user: ${error.message}`)
+			toast.error(`Изменение данных пользователя: ${error.message}`)
 		}
 	})
 
