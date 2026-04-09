@@ -1,6 +1,12 @@
 import { EnumTokens } from '@/services/auth/auth.service'
 import Cookies from 'js-cookie'
 
+const accessTokenCookieOptions = {
+	sameSite: 'strict' as const,
+	expires: 1,
+	path: '/'
+}
+
 export const getAccessToken = () => {
 	const accessToken = Cookies.get(EnumTokens.ACCESS_TOKEN)
 	return accessToken || null
@@ -12,13 +18,15 @@ export const getRefreshToken = () => {
 }
 
 export const saveTokenStorage = (accessToken: string) => {
-	Cookies.set(EnumTokens.ACCESS_TOKEN, accessToken, {
-		domain: 'localhost',
-		sameSite: 'strict',
-		expires: 1
-	})
+	Cookies.set(
+		EnumTokens.ACCESS_TOKEN,
+		accessToken,
+		accessTokenCookieOptions
+	)
 }
 
 export const removeFromStorage = () => {
-	Cookies.remove(EnumTokens.ACCESS_TOKEN)
+	Cookies.remove(EnumTokens.ACCESS_TOKEN, {
+		path: accessTokenCookieOptions.path
+	})
 }
