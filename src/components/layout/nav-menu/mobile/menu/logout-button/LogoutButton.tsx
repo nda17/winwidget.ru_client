@@ -21,7 +21,7 @@ const LogoutButton: NextPage = () => {
 			mutationKey: ['logout'],
 			mutationFn: () => authService.logout(),
 			onSuccess() {
-				toast.success('Logout')
+				toast.success('Вы вышли из аккаунта')
 				queryClient.clear()
 				setAuth()
 			}
@@ -50,7 +50,7 @@ const LogoutButton: NextPage = () => {
 			className={clsx(styles['link-auth-button'])}
 		>
 			<MaterialIcon name="MdLogout" fill="red" />
-			Logout
+			Выйти
 		</button>
 	)
 }

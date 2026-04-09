@@ -16,7 +16,7 @@ const Footer: NextPage = () => {
 				<LogoImage />
 				<div className={clsx(styles['information-wrapper'])}>
 					<div className={clsx(styles['socials-wrapper'])}>
-						<h4 className={clsx(styles['title-block'])}>Socials:</h4>
+						<h4 className={clsx(styles['title-block'])}>Мы в соцсетях:</h4>
 
 						<div className={clsx(styles['link-icon-wrapper'])}>
 							<Link
@@ -35,8 +35,8 @@ const Footer: NextPage = () => {
 					</div>
 
 					<div className={clsx(styles['contacts-wrapper'])}>
-						<h4 className={clsx(styles['title-block'])}>Contacts:</h4>
-						<p className={clsx(styles['info-llc'])}>Company LLC.</p>
+						<h4 className={clsx(styles['title-block'])}>Контакты:</h4>
+						<p className={clsx(styles['info-llc'])}>ООО ЮБС</p>
 
 						<a
 							href="tel:88008008888"
@@ -46,7 +46,7 @@ const Footer: NextPage = () => {
 						</a>
 
 						<a
-							href="mailto:info@info.com"
+							href="mailto:info@winwidget.ru"
 							className={clsx(styles['link-contact'])}
 						>
 							info@info.com
@@ -54,25 +54,25 @@ const Footer: NextPage = () => {
 					</div>
 
 					<div className={clsx(styles['legal-wrapper'])}>
-						<h4 className={clsx(styles['title-block'])}>Legal:</h4>
+						<h4 className={clsx(styles['title-block'])}>Документы:</h4>
 						<Link
 							href={PUBLIC_PAGES.PRIVACY_POLICY}
 							className={clsx(styles['link-legal'])}
 						>
-							Privacy policy
+							Политика конфиденциальности
 						</Link>
 						<Link
 							href={PUBLIC_PAGES.COOKIE_NOTICE}
 							className={clsx(styles['link-legal'])}
 						>
-							Cookie notice
+							Уведомление о cookie
 						</Link>
 					</div>
 				</div>
 
 				<div className={clsx(styles['inform-wrapper'])}>
 					<p className={clsx(styles['text-inform'])}>
-						All rights reserved ©
+						Все права защищены ©
 					</p>
 					<p className={clsx(styles['date-inform'])}>
 						{year === currentYear

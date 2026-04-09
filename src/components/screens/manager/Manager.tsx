@@ -11,13 +11,13 @@ const Manager: NextPage = () => {
 
 	return (
 		<div className={styles.wrapper}>
-			<Heading text="Page for only managers" />
+			<Heading text="Страница только для менеджеров" />
 			{isLoading ? (
 				<CirclesLoader />
 			) : data ? (
-				<SubHeading text={'This manager content'} />
+				<SubHeading text={'Контент для менеджеров'} />
 			) : (
-				<SubHeading text={'Not found!'} />
+				<SubHeading text={'Ничего не найдено'} />
 			)}
 		</div>
 	)

@@ -15,7 +15,7 @@ const AuthItems: NextPage = () => {
 					item={{
 						icon: 'MdSettings',
 						link: PUBLIC_PAGES.USER_PROFILE,
-						title: 'Profile'
+						title: 'Профиль'
 					}}
 				/>
 			)}
@@ -25,7 +25,7 @@ const AuthItems: NextPage = () => {
 					item={{
 						icon: 'MdGroup',
 						link: PUBLIC_PAGES.MANAGER,
-						title: 'Manager'
+						title: 'Менеджер'
 					}}
 				/>
 			)}
@@ -35,7 +35,7 @@ const AuthItems: NextPage = () => {
 					item={{
 						icon: 'MdOutlineLock',
 						link: ADMIN_PAGES.HOME,
-						title: 'Admin'
+						title: 'Админ'
 					}}
 				/>
 			)}
@@ -45,7 +45,7 @@ const AuthItems: NextPage = () => {
 					item={{
 						icon: 'MdLogout',
 						link: PUBLIC_PAGES.LOGIN,
-						title: 'Login'
+						title: 'Войти'
 					}}
 				/>
 			)}

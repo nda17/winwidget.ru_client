@@ -26,7 +26,7 @@ const Profile: NextPage = () => {
 			mutationFn: () => authService.logout(),
 			onSuccess() {
 				startTransition(() => {
-					toast.success('Logout')
+					toast.success('Вы вышли из аккаунта')
 					queryClient.clear()
 					replace(PUBLIC_PAGES.LOGIN)
 				})
@@ -38,7 +38,7 @@ const Profile: NextPage = () => {
 
 	return (
 		<div className={styles.wrapper}>
-			<Heading text="Profile" />
+			<Heading text="Профиль" />
 
 			{isLoading ? (
 				<CirclesLoader />
@@ -54,8 +54,8 @@ const Profile: NextPage = () => {
 						<i>
 							(
 							{user.verificationToken
-								? 'Confirmation is required'
-								: 'Confirmed'}
+								? 'Требуется подтверждение'
+								: 'Подтверждено'}
 							)
 						</i>
 					</p>
@@ -64,7 +64,7 @@ const Profile: NextPage = () => {
 						disabled={isLogoutLoading}
 						className={clsx(styles['logout-button'])}
 					>
-						{isLogoutLoading ? 'Wait...' : 'Logout'}
+						{isLogoutLoading ? 'Подождите...' : 'Выйти'}
 					</button>
 				</>
 			)}

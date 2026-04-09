@@ -6,8 +6,8 @@ import { NextPage } from 'next'
 const FreeContent: NextPage = () => {
 	return (
 		<div className={styles.wrapper}>
-			<Heading text="Free content page for all users" />
-			<SubHeading text="This Free content page" />
+			<Heading text="Бесплатный контент для всех пользователей" />
+			<SubHeading text="Страница бесплатного контента" />
 		</div>
 	)
 }

@@ -16,8 +16,8 @@ const FieldEmail = forwardRef<HTMLInputElement, IField>(
 						autoComplete="on"
 					/>
 				</label>
-				{error?.message === 'Please enter a valid email' && (
-					<p className={styles.error}>{error.message.toString()}</p>
+				{error?.message && (
+					<p className={styles.error}>{String(error.message)}</p>
 				)}
 			</div>
 		)

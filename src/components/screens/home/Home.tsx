@@ -6,8 +6,8 @@ import { NextPage } from 'next'
 const Home: NextPage = () => {
 	return (
 		<div className={styles.wrapper}>
-			<Heading text="Home page" />
-			<SubHeading text={'This Home page content'} />
+			<Heading text="Главная страница" />
+			<SubHeading text={'Контент главной страницы'} />
 		</div>
 	)
 }

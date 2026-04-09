@@ -21,13 +21,13 @@ const RestorePasswordForm: NextPage = () => {
 		<form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
 			<FieldEmail
 				{...register('email', {
-					required: 'Email is required!',
+					required: 'Введите email',
 					pattern: {
 						value: validEmail,
-						message: 'Не корректный ввод Email'
+						message: 'Проверьте правильность ввода email'
 					}
 				})}
-				placeholder="Enter email:"
+				placeholder="Email:"
 				type="email"
 				error={errors.email}
 			/>

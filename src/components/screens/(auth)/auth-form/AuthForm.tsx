@@ -25,26 +25,27 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 		<form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
 			<FieldEmail
 				{...register('email', {
-					required: 'Email is required!',
+					required: 'Введите email',
 					pattern: {
 						value: validEmail,
-						message: 'Please enter a valid email'
+						message: 'Проверьте правильность ввода email'
 					}
 				})}
-				placeholder="Enter email:"
+				placeholder="Email:"
 				type="email"
 				error={errors.email}
 			/>
 
 			<FieldPassword
 				{...register('password', {
+					required: 'Введите пароль',
 					pattern: {
 						value: validPassword,
 						message:
-							'Min length should more 6 symbols. Contains 1 number 0-9, 1 Latin letter a-z, 1 Latin letter A-Z'
+							'Мин. длина 6 символов. Должен содержать 1 цифру 0-9, 1 строчную букву a-z и 1 заглавную букву A-Z.'
 					}
 				})}
-				placeholder="Enter password:"
+				placeholder="Пароль:"
 				type="password"
 				error={errors.password}
 			/>
@@ -69,7 +70,11 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 					)}
 					disabled={isLoading}
 				>
-					{isLoading ? 'Loading...' : isLogin ? 'Sign in' : 'Sign up'}
+					{isLoading
+						? 'Загрузка...'
+						: isLogin
+							? 'Войти'
+							: 'Зарегистрироваться'}
 				</button>
 			</div>
 

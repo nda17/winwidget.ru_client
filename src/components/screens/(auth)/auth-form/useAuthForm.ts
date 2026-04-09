@@ -32,7 +32,7 @@ const useAuthForm = (isLogin: boolean) => {
 			authService.main('login', data, token),
 		onSuccess() {
 			startTransition(() => {
-				toast.success('Successful login')
+				toast.success('Успешный вход в аккаунт')
 				reset()
 				router.replace(
 					previousRoute && whiteListRedirect.includes(previousRoute)
@@ -44,7 +44,7 @@ const useAuthForm = (isLogin: boolean) => {
 		},
 		onError(error) {
 			if (axios.isAxiosError(error)) {
-				toast.error(`Unsuccessful login: ${error.response?.data?.message}`)
+				toast.error(`Ошибка входа: ${error.response?.data?.message}`)
 				recaptchaRef.current.reset()
 			}
 		}
@@ -58,7 +58,7 @@ const useAuthForm = (isLogin: boolean) => {
 			onSuccess() {
 				startTransition(() => {
 					toast.success(
-						'Successful register. A link to confirm your Email has been sent to your email.'
+						'Регистрация прошла успешно. Ссылка для подтверждения email отправлена на вашу почту.'
 					)
 					reset()
 					router.replace('/profile')
@@ -67,7 +67,7 @@ const useAuthForm = (isLogin: boolean) => {
 			onError(error) {
 				if (axios.isAxiosError(error)) {
 					toast.error(
-						`Unsuccessful register: ${error.response?.data?.message}`
+						`Ошибка регистрации: ${error.response?.data?.message}`
 					)
 
 					recaptchaRef.current.reset()
@@ -79,7 +79,7 @@ const useAuthForm = (isLogin: boolean) => {
 		const captcha = recaptchaRef.current
 
 		if (!captcha) {
-			toast.error('Captcha is unavailable')
+			toast.error('Капча недоступна')
 			return
 		}
 
@@ -87,7 +87,7 @@ const useAuthForm = (isLogin: boolean) => {
 		const requestToken = SIMULATE_CAPTCHA_FAILURE ? 'invalid-token' : token
 
 		if (!token) {
-			toast.error('Captcha verification failed')
+			toast.error('Не удалось пройти проверку капчи')
 			captcha.reset()
 			return
 		}

@@ -27,14 +27,16 @@ const useRestorePasswordForm = () => {
 				authService.getRestorePassword(data, token),
 			onSuccess() {
 				startTransition(() => {
-					toast.success('Temporary password sent by email')
+					toast.success('Временный пароль отправлен на вашу почту')
 					reset()
 					router.replace('/login')
 				})
 			},
 			onError(error) {
 				if (axios.isAxiosError(error)) {
-					toast.error(`Restore password: ${error.response?.data?.message}`)
+					toast.error(
+						`Ошибка восстановления пароля: ${error.response?.data?.message}`
+					)
 					recaptchaRef.current.reset()
 				}
 			}
@@ -44,7 +46,7 @@ const useRestorePasswordForm = () => {
 		const captcha = recaptchaRef.current
 
 		if (!captcha) {
-			toast.error('Captcha is unavailable')
+			toast.error('Капча недоступна')
 			return
 		}
 
@@ -52,7 +54,7 @@ const useRestorePasswordForm = () => {
 		const requestToken = SIMULATE_CAPTCHA_FAILURE ? 'invalid-token' : token
 
 		if (!token) {
-			toast.error('Captcha verification failed')
+			toast.error('Не удалось пройти проверку капчи')
 			captcha.reset()
 			return
 		}

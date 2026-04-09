@@ -6,17 +6,17 @@ export const staticMenu: IMenu = {
 		{
 			icon: 'MdHomeWork',
 			link: PUBLIC_PAGES.HOME,
-			title: 'Home'
+			title: 'Главная'
 		},
 		{
 			icon: 'MdCheckCircle',
 			link: PUBLIC_PAGES.FREE_CONTENT,
-			title: 'Free content'
+			title: 'Бесплатно'
 		},
 		{
 			icon: 'MdPaid',
 			link: PUBLIC_PAGES.PREMIUM_CONTENT,
-			title: 'Premium content'
+			title: 'Премиум'
 		}
 	]
 }

@@ -29,18 +29,20 @@ const CookieConsentPopup: NextPage<ICookieConsent> = (status) => {
 					<div className={clsx(styles['image-cookie'])}>
 						<MaterialIcon name="MdCookie" fill="#dd850b" />
 					</div>
-					<h1 className={clsx(styles['text-heading'])}>Cookie consent</h1>
+					<h1 className={clsx(styles['text-heading'])}>
+						Согласие на использование cookie
+					</h1>
 				</div>
 
 				<div className={clsx(styles['text-wrapper'])}>
 					<p className={clsx(styles['text-consent'])}>
-						We use cookies to obtain statistics and personalize services
-						and offers,{' '}
+						Мы используем cookie для сбора статистики и персонализации
+						сервисов и предложений,{' '}
 						<Link href={PUBLIC_PAGES.COOKIE_NOTICE}>
-							<span className={clsx(styles['more-link'])}>read more</span>
+							<span className={clsx(styles['more-link'])}>подробнее</span>
 						</Link>
-						. By continuing to use the site without you consent to the use
-						of cookies.
+						. Продолжая пользоваться сайтом, вы соглашаетесь на
+						использование cookie.
 					</p>
 				</div>
 			</div>
@@ -49,7 +51,7 @@ const CookieConsentPopup: NextPage<ICookieConsent> = (status) => {
 				onClick={(e: any) => accept(e)}
 				className={clsx(styles['button-accept'])}
 			>
-				Accept
+				Принять
 			</button>
 		</div>
 	) : null

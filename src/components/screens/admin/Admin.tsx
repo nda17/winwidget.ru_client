@@ -9,9 +9,9 @@ import { NextPage } from 'next'
 const Admin: NextPage = () => {
 	return (
 		<div className={styles.wrapper}>
-			<Heading text="Admin page" />
+			<Heading text="Панель администратора" />
 			<AdminNavigation />
-			<SubHeading text="Some statistics" />
+			<SubHeading text="Статистика" />
 			<Statistics />
 		</div>
 	)
