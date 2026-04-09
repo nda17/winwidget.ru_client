@@ -12,24 +12,24 @@ const AuthToggle: NextPage<IAuthToggle> = ({ isLogin }) => {
 		<div className={styles.wrapper}>
 			{isLogin ? (
 				<p className={clsx(styles['toggle-link-block'])}>
-					No account?{' '}
+					Нет аккаунта?{' '}
 					<button
 						type="button"
 						className={clsx(styles['sign-up-button'])}
 						onClick={() => router.push(PUBLIC_PAGES.REGISTER)}
 					>
-						Sign up
+						Зарегистрироваться
 					</button>
 				</p>
 			) : (
 				<p className={clsx(styles['toggle-link-block'])}>
-					Have an account?{' '}
+					Уже зарегистрированы?{' '}
 					<button
 						type="button"
 						className={clsx(styles['sign-in-button'])}
 						onClick={() => router.push(PUBLIC_PAGES.LOGIN)}
 					>
-						Sign in
+						Войти
 					</button>
 				</p>
 			)}
@@ -39,7 +39,7 @@ const AuthToggle: NextPage<IAuthToggle> = ({ isLogin }) => {
 					className={clsx(styles['restore-password-button'])}
 					onClick={() => router.push(PUBLIC_PAGES.RESTORE_PASSWORD)}
 				>
-					Forgot password?
+					Забыли пароль?
 				</button>
 			</p>
 		</div>

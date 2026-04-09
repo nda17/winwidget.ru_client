@@ -6,7 +6,7 @@ const RestorePassword: NextPage = () => {
 	return (
 		<div className={styles.wrapper}>
 			<div className={styles.form}>
-				<h2 className={styles.title}>Restore password</h2>
+				<h2 className={styles.title}>Восстановление пароля</h2>
 				<RestorePasswordForm />
 			</div>
 		</div>

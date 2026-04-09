@@ -24,7 +24,7 @@ const RestorePasswordForm: NextPage = () => {
 					required: 'Email is required!',
 					pattern: {
 						value: validEmail,
-						message: 'Please enter a valid email'
+						message: 'Не корректный ввод Email'
 					}
 				})}
 				placeholder="Enter email:"
@@ -51,7 +51,7 @@ const RestorePasswordForm: NextPage = () => {
 					)}
 					disabled={isLoading}
 				>
-					Restore password
+					Восстановить пароль
 				</button>
 			</div>
 		</form>

@@ -14,8 +14,8 @@ const ConfirmationEmail: NextPage = () => {
 
 	return (
 		<div className={styles.wrapper}>
-			<Heading text="Email confirmed!" />
-			<SubHeading text="Redirect to Home page after 5 seconds..." />
+			<Heading text="Email подтвержден!" />
+			<SubHeading text="Возврат на главную страницу через 5 секунд ..." />
 		</div>
 	)
 }

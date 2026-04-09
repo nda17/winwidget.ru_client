@@ -6,7 +6,7 @@ const SignUp: NextPage = () => {
 	return (
 		<div className={styles.wrapper}>
 			<div className={styles.form}>
-				<h2 className={styles.title}>Sign up</h2>
+				<h2 className={styles.title}>Регистрация</h2>
 				<AuthForm isLogin={false} />
 			</div>
 		</div>
