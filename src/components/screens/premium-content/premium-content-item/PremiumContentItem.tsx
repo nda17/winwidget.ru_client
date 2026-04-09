@@ -18,27 +18,25 @@ const PremiumContentItem: NextPage = () => {
 
 	return (
 		<div className={styles.wrapper}>
-			<Heading text={`Premium content item # ${id}`} />
+			<Heading text={`Премиум-материал № ${id}`} />
 			{isLoadingProfile || isLoadingPremium ? (
 				<CirclesLoader />
 			) : (
 				user?.isLoggedIn &&
 				(data ? (
 					<SubHeading
-						text={`This is PREMIUM CONTENT # ${id}, you have access to this content.`}
+						text={`Это премиум-материал № ${id}, у вас есть доступ к этому контенту.`}
 					/>
 				) : (
 					<SubHeading
-						text={
-							'Sorry. To access PREMIUM CONTENT, please purchase a subscription.'
-						}
+						text={'Для доступа к премиум-контенту необходимо оформить подписку.'}
 					/>
 				))
 			)}
 
 			{!user?.isLoggedIn && (
 				<Link href={PUBLIC_PAGES.LOGIN} className={styles.link}>
-					Please login
+					Войдите в аккаунт
 				</Link>
 			)}
 		</div>
