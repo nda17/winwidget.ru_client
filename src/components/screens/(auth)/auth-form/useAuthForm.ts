@@ -1,4 +1,5 @@
 import { PUBLIC_PAGES } from '@/config/pages/public.config'
+import { useRecaptchaV3 } from '@/hooks/useRecaptchaV3'
 import { useNavigationContext } from '@/providers/navigation-provider/NavigationProvider'
 import authService from '@/services/auth/auth.service'
 import { IFormData } from '@/shared/types/form.types'
@@ -6,15 +7,9 @@ import { useAuthStore } from '@/store/auth-store/auth-store'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { useRouter } from 'next/navigation'
-import { useRef, useTransition } from 'react'
-import ReCAPTCHA from 'react-google-recaptcha'
+import { useTransition } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
-
-const SIMULATE_CAPTCHA_FAILURE =
-	process.env.NEXT_PUBLIC_SIMULATE_CAPTCHA_FAILURE === 'true'
-const DISABLE_RECAPTCHA =
-	process.env.NEXT_PUBLIC_DISABLE_RECAPTCHA === 'true'
 
 const useAuthForm = (isLogin: boolean) => {
 	const { previousRoute } = useNavigationContext()
@@ -29,7 +24,7 @@ const useAuthForm = (isLogin: boolean) => {
 	const router = useRouter()
 	const [isPending, startTransition] = useTransition()
 	const queryClient = useQueryClient()
-	const recaptchaRef = useRef<ReCAPTCHA>(null)
+	const { executeRecaptcha, isRecaptchaReady } = useRecaptchaV3()
 
 	const { mutate: mutateLogin, isPending: isLoginPending } = useMutation({
 		mutationKey: ['login'],
@@ -39,8 +34,7 @@ const useAuthForm = (isLogin: boolean) => {
 		}: {
 			data: IFormData
 			token: string | null
-		}) =>
-			authService.main('login', data, token),
+		}) => authService.main('login', data, token),
 		onSuccess() {
 			startTransition(() => {
 				setAuth(true)
@@ -58,7 +52,6 @@ const useAuthForm = (isLogin: boolean) => {
 		onError(error) {
 			if (axios.isAxiosError(error)) {
 				toast.error(`Ошибка входа: ${error.response?.data?.message}`)
-				recaptchaRef.current?.reset()
 			}
 		}
 	})
@@ -72,14 +65,13 @@ const useAuthForm = (isLogin: boolean) => {
 			}: {
 				data: IFormData
 				token: string | null
-			}) =>
-				authService.main('register', data, token),
-		onSuccess() {
-			startTransition(() => {
-				setAuth(true)
-				setAuthResolved(true)
-				toast.success(
-					'Регистрация прошла успешно. Ссылка для подтверждения email отправлена на вашу почту.'
+			}) => authService.main('register', data, token),
+			onSuccess() {
+				startTransition(() => {
+					setAuth(true)
+					setAuthResolved(true)
+					toast.success(
+						'Регистрация прошла успешно. Ссылка для подтверждения email отправлена на вашу почту.'
 					)
 					reset()
 					router.replace('/profile')
@@ -90,58 +82,36 @@ const useAuthForm = (isLogin: boolean) => {
 					toast.error(
 						`Ошибка регистрации: ${error.response?.data?.message}`
 					)
-
-					recaptchaRef.current?.reset()
 				}
 			}
 		})
 
 	const onSubmit: SubmitHandler<IFormData> = async (data) => {
-		if (DISABLE_RECAPTCHA) {
-			const token = SIMULATE_CAPTCHA_FAILURE ? 'invalid-token' : null
-
-			if (isLogin) {
-				mutateLogin({ data, token })
-				return
-			}
-
-			mutateRegister({ data, token })
-			return
-		}
-
-		const captcha = recaptchaRef.current
-
-		if (!captcha) {
+		if (!isRecaptchaReady) {
 			toast.error('Капча недоступна')
 			return
 		}
 
-		const token = await captcha.executeAsync()
-		const requestToken = SIMULATE_CAPTCHA_FAILURE ? 'invalid-token' : token
+		let token: string | null = null
+
+		try {
+			token = await executeRecaptcha(isLogin ? 'login' : 'register')
+		} catch {
+			toast.error('Не удалось пройти проверку капчи')
+			return
+		}
 
 		if (!token) {
 			toast.error('Не удалось пройти проверку капчи')
-			captcha.reset()
 			return
 		}
 
 		if (isLogin) {
-			mutateLogin({ data, token: requestToken }, {
-				onSettled() {
-					captcha.reset()
-				}
-			})
+			mutateLogin({ data, token })
 			return
 		}
 
-		mutateRegister(
-			{ data, token: requestToken },
-			{
-				onSettled() {
-					captcha.reset()
-				}
-			}
-		)
+		mutateRegister({ data, token })
 	}
 
 	const isLoading = isPending || isLoginPending || isRegisterPending
@@ -150,8 +120,6 @@ const useAuthForm = (isLogin: boolean) => {
 		register,
 		handleSubmit,
 		onSubmit,
-		recaptchaRef,
-		isRecaptchaDisabled: DISABLE_RECAPTCHA,
 		isLoading,
 		formState
 	}

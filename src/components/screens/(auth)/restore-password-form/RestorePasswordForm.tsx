@@ -5,15 +5,12 @@ import FieldEmail from '@/components/ui/form-elements/auth-page/field-email/Fiel
 import { validEmail } from '@/shared/regex'
 import clsx from 'clsx'
 import { NextPage } from 'next'
-import ReCAPTCHA from 'react-google-recaptcha'
 
 const RestorePasswordForm: NextPage = () => {
 	const {
 		handleSubmit,
 		isLoading,
-		isRecaptchaDisabled,
 		onSubmit,
-		recaptchaRef,
 		register,
 		formState: { errors }
 	} = useRestorePasswordForm()
@@ -32,18 +29,6 @@ const RestorePasswordForm: NextPage = () => {
 				type="email"
 				error={errors.email}
 			/>
-
-			{!isRecaptchaDisabled && (
-				<ReCAPTCHA
-					hl="ru"
-					ref={recaptchaRef}
-					size="invisible"
-					badge="bottomright"
-					sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY as string}
-					theme="light"
-					className={styles.recaptcha}
-				/>
-			)}
 
 			<div className={clsx(styles['wrapper-button'])}>
 				<button

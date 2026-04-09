@@ -68,3 +68,8 @@
 		@apply sm:max-w-[540px] md:max-w-[720px] lg:max-w-[960px] xl:max-w-[1140px] xxl:max-w-[1320px];
 	}
 }
+
+.grecaptcha-badge {
+	z-index: 1000 !important;
+	opacity: 0.87 !important;
+}
