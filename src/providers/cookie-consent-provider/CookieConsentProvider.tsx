@@ -1,3 +1,4 @@
+'use client'
 import CookieConsentPopup from '@/components/ui/cookie-consent-popup/CookieConsentPopup'
 import Cookies from 'js-cookie'
 import { NextPage } from 'next'
@@ -8,13 +9,10 @@ const CookieConsentProvider: NextPage = () => {
 	const [confirm, setConfirm] = useState(true)
 	const pathname = usePathname()
 
-	const getCookieConsent = () => {
-		Cookies.get('cookieConsent') ? setConfirm(true) : setConfirm(false)
-	}
-
 	useEffect(() => {
-		getCookieConsent()
-	}, [confirm, pathname])
+		setConfirm(Boolean(Cookies.get('cookieConsent')))
+	}, [pathname])
+
 	return <CookieConsentPopup status={!confirm ? 'show' : 'hide'} />
 }
 
