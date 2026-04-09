@@ -45,7 +45,7 @@ const useRestorePasswordForm = () => {
 					toast.error(
 						`Ошибка восстановления пароля: ${error.response?.data?.message}`
 					)
-					recaptchaRef.current.reset()
+					recaptchaRef.current?.reset()
 				}
 			}
 		})

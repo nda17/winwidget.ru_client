@@ -53,7 +53,7 @@ const useAuthForm = (isLogin: boolean) => {
 		onError(error) {
 			if (axios.isAxiosError(error)) {
 				toast.error(`Ошибка входа: ${error.response?.data?.message}`)
-				recaptchaRef.current.reset()
+				recaptchaRef.current?.reset()
 			}
 		}
 	})
@@ -84,7 +84,7 @@ const useAuthForm = (isLogin: boolean) => {
 						`Ошибка регистрации: ${error.response?.data?.message}`
 					)
 
-					recaptchaRef.current.reset()
+					recaptchaRef.current?.reset()
 				}
 			}
 		})
