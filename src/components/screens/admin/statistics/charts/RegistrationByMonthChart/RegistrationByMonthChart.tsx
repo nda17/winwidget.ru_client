@@ -1,4 +1,4 @@
-import { useRegistrationsByMonth } from '@/components/screens/admin/statistics/charts/RegistrationByMonthChart/useRegistrationByMonthChart';
+import { useRegistrationsByMonthChart } from '@/components/screens/admin/statistics/charts/RegistrationByMonthChart/useRegistrationByMonthChart';
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader';
 import {
 	CategoryScale,
@@ -22,12 +22,53 @@ ChartJS.register(
 );
 
 const RegistrationByMonthChart: FC = () => {
-	const { data, isPending } = useRegistrationsByMonth();
+	const { data, isPending } = useRegistrationsByMonthChart();
 
 	return isPending ? (
-		<SkeletonLoader count={1} className="w-full h-[278px]" />
+		<SkeletonLoader count={1} className="w-full h-full" />
 	) : data ? (
-		<Line data={data} />
+		<Line
+			data={data}
+			options={{
+				responsive: true,
+				maintainAspectRatio: false,
+				interaction: {
+					mode: 'index',
+					intersect: false
+				},
+				plugins: {
+					legend: {
+						position: 'bottom',
+						labels: {
+							boxWidth: 12,
+							padding: 12,
+							font: {
+								size: 11
+							}
+						}
+					}
+				},
+				scales: {
+					x: {
+						ticks: {
+							maxRotation: 0,
+							autoSkip: true,
+							maxTicksLimit: 6,
+							font: {
+								size: 10
+							}
+						}
+					},
+					y: {
+						ticks: {
+							font: {
+								size: 10
+							}
+						}
+					}
+				}
+			}}
+		/>
 	) : null;
 };
 

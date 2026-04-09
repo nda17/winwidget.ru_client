@@ -1,25 +1,30 @@
-import { axiosInterceptorsRequest } from '@/api/interceptors';
+import { axiosInterceptorsRequest } from '@/api/interceptors'
 
 export interface IUserRegistrationsByMonth {
-	month: string;
-	year: number;
-	count: number;
+	month: string
+	year: number
+	count: number
+}
+
+export interface IStatisticsCounter {
+	name: string
+	value: string
 }
 
 class StatisticsService {
-	private _BASE_URL = '/statistics';
+	private _BASE_URL = '/statistics'
 
 	async getRegistrationsByMonth() {
 		return axiosInterceptorsRequest.get<IUserRegistrationsByMonth[]>(
 			`${this._BASE_URL}/registrations-by-month`
-		);
+		)
 	}
 
 	async getCounters() {
-		return axiosInterceptorsRequest.get<{ name: string; value: string }[]>(
+		return axiosInterceptorsRequest.get<IStatisticsCounter[]>(
 			`${this._BASE_URL}/counters`
-		);
+		)
 	}
 }
 
-export default new StatisticsService();
+export default new StatisticsService()

@@ -1,28 +1,26 @@
-import statisticsService from '@/services/statistics/statistics.service'
-import { useQuery } from '@tanstack/react-query'
+import { useRegistrationsByMonth as useRegistrationsByMonthQuery } from '@/components/screens/admin/statistics/hooks/useRegistrationsByMonth'
+import { getRegistrationLabels } from '@/components/screens/admin/statistics/statistics.utils'
 import { ChartData } from 'chart.js'
 
-export const useRegistrationsByMonth = () => {
-	const { data, isPending } = useQuery({
-		queryKey: ['get-registration-by-month-chart'],
-		queryFn: () => statisticsService.getRegistrationsByMonth(),
-		select({ data }): ChartData<'line', number[], string> {
-			return {
-				labels: data.map((item) => item.month),
-				datasets: [
-					{
-						label: 'Number of registrations',
-						data: data.map((item) => item.count),
-						borderColor: '#E6A34D',
-						tension: 0.1
-					}
-				]
-			}
-		}
-	})
+export const useRegistrationsByMonthChart = () => {
+	const { data, isPending } = useRegistrationsByMonthQuery()
 
 	return {
-		data,
+		data: data
+			? ({
+					labels: getRegistrationLabels(data),
+					datasets: [
+						{
+							label: 'Регистрации',
+							data: data.map((item) => item.count),
+							borderColor: '#E6A34D',
+							backgroundColor: 'rgba(230, 163, 77, 0.18)',
+							fill: true,
+							tension: 0.35
+						}
+					]
+				} as ChartData<'line', number[], string>)
+			: null,
 		isPending
 	}
 }
