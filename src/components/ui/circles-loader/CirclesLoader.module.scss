@@ -1,0 +1,20 @@
+.circles-loader {
+	@apply flex justify-center items-center absolute top-[50%] left-[50%] w-12 h-12 rounded-[50%] select-none;
+	animation: spin 2s infinite linear;
+	background: conic-gradient(
+		from 180deg at 50% 50%,
+		#ffffff,
+		#211c2c 360deg
+	);
+
+	&::before {
+		@apply rounded-[50%] w-[80%] h-[80%] bg-[#ffffff];
+		content: '';
+	}
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(1turn);
+	}
+}

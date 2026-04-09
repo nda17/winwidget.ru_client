@@ -1,0 +1,7 @@
+.wrapper {
+	@apply w-full flex flex-col relative;
+
+	.user {
+		@apply text-red-700;
+	}
+}
