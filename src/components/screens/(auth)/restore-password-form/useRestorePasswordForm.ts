@@ -8,6 +8,9 @@ import ReCAPTCHA from 'react-google-recaptcha'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 
+const SIMULATE_CAPTCHA_FAILURE =
+	process.env.NEXT_PUBLIC_SIMULATE_CAPTCHA_FAILURE === 'true'
+
 const useRestorePasswordForm = () => {
 	const { register, handleSubmit, reset, formState } = useForm<IEmail>()
 
@@ -46,6 +49,7 @@ const useRestorePasswordForm = () => {
 		}
 
 		const token = await captcha.executeAsync()
+		const requestToken = SIMULATE_CAPTCHA_FAILURE ? 'invalid-token' : token
 
 		if (!token) {
 			toast.error('Captcha verification failed')
@@ -54,7 +58,7 @@ const useRestorePasswordForm = () => {
 		}
 
 		mutateRestorePassword(
-			{ data, token },
+			{ data, token: requestToken },
 			{
 				onSettled() {
 					captcha.reset()

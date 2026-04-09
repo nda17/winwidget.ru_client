@@ -10,6 +10,9 @@ import ReCAPTCHA from 'react-google-recaptcha'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 
+const SIMULATE_CAPTCHA_FAILURE =
+	process.env.NEXT_PUBLIC_SIMULATE_CAPTCHA_FAILURE === 'true'
+
 const useAuthForm = (isLogin: boolean) => {
 	const { previousRoute } = useNavigationContext()
 
@@ -81,6 +84,7 @@ const useAuthForm = (isLogin: boolean) => {
 		}
 
 		const token = await captcha.executeAsync()
+		const requestToken = SIMULATE_CAPTCHA_FAILURE ? 'invalid-token' : token
 
 		if (!token) {
 			toast.error('Captcha verification failed')
@@ -89,7 +93,7 @@ const useAuthForm = (isLogin: boolean) => {
 		}
 
 		if (isLogin) {
-			mutateLogin({ data, token }, {
+			mutateLogin({ data, token: requestToken }, {
 				onSettled() {
 					captcha.reset()
 				}
@@ -98,7 +102,7 @@ const useAuthForm = (isLogin: boolean) => {
 		}
 
 		mutateRegister(
-			{ data, token },
+			{ data, token: requestToken },
 			{
 				onSettled() {
 					captcha.reset()

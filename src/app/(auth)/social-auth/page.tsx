@@ -1,23 +1,14 @@
 'use client'
 import CirclesLoader from '@/components/ui/circles-loader/CirclesLoader'
-import { saveTokenStorage } from '@/services/auth/auth.helper'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect } from 'react'
+import SocialAuth from '@/components/screens/(auth)/social-auth/SocialAuth'
+import { Suspense } from 'react'
 
 const SocialAuthPage = () => {
-	const searchParams = useSearchParams()
-	const router = useRouter()
-
-	useEffect(() => {
-		const accessToken = searchParams.get('accessToken')
-		if (accessToken) {
-			saveTokenStorage(accessToken)
-		}
-
-		router.replace('/')
-	}, [])
-
-	return <CirclesLoader />
+	return (
+		<Suspense fallback={<CirclesLoader />}>
+			<SocialAuth />
+		</Suspense>
+	)
 }
 
 export default SocialAuthPage
