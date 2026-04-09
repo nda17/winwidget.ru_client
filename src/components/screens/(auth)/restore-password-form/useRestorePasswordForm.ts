@@ -10,6 +10,8 @@ import toast from 'react-hot-toast'
 
 const SIMULATE_CAPTCHA_FAILURE =
 	process.env.NEXT_PUBLIC_SIMULATE_CAPTCHA_FAILURE === 'true'
+const DISABLE_RECAPTCHA =
+	process.env.NEXT_PUBLIC_DISABLE_RECAPTCHA === 'true'
 
 const useRestorePasswordForm = () => {
 	const { register, handleSubmit, reset, formState } = useForm<IEmail>()
@@ -23,7 +25,13 @@ const useRestorePasswordForm = () => {
 	const { mutate: mutateRestorePassword, isPending: isRestorePending } =
 		useMutation({
 			mutationKey: ['restore-password'],
-			mutationFn: ({ data, token }: { data: IEmail; token: string }) =>
+			mutationFn: ({
+				data,
+				token
+			}: {
+				data: IEmail
+				token: string | null
+			}) =>
 				authService.getRestorePassword(data, token),
 			onSuccess() {
 				startTransition(() => {
@@ -43,6 +51,13 @@ const useRestorePasswordForm = () => {
 		})
 
 	const onSubmit: SubmitHandler<IEmail> = async (data) => {
+		if (DISABLE_RECAPTCHA) {
+			const token = SIMULATE_CAPTCHA_FAILURE ? 'invalid-token' : null
+
+			mutateRestorePassword({ data, token })
+			return
+		}
+
 		const captcha = recaptchaRef.current
 
 		if (!captcha) {
@@ -76,6 +91,7 @@ const useRestorePasswordForm = () => {
 		handleSubmit,
 		onSubmit,
 		recaptchaRef,
+		isRecaptchaDisabled: DISABLE_RECAPTCHA,
 		isLoading,
 		formState
 	}

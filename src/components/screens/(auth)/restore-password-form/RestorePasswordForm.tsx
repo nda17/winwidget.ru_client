@@ -11,6 +11,7 @@ const RestorePasswordForm: NextPage = () => {
 	const {
 		handleSubmit,
 		isLoading,
+		isRecaptchaDisabled,
 		onSubmit,
 		recaptchaRef,
 		register,
@@ -32,15 +33,17 @@ const RestorePasswordForm: NextPage = () => {
 				error={errors.email}
 			/>
 
-			<ReCAPTCHA
-				hl="ru"
-				ref={recaptchaRef}
-				size="invisible"
-				badge="bottomright"
-				sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY as string}
-				theme="light"
-				className={styles.recaptcha}
-			/>
+			{!isRecaptchaDisabled && (
+				<ReCAPTCHA
+					hl="ru"
+					ref={recaptchaRef}
+					size="invisible"
+					badge="bottomright"
+					sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY as string}
+					theme="light"
+					className={styles.recaptcha}
+				/>
+			)}
 
 			<div className={clsx(styles['wrapper-button'])}>
 				<button

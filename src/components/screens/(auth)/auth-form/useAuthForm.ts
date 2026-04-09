@@ -12,6 +12,8 @@ import toast from 'react-hot-toast'
 
 const SIMULATE_CAPTCHA_FAILURE =
 	process.env.NEXT_PUBLIC_SIMULATE_CAPTCHA_FAILURE === 'true'
+const DISABLE_RECAPTCHA =
+	process.env.NEXT_PUBLIC_DISABLE_RECAPTCHA === 'true'
 
 const useAuthForm = (isLogin: boolean) => {
 	const { previousRoute } = useNavigationContext()
@@ -28,7 +30,13 @@ const useAuthForm = (isLogin: boolean) => {
 
 	const { mutate: mutateLogin, isPending: isLoginPending } = useMutation({
 		mutationKey: ['login'],
-		mutationFn: ({ data, token }: { data: IFormData; token: string }) =>
+		mutationFn: ({
+			data,
+			token
+		}: {
+			data: IFormData
+			token: string | null
+		}) =>
 			authService.main('login', data, token),
 		onSuccess() {
 			startTransition(() => {
@@ -53,7 +61,13 @@ const useAuthForm = (isLogin: boolean) => {
 	const { mutate: mutateRegister, isPending: isRegisterPending } =
 		useMutation({
 			mutationKey: ['register'],
-			mutationFn: ({ data, token }: { data: IFormData; token: string }) =>
+			mutationFn: ({
+				data,
+				token
+			}: {
+				data: IFormData
+				token: string | null
+			}) =>
 				authService.main('register', data, token),
 			onSuccess() {
 				startTransition(() => {
@@ -76,6 +90,18 @@ const useAuthForm = (isLogin: boolean) => {
 		})
 
 	const onSubmit: SubmitHandler<IFormData> = async (data) => {
+		if (DISABLE_RECAPTCHA) {
+			const token = SIMULATE_CAPTCHA_FAILURE ? 'invalid-token' : null
+
+			if (isLogin) {
+				mutateLogin({ data, token })
+				return
+			}
+
+			mutateRegister({ data, token })
+			return
+		}
+
 		const captcha = recaptchaRef.current
 
 		if (!captcha) {
@@ -118,6 +144,7 @@ const useAuthForm = (isLogin: boolean) => {
 		handleSubmit,
 		onSubmit,
 		recaptchaRef,
+		isRecaptchaDisabled: DISABLE_RECAPTCHA,
 		isLoading,
 		formState
 	}
