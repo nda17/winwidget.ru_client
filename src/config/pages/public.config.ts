@@ -7,8 +7,9 @@ class PublicPages {
 	MANAGER = '/manager'
 	FREE_CONTENT = '/free-content'
 	PREMIUM_CONTENT = '/premium-content'
-	PRIVACY_POLICY = '/legal-documentation/privacy-policy'
+	PERSONAL_POLICY = '/legal-documentation/personal-policy'
 	COOKIE_NOTICE = '/legal-documentation/cookie-notice'
+	OFERTA = '/legal-documentation/oferta'
 	SOCIALS_LINK_VK = 'https://vk.ru'
 	SOCIALS_LINK_TG = 'https://web.telegram.org/k/'
 }

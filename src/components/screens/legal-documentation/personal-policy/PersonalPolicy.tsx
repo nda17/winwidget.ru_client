@@ -1,9 +1,9 @@
-import styles from '@/components/screens/legal-documentation/privacy-policy/PrivacyPolicy.module.scss'
+import styles from '@/components/screens/legal-documentation/personal-policy/PersonalPolicy.module.scss'
 import Heading from '@/components/ui/heading/Heading'
 import SubHeading from '@/components/ui/sub-heading/SubHeading'
 import { NextPage } from 'next'
 
-const PrivacyPolicy: NextPage = () => {
+const PersonalPolicy: NextPage = () => {
 	return (
 		<div className={styles.wrapper}>
 			<Heading text="Privacy Policy" />
@@ -168,4 +168,4 @@ const PrivacyPolicy: NextPage = () => {
 	)
 }
 
-export default PrivacyPolicy
+export default PersonalPolicy

@@ -1,6 +1,5 @@
 import styles from '@/components/layout/footer/Footer.module.scss'
 import FontAwesomeIcon from '@/components/ui/icons/FontAwesomeIcon'
-import LogoImage from '@/components/ui/logo-image/LogoImage'
 import { PUBLIC_PAGES } from '@/config/pages/public.config'
 import clsx from 'clsx'
 import { NextPage } from 'next'
@@ -13,7 +12,6 @@ const Footer: NextPage = () => {
 	return (
 		<footer className={styles.footer}>
 			<div className={clsx(styles['layout-container'])}>
-				<LogoImage />
 				<div className={clsx(styles['information-wrapper'])}>
 					<div className={clsx(styles['socials-wrapper'])}>
 						<h4 className={clsx(styles['title-block'])}>Мы в соцсетях:</h4>
@@ -37,6 +35,8 @@ const Footer: NextPage = () => {
 					<div className={clsx(styles['contacts-wrapper'])}>
 						<h4 className={clsx(styles['title-block'])}>Контакты:</h4>
 						<p className={clsx(styles['info-llc'])}>ООО ЮБС</p>
+						<p className={clsx(styles['info-llc'])}>ИНН: 222222222222</p>
+						<p className={clsx(styles['info-llc'])}>ОГРН: 222222222222</p>
 
 						<a
 							href="tel:88008008888"
@@ -56,16 +56,22 @@ const Footer: NextPage = () => {
 					<div className={clsx(styles['legal-wrapper'])}>
 						<h4 className={clsx(styles['title-block'])}>Документы:</h4>
 						<Link
-							href={PUBLIC_PAGES.PRIVACY_POLICY}
+							href={PUBLIC_PAGES.PERSONAL_POLICY}
 							className={clsx(styles['link-legal'])}
 						>
-							Политика конфиденциальности
+							Политика обработки персональных данных
 						</Link>
 						<Link
 							href={PUBLIC_PAGES.COOKIE_NOTICE}
 							className={clsx(styles['link-legal'])}
 						>
-							Уведомление о cookie
+							Согласие на обработку персональных данных
+						</Link>
+						<Link
+							href={PUBLIC_PAGES.OFERTA}
+							className={clsx(styles['link-legal'])}
+						>
+							Договор-оферта
 						</Link>
 					</div>
 				</div>
