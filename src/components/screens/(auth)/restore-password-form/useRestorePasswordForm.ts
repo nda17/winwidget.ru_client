@@ -20,11 +20,8 @@ const useRestorePasswordForm = () => {
 	const { mutate: mutateRestorePassword, isPending: isRestorePending } =
 		useMutation({
 			mutationKey: ['restore-password'],
-			mutationFn: (data: IEmail) =>
-				authService.getRestorePassword(
-					data,
-					recaptchaRef?.current?.getValue()
-				),
+			mutationFn: ({ data, token }: { data: IEmail; token: string }) =>
+				authService.getRestorePassword(data, token),
 			onSuccess() {
 				startTransition(() => {
 					toast.success('Temporary password sent by email')
@@ -40,15 +37,30 @@ const useRestorePasswordForm = () => {
 			}
 		})
 
-	const onSubmit: SubmitHandler<IEmail> = (data) => {
-		const token = recaptchaRef?.current?.getValue()
+	const onSubmit: SubmitHandler<IEmail> = async (data) => {
+		const captcha = recaptchaRef.current
 
-		if (!token) {
-			toast.error('Pass the captcha!')
+		if (!captcha) {
+			toast.error('Captcha is unavailable')
 			return
 		}
 
-		mutateRestorePassword(data)
+		const token = await captcha.executeAsync()
+
+		if (!token) {
+			toast.error('Captcha verification failed')
+			captcha.reset()
+			return
+		}
+
+		mutateRestorePassword(
+			{ data, token },
+			{
+				onSettled() {
+					captcha.reset()
+				}
+			}
+		)
 	}
 
 	const isLoading = isPending || isRestorePending

@@ -25,8 +25,8 @@ const useAuthForm = (isLogin: boolean) => {
 
 	const { mutate: mutateLogin, isPending: isLoginPending } = useMutation({
 		mutationKey: ['login'],
-		mutationFn: (data: IFormData) =>
-			authService.main('login', data, recaptchaRef?.current?.getValue()),
+		mutationFn: ({ data, token }: { data: IFormData; token: string }) =>
+			authService.main('login', data, token),
 		onSuccess() {
 			startTransition(() => {
 				toast.success('Successful login')
@@ -50,12 +50,8 @@ const useAuthForm = (isLogin: boolean) => {
 	const { mutate: mutateRegister, isPending: isRegisterPending } =
 		useMutation({
 			mutationKey: ['register'],
-			mutationFn: (data: IFormData) =>
-				authService.main(
-					'register',
-					data,
-					recaptchaRef?.current?.getValue()
-				),
+			mutationFn: ({ data, token }: { data: IFormData; token: string }) =>
+				authService.main('register', data, token),
 			onSuccess() {
 				startTransition(() => {
 					toast.success(
@@ -76,15 +72,39 @@ const useAuthForm = (isLogin: boolean) => {
 			}
 		})
 
-	const onSubmit: SubmitHandler<IFormData> = (data) => {
-		const token = recaptchaRef?.current?.getValue()
+	const onSubmit: SubmitHandler<IFormData> = async (data) => {
+		const captcha = recaptchaRef.current
 
-		if (!token) {
-			toast.error('Pass the captcha!')
+		if (!captcha) {
+			toast.error('Captcha is unavailable')
 			return
 		}
 
-		isLogin ? mutateLogin(data) : mutateRegister(data)
+		const token = await captcha.executeAsync()
+
+		if (!token) {
+			toast.error('Captcha verification failed')
+			captcha.reset()
+			return
+		}
+
+		if (isLogin) {
+			mutateLogin({ data, token }, {
+				onSettled() {
+					captcha.reset()
+				}
+			})
+			return
+		}
+
+		mutateRegister(
+			{ data, token },
+			{
+				onSettled() {
+					captcha.reset()
+				}
+			}
+		)
 	}
 
 	const isLoading = isPending || isLoginPending || isRegisterPending

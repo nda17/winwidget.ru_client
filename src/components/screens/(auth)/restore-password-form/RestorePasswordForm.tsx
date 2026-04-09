@@ -33,11 +33,12 @@ const RestorePasswordForm: NextPage = () => {
 			/>
 
 			<ReCAPTCHA
-				hl="en"
+				hl="ru"
 				ref={recaptchaRef}
-				size="normal"
+				size="invisible"
+				badge="bottomright"
 				sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY as string}
-				theme="dark"
+				theme="light"
 				className={styles.recaptcha}
 			/>
 
