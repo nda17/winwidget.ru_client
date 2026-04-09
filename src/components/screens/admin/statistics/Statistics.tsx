@@ -1,8 +1,14 @@
-import CountUsers from '@/components/screens/admin/statistics/count-users/CountUsers'
-import { NextPage } from 'next'
+import RegistrationByMonthChart from '@/components/screens/admin/statistics/charts/RegistrationByMonthChart/RegistrationByMonthChart'
+import Counters from '@/components/screens/admin/statistics/counters/Counters'
+import { FC } from 'react'
 
-const Statistics: NextPage = () => {
-	return <CountUsers />
+const Statistics: FC = () => {
+	return (
+		<>
+			<Counters />
+			<RegistrationByMonthChart />
+		</>
+	)
 }
 
 export default Statistics
