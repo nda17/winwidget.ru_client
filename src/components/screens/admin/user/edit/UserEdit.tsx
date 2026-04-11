@@ -19,7 +19,8 @@ import {
 	validEmail,
 	validId,
 	validName,
-	validPassword
+	validPassword,
+	validPhone
 } from '@/shared/regex'
 import { IParamsUrl } from '@/shared/types/params-url.types'
 import clsx from 'clsx'
@@ -41,17 +42,147 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 		<div className={styles.wrapper}>
 			<Heading text="Панель администратора" />
 			<AdminNavigation />
-			<SubHeading text="Редактирование данных пользователя" />
-			<UserInfo
-				avatarPath={data?.avatarPath}
-				name={data?.name}
-				isLoading={isLoading}
-			/>
 			{isLoading ? (
-				<SkeletonLoader count={6} className="h-5 mb-4" />
+				<div className={styles['loading-content']}>
+					<div className={styles['loading-section']}>
+						<SubHeading text="Редактирование данных пользователя" />
+						<div className={styles['loading-user-info']}>
+							<SkeletonLoader
+								count={1}
+								circle
+								className={styles['loading-avatar']}
+							/>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-user-name']}
+							/>
+						</div>
+						<div className={styles['loading-meta']}>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-meta-line']}
+							/>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-meta-line']}
+							/>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-meta-line']}
+							/>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-meta-line']}
+							/>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-meta-line-short']}
+							/>
+						</div>
+					</div>
+					<div className={styles['loading-section']}>
+						<SubHeading text="Поля редактирования" />
+						<div className={styles['loading-form']}>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-upload']}
+							/>
+							<div className={styles['loading-checkboxes']}>
+								<SkeletonLoader
+									count={1}
+									className={styles['loading-checkbox']}
+								/>
+								<SkeletonLoader
+									count={1}
+									className={styles['loading-checkbox']}
+								/>
+								<SkeletonLoader
+									count={1}
+									className={styles['loading-checkbox']}
+								/>
+								<SkeletonLoader
+									count={1}
+									className={styles['loading-checkbox']}
+								/>
+							</div>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-input']}
+							/>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-input']}
+							/>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-input']}
+							/>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-input']}
+							/>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-input']}
+							/>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-button']}
+							/>
+						</div>
+					</div>
+				</div>
 			) : (
-				<>
-					<form onSubmit={handleSubmit(onSubmit)}>
+				<div className={styles.content}>
+					<div className={styles['summary-section']}>
+						<SubHeading text="Редактирование данных пользователя" />
+						<UserInfo
+							avatarPath={data?.avatarPath}
+							name={data?.name}
+							isLoading={isLoading}
+						/>
+						<div className={styles['summary-meta']}>
+							<p className={styles['info-field']}>
+								<span className={styles['info-label']}>ID:</span> {data.id}
+							</p>
+							<p className={styles['info-field']}>
+								<span className={styles['info-label']}>Email:</span>{' '}
+								{data.email || 'Нет данных'}
+							</p>
+							<p className={styles['info-field']}>
+								<span className={styles['info-label']}>Телефон:</span>{' '}
+								{data.phone || 'Нет данных'}
+							</p>
+							<p className={styles['info-field']}>
+								<span className={styles['info-label']}>Статус:</span>{' '}
+								<span className={styles['info-status']}>
+									{data.email
+										? data.verificationToken
+											? 'Email не подтвержден'
+											: 'Email подтвержден'
+										: data.isPhoneVerified
+											? 'Телефон подтвержден'
+											: 'Телефон не подтвержден'}
+								</span>
+							</p>
+							<p className={styles['info-field']}>
+								<span className={styles['info-label']}>Роли:</span>{' '}
+								{data.rights.join(', ')}
+							</p>
+							<p className={styles['info-field']}>
+								<span className={styles['info-label']}>
+									Дата регистрации:
+								</span>{' '}
+								{data.createdAt.replace(/\T.*/, '')}
+							</p>
+						</div>
+					</div>
+					<div className={styles['edit-section']}>
+						<SubHeading text="Поля редактирования" />
+						<form
+							onSubmit={handleSubmit(onSubmit)}
+							className={styles['edit-form']}
+						>
 						<Controller
 							control={control}
 							name="avatarPath"
@@ -174,12 +305,17 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 							error={errors.phone}
 							defaultValue={data?.phone || ''}
 							placeholder="Телефон"
-							{...register('phone')}
+							{...register('phone', {
+								pattern: {
+									value: validPhone,
+									message: 'Проверьте правильность ввода номера телефона'
+								}
+							})}
 						/>
 						<FieldPassword
 							type="password"
 							error={errors.password}
-							placeholder="Password"
+							placeholder="Пароль"
 							{...register('password', {
 								pattern: {
 									value: validPassword,
@@ -188,9 +324,12 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 								}
 							})}
 						/>
-						<Button>Save</Button>
-					</form>
-				</>
+							<div className={styles.actions}>
+								<Button>Сохранить</Button>
+							</div>
+						</form>
+					</div>
+				</div>
 			)}
 		</div>
 	)

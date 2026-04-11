@@ -1,36 +1,208 @@
 .wrapper {
-	@apply w-full flex flex-col relative;
+	@apply w-full max-w-[88rem] mx-auto px-4 flex flex-col items-center relative;
 
-	.wrapper-table {
-		@apply py-[1.25rem];
+	.list-section {
+		@apply w-full rounded-layout border border-gray-300 bg-white shadow-sm overflow-hidden;
+	}
 
-		.row-table {
-			@apply grid;
-			grid-template-columns: 19% 15% 19% 10% 15% 14% 8%;
+	.list-meta {
+		@apply flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-5 py-4 border-b border-gray-300 bg-gray-300 bg-opacity-20;
+	}
+
+	.meta-title {
+		@apply text-[1.1rem] font-semibold text-gray-700;
+	}
+
+	.meta-subtitle {
+		@apply text-sm text-gray-600;
+	}
+
+	.loading-meta-block {
+		@apply flex flex-col gap-2;
+	}
+
+	.loading-meta-title {
+		@apply h-5 w-[10rem];
+	}
+
+	.loading-meta-subtitle {
+		@apply h-4 w-[7rem];
+	}
+
+	.loading-meta-side {
+		@apply h-4 w-[10rem];
+	}
+
+	.table-scroll {
+		@apply hidden lg:block w-full overflow-x-auto;
+	}
+
+	.mobile-list {
+		@apply flex flex-col lg:hidden;
+	}
+
+	.loading-card {
+		@apply px-4 py-4 border-b border-gray-300;
+
+		&:last-child {
+			@apply border-b-0;
+		}
+	}
+
+	.loading-card-header {
+		@apply flex items-start justify-between gap-3 mb-4;
+	}
+
+	.loading-card-main {
+		@apply flex-1 min-w-0;
+	}
+
+	.loading-card-title {
+		@apply h-5 w-[9rem];
+	}
+
+	.loading-card-id {
+		@apply h-4 w-[13rem] mt-2;
+	}
+
+	.loading-card-actions {
+		@apply h-8 w-[4.5rem];
+	}
+
+	.loading-card-body {
+		@apply flex flex-col gap-3;
+	}
+
+	.loading-card-line {
+		@apply h-4 w-full;
+	}
+
+	.loading-card-line-short {
+		@apply h-4 w-[65%];
+	}
+
+	.user-card {
+		@apply px-4 py-4 border-b border-gray-300;
+
+		&:last-child {
+			@apply border-b-0;
+		}
+	}
+
+	.user-card-header {
+		@apply flex items-start justify-between gap-3 mb-4;
+	}
+
+	.user-card-main {
+		@apply min-w-0;
+	}
+
+	.user-card-title {
+		@apply text-base font-semibold text-gray-700 leading-tight;
+	}
+
+	.user-card-id {
+		@apply mt-1 text-xs text-gray-600;
+		word-break: break-all;
+	}
+
+	.user-card-body {
+		@apply flex flex-col gap-3;
+	}
+
+	.user-card-row {
+		@apply flex flex-col gap-1;
+	}
+
+	.card-label {
+		@apply text-xs uppercase tracking-wide text-gray-500 font-semibold;
+	}
+
+	.card-value {
+		@apply text-sm text-gray-700 leading-snug;
+		word-break: break-word;
+	}
+
+	.table {
+		@apply w-full min-w-[75rem] border-collapse;
+
+		thead tr {
+			@apply bg-white;
 		}
 
-		.column-item-title {
-			@apply font-700 text-red-700;
+		th {
+			@apply px-4 py-3 text-left text-sm font-semibold text-red-700 border-b border-gray-300 whitespace-nowrap;
 		}
 
-		.column-item {
-			@apply overflow-y-scroll p-2 text-nowrap;
+		td {
+			@apply px-4 py-3 text-sm text-gray-700 border-b border-gray-300 align-top;
+		}
 
-			&::-webkit-scrollbar {
-				@apply block w-full h-[.22rem] md:h-[.30rem];
-			}
+		tbody tr {
+			@apply transition-colors;
 
-			&::-webkit-scrollbar-track {
-				@apply bg-gray-500;
-			}
-
-			&::-webkit-scrollbar-thumb {
-				@apply bg-gray-700;
-			}
-
-			&::-webkit-scrollbar-thumb:hover {
-				@apply bg-gray-600 cursor-pointer;
+			&:hover {
+				@apply bg-gray-300 bg-opacity-20;
 			}
 		}
+
+		tbody tr:last-child td {
+			@apply border-b-0;
+		}
+	}
+
+	.loading-table-line {
+		@apply h-4 w-full;
+	}
+
+	.loading-table-line-short {
+		@apply h-4 w-[8rem];
+	}
+
+	.loading-badge {
+		@apply h-7 w-[10rem];
+	}
+
+	.loading-roles {
+		@apply flex flex-wrap gap-2;
+	}
+
+	.loading-role {
+		@apply h-7 w-[4rem];
+	}
+
+	.truncate {
+		@apply block max-w-full;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.status-badge {
+		@apply inline-flex items-center rounded-full px-3 py-1 text-[0.75rem] font-semibold whitespace-nowrap;
+	}
+
+	.status-badge-success {
+		@apply bg-green-100 text-green-700;
+	}
+
+	.status-badge-pending {
+		@apply bg-red-100 text-red-700;
+	}
+
+	.roles-list {
+		@apply flex flex-wrap gap-2;
+	}
+
+	.role-badge {
+		@apply inline-flex items-center rounded-full bg-gray-300 bg-opacity-40 px-2 py-1 text-[0.75rem] font-semibold text-gray-700;
+	}
+
+	.actions-cell {
+		@apply flex items-center justify-center min-w-[5rem];
+	}
+
+	.empty-state {
+		@apply w-full rounded-layout border border-dashed border-gray-300 bg-white px-5 py-10 text-center;
 	}
 }

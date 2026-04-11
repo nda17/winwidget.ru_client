@@ -2,6 +2,12 @@ import { axiosInterceptorsRequest } from '@/api/interceptors'
 import { IUserEditInput } from '@/components/screens/admin/user/edit/user-edit.interface'
 import { IUser } from '@/shared/types/user.types'
 
+export interface IProfileEditInput {
+	name?: string
+	avatarPath?: string
+	password?: string
+}
+
 class UserService {
 	private _BASE_URL = '/users'
 
@@ -49,6 +55,13 @@ class UserService {
 	async updateUser(id: string, data: IUserEditInput) {
 		return axiosInterceptorsRequest.patch<string>(
 			`${this._BASE_URL}/user/${id}`,
+			data
+		)
+	}
+
+	async updateProfile(data: IProfileEditInput) {
+		return axiosInterceptorsRequest.patch<boolean>(
+			`${this._BASE_URL}/profile`,
 			data
 		)
 	}

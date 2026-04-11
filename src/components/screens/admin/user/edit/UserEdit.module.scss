@@ -1,11 +1,103 @@
 .wrapper {
-	@apply w-full flex flex-col;
+	@apply w-full max-w-[56rem] mx-auto px-4 flex flex-col items-center;
+
+	.content {
+		@apply w-full max-w-[42rem] flex flex-col gap-5;
+	}
+
+	.loading-content {
+		@apply w-full max-w-[42rem] flex flex-col gap-5;
+	}
+
+	.loading-section {
+		@apply w-full max-w-[42rem] rounded-layout border border-gray-300 bg-white px-5 py-5 shadow-sm;
+	}
+
+	.loading-user-info {
+		@apply flex items-center gap-4 mb-4;
+	}
+
+	.loading-avatar {
+		@apply w-20 h-20;
+	}
+
+	.loading-user-name {
+		@apply h-6 w-[12rem];
+	}
+
+	.loading-meta {
+		@apply mt-4 border-t border-gray-300 pt-4 flex flex-col gap-3;
+	}
+
+	.loading-meta-line {
+		@apply h-5 w-full;
+	}
+
+	.loading-meta-line-short {
+		@apply h-5 w-[65%];
+	}
+
+	.loading-form {
+		@apply w-full flex flex-col gap-4;
+	}
+
+	.loading-upload {
+		@apply h-[4.75rem] w-full;
+	}
+
+	.loading-checkboxes {
+		@apply grid grid-cols-2 sm:grid-cols-4 gap-3;
+	}
+
+	.loading-checkbox {
+		@apply h-10 w-full;
+	}
+
+	.loading-input {
+		@apply h-10 w-full;
+	}
+
+	.loading-button {
+		@apply h-10 w-[7.5rem];
+	}
+
+	.summary-section {
+		@apply w-full rounded-layout border border-gray-300 bg-white px-5 py-5 shadow-sm;
+	}
+
+	.summary-meta {
+		@apply mt-4 border-t border-gray-300 pt-4 flex flex-col gap-3;
+	}
+
+	.info-field {
+		@apply w-full text-left text-lg leading-snug;
+	}
+
+	.info-label {
+		@apply font-semibold text-gray-700;
+	}
+
+	.info-status {
+		@apply text-gray-600;
+	}
+
+	.edit-section {
+		@apply w-full rounded-layout border border-gray-300 bg-white px-5 py-5 shadow-sm mb-6;
+	}
+
+	.edit-form {
+		@apply w-full flex flex-col gap-1;
+	}
 
 	.wrapper-checkbox {
-		@apply flex gap-4 text-gray-600 w-full outline-none p-1 border-b border-b-black border-solid mb-[1.85rem];
+		@apply grid grid-cols-2 sm:grid-cols-4 gap-3 text-gray-600 w-full outline-none p-1 border-b border-b-black border-solid mb-[1.85rem];
 
 		.checkbox {
-			@apply flex gap-2;
+			@apply flex gap-2 items-center;
 		}
+	}
+
+	.actions {
+		@apply pt-2 flex justify-start;
 	}
 }

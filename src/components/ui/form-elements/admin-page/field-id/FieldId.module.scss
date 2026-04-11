@@ -11,6 +11,6 @@
 	}
 
 	.error-message {
-		@apply text-firebrick text-[12px] absolute bottom-[-7px];
+		@apply text-firebrick text-[11px] absolute bottom-[-14px] leading-[1.25];
 	}
 }
