@@ -27,4 +27,6 @@ const FieldEmail = forwardRef<HTMLInputElement, IField>(
 	}
 )
 
+FieldEmail.displayName = 'FieldEmail'
+
 export default FieldEmail

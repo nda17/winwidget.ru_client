@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/auth-store/auth-store'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
+import toast from 'react-hot-toast'
 
 const LogoutPage = () => {
 	const setAuth = useAuthStore((state) => state.setAuth)
@@ -13,10 +14,10 @@ const LogoutPage = () => {
 	const { replace } = useRouter()
 	const queryClient = useQueryClient()
 
-	const { mutate: mutateLogout } = useMutation({
+	const { mutateAsync: mutateLogout } = useMutation({
 		mutationKey: ['logout'],
 		mutationFn: () => authService.logout(),
-		onMutate() {
+		onSuccess() {
 			queryClient.clear()
 			setAuth(false)
 			setAuthResolved(true)
@@ -24,8 +25,17 @@ const LogoutPage = () => {
 	})
 
 	useEffect(() => {
-		mutateLogout()
-		replace(PUBLIC_PAGES.LOGIN)
+		const logout = async () => {
+			try {
+				await mutateLogout()
+				replace(PUBLIC_PAGES.LOGIN)
+			} catch {
+				toast.error('Не удалось завершить выход. Попробуйте ещё раз.')
+				replace(PUBLIC_PAGES.HOME)
+			}
+		}
+
+		void logout()
 	}, [mutateLogout, replace])
 
 	return <CirclesLoader />

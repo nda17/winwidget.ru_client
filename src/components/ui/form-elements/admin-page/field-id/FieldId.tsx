@@ -27,4 +27,6 @@ const FieldId = forwardRef<HTMLInputElement, IField>(
 	}
 )
 
+FieldId.displayName = 'FieldId'
+
 export default FieldId

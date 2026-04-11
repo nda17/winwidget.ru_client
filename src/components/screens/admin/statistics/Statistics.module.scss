@@ -1,6 +1,22 @@
 .wrapper {
 	@apply flex flex-col;
 
+	.section {
+		@apply mb-8;
+	}
+
+	.section-head {
+		@apply mb-4;
+	}
+
+	.section-title {
+		@apply text-[1.05rem] sm:text-[1.15rem] font-semibold text-[#131b22] mb-1;
+	}
+
+	.section-subtitle {
+		@apply text-[0.82rem] sm:text-[0.88rem] text-[#6b7280];
+	}
+
 	.charts-grid {
 		@apply grid gap-5 xl:grid-cols-2;
 	}

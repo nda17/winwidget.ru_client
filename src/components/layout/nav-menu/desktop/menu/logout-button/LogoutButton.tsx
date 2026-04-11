@@ -20,12 +20,15 @@ const LogoutButton: NextPage = () => {
 		{
 			mutationKey: ['logout'],
 			mutationFn: () => authService.logout(),
-			onMutate() {
+			onSuccess() {
 				toast.success('Вы вышли из аккаунта')
 				queryClient.clear()
 				setAuth(false)
 				setAuthResolved(true)
 				replace(PUBLIC_PAGES.LOGIN)
+			},
+			onError() {
+				toast.error('Не удалось завершить выход. Попробуйте ещё раз.')
 			}
 		}
 	)

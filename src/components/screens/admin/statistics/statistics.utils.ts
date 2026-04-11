@@ -1,28 +1,9 @@
 import {
-	IStatisticsCounter,
+	IStatisticsOverview,
 	IUserRegistrationsByMonth
 } from '@/services/statistics/statistics.service'
 
 const numberFormatter = new Intl.NumberFormat('ru-RU')
-
-export const parseStatValue = (value: string | number | null | undefined) => {
-	if (typeof value === 'number') {
-		return Number.isFinite(value) ? value : 0
-	}
-
-	if (typeof value !== 'string') {
-		return 0
-	}
-
-	const normalizedValue = value.replace(/\s+/g, '').replace(',', '.')
-	const match = normalizedValue.match(/-?\d+(\.\d+)?/)
-
-	if (!match) {
-		return 0
-	}
-
-	return Number(match[0])
-}
 
 export const formatStatValue = (value: number) => {
 	if (!Number.isFinite(value)) {
@@ -60,29 +41,20 @@ export const getSortedRegistrations = (
 export const getRegistrationLabels = (items: IUserRegistrationsByMonth[]) =>
 	items.map((item) => `${item.month} ${item.year}`)
 
-export const getCountersChartData = (
-	counters: IStatisticsCounter[] | undefined
+export const getOverviewChartData = (
+	overview: IStatisticsOverview | undefined
 ) => {
-	if (!counters?.length) {
+	if (!overview) {
 		return []
 	}
 
-	return counters
-		.map((item) => ({
-			label: item.name,
-			value: parseStatValue(item.value)
-		}))
+	return [
+		{ label: 'Активные за 30 дней', value: overview.activeUsers30d },
+		{ label: 'Новые за 30 дней', value: overview.newUsers30d },
+		{ label: 'Премиум', value: overview.premiumUsers },
+		{ label: 'Без подтверждения', value: overview.unconfirmedUsers },
+		{ label: 'Админы', value: overview.adminUsers },
+		{ label: 'Менеджеры', value: overview.managerUsers }
+	]
 		.filter((item) => item.value > 0)
-}
-
-export const getTopCounter = (counters: IStatisticsCounter[] | undefined) => {
-	const parsedCounters = getCountersChartData(counters)
-
-	if (!parsedCounters.length) {
-		return null
-	}
-
-	return parsedCounters.reduce((topItem, currentItem) =>
-		currentItem.value > topItem.value ? currentItem : topItem
-	)
 }

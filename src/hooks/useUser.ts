@@ -78,7 +78,7 @@ const useUser = () => {
 		return () => {
 			ignore = true
 		}
-	}, [pathname, queryClient, setAuth, setAuthResolved])
+	}, [isProtectedPath, pathname, queryClient, setAuth, setAuthResolved])
 
 	useEffect(() => {
 		const handleVisibilityChange = () => {

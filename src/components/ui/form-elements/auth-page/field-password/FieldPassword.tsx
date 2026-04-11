@@ -43,4 +43,6 @@ const FieldPassword = forwardRef<HTMLInputElement, IField>(
 	}
 )
 
+FieldPassword.displayName = 'FieldPassword'
+
 export default FieldPassword

@@ -17,4 +17,6 @@ class FileService {
 	}
 }
 
-export default new FileService()
+const fileService = new FileService()
+
+export default fileService

@@ -1,5 +1,5 @@
-import { useCounters } from '@/components/screens/admin/statistics/counters/useCounters'
-import { getCountersChartData } from '@/components/screens/admin/statistics/statistics.utils'
+import { useStatisticsOverview } from '@/components/screens/admin/statistics/hooks/useStatisticsOverview'
+import { getOverviewChartData } from '@/components/screens/admin/statistics/statistics.utils'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import {
 	ArcElement,
@@ -14,27 +14,27 @@ ChartJS.register(ArcElement, Tooltip, Legend)
 
 const palette = ['#E6A34D', '#BE496B', '#406E8E', '#2A9D8F', '#FFB703', '#6C757D']
 
-const CountersDistributionChart: FC = () => {
-	const { data, isPending } = useCounters()
-	const countersData = getCountersChartData(data)
+const OverviewDistributionChart: FC = () => {
+	const { data, isPending } = useStatisticsOverview()
+	const overviewChartData = getOverviewChartData(data)
 
 	if (isPending) {
 		return <SkeletonLoader count={1} className="w-full h-full" />
 	}
 
-	if (!countersData.length) {
+	if (!overviewChartData.length) {
 		return null
 	}
 
 	return (
 		<Doughnut
 			data={{
-				labels: countersData.map((item) => item.label),
+				labels: overviewChartData.map((item) => item.label),
 				datasets: [
 					{
-						label: 'Распределение',
-						data: countersData.map((item) => item.value),
-						backgroundColor: countersData.map(
+						label: 'Ключевые показатели',
+						data: overviewChartData.map((item) => item.value),
+						backgroundColor: overviewChartData.map(
 							(_, index) => palette[index % palette.length]
 						),
 						borderWidth: 0
@@ -62,4 +62,4 @@ const CountersDistributionChart: FC = () => {
 	)
 }
 
-export default CountersDistributionChart
+export default OverviewDistributionChart

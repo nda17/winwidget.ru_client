@@ -18,7 +18,7 @@ export const managerMiddleware = async (request: NextRequest) => {
 		!user?.isManager &&
 		!user?.rights?.includes(UserRole.MANAGER)
 	) {
-		return NextResponse.error()
+		return NextResponse.redirect(new URL('/profile', request.url))
 	}
 
 	return NextResponse.redirect(new URL('/logout', request.url))

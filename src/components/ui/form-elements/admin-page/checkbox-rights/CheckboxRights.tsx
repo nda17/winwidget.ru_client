@@ -14,4 +14,6 @@ const CheckboxRights = forwardRef<HTMLInputElement, IField>(
 	}
 )
 
+CheckboxRights.displayName = 'CheckboxRights'
+
 export default CheckboxRights

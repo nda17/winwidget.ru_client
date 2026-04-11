@@ -1,22 +1,27 @@
 import styles from '@/components/screens/admin/statistics/insights/StatisticsInsights.module.scss'
+import { useStatisticsOverview } from '@/components/screens/admin/statistics/hooks/useStatisticsOverview'
 import { useRegistrationsByMonth } from '@/components/screens/admin/statistics/hooks/useRegistrationsByMonth'
 import {
 	formatPercentage,
 	formatStatValue,
 	getSortedRegistrations
 } from '@/components/screens/admin/statistics/statistics.utils'
-import { useCounters } from '@/components/screens/admin/statistics/counters/useCounters'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import { FC } from 'react'
 
 const StatisticsInsights: FC = () => {
-	const { data: counters, isPending: isCountersPending } = useCounters()
+	const { data: overview, isPending: isOverviewPending } =
+		useStatisticsOverview()
 	const { data: registrations, isPending: isRegistrationsPending } =
 		useRegistrationsByMonth()
 
-	if (isCountersPending || isRegistrationsPending) {
+	if (isOverviewPending || isRegistrationsPending) {
 		return (
 			<div className={styles.wrapper}>
+				<SkeletonLoader count={1} className="h-[130px]" />
+				<SkeletonLoader count={1} className="h-[130px]" />
+				<SkeletonLoader count={1} className="h-[130px]" />
+				<SkeletonLoader count={1} className="h-[130px]" />
 				<SkeletonLoader count={1} className="h-[130px]" />
 				<SkeletonLoader count={1} className="h-[130px]" />
 				<SkeletonLoader count={1} className="h-[130px]" />
@@ -44,20 +49,21 @@ const StatisticsInsights: FC = () => {
 		latestMonth && previousMonth && previousMonth.count > 0
 			? ((latestMonth.count - previousMonth.count) / previousMonth.count) * 100
 			: 0
-
-	const premiumCounter = counters?.find((item) =>
-		item.name.toLowerCase().includes('premium')
-	)
-	const usersCounter = counters?.find((item) =>
-		/(user|польз)/i.test(item.name)
+	const publicRegistrations = Math.max(
+		(overview?.totalUsers ?? 0) -
+			(overview?.adminUsers ?? 0) -
+			(overview?.managerUsers ?? 0),
+		0
 	)
 
 	return (
 		<div className={styles.wrapper}>
 			<div className={styles.card}>
 				<p className={styles.label}>Регистрации за весь период</p>
-				<p className={styles.value}>{formatStatValue(totalRegistrations)}</p>
-				<p className={styles.caption}>Сумма по всем доступным месяцам</p>
+				<p className={styles.value}>{formatStatValue(publicRegistrations)}</p>
+				<p className={styles.caption}>
+					Без учёта администраторов и менеджеров
+				</p>
 			</div>
 			<div className={styles.card}>
 				<p className={styles.label}>Последний месяц</p>
@@ -101,18 +107,50 @@ const StatisticsInsights: FC = () => {
 			</div>
 			<div className={styles.card}>
 				<p className={styles.label}>Пользователи</p>
-				<p className={styles.value}>{usersCounter?.value ?? '0'}</p>
+				<p className={styles.value}>
+					{formatStatValue(overview?.totalUsers ?? 0)}
+				</p>
 				<p className={styles.caption}>Основной счётчик аудитории</p>
 			</div>
 			<div className={styles.card}>
-				<p className={styles.label}>Премиум-доступ</p>
-				<p className={styles.value}>{premiumCounter?.value ?? '0'}</p>
-				<p className={styles.caption}>Текущее значение по premium</p>
+				<p className={styles.label}>Активные за 30 дней</p>
+				<p className={styles.value}>
+					{formatStatValue(overview?.activeUsers30d ?? 0)}
+				</p>
+				<p className={styles.caption}>Живая аудитория за последний месяц</p>
 			</div>
 			<div className={styles.card}>
-				<p className={styles.label}>Карточек статистики</p>
-				<p className={styles.value}>{formatStatValue(counters?.length ?? 0)}</p>
-				<p className={styles.caption}>Сколько счётчиков пришло с сервера</p>
+				<p className={styles.label}>Новые за 30 дней</p>
+				<p className={styles.value}>
+					{formatStatValue(overview?.newUsers30d ?? 0)}
+				</p>
+				<p className={styles.caption}>Новые пользователи за последний месяц</p>
+			</div>
+			<div className={styles.card}>
+				<p className={styles.label}>Премиум-пользователи</p>
+				<p className={styles.value}>
+					{formatStatValue(overview?.premiumUsers ?? 0)}
+				</p>
+				<p className={styles.caption}>Пользователи с premium-доступом</p>
+			</div>
+			<div className={styles.card}>
+				<p className={styles.label}>Без подтверждения email</p>
+				<p className={styles.value}>
+					{formatStatValue(overview?.unconfirmedUsers ?? 0)}
+				</p>
+				<p className={styles.caption}>Пользователи, не завершившие подтверждение</p>
+			</div>
+			<div className={styles.card}>
+				<p className={styles.label}>Роли команды</p>
+				<p className={styles.value}>
+					{formatStatValue(
+						(overview?.adminUsers ?? 0) + (overview?.managerUsers ?? 0)
+					)}
+				</p>
+				<p className={styles.caption}>
+					Админы: {formatStatValue(overview?.adminUsers ?? 0)} | Менеджеры:{' '}
+					{formatStatValue(overview?.managerUsers ?? 0)}
+				</p>
 			</div>
 		</div>
 	)

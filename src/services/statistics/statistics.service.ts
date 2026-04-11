@@ -6,9 +6,14 @@ export interface IUserRegistrationsByMonth {
 	count: number
 }
 
-export interface IStatisticsCounter {
-	name: string
-	value: string
+export interface IStatisticsOverview {
+	totalUsers: number
+	activeUsers30d: number
+	newUsers30d: number
+	unconfirmedUsers: number
+	premiumUsers: number
+	adminUsers: number
+	managerUsers: number
 }
 
 class StatisticsService {
@@ -20,11 +25,13 @@ class StatisticsService {
 		)
 	}
 
-	async getCounters() {
-		return axiosInterceptorsRequest.get<IStatisticsCounter[]>(
-			`${this._BASE_URL}/counters`
+	async getOverview() {
+		return axiosInterceptorsRequest.get<IStatisticsOverview>(
+			`${this._BASE_URL}/overview`
 		)
 	}
 }
 
-export default new StatisticsService()
+const statisticsService = new StatisticsService()
+
+export default statisticsService
