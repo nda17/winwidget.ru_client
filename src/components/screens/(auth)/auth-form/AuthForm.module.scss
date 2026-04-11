@@ -1,6 +1,26 @@
 .form {
 	@apply w-[19.85rem] mx-auto overflow-hidden min-h-[22.699rem];
 
+	.auth-method-toggle {
+		@apply mb-4 grid grid-cols-2 gap-2;
+
+		.method-button {
+			@apply py-2 border border-white/30 rounded text-white transition-colors;
+		}
+
+		.method-button-active {
+			@apply bg-white text-black border-white;
+		}
+	}
+
+	.phone-hint {
+		@apply text-[.75rem] text-white/80 mb-2 -mt-1;
+	}
+
+	.link-button {
+		@apply text-[.75rem] text-yellow-700 mb-3 underline underline-offset-2;
+	}
+
 	.wrapper-button {
 		@apply mb-3;
 

@@ -49,16 +49,30 @@ const Profile: NextPage = () => {
 						name={user?.name}
 						isLoading={isLoading}
 					/>
-					<p className={clsx(styles['info-field'])}>
-						Email: {user.email}{' '}
-						<i>
-							(
-							{user.verificationToken
-								? 'Требуется подтверждение'
-								: 'Подтверждено'}
-							)
-						</i>
-					</p>
+					{user?.email && (
+						<p className={clsx(styles['info-field'])}>
+							Email: {user.email}{' '}
+							<i>
+								(
+								{user.verificationToken
+									? 'Требуется подтверждение'
+									: 'Подтверждено'}
+								)
+							</i>
+						</p>
+					)}
+					{user?.phone && (
+						<p className={clsx(styles['info-field'])}>
+							Телефон: {user.phone}{' '}
+							<i>
+								(
+								{user.isPhoneVerified
+									? 'Подтвержден'
+									: 'Требуется подтверждение'}
+								)
+							</i>
+						</p>
+					)}
 					<button
 						onClick={() => mutateLogout()}
 						disabled={isLogoutLoading}

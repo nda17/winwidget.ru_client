@@ -163,12 +163,18 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 							defaultValue={data?.email}
 							placeholder="Email"
 							{...register('email', {
-								required: 'Обяательное поле!',
 								pattern: {
 									value: validEmail,
 									message: 'Проверьте правильность ввода email'
 								}
 							})}
+						/>
+						<FieldEmail
+							type="tel"
+							error={errors.phone}
+							defaultValue={data?.phone || ''}
+							placeholder="Телефон"
+							{...register('phone')}
 						/>
 						<FieldPassword
 							type="password"

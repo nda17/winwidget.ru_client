@@ -5,8 +5,10 @@ import AuthToggle from '@/components/screens/(auth)/auth-form/auth-toggle/AuthTo
 import SocialMediaButtons from '@/components/screens/(auth)/auth-form/social-media-buttons/SocialMediaButtons'
 import useAuthForm from '@/components/screens/(auth)/auth-form/useAuthForm'
 import FieldEmail from '@/components/ui/form-elements/auth-page/field-email/FieldEmail'
+import FieldPhone from '@/components/ui/form-elements/auth-page/field-phone/FieldPhone'
+import FieldSmsCode from '@/components/ui/form-elements/auth-page/field-sms-code/FieldSmsCode'
 import FieldPassword from '@/components/ui/form-elements/auth-page/field-password/FieldPassword'
-import { validEmail, validPassword } from '@/shared/regex'
+import { validEmail, validPassword, validPhone, validPhoneCode } from '@/shared/regex'
 import clsx from 'clsx'
 import { NextPage } from 'next'
 
@@ -16,23 +18,126 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 		isLoading,
 		onSubmit,
 		register,
-		formState: { errors }
+		formState: { errors, touchedFields, isSubmitted },
+		authMethod,
+		setAuthMethod,
+		isPhoneCodeRequested,
+		phoneValue,
+		phoneInputRef,
+		phoneMask,
+		resetPhoneCodeStep
 	} = useAuthForm(isLogin)
 
 	return (
 		<form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
-			<FieldEmail
-				{...register('email', {
-					required: 'Введите email',
-					pattern: {
-						value: validEmail,
-						message: 'Проверьте правильность ввода email'
+			<div className={styles['auth-method-toggle']}>
+				<button
+					type="button"
+					className={clsx(
+						styles['method-button'],
+						authMethod === 'email' && styles['method-button-active']
+					)}
+					onClick={() => setAuthMethod('email')}
+				>
+					Email
+				</button>
+				<button
+					type="button"
+					className={clsx(
+						styles['method-button'],
+						authMethod === 'phone' && styles['method-button-active']
+					)}
+					onClick={() => setAuthMethod('phone')}
+				>
+					Телефон
+				</button>
+			</div>
+
+			{authMethod === 'email' ? (
+				<FieldEmail
+					{...register('email', {
+						required: 'Введите email',
+						pattern: {
+							value: validEmail,
+							message: 'Проверьте правильность ввода email'
+						}
+					})}
+					placeholder="Email:"
+					type="email"
+					error={errors.email}
+					data-validated={
+						touchedFields.email || isSubmitted ? 'true' : undefined
 					}
-				})}
-				placeholder="Email:"
-				type="email"
-				error={errors.email}
-			/>
+				/>
+			) : (
+				<>
+					{(() => {
+						const phoneRegister = register('phone', {
+							required: 'Введите номер телефона',
+							pattern: {
+								value: validPhone,
+								message: 'Проверьте правильность ввода номера телефона'
+							}
+						})
+
+						return (
+							<FieldPhone
+								{...phoneRegister}
+								placeholder="Телефон:"
+								type="tel"
+								error={errors.phone}
+								data-validated={
+									touchedFields.phone || isSubmitted ? 'true' : undefined
+								}
+								data-mask-empty={phoneMask.isMaskEmpty ? 'true' : undefined}
+								disabled={!isLogin && isPhoneCodeRequested}
+								onFocus={phoneMask.onFocus}
+								onClick={phoneMask.onClick}
+								onKeyDown={phoneMask.onKeyDown}
+								onBeforeInput={phoneMask.onBeforeInput}
+								onInput={phoneMask.onInput}
+								onPaste={phoneMask.onPaste}
+								onBlur={phoneMask.onBlur}
+								ref={(element) => {
+									phoneRegister.ref(element)
+									phoneInputRef.current = element
+								}}
+							/>
+						)
+					})()}
+					{!isLogin && isPhoneCodeRequested && (
+						<>
+							<FieldSmsCode
+								{...register('code', {
+									required: 'Введите код из SMS',
+									pattern: {
+										value: validPhoneCode,
+										message: 'Код должен содержать 4-6 цифр'
+									}
+								})}
+								placeholder="Код из SMS:"
+								type="text"
+								error={errors.code}
+								data-validated={
+									touchedFields.code || isSubmitted
+										? 'true'
+										: undefined
+								}
+							/>
+							<div className={styles['phone-hint']}>
+								Код отправлен на номер {phoneValue}
+							</div>
+							<button
+								type="button"
+								className={styles['link-button']}
+								onClick={resetPhoneCodeStep}
+							>
+								Изменить номер
+							</button>
+						</>
+					)}
+				</>
+			)}
 
 			<FieldPassword
 				{...register('password', {
@@ -46,6 +151,9 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 				placeholder="Пароль:"
 				type="password"
 				error={errors.password}
+				data-validated={
+					touchedFields.password || isSubmitted ? 'true' : undefined
+				}
 			/>
 
 			<div className={clsx(styles['wrapper-button'])}>
@@ -60,9 +168,11 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 				>
 					{isLoading
 						? 'Загрузка...'
-						: isLogin
-							? 'Войти'
-							: 'Зарегистрироваться'}
+						: authMethod === 'phone' && !isLogin && !isPhoneCodeRequested
+							? 'Получить код'
+							: isLogin
+								? 'Войти'
+								: 'Зарегистрироваться'}
 				</button>
 			</div>
 

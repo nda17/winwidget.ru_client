@@ -15,10 +15,15 @@ declare global {
 
 let recaptchaScriptPromise: Promise<void> | null = null
 
+const resolveRecaptchaHost = () =>
+	process.env.NEXT_PUBLIC_RECAPTCHA_HOST || 'https://www.recaptcha.net'
+
 const loadRecaptchaScript = (siteKey: string) => {
 	if (typeof window === 'undefined') {
 		return Promise.resolve()
 	}
+
+	const recaptchaHost = resolveRecaptchaHost()
 
 	if (window.grecaptcha) {
 		return Promise.resolve()
@@ -27,7 +32,7 @@ const loadRecaptchaScript = (siteKey: string) => {
 	if (!recaptchaScriptPromise) {
 		recaptchaScriptPromise = new Promise<void>((resolve, reject) => {
 			const existingScript = document.querySelector<HTMLScriptElement>(
-				`script[src^="https://www.google.com/recaptcha/api.js?render="]`
+				`script[src^="${recaptchaHost}/recaptcha/api.js?render="], script[src^="https://www.google.com/recaptcha/api.js?render="], script[src^="https://www.recaptcha.net/recaptcha/api.js?render="]`
 			)
 
 			if (existingScript) {
@@ -43,17 +48,36 @@ const loadRecaptchaScript = (siteKey: string) => {
 			}
 
 			const script = document.createElement('script')
-			script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}&hl=ru`
+			script.src = `${recaptchaHost}/recaptcha/api.js?render=${siteKey}&hl=ru`
 			script.async = true
 			script.defer = true
 			script.onload = () => resolve()
-			script.onerror = () =>
+			script.onerror = () => {
+				recaptchaScriptPromise = null
 				reject(new Error('Не удалось загрузить reCAPTCHA'))
+			}
 			document.head.appendChild(script)
 		})
 	}
 
 	return recaptchaScriptPromise
+}
+
+const waitForRecaptchaReady = () => {
+	if (!window.grecaptcha) {
+		return Promise.reject(new Error('reCAPTCHA не инициализирована'))
+	}
+
+	return new Promise<void>((resolve, reject) => {
+		const timeout = window.setTimeout(() => {
+			reject(new Error('reCAPTCHA не готова'))
+		}, 5000)
+
+		window.grecaptcha?.ready(() => {
+			window.clearTimeout(timeout)
+			resolve()
+		})
+	})
 }
 
 export const useRecaptchaV3 = () => {
@@ -96,18 +120,13 @@ export const useRecaptchaV3 = () => {
 		}
 
 		await loadRecaptchaScript(siteKey)
-
-		if (!window.grecaptcha) {
-			throw new Error('reCAPTCHA не инициализирована')
-		}
+		await waitForRecaptchaReady()
 
 		return new Promise<string>((resolve, reject) => {
-			window.grecaptcha?.ready(() => {
-				window.grecaptcha
-					?.execute(siteKey, { action })
-					.then(resolve)
-					.catch(reject)
-			})
+			window.grecaptcha
+				?.execute(siteKey, { action })
+				.then(resolve)
+				.catch(reject)
 		})
 	}
 

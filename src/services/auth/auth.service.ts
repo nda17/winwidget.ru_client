@@ -16,7 +16,14 @@ interface IConfirmationToken {
 }
 
 interface IEmail {
-	email: string
+	email?: string
+	phone?: string
+}
+
+interface IPhonePayload {
+	phone: string
+	password?: string
+	code?: string
 }
 
 export enum EnumTokens {
@@ -85,7 +92,7 @@ class AuthService {
 	async getRestorePassword(data: IEmail, token?: string | null) {
 		const response = await axiosClassicRequest.patch<IEmail>(
 			'/auth/restore-password',
-			{ email: data.email },
+			{ email: data.email, phone: data.phone },
 			{
 				headers: {
 					recaptcha: token
@@ -103,6 +110,61 @@ class AuthService {
 
 		if (response.data) {
 			removeFromStorage()
+		}
+
+		return response
+	}
+
+	async sendPhoneCode(data: IPhonePayload, token?: string | null) {
+		return axiosClassicRequest.post<boolean>(
+			'/auth/phone/send-code',
+			{ phone: data.phone },
+			{
+				headers: {
+					recaptcha: token
+				}
+			}
+		)
+	}
+
+	async registerByPhone(data: IPhonePayload, token?: string | null) {
+		const response = await axiosClassicRequest.post<IAuthResponse>(
+			'/auth/phone/register',
+			{
+				phone: data.phone,
+				password: data.password,
+				code: data.code
+			},
+			{
+				headers: {
+					recaptcha: token
+				}
+			}
+		)
+
+		if (response.data.accessToken) {
+			saveTokenStorage(response.data.accessToken)
+		}
+
+		return response
+	}
+
+	async loginByPhone(data: IPhonePayload, token?: string | null) {
+		const response = await axiosClassicRequest.post<IAuthResponse>(
+			'/auth/phone/login',
+			{
+				phone: data.phone,
+				password: data.password
+			},
+			{
+				headers: {
+					recaptcha: token
+				}
+			}
+		)
+
+		if (response.data.accessToken) {
+			saveTokenStorage(response.data.accessToken)
 		}
 
 		return response

@@ -2,7 +2,8 @@
 import styles from '@/components/screens/(auth)/auth-form/AuthForm.module.scss'
 import useRestorePasswordForm from '@/components/screens/(auth)/restore-password-form/useRestorePasswordForm'
 import FieldEmail from '@/components/ui/form-elements/auth-page/field-email/FieldEmail'
-import { validEmail } from '@/shared/regex'
+import FieldPhone from '@/components/ui/form-elements/auth-page/field-phone/FieldPhone'
+import { validEmail, validPhone } from '@/shared/regex'
 import clsx from 'clsx'
 import { NextPage } from 'next'
 
@@ -11,24 +12,91 @@ const RestorePasswordForm: NextPage = () => {
 		handleSubmit,
 		isLoading,
 		onSubmit,
+		onInvalid,
 		register,
-		formState: { errors }
+		formState: { errors, touchedFields, isSubmitted },
+		authMethod,
+		setAuthMethod,
+		phoneInputRef,
+		phoneMask
 	} = useRestorePasswordForm()
 
 	return (
-		<form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
-			<FieldEmail
-				{...register('email', {
-					required: 'Введите email',
-					pattern: {
-						value: validEmail,
-						message: 'Проверьте правильность ввода email'
+		<form onSubmit={handleSubmit(onSubmit, onInvalid)} className={styles.form}>
+			<div className={styles['auth-method-toggle']}>
+				<button
+					type="button"
+					className={clsx(
+						styles['method-button'],
+						authMethod === 'email' && styles['method-button-active']
+					)}
+					onClick={() => setAuthMethod('email')}
+				>
+					Email
+				</button>
+				<button
+					type="button"
+					className={clsx(
+						styles['method-button'],
+						authMethod === 'phone' && styles['method-button-active']
+					)}
+					onClick={() => setAuthMethod('phone')}
+				>
+					Телефон
+				</button>
+			</div>
+
+			{authMethod === 'email' ? (
+				<FieldEmail
+					{...register('email', {
+						required: 'Введите email',
+						pattern: {
+							value: validEmail,
+							message: 'Проверьте правильность ввода email'
+						}
+					})}
+					placeholder="Email:"
+					type="email"
+					error={errors.email}
+					data-validated={
+						touchedFields.email || isSubmitted ? 'true' : undefined
 					}
-				})}
-				placeholder="Email:"
-				type="email"
-				error={errors.email}
-			/>
+				/>
+			) : (
+				(() => {
+					const phoneRegister = register('phone', {
+						required: 'Введите номер телефона',
+						pattern: {
+							value: validPhone,
+							message: 'Проверьте правильность ввода номера телефона'
+						}
+					})
+
+					return (
+						<FieldPhone
+							{...phoneRegister}
+							placeholder="Телефон:"
+							type="tel"
+							error={errors.phone}
+							data-validated={
+								touchedFields.phone || isSubmitted ? 'true' : undefined
+							}
+							data-mask-empty={phoneMask.isMaskEmpty ? 'true' : undefined}
+							onFocus={phoneMask.onFocus}
+							onClick={phoneMask.onClick}
+							onKeyDown={phoneMask.onKeyDown}
+							onBeforeInput={phoneMask.onBeforeInput}
+							onInput={phoneMask.onInput}
+							onPaste={phoneMask.onPaste}
+							onBlur={phoneMask.onBlur}
+							ref={(element) => {
+								phoneRegister.ref(element)
+								phoneInputRef.current = element
+							}}
+						/>
+					)
+				})()
+			)}
 
 			<div className={clsx(styles['wrapper-button'])}>
 				<button

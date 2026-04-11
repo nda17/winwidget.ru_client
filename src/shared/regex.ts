@@ -7,3 +7,7 @@ export const validPassword =
 export const validName = /^[a-zA-Z][a-zA-Z0-9-]+$/
 
 export const validId = /^[a-z]{2}[a-z0-9]{23}$/
+
+export const validPhone = /^[0-9+()\-\s]{10,20}$/
+
+export const validPhoneCode = /^\d{4,6}$/

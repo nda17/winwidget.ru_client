@@ -115,6 +115,17 @@ const UserList: NextPage = () => {
 								'border-b'
 							)}
 						>
+							Телефон:
+						</p>
+						<p
+							className={clsx(
+								styles['column-item'],
+								styles['column-item-title'],
+								'border-t',
+								'border-l',
+								'border-b'
+							)}
+						>
 							Статус:
 						</p>
 						<p
@@ -189,7 +200,22 @@ const UserList: NextPage = () => {
 									'border-b'
 								)}
 							>
-								{!user.verificationToken ? 'Подтвержден' : 'Не подтвержден'}
+								{user.phone || 'Нет данных'}
+							</p>
+							<p
+								className={clsx(
+									styles['column-item'],
+									'border-l',
+									'border-b'
+								)}
+							>
+								{user.email
+									? !user.verificationToken
+										? 'Подтвержден'
+										: 'Не подтвержден'
+									: user.isPhoneVerified
+										? 'Подтвержден'
+										: 'Не подтвержден'}
 							</p>
 
 							<p

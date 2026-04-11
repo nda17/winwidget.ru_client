@@ -80,6 +80,9 @@
 			.date-inform {
 				@apply text-[#ffffff] text-[.8rem] leading-[.9rem];
 			}
+			.ybs-inform-wrapper {
+				@apply flex gap-1 mb-3 items-center;
+			}
 		}
 	}
 }
