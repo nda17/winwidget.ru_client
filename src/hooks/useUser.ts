@@ -44,7 +44,7 @@ const useUser = () => {
 				return
 			}
 
-			if (!ignore) {
+			if (!ignore && !isAuthResolved) {
 				setAuthResolved(false)
 			}
 
@@ -78,7 +78,14 @@ const useUser = () => {
 		return () => {
 			ignore = true
 		}
-	}, [isProtectedPath, pathname, queryClient, setAuth, setAuthResolved])
+	}, [
+		isAuthResolved,
+		isProtectedPath,
+		pathname,
+		queryClient,
+		setAuth,
+		setAuthResolved
+	])
 
 	useEffect(() => {
 		const handleVisibilityChange = () => {

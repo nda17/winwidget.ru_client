@@ -8,15 +8,16 @@ import { NextPage } from 'next'
 
 const AuthItems: NextPage = () => {
 	const { user, isLoading } = useUser()
+	const auth = useAuthStore((state) => state.auth)
 	const isAuthResolved = useAuthStore((state) => state.isAuthResolved)
 
-	if (!isAuthResolved || isLoading) {
+	if (!isAuthResolved || (auth && isLoading)) {
 		return null
 	}
 
 	return (
 		<>
-			{user?.isLoggedIn && (
+			{auth && (
 				<MenuItem
 					item={{
 						icon: 'MdSettings',
@@ -46,7 +47,7 @@ const AuthItems: NextPage = () => {
 				/>
 			)}
 
-			{!user?.isLoggedIn && (
+			{!auth && (
 				<MenuItem
 					item={{
 						icon: 'MdLogout',
@@ -56,7 +57,7 @@ const AuthItems: NextPage = () => {
 				/>
 			)}
 
-			{user?.isLoggedIn && <LogoutButton />}
+			{auth && <LogoutButton />}
 		</>
 	)
 }
