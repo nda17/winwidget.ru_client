@@ -11,6 +11,10 @@ const nextConfig = {
 				destination: 'http://localhost:4200/auth/github'
 			},
 			{
+				source: '/auth/yandex',
+				destination: 'http://localhost:4200/auth/yandex'
+			},
+			{
 				source: '/uploads/:path*',
 				destination: `http://localhost:4200/uploads/:path*`
 			}
@@ -27,6 +31,12 @@ const nextConfig = {
 			{
 				protocol: 'https',
 				hostname: 'avatars.githubusercontent.com',
+				port: '',
+				pathname: '/**'
+			},
+			{
+				protocol: 'https',
+				hostname: 'avatars.yandex.net',
 				port: '',
 				pathname: '/**'
 			}

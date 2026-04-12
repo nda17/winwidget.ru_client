@@ -43,7 +43,8 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 		EMAIL: 'Email',
 		PHONE: 'Телефон',
 		GOOGLE: 'Google',
-		GITHUB: 'GitHub'
+		GITHUB: 'GitHub',
+		YANDEX: 'Яндекс'
 	}
 
 	const getLoginMethods = () => {

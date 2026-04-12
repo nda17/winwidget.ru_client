@@ -1,6 +1,11 @@
 import { UserRole } from '@/services/auth/auth.types'
 
-export type UserLoginMethod = 'EMAIL' | 'PHONE' | 'GOOGLE' | 'GITHUB'
+export type UserLoginMethod =
+	| 'EMAIL'
+	| 'PHONE'
+	| 'GOOGLE'
+	| 'GITHUB'
+	| 'YANDEX'
 
 export interface IUser {
 	id: string

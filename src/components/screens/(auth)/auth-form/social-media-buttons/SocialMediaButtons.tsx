@@ -23,6 +23,14 @@ const SocialMediaButtons = () => {
 				<FontAwesomeIcon name="FaGithub" fill="currentColor" />
 				<span>GitHub</span>
 			</button>
+			<button
+				onClick={() => router.push('/auth/yandex')}
+				className={styles.button}
+				type="button"
+			>
+				<FontAwesomeIcon name="FaYandex" fill="currentColor" />
+				<span>Яндекс</span>
+			</button>
 		</div>
 	)
 }
