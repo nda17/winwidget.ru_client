@@ -1,39 +1,99 @@
 .form {
-	@apply w-[19.85rem] mx-auto overflow-hidden min-h-[22.699rem];
+	@apply w-full mx-auto overflow-hidden min-h-[22.699rem];
 
 	.auth-method-toggle {
-		@apply mb-4 grid grid-cols-2 gap-2;
+		@apply mb-5 grid grid-cols-2 gap-2 rounded-[1.15rem] border p-1;
+		background: rgba(255, 255, 255, 0.04);
+		border-color: rgba(255, 255, 255, 0.08);
 
 		.method-button {
-			@apply py-2 border border-white/30 rounded text-white transition-colors;
+			@apply rounded-[0.9rem] px-4 py-3 text-[0.95rem] font-medium transition-all;
+			color: rgba(217, 218, 232, 0.76);
+
+			&:hover {
+				color: #ffffff;
+				background: rgba(255, 255, 255, 0.04);
+			}
 		}
 
 		.method-button-active {
-			@apply bg-white text-black border-white;
+			color: #131b22;
+			background: linear-gradient(135deg, #f7fafc 0%, #dfe7f1 100%);
+			box-shadow: 0 8px 24px rgba(255, 255, 255, 0.14);
 		}
 	}
 
 	.verification-hint {
-		@apply text-[.75rem] text-white/80 mb-2 -mt-1;
+		@apply rounded-2xl border px-4 py-3 text-[0.78rem] leading-5 mb-3;
+		color: rgba(217, 218, 232, 0.82);
+		background: rgba(255, 255, 255, 0.04);
+		border-color: rgba(255, 255, 255, 0.08);
 	}
 
 	.link-actions {
-		@apply flex flex-wrap gap-3 mb-3;
+		@apply flex flex-wrap gap-2 mb-4;
 	}
 
 	.link-button {
-		@apply text-[.75rem] text-yellow-700 underline underline-offset-2;
+		@apply rounded-full border px-3 py-2 text-[0.76rem] font-medium transition-all;
+		color: rgba(217, 218, 232, 0.82);
+		background: rgba(255, 255, 255, 0.03);
+		border-color: rgba(255, 255, 255, 0.08);
+
+		&:hover:not(:disabled) {
+			@apply text-white;
+			background: rgba(255, 255, 255, 0.08);
+		}
+
+		&:disabled {
+			@apply cursor-not-allowed;
+			opacity: 0.65;
+		}
 	}
 
 	.wrapper-button {
-		@apply mb-3;
+		@apply mb-4;
 
 		.button-primary {
-			@apply w-full py-2 text-white font-semibold rounded transition duration-300 ease-in-out mt-1;
+			@apply mt-1 w-full rounded-2xl px-4 py-3.5 text-[0.95rem] font-semibold transition-all duration-300 ease-in-out;
+			color: #131b22;
+			background: linear-gradient(135deg, #f7fafc 0%, #dfe7f1 100%);
+			box-shadow: 0 18px 30px rgba(223, 231, 241, 0.18);
 
-			&:hover {
-				@apply transform scale-[.98];
+			&:hover:not(:disabled) {
+				transform: translateY(-1px);
+				box-shadow: 0 20px 34px rgba(223, 231, 241, 0.24);
 			}
+
+			&:disabled {
+				@apply cursor-not-allowed;
+				opacity: 0.72;
+				box-shadow: none;
+			}
+		}
+	}
+
+	.social-section {
+		@apply mb-4;
+	}
+
+	.section-divider {
+		@apply relative mb-4 text-center text-[0.76rem] uppercase tracking-[0.16em];
+		color: rgba(217, 218, 232, 0.46);
+
+		&::before {
+			content: '';
+			@apply absolute left-0 right-0 top-1/2;
+			border-top: 1px solid rgba(255, 255, 255, 0.08);
+		}
+
+		span {
+			@apply relative px-3;
+			background: linear-gradient(
+				180deg,
+				rgba(19, 27, 34, 0.98) 0%,
+				rgba(22, 29, 37, 0.98) 100%
+			);
 		}
 	}
 }

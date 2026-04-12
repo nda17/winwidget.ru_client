@@ -1,7 +1,10 @@
 .header {
-	@apply sticky top-0 z-10 px-3 pt-3;
+	@apply w-full border-b;
+	background: #131b22;
+	border-color: rgba(255, 255, 255, 0.08);
+	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
 }
 
 .header-shell {
-	@apply mx-auto w-full max-w-[88rem] relative;
+	@apply w-full relative;
 }

@@ -218,11 +218,7 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 			<div className={clsx(styles['wrapper-button'])}>
 				<button
 					type="submit"
-					className={clsx(
-						styles['button-primary'],
-						isLogin ? 'bg-green-500' : 'bg-yellow-700',
-						isLoading ? 'opacity-75 cursor-not-allowed' : ''
-					)}
+					className={clsx(styles['button-primary'])}
 					disabled={isLoading}
 				>
 					{isLoading
@@ -239,7 +235,12 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 				</button>
 			</div>
 
-			<SocialMediaButtons />
+			<div className={styles['social-section']}>
+				<div className={styles['section-divider']}>
+					<span>или продолжить через</span>
+				</div>
+				<SocialMediaButtons />
+			</div>
 
 			<AuthToggle isLogin={isLogin} />
 		</form>

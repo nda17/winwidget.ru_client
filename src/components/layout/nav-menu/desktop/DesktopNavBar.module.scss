@@ -1,31 +1,12 @@
 .wrapper {
-	@apply hidden lg:flex;
+	@apply hidden lg:flex w-full;
 
 	.layout-container {
-		@apply w-full flex justify-between items-center gap-6 rounded-[1.35rem] px-5 py-3;
-		position: relative;
-		overflow: hidden;
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		background: linear-gradient(135deg, rgba(19, 27, 34, 0.96) 0%, rgba(22, 29, 37, 0.94) 100%);
-		box-shadow: 0 18px 44px rgba(0, 0, 0, 0.24);
-		backdrop-filter: blur(16px);
-
-		&::before {
-			content: '';
-			position: absolute;
-			top: -1.5rem;
-			left: 1.5rem;
-			width: 10rem;
-			height: 6rem;
-			border-radius: 9999px;
-			background: rgba(255, 255, 255, 0.08);
-			filter: blur(38px);
-			pointer-events: none;
-		}
+		@apply container w-full flex justify-between items-center gap-4 px-4 py-[0.65rem];
 	}
 
 	.brand {
-		@apply relative z-1 flex items-center gap-3 min-w-fit pr-5;
+		@apply flex items-center gap-2 min-w-fit pr-4;
 		border-right: 1px solid rgba(255, 255, 255, 0.12);
 	}
 
@@ -34,10 +15,10 @@
 	}
 
 	.brand-title {
-		@apply text-sm font-700 uppercase tracking-[0.16em] text-white;
+		@apply text-[0.8rem] font-700 uppercase tracking-[0.14em] text-white;
 	}
 
 	.brand-subtitle {
-		@apply text-[0.72rem] text-gray-300 leading-tight whitespace-nowrap;
+		@apply text-[0.66rem] text-gray-300 leading-tight whitespace-nowrap;
 	}
 }

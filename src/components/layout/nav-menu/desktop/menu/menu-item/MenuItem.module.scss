@@ -1,12 +1,12 @@
 .wrapper {
 	.link-button {
-		@apply inline-flex items-center gap-2 rounded-max px-3 py-2 text-sm font-500 text-gray-300 transition-all;
+		@apply inline-flex items-center gap-[0.45rem] rounded-max px-[0.8rem] py-[0.48rem] text-[0.82rem] font-500 text-gray-300 transition-all;
 		border: 1px solid rgba(255, 255, 255, 0.08);
 		background: rgba(255, 255, 255, 0.04);
-		box-shadow: 0 4px 18px rgba(0, 0, 0, 0.14);
+		box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12);
 
 		> svg {
-			@apply w-[1.15rem] h-[1.15rem] transition-all rounded-max p-[0.18rem];
+			@apply w-[1rem] h-[1rem] transition-all rounded-max p-[0.14rem];
 			flex-shrink: 0;
 			fill: #d9dae8;
 			background: rgba(255, 255, 255, 0.06);
@@ -17,7 +17,7 @@
 			transform: translateY(-1px);
 			border-color: rgba(255, 255, 255, 0.16);
 			background: rgba(255, 255, 255, 0.08);
-			box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
+			box-shadow: 0 8px 16px rgba(0, 0, 0, 0.16);
 
 			> svg {
 				fill: #ffffff;
@@ -32,7 +32,7 @@
 		@apply text-white;
 		border-color: rgba(255, 255, 255, 0.18);
 		background: rgba(255, 255, 255, 0.1);
-		box-shadow: 0 12px 26px rgba(0, 0, 0, 0.2);
+		box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
 
 		> svg {
 			fill: #ffffff;

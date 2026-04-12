@@ -101,11 +101,7 @@ const RestorePasswordForm: NextPage = () => {
 			<div className={clsx(styles['wrapper-button'])}>
 				<button
 					type="submit"
-					className={clsx(
-						styles['button-primary'],
-						'bg-red-600',
-						isLoading ? 'opacity-75 cursor-not-allowed' : ''
-					)}
+					className={clsx(styles['button-primary'])}
 					disabled={isLoading}
 				>
 					Восстановить пароль

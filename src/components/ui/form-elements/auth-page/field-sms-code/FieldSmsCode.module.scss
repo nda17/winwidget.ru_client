@@ -1,15 +1,33 @@
 .wrapper-input {
-	@apply mb-3 relative;
+	@apply mb-4;
 
 	.label-input {
-		@apply text-gray-600;
+		@apply block text-[0.82rem] font-medium;
+		color: rgba(217, 218, 232, 0.8);
 
 		.input-field {
-			@apply w-full outline-none p-1 border border-solid rounded border-white bg-transparent text-white transition-colors mt-1 mb-[1.1rem];
+			@apply mt-2 w-full rounded-2xl border px-4 py-3 outline-none transition-all;
+			background: rgba(255, 255, 255, 0.04);
+			border-color: rgba(255, 255, 255, 0.1);
+			color: #ffffff;
+			letter-spacing: 0.18em;
+			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+
+			&::placeholder {
+				color: rgba(217, 218, 232, 0.45);
+				letter-spacing: normal;
+			}
+
+			&:focus {
+				background: rgba(255, 255, 255, 0.06);
+				border-color: rgba(223, 231, 241, 0.64);
+				box-shadow: 0 0 0 4px rgba(223, 231, 241, 0.08);
+			}
 		}
 	}
 
 	.error {
-		@apply text-[.65rem] leading-[15px] w-full text-red-700 tracking-tight absolute top-10 z-50;
+		@apply mt-2 leading-[12px] text-[0.72rem] tracking-tight;
+		color: #f8b4b4;
 	}
 }

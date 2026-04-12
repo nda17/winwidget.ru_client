@@ -89,7 +89,7 @@ export const usePhoneMask = <TFieldValues extends FieldValues & { phone?: string
 		})
 		syncingRef.current = false
 		moveCursor()
-	}, [moveCursor, setValue])
+	}, [inputRef, moveCursor, phoneField, setValue, updateMaskEmpty])
 
 	const onFocus = useCallback(() => {
 		const input = inputRef.current
@@ -129,7 +129,7 @@ export const usePhoneMask = <TFieldValues extends FieldValues & { phone?: string
 				e.preventDefault()
 			}
 		},
-		[renderMask]
+		[renderMask, updateMaskEmpty]
 	)
 
 	const onPaste = useCallback(
@@ -142,7 +142,7 @@ export const usePhoneMask = <TFieldValues extends FieldValues & { phone?: string
 			renderMask()
 			e.preventDefault()
 		},
-		[normalizeDigits, renderMask]
+		[normalizeDigits, renderMask, updateMaskEmpty]
 	)
 
 	const onBeforeInput = useCallback(
@@ -171,7 +171,7 @@ export const usePhoneMask = <TFieldValues extends FieldValues & { phone?: string
 				renderMask()
 			}
 		},
-		[normalizeDigits, renderMask]
+		[normalizeDigits, renderMask, updateMaskEmpty]
 	)
 
 	const onBlur = useCallback(() => {
@@ -183,7 +183,7 @@ export const usePhoneMask = <TFieldValues extends FieldValues & { phone?: string
 				shouldTouch: interactedRef.current
 			})
 		}
-	}, [setValue, updateMaskEmpty])
+	}, [phoneField, setValue, updateMaskEmpty])
 
 	const reset = useCallback(() => {
 		digitsRef.current = ''

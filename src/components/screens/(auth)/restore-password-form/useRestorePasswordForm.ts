@@ -18,6 +18,7 @@ const useRestorePasswordForm = () => {
 	const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email')
 	const phoneInputRef = useRef<HTMLInputElement>(null)
 	const phoneMask = usePhoneMask(setValue, phoneInputRef)
+	const resetPhoneMask = phoneMask.reset
 
 	const router = useRouter()
 
@@ -61,8 +62,8 @@ const useRestorePasswordForm = () => {
 	useEffect(() => {
 		setValue('email', '')
 		setValue('phone', '')
-		phoneMask.reset()
-	}, [authMethod, phoneMask.reset, setValue])
+		resetPhoneMask()
+	}, [authMethod, resetPhoneMask, setValue])
 
 	const onSubmit: SubmitHandler<IRestorePassword> = async (data) => {
 		if (!isRecaptchaReady) {

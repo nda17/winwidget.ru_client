@@ -32,13 +32,13 @@ const Footer: NextPage = () => {
 									href={PUBLIC_PAGES.SOCIALS_LINK_VK}
 									className={clsx(styles['link-icon'])}
 								>
-									<FontAwesomeIcon name="FaVk" fill="gray" />
+									<FontAwesomeIcon name="FaVk" fill="#d9dae8" />
 								</Link>
 								<Link
 									href={PUBLIC_PAGES.SOCIALS_LINK_TG}
 									className={clsx(styles['link-icon'])}
 								>
-									<FontAwesomeIcon name="FaTelegram" fill="gray" />
+									<FontAwesomeIcon name="FaTelegram" fill="#d9dae8" />
 								</Link>
 							</div>
 						</div>

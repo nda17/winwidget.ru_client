@@ -204,7 +204,7 @@ const Profile: NextPage = () => {
 		required: 'Введите номер телефона',
 		pattern: {
 			value: validPhone,
-			message: 'Проверьте правильность ввода номера телефона'
+			message: 'Проверьте правильность ввода'
 		}
 	})
 
@@ -348,7 +348,7 @@ const Profile: NextPage = () => {
 										required: 'Введите email',
 										pattern: {
 											value: validEmail,
-											message: 'Проверьте правильность ввода email'
+											message: 'Проверьте правильность ввода'
 										}
 									})}
 								/>

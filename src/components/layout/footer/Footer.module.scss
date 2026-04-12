@@ -1,5 +1,7 @@
 .footer {
-	@apply bg-[#131b22] p-4 relative z-10 flex justify-center;
+	@apply p-4 relative z-10 flex justify-center border-t;
+	background: linear-gradient(180deg, rgba(19, 27, 34, 0.98) 0%, rgba(22, 29, 37, 0.98) 100%);
+	border-color: rgba(255, 255, 255, 0.08);
 
 	.layout-container {
 		@apply flex flex-col max-w-[88rem] w-full;
@@ -45,7 +47,7 @@
 				}
 
 				.info-llc {
-					@apply text-white text-[.7rem] leading-[.8rem] select-none;
+					@apply text-gray-300 text-[.7rem] leading-[.8rem] select-none;
 				}
 
 				.link-contact {
@@ -78,7 +80,7 @@
 			@apply flex flex-col select-none items-center;
 			.text-inform,
 			.date-inform {
-				@apply text-[#ffffff] text-[.8rem] leading-[.9rem];
+				@apply text-gray-300 text-[.8rem] leading-[.9rem];
 			}
 			.ybs-inform-wrapper {
 				@apply flex gap-1 mb-3 items-center;

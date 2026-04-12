@@ -73,3 +73,10 @@
 	z-index: 1000 !important;
 	opacity: 0.87 !important;
 }
+
+body.hide-recaptcha-badge .grecaptcha-badge {
+	display: none !important;
+	visibility: hidden !important;
+	opacity: 0 !important;
+	pointer-events: none !important;
+}

@@ -7,6 +7,10 @@ const SignUp: NextPage = () => {
 		<div className={styles.wrapper}>
 			<div className={styles.form}>
 				<h2 className={styles.title}>Регистрация</h2>
+				<p className={styles.subtitle}>
+					Создайте аккаунт и настройте удобный способ входа для работы с
+					сервисом.
+				</p>
 				<AuthForm isLogin={false} />
 			</div>
 		</div>

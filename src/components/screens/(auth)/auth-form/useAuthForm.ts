@@ -11,7 +11,7 @@ import { useAuthStore } from '@/store/auth-store/auth-store'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { useRouter } from 'next/navigation'
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 
@@ -87,12 +87,13 @@ const useAuthForm = (isLogin: boolean) => {
 	const emailValue = watch('email')
 	const phoneValue = watch('phone')
 	const phoneMask = usePhoneMask(setValue, phoneInputRef)
+	const resetPhoneMask = phoneMask.reset
 
-	const clearEmailCodeStep = () => {
+	const clearEmailCodeStep = useCallback(() => {
 		clearPendingEmailRegistrationState()
 		setIsEmailCodeRequested(false)
 		setValue('code', '')
-	}
+	}, [setValue])
 
 	const syncPendingEmailRegistrationState = (
 		payload: IEmailRegistrationResponse
@@ -335,7 +336,7 @@ const useAuthForm = (isLogin: boolean) => {
 			clearEmailCodeStep()
 			setIsPhoneCodeRequested(false)
 			setValue('code', '')
-			phoneMask.reset()
+			resetPhoneMask()
 			return
 		}
 
@@ -353,7 +354,7 @@ const useAuthForm = (isLogin: boolean) => {
 		setValue('email', pendingEmailRegistration.email)
 		setValue('code', '')
 		setIsEmailCodeRequested(true)
-	}, [isLogin, phoneMask.reset, setValue])
+	}, [clearEmailCodeStep, isLogin, resetPhoneMask, setValue])
 
 	useEffect(() => {
 		if (authMethod === 'phone') {
@@ -364,8 +365,8 @@ const useAuthForm = (isLogin: boolean) => {
 
 		setIsPhoneCodeRequested(false)
 		setValue('code', '')
-		phoneMask.reset()
-	}, [authMethod, phoneMask.reset, setValue])
+		resetPhoneMask()
+	}, [authMethod, clearEmailCodeStep, resetPhoneMask, setValue])
 
 	const onSubmit: SubmitHandler<IFormData> = async (data) => {
 		let token: string | null = null

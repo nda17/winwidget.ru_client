@@ -1,16 +1,12 @@
 .wrapper {
-	@apply relative;
+	@apply relative w-full;
 
 	.layout-container {
-		@apply flex justify-between items-center gap-3 rounded-[1.2rem] px-4 py-3;
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		background: linear-gradient(135deg, rgba(19, 27, 34, 0.96) 0%, rgba(22, 29, 37, 0.94) 100%);
-		box-shadow: 0 16px 36px rgba(0, 0, 0, 0.24);
-		backdrop-filter: blur(14px);
+		@apply flex justify-between items-center gap-3 px-4 py-[0.7rem];
 	}
 
 	.brand {
-		@apply flex items-center gap-3 min-w-0;
+		@apply flex items-center gap-2 min-w-0;
 	}
 
 	.brand-copy {
@@ -18,17 +14,17 @@
 	}
 
 	.brand-title {
-		@apply text-xs font-700 uppercase tracking-[0.16em] text-white whitespace-nowrap;
+		@apply text-[0.74rem] font-700 uppercase tracking-[0.14em] text-white whitespace-nowrap;
 	}
 
 	.brand-subtitle {
-		@apply text-[0.68rem] text-gray-300 leading-tight whitespace-nowrap;
+		@apply text-[0.63rem] text-gray-300 leading-tight whitespace-nowrap;
 	}
 
 	.menu-toggle {
-		@apply flex items-center justify-center flex-shrink-0 rounded-max p-2;
+		@apply flex items-center justify-center flex-shrink-0 rounded-max p-[0.45rem];
 		border: 1px solid rgba(255, 255, 255, 0.12);
 		background: rgba(255, 255, 255, 0.06);
-		box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 	}
 }
