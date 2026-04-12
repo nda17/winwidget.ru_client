@@ -1,10 +1,10 @@
 {
 	"scope": "/",
 	"start_url": "/",
-	"name": "Auth-form",
-	"app_name": "Auth-form",
-	"short_name": "Auth-form",
-	"description": "Auth-form",
+	"name": "Winwidget.ru",
+	"app_name": "Winwidget.ru",
+	"short_name": "Winwidget",
+	"description": "Виджеты для генерации клиентов вашему бизнесу",
 	"icons": [
 		{
 			"src": "/favicon.ico",
