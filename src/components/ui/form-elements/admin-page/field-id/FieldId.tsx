@@ -13,6 +13,7 @@ const FieldId = forwardRef<HTMLInputElement, IField>(
 						className={clsx(styles['input-field'])}
 						ref={ref}
 						type={type}
+						readOnly
 						{...rest}
 						autoComplete="on"
 					/>

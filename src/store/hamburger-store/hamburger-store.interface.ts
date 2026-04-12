@@ -1,4 +1,4 @@
 export interface IHamburgerStore {
 	visible: boolean
-	setVisible: () => void
+	setVisible: (value?: boolean) => void
 }

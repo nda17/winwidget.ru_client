@@ -9,7 +9,7 @@ const PremiumContent: NextPage = () => {
 
 	return (
 		<div className={styles.wrapper}>
-			<Heading text="Страница для пользователей с активной Premium-подпиской" />
+			<Heading text="Платный Premium контент" />
 
 			<div className={styles.text}>
 				<Link

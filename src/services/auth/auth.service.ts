@@ -40,11 +40,7 @@ export enum EnumTokens {
 }
 
 class AuthService {
-	async main(
-		type: 'login' | 'register',
-		data: IFormData,
-		token?: string | null
-	) {
+	async main(type: 'login', data: IFormData, token?: string | null) {
 		const response = await axiosClassicRequest.post<IAuthResponse>(
 			`/auth/${type}`,
 			data,

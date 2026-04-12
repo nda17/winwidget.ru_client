@@ -4,6 +4,12 @@ import { managerMiddleware } from '@/app/middlewares/managerMiddleware'
 import { profileMiddleware } from '@/app/middlewares/profileMiddleware'
 import { NextRequest, NextResponse } from 'next/server'
 
+export const config = {
+	matcher: [
+		'/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|otf)).*)'
+	]
+}
+
 export const middleware = (request: NextRequest) => {
 	const { pathname } = request.nextUrl
 
