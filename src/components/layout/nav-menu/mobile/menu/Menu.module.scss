@@ -1,6 +1,7 @@
 .wrapper {
-	@apply absolute right-0 z-5 p-4 rounded-[1.2rem];
-	top: calc(100% + 0.75rem);
+	@apply absolute right-0 z-5 p-4;
+	top: 0;
+	padding: 7rem 1rem 1rem 1em;
 	width: min(22rem, calc(100vw - 1.5rem));
 	border: 1px solid rgba(255, 255, 255, 0.08);
 	background: linear-gradient(

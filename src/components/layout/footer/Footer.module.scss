@@ -1,11 +1,18 @@
+/* .header {
+	@apply w-full rounded-b-[1.2rem];
+	background: #131b22;
+	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+} */
 .footer {
-	@apply p-4 relative z-10 flex justify-center border-t;
+	@apply p-4 relative z-3 flex justify-center border-t;
 	background: linear-gradient(
 		180deg,
 		rgba(19, 27, 34, 0.98) 0%,
 		rgba(22, 29, 37, 0.98) 100%
 	);
 	border-color: rgba(255, 255, 255, 0.08);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 
 	.layout-container {
 		@apply flex flex-col max-w-[88rem] w-full;
