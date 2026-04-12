@@ -22,9 +22,13 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 		authMethod,
 		setAuthMethod,
 		isPhoneCodeRequested,
+		isEmailCodeRequested,
+		emailValue,
 		phoneValue,
 		phoneInputRef,
 		phoneMask,
+		resendEmailCode,
+		resetEmailCodeStep,
 		resetPhoneCodeStep
 	} = useAuthForm(isLogin)
 
@@ -54,21 +58,66 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 			</div>
 
 			{authMethod === 'email' ? (
-				<FieldEmail
-					{...register('email', {
-						required: 'Введите email',
-						pattern: {
-							value: validEmail,
-							message: 'Проверьте правильность ввода email'
+				<>
+					<FieldEmail
+						{...register('email', {
+							required: 'Введите email',
+							pattern: {
+								value: validEmail,
+								message: 'Проверьте правильность ввода email'
+							}
+						})}
+						placeholder="Email:"
+						type="email"
+						error={errors.email}
+						data-validated={
+							touchedFields.email || isSubmitted ? 'true' : undefined
 						}
-					})}
-					placeholder="Email:"
-					type="email"
-					error={errors.email}
-					data-validated={
-						touchedFields.email || isSubmitted ? 'true' : undefined
-					}
-				/>
+						disabled={!isLogin && isEmailCodeRequested}
+					/>
+					{!isLogin && isEmailCodeRequested && (
+						<>
+							<FieldSmsCode
+								{...register('code', {
+									required: 'Введите код из email',
+									pattern: {
+										value: validPhoneCode,
+										message: 'Код должен содержать 4-6 цифр'
+									}
+								})}
+								placeholder="Код из email:"
+								type="text"
+								error={errors.code}
+								data-validated={
+									touchedFields.code || isSubmitted
+										? 'true'
+										: undefined
+								}
+							/>
+							<div className={styles['verification-hint']}>
+								Код отправлен на email {emailValue}. Код действует 10 минут.
+							</div>
+							<div className={styles['link-actions']}>
+								<button
+									type="button"
+									className={styles['link-button']}
+									onClick={resendEmailCode}
+									disabled={isLoading}
+								>
+									Отправить код повторно
+								</button>
+								<button
+									type="button"
+									className={styles['link-button']}
+									onClick={resetEmailCodeStep}
+									disabled={isLoading}
+								>
+									Изменить email
+								</button>
+							</div>
+						</>
+					)}
+				</>
 			) : (
 				<>
 					{(() => {
@@ -124,16 +173,19 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 										: undefined
 								}
 							/>
-							<div className={styles['phone-hint']}>
+							<div className={styles['verification-hint']}>
 								Код отправлен на номер {phoneValue}
 							</div>
-							<button
-								type="button"
-								className={styles['link-button']}
-								onClick={resetPhoneCodeStep}
-							>
-								Изменить номер
-							</button>
+							<div className={styles['link-actions']}>
+								<button
+									type="button"
+									className={styles['link-button']}
+									onClick={resetPhoneCodeStep}
+									disabled={isLoading}
+								>
+									Изменить номер
+								</button>
+							</div>
 						</>
 					)}
 				</>
@@ -141,12 +193,18 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 
 			<FieldPassword
 				{...register('password', {
-					required: 'Введите пароль',
-					pattern: {
-						value: validPassword,
-						message:
-							'Мин. длина 6 символов. Должен содержать 1 цифру 0-9, 1 строчную букву a-z и 1 заглавную букву A-Z.'
-					}
+					required:
+						!isLogin && authMethod === 'email' && isEmailCodeRequested
+							? false
+							: 'Введите пароль',
+					pattern:
+						!isLogin && authMethod === 'email' && isEmailCodeRequested
+							? undefined
+							: {
+									value: validPassword,
+									message:
+										'Мин. длина 6 символов. Должен содержать 1 цифру 0-9, 1 строчную букву a-z и 1 заглавную букву A-Z.'
+								}
 				})}
 				placeholder="Пароль:"
 				type="password"
@@ -154,6 +212,7 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 				data-validated={
 					touchedFields.password || isSubmitted ? 'true' : undefined
 				}
+				disabled={!isLogin && authMethod === 'email' && isEmailCodeRequested}
 			/>
 
 			<div className={clsx(styles['wrapper-button'])}>
@@ -168,11 +227,15 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 				>
 					{isLoading
 						? 'Загрузка...'
-						: authMethod === 'phone' && !isLogin && !isPhoneCodeRequested
-							? 'Получить код'
-							: isLogin
-								? 'Войти'
-								: 'Зарегистрироваться'}
+						: isLogin
+							? 'Войти'
+							: authMethod === 'phone'
+								? !isPhoneCodeRequested
+									? 'Получить код'
+									: 'Зарегистрироваться'
+								: !isEmailCodeRequested
+									? 'Получить код'
+									: 'Подтвердить email'}
 				</button>
 			</div>
 

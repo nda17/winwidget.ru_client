@@ -107,11 +107,7 @@ const Profile: NextPage = () => {
 										<span className={styles['info-label']}>Email:</span>{' '}
 										{user.email}{' '}
 										<i className={styles['info-status']}>
-											(
-											{user.verificationToken
-												? 'Требуется подтверждение'
-												: 'Подтверждено'}
-											)
+											(Подтверждено)
 										</i>
 									</p>
 								)}

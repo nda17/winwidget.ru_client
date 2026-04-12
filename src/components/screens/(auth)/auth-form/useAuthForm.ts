@@ -2,7 +2,9 @@ import { PUBLIC_PAGES } from '@/config/pages/public.config'
 import { usePhoneMask } from '@/hooks/usePhoneMask'
 import { useRecaptchaV3 } from '@/hooks/useRecaptchaV3'
 import { useNavigationContext } from '@/providers/navigation-provider/NavigationProvider'
-import authService from '@/services/auth/auth.service'
+import authService, {
+	IEmailRegistrationResponse
+} from '@/services/auth/auth.service'
 import { IFormData } from '@/shared/types/form.types'
 import { validPhoneCode } from '@/shared/regex'
 import { useAuthStore } from '@/store/auth-store/auth-store'
@@ -13,6 +15,56 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 
+const PENDING_EMAIL_REGISTRATION_STORAGE_KEY = 'pendingEmailRegistration'
+
+type PendingEmailRegistrationState = {
+	email: string
+	expiresAt: string
+	resendAvailableAt: string
+}
+
+const savePendingEmailRegistrationState = (
+	payload: PendingEmailRegistrationState
+) => {
+	if (typeof window === 'undefined') {
+		return
+	}
+
+	window.localStorage.setItem(
+		PENDING_EMAIL_REGISTRATION_STORAGE_KEY,
+		JSON.stringify(payload)
+	)
+}
+
+const getPendingEmailRegistrationState = () => {
+	if (typeof window === 'undefined') {
+		return null
+	}
+
+	const rawValue = window.localStorage.getItem(
+		PENDING_EMAIL_REGISTRATION_STORAGE_KEY
+	)
+
+	if (!rawValue) {
+		return null
+	}
+
+	try {
+		return JSON.parse(rawValue) as PendingEmailRegistrationState
+	} catch {
+		window.localStorage.removeItem(PENDING_EMAIL_REGISTRATION_STORAGE_KEY)
+		return null
+	}
+}
+
+const clearPendingEmailRegistrationState = () => {
+	if (typeof window === 'undefined') {
+		return
+	}
+
+	window.localStorage.removeItem(PENDING_EMAIL_REGISTRATION_STORAGE_KEY)
+}
+
 const useAuthForm = (isLogin: boolean) => {
 	const { previousRoute } = useNavigationContext()
 	const setAuth = useAuthStore((state) => state.setAuth)
@@ -21,6 +73,7 @@ const useAuthForm = (isLogin: boolean) => {
 	const whiteListRedirect = ['/?', '/free-content?', '/premium-content?']
 	const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email')
 	const [isPhoneCodeRequested, setIsPhoneCodeRequested] = useState(false)
+	const [isEmailCodeRequested, setIsEmailCodeRequested] = useState(false)
 
 	const { register, handleSubmit, reset, formState, watch, setValue } =
 		useForm<IFormData>({
@@ -30,9 +83,41 @@ const useAuthForm = (isLogin: boolean) => {
 	const router = useRouter()
 	const [isPending, startTransition] = useTransition()
 	const queryClient = useQueryClient()
-	const { executeRecaptcha, isRecaptchaReady } = useRecaptchaV3()
+	const { executeRecaptcha } = useRecaptchaV3()
+	const emailValue = watch('email')
 	const phoneValue = watch('phone')
 	const phoneMask = usePhoneMask(setValue, phoneInputRef)
+
+	const clearEmailCodeStep = () => {
+		clearPendingEmailRegistrationState()
+		setIsEmailCodeRequested(false)
+		setValue('code', '')
+	}
+
+	const syncPendingEmailRegistrationState = (
+		payload: IEmailRegistrationResponse
+	) => {
+		savePendingEmailRegistrationState(payload)
+		setValue('email', payload.email)
+		setValue('code', '')
+		setIsEmailCodeRequested(true)
+	}
+
+	const handleEmailFlowError = (error: unknown, prefix: string) => {
+		if (!axios.isAxiosError(error)) {
+			return
+		}
+
+		const errorCode = error.response?.data?.code
+		if (
+			errorCode === 'email_code_not_found' ||
+			errorCode === 'user_already_exists'
+		) {
+			clearEmailCodeStep()
+		}
+
+		toast.error(`${prefix}: ${error.response?.data?.message}`)
+	}
 
 	const { mutate: mutateLogin, isPending: isLoginPending } = useMutation({
 		mutationKey: ['login'],
@@ -64,35 +149,87 @@ const useAuthForm = (isLogin: boolean) => {
 		}
 	})
 
-	const { mutate: mutateRegister, isPending: isRegisterPending } =
+	const { mutate: mutateEmailSendCode, isPending: isEmailSendCodePending } =
 		useMutation({
-			mutationKey: ['register'],
+			mutationKey: ['email-send-code'],
 			mutationFn: ({
 				data,
 				token
 			}: {
 				data: IFormData
 				token: string | null
-			}) => authService.main('register', data, token),
-			onSuccess() {
-				startTransition(() => {
-					setAuth(true)
-					setAuthResolved(true)
-					toast.success(
-						'Регистрация прошла успешно. Ссылка для подтверждения email отправлена на вашу почту.'
-					)
-					reset()
-					router.replace('/profile')
-				})
+			}) =>
+				authService.sendEmailCode(
+					{
+						email: data.email || '',
+						password: data.password
+					},
+					token
+				),
+			onSuccess({ data }) {
+				syncPendingEmailRegistrationState(data)
+				toast.success('Код подтверждения отправлен на email')
 			},
 			onError(error) {
-				if (axios.isAxiosError(error)) {
-					toast.error(
-						`Ошибка регистрации: ${error.response?.data?.message}`
-					)
-				}
+				handleEmailFlowError(error, 'Ошибка отправки кода')
 			}
 		})
+
+	const {
+		mutate: mutateEmailRegister,
+		isPending: isEmailRegisterPending
+	} = useMutation({
+		mutationKey: ['email-register'],
+		mutationFn: ({
+			data,
+			token
+		}: {
+			data: IFormData
+			token: string | null
+		}) =>
+			authService.registerByEmail(
+				{
+					email: data.email || '',
+					code: data.code
+				},
+				token
+			),
+		onSuccess() {
+			startTransition(() => {
+				clearEmailCodeStep()
+				setAuth(true)
+				setAuthResolved(true)
+				toast.success('Email подтвержден. Регистрация завершена')
+				reset()
+				router.replace('/profile')
+				queryClient.invalidateQueries({ queryKey: ['get-profile'] })
+			})
+		},
+		onError(error) {
+			handleEmailFlowError(error, 'Ошибка подтверждения email')
+		}
+	})
+
+	const {
+		mutate: mutateEmailResendCode,
+		isPending: isEmailResendCodePending
+	} = useMutation({
+		mutationKey: ['email-resend-code'],
+		mutationFn: ({
+			email,
+			token
+		}: {
+			email: string
+			token: string | null
+		}) => authService.resendEmailCode({ email }, token),
+		onSuccess({ data }) {
+			syncPendingEmailRegistrationState(data)
+			toast.success('Новый код подтверждения отправлен на email')
+		},
+		onError(error) {
+			handleEmailFlowError(error, 'Ошибка повторной отправки')
+		}
+	})
 
 	const { mutate: mutatePhoneSendCode, isPending: isPhoneSendCodePending } =
 		useMutation({
@@ -194,10 +331,41 @@ const useAuthForm = (isLogin: boolean) => {
 		})
 
 	useEffect(() => {
+		if (isLogin) {
+			clearEmailCodeStep()
+			setIsPhoneCodeRequested(false)
+			setValue('code', '')
+			phoneMask.reset()
+			return
+		}
+
+		const pendingEmailRegistration = getPendingEmailRegistrationState()
+
+		if (!pendingEmailRegistration) {
+			return
+		}
+
+		if (new Date(pendingEmailRegistration.expiresAt).getTime() < Date.now()) {
+			clearPendingEmailRegistrationState()
+			return
+		}
+
+		setValue('email', pendingEmailRegistration.email)
+		setValue('code', '')
+		setIsEmailCodeRequested(true)
+	}, [isLogin, phoneMask.reset, setValue])
+
+	useEffect(() => {
+		if (authMethod === 'phone') {
+			clearEmailCodeStep()
+			setValue('code', '')
+			return
+		}
+
 		setIsPhoneCodeRequested(false)
 		setValue('code', '')
 		phoneMask.reset()
-	}, [authMethod, isLogin, phoneMask.reset, setValue])
+	}, [authMethod, phoneMask.reset, setValue])
 
 	const onSubmit: SubmitHandler<IFormData> = async (data) => {
 		let token: string | null = null
@@ -210,7 +378,9 @@ const useAuthForm = (isLogin: boolean) => {
 						: 'phone_send_code'
 				: isLogin
 					? 'login'
-					: 'register'
+					: isEmailCodeRequested
+						? 'email_register'
+						: 'register'
 
 		try {
 			token = await executeRecaptcha(recaptchaAction)
@@ -252,13 +422,50 @@ const useAuthForm = (isLogin: boolean) => {
 			return
 		}
 
-		mutateRegister({ data, token })
+		if (!isEmailCodeRequested) {
+			mutateEmailSendCode({ data, token })
+			return
+		}
+
+		if (!data.code || !validPhoneCode.test(data.code)) {
+			toast.error('Введите корректный код из email')
+			return
+		}
+
+		mutateEmailRegister({ data, token })
+	}
+
+	const resendEmailCode = async () => {
+		const email = emailValue?.trim()
+
+		if (!email) {
+			toast.error('Введите email')
+			return
+		}
+
+		let token: string | null = null
+
+		try {
+			token = await executeRecaptcha('email_resend_code')
+		} catch {
+			toast.error('Не удалось пройти проверку капчи')
+			return
+		}
+
+		if (!token) {
+			toast.error('Не удалось пройти проверку капчи')
+			return
+		}
+
+		mutateEmailResendCode({ email, token })
 	}
 
 	const isLoading =
 		isPending ||
 		isLoginPending ||
-		isRegisterPending ||
+		isEmailSendCodePending ||
+		isEmailRegisterPending ||
+		isEmailResendCodePending ||
 		isPhoneSendCodePending ||
 		isPhoneRegisterPending ||
 		isPhoneLoginPending
@@ -272,9 +479,15 @@ const useAuthForm = (isLogin: boolean) => {
 		authMethod,
 		setAuthMethod,
 		isPhoneCodeRequested,
+		isEmailCodeRequested,
+		emailValue,
 		phoneValue,
 		phoneInputRef,
 		phoneMask,
+		resendEmailCode,
+		resetEmailCodeStep: () => {
+			clearEmailCodeStep()
+		},
 		resetPhoneCodeStep: () => {
 			setIsPhoneCodeRequested(false)
 			setValue('code', '')

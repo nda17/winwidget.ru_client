@@ -72,15 +72,10 @@ const UserList: NextPage = () => {
 
 	const getUserStatus = (user: (typeof activePage)[number]) => {
 		if (user.email) {
-			return user.verificationToken
-				? {
-						label: 'Email не подтвержден',
-						tone: 'pending'
-					}
-				: {
-						label: 'Email подтвержден',
-						tone: 'success'
-					}
+			return {
+				label: 'Email подтвержден',
+				tone: 'success'
+			}
 		}
 
 		return user.isPhoneVerified

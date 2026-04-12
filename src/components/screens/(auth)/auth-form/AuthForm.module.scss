@@ -13,12 +13,16 @@
 		}
 	}
 
-	.phone-hint {
+	.verification-hint {
 		@apply text-[.75rem] text-white/80 mb-2 -mt-1;
 	}
 
+	.link-actions {
+		@apply flex flex-wrap gap-3 mb-3;
+	}
+
 	.link-button {
-		@apply text-[.75rem] text-yellow-700 mb-3 underline underline-offset-2;
+		@apply text-[.75rem] text-yellow-700 underline underline-offset-2;
 	}
 
 	.wrapper-button {

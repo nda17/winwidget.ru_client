@@ -8,7 +8,6 @@ export interface IUser {
 	isPhoneVerified?: boolean
 	password?: string
 	avatarPath?: string
-	verificationToken?: string
 	rights: UserRole[]
 	createdAt: string
 }

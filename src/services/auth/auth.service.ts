@@ -11,10 +11,6 @@ interface IAuthResponse {
 	user: IUser
 }
 
-interface IConfirmationToken {
-	verificationToken: string
-}
-
 interface IEmail {
 	email?: string
 	phone?: string
@@ -24,6 +20,18 @@ interface IPhonePayload {
 	phone: string
 	password?: string
 	code?: string
+}
+
+interface IEmailCodePayload {
+	email: string
+	password?: string
+	code?: string
+}
+
+export interface IEmailRegistrationResponse {
+	email: string
+	expiresAt: string
+	resendAvailableAt: string
 }
 
 export enum EnumTokens {
@@ -80,15 +88,6 @@ class AuthService {
 		return response.data
 	}
 
-	async getConfirmationEmail(verificationToken: string) {
-		const response = await axiosClassicRequest.patch<IConfirmationToken>(
-			'/auth/confirmation-email',
-			{ verificationToken: verificationToken }
-		)
-
-		return response
-	}
-
 	async getRestorePassword(data: IEmail, token?: string | null) {
 		const response = await axiosClassicRequest.patch<IEmail>(
 			'/auth/restore-password',
@@ -113,6 +112,56 @@ class AuthService {
 		}
 
 		return response
+	}
+
+	async sendEmailCode(data: IEmailCodePayload, token?: string | null) {
+		return axiosClassicRequest.post<IEmailRegistrationResponse>(
+			'/auth/register',
+			{
+				email: data.email,
+				password: data.password
+			},
+			{
+				headers: {
+					recaptcha: token
+				}
+			}
+		)
+	}
+
+	async registerByEmail(data: IEmailCodePayload, token?: string | null) {
+		const response = await axiosClassicRequest.post<IAuthResponse>(
+			'/auth/email/register',
+			{
+				email: data.email,
+				code: data.code
+			},
+			{
+				headers: {
+					recaptcha: token
+				}
+			}
+		)
+
+		if (response.data.accessToken) {
+			saveTokenStorage(response.data.accessToken)
+		}
+
+		return response
+	}
+
+	async resendEmailCode(data: IEmailCodePayload, token?: string | null) {
+		return axiosClassicRequest.post<IEmailRegistrationResponse>(
+			'/auth/email/resend-code',
+			{
+				email: data.email
+			},
+			{
+				headers: {
+					recaptcha: token
+				}
+			}
+		)
 	}
 
 	async sendPhoneCode(data: IPhonePayload, token?: string | null) {

@@ -157,9 +157,7 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 								<span className={styles['info-label']}>Статус:</span>{' '}
 								<span className={styles['info-status']}>
 									{data.email
-										? data.verificationToken
-											? 'Email не подтвержден'
-											: 'Email подтвержден'
+										? 'Email подтвержден'
 										: data.isPhoneVerified
 											? 'Телефон подтвержден'
 											: 'Телефон не подтвержден'}
