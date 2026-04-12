@@ -42,12 +42,15 @@ const StatisticsInsights: FC = () => {
 	const previousMonth = sortedRegistrations.at(-2)
 	const peakMonth = sortedRegistrations.reduce(
 		(topItem, currentItem) =>
-			!topItem || currentItem.count > topItem.count ? currentItem : topItem,
+			!topItem || currentItem.count > topItem.count
+				? currentItem
+				: topItem,
 		undefined as (typeof sortedRegistrations)[number] | undefined
 	)
 	const monthOverMonthGrowth =
 		latestMonth && previousMonth && previousMonth.count > 0
-			? ((latestMonth.count - previousMonth.count) / previousMonth.count) * 100
+			? ((latestMonth.count - previousMonth.count) / previousMonth.count) *
+				100
 			: 0
 	const publicRegistrations = Math.max(
 		(overview?.totalUsers ?? 0) -
@@ -60,7 +63,9 @@ const StatisticsInsights: FC = () => {
 		<div className={styles.wrapper}>
 			<div className={styles.card}>
 				<p className={styles.label}>Регистрации за весь период</p>
-				<p className={styles.value}>{formatStatValue(publicRegistrations)}</p>
+				<p className={styles.value}>
+					{formatStatValue(publicRegistrations)}
+				</p>
 				<p className={styles.caption}>
 					Без учёта администраторов и менеджеров
 				</p>
@@ -87,7 +92,9 @@ const StatisticsInsights: FC = () => {
 			</div>
 			<div className={styles.card}>
 				<p className={styles.label}>Рост к прошлому месяцу</p>
-				<p className={styles.value}>{formatPercentage(monthOverMonthGrowth)}</p>
+				<p className={styles.value}>
+					{formatPercentage(monthOverMonthGrowth)}
+				</p>
 				<p className={styles.caption}>
 					{previousMonth
 						? `Сравнение с ${previousMonth.month} ${previousMonth.year}`
@@ -117,14 +124,18 @@ const StatisticsInsights: FC = () => {
 				<p className={styles.value}>
 					{formatStatValue(overview?.activeUsers30d ?? 0)}
 				</p>
-				<p className={styles.caption}>Живая аудитория за последний месяц</p>
+				<p className={styles.caption}>
+					Живая аудитория за последний месяц
+				</p>
 			</div>
 			<div className={styles.card}>
 				<p className={styles.label}>Новые за 30 дней</p>
 				<p className={styles.value}>
 					{formatStatValue(overview?.newUsers30d ?? 0)}
 				</p>
-				<p className={styles.caption}>Новые пользователи за последний месяц</p>
+				<p className={styles.caption}>
+					Новые пользователи за последний месяц
+				</p>
 			</div>
 			<div className={styles.card}>
 				<p className={styles.label}>Премиум-пользователи</p>

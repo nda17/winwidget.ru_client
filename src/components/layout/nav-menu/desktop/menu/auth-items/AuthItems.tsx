@@ -8,8 +8,8 @@ import { NextPage } from 'next'
 
 const AuthItems: NextPage = () => {
 	const { user, isLoading } = useUser()
-	const auth = useAuthStore((state) => state.auth)
-	const isAuthResolved = useAuthStore((state) => state.isAuthResolved)
+	const auth = useAuthStore(state => state.auth)
+	const isAuthResolved = useAuthStore(state => state.isAuthResolved)
 
 	if (!isAuthResolved || (auth && isLoading)) {
 		return null

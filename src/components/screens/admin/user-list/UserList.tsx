@@ -54,7 +54,7 @@ const UserList: NextPage = () => {
 
 	const prevPage = () => {
 		if (currentPage !== 1) {
-			setCurrentPage((prev) => prev - 1)
+			setCurrentPage(prev => prev - 1)
 		} else {
 			return
 		}
@@ -65,7 +65,7 @@ const UserList: NextPage = () => {
 
 	const nextPage = () => {
 		if (currentPage !== totalPages) {
-			setCurrentPage((prev) => prev + 1)
+			setCurrentPage(prev => prev + 1)
 		} else {
 			return
 		}
@@ -80,7 +80,7 @@ const UserList: NextPage = () => {
 
 	const getLoginMethods = (user: (typeof activePage)[number]) => {
 		return (
-			user.loginMethods?.map((method) => loginMethodLabels[method]) ?? []
+			user.loginMethods?.map(method => loginMethodLabels[method]) ?? []
 		)
 	}
 
@@ -118,7 +118,7 @@ const UserList: NextPage = () => {
 						/>
 					</div>
 					<div className={styles['mobile-list']}>
-						{loadingRows.map((item) => (
+						{loadingRows.map(item => (
 							<div key={item} className={styles['loading-card']}>
 								<div className={styles['loading-card-header']}>
 									<div className={styles['loading-card-main']}>
@@ -176,7 +176,7 @@ const UserList: NextPage = () => {
 								</tr>
 							</thead>
 							<tbody>
-								{loadingRows.map((item) => (
+								{loadingRows.map(item => (
 									<tr key={item}>
 										<td>
 											<SkeletonLoader
@@ -252,7 +252,7 @@ const UserList: NextPage = () => {
 						</p>
 					</div>
 					<div className={styles['mobile-list']}>
-						{activePage.map((user) => {
+						{activePage.map(user => {
 							const loginMethods = getLoginMethods(user)
 							const roles = getRoleLabels(user)
 
@@ -300,7 +300,7 @@ const UserList: NextPage = () => {
 											</span>
 											<div className={styles['methods-list']}>
 												{loginMethods.length ? (
-													loginMethods.map((method) => (
+													loginMethods.map(method => (
 														<span
 															key={`${user.id}-${method}`}
 															className={styles['method-badge']}
@@ -324,7 +324,7 @@ const UserList: NextPage = () => {
 											<span className={styles['card-label']}>Роли</span>
 											<div className={styles['roles-list']}>
 												{roles.length ? (
-													roles.map((role) => (
+													roles.map(role => (
 														<span
 															key={role}
 															className={styles['role-badge']}
@@ -367,16 +367,14 @@ const UserList: NextPage = () => {
 								</tr>
 							</thead>
 							<tbody>
-								{activePage.map((user) => {
+								{activePage.map(user => {
 									const loginMethods = getLoginMethods(user)
 									const roles = getRoleLabels(user)
 
 									return (
 										<tr key={user.id}>
 											<td title={user.id}>
-												<span className={styles.truncate}>
-													{user.id}
-												</span>
+												<span className={styles.truncate}>{user.id}</span>
 											</td>
 											<td title={user.name || 'Нет данных'}>
 												<span className={styles.truncate}>
@@ -396,7 +394,7 @@ const UserList: NextPage = () => {
 											<td>
 												<div className={styles['methods-list']}>
 													{loginMethods.length ? (
-														loginMethods.map((method) => (
+														loginMethods.map(method => (
 															<span
 																key={`${user.id}-${method}`}
 																className={styles['method-badge']}
@@ -419,7 +417,7 @@ const UserList: NextPage = () => {
 											<td>
 												<div className={styles['roles-list']}>
 													{roles.length ? (
-														roles.map((role) => (
+														roles.map(role => (
 															<span
 																key={role}
 																className={styles['role-badge']}

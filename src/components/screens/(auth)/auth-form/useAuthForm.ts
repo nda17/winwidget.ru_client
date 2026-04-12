@@ -11,7 +11,13 @@ import { useAuthStore } from '@/store/auth-store/auth-store'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
+import {
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+	useTransition
+} from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 
@@ -67,8 +73,8 @@ const clearPendingEmailRegistrationState = () => {
 
 const useAuthForm = (isLogin: boolean) => {
 	const { previousRoute } = useNavigationContext()
-	const setAuth = useAuthStore((state) => state.setAuth)
-	const setAuthResolved = useAuthStore((state) => state.setAuthResolved)
+	const setAuth = useAuthStore(state => state.setAuth)
+	const setAuthResolved = useAuthStore(state => state.setAuthResolved)
 
 	const whiteListRedirect = ['/?', '/free-content?', '/premium-content?']
 	const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email')
@@ -150,31 +156,33 @@ const useAuthForm = (isLogin: boolean) => {
 		}
 	})
 
-	const { mutate: mutateEmailSendCode, isPending: isEmailSendCodePending } =
-		useMutation({
-			mutationKey: ['email-send-code'],
-			mutationFn: ({
-				data,
+	const {
+		mutate: mutateEmailSendCode,
+		isPending: isEmailSendCodePending
+	} = useMutation({
+		mutationKey: ['email-send-code'],
+		mutationFn: ({
+			data,
+			token
+		}: {
+			data: IFormData
+			token: string | null
+		}) =>
+			authService.sendEmailCode(
+				{
+					email: data.email || '',
+					password: data.password
+				},
 				token
-			}: {
-				data: IFormData
-				token: string | null
-			}) =>
-				authService.sendEmailCode(
-					{
-						email: data.email || '',
-						password: data.password
-					},
-					token
-				),
-			onSuccess({ data }) {
-				syncPendingEmailRegistrationState(data)
-				toast.success('Код подтверждения отправлен на email')
-			},
-			onError(error) {
-				handleEmailFlowError(error, 'Ошибка отправки кода')
-			}
-		})
+			),
+		onSuccess({ data }) {
+			syncPendingEmailRegistrationState(data)
+			toast.success('Код подтверждения отправлен на email')
+		},
+		onError(error) {
+			handleEmailFlowError(error, 'Ошибка отправки кода')
+		}
+	})
 
 	const {
 		mutate: mutateEmailRegister,
@@ -232,66 +240,68 @@ const useAuthForm = (isLogin: boolean) => {
 		}
 	})
 
-	const { mutate: mutatePhoneSendCode, isPending: isPhoneSendCodePending } =
-		useMutation({
-			mutationKey: ['phone-send-code'],
-			mutationFn: ({
-				phone,
-				token
-			}: {
-				phone: string
-				token: string | null
-			}) => authService.sendPhoneCode({ phone }, token),
-			onSuccess() {
-				setIsPhoneCodeRequested(true)
-				toast.success('Код подтверждения отправлен по SMS')
-			},
-			onError(error) {
-				if (axios.isAxiosError(error)) {
-					toast.error(
-						`Ошибка отправки кода: ${error.response?.data?.message}`
-					)
-				}
+	const {
+		mutate: mutatePhoneSendCode,
+		isPending: isPhoneSendCodePending
+	} = useMutation({
+		mutationKey: ['phone-send-code'],
+		mutationFn: ({
+			phone,
+			token
+		}: {
+			phone: string
+			token: string | null
+		}) => authService.sendPhoneCode({ phone }, token),
+		onSuccess() {
+			setIsPhoneCodeRequested(true)
+			toast.success('Код подтверждения отправлен по SMS')
+		},
+		onError(error) {
+			if (axios.isAxiosError(error)) {
+				toast.error(
+					`Ошибка отправки кода: ${error.response?.data?.message}`
+				)
 			}
-		})
+		}
+	})
 
-	const { mutate: mutatePhoneRegister, isPending: isPhoneRegisterPending } =
-		useMutation({
-			mutationKey: ['phone-register'],
-			mutationFn: ({
-				data,
+	const {
+		mutate: mutatePhoneRegister,
+		isPending: isPhoneRegisterPending
+	} = useMutation({
+		mutationKey: ['phone-register'],
+		mutationFn: ({
+			data,
+			token
+		}: {
+			data: IFormData
+			token: string | null
+		}) =>
+			authService.registerByPhone(
+				{
+					phone: data.phone || '',
+					password: data.password,
+					code: data.code
+				},
 				token
-			}: {
-				data: IFormData
-				token: string | null
-			}) =>
-				authService.registerByPhone(
-					{
-						phone: data.phone || '',
-						password: data.password,
-						code: data.code
-					},
-					token
-				),
-			onSuccess() {
-				startTransition(() => {
-					setAuth(true)
-					setAuthResolved(true)
-					toast.success('Регистрация по номеру телефона прошла успешно')
-					reset()
-					setIsPhoneCodeRequested(false)
-					queryClient.invalidateQueries({ queryKey: ['get-profile'] })
-					router.replace('/profile')
-				})
-			},
-			onError(error) {
-				if (axios.isAxiosError(error)) {
-					toast.error(
-						`Ошибка регистрации: ${error.response?.data?.message}`
-					)
-				}
+			),
+		onSuccess() {
+			startTransition(() => {
+				setAuth(true)
+				setAuthResolved(true)
+				toast.success('Регистрация по номеру телефона прошла успешно')
+				reset()
+				setIsPhoneCodeRequested(false)
+				queryClient.invalidateQueries({ queryKey: ['get-profile'] })
+				router.replace('/profile')
+			})
+		},
+		onError(error) {
+			if (axios.isAxiosError(error)) {
+				toast.error(`Ошибка регистрации: ${error.response?.data?.message}`)
 			}
-		})
+		}
+	})
 
 	const { mutate: mutatePhoneLogin, isPending: isPhoneLoginPending } =
 		useMutation({
@@ -346,7 +356,9 @@ const useAuthForm = (isLogin: boolean) => {
 			return
 		}
 
-		if (new Date(pendingEmailRegistration.expiresAt).getTime() < Date.now()) {
+		if (
+			new Date(pendingEmailRegistration.expiresAt).getTime() < Date.now()
+		) {
 			clearPendingEmailRegistrationState()
 			return
 		}
@@ -368,7 +380,7 @@ const useAuthForm = (isLogin: boolean) => {
 		resetPhoneMask()
 	}, [authMethod, clearEmailCodeStep, resetPhoneMask, setValue])
 
-	const onSubmit: SubmitHandler<IFormData> = async (data) => {
+	const onSubmit: SubmitHandler<IFormData> = async data => {
 		let token: string | null = null
 		const recaptchaAction =
 			authMethod === 'phone'

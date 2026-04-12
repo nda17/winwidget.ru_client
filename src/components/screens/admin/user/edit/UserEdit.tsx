@@ -52,7 +52,7 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 		}
 
 		return data.loginMethods
-			.map((method) => loginMethodLabels[method])
+			.map(method => loginMethodLabels[method])
 			.join(', ')
 	}
 
@@ -195,147 +195,151 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 							onSubmit={handleSubmit(onSubmit)}
 							className={styles['edit-form']}
 						>
-						<Controller
-							control={control}
-							name="avatarPath"
-							render={({ field: { value, onChange } }) => (
-								<FieldUploadFile
-									onChange={onChange}
-									value={value}
-									currentFile={
-										data?.avatarPath ||
-										'/uploads/user-avatar/avatar-default.png'
+							<Controller
+								control={control}
+								name="avatarPath"
+								render={({ field: { value, onChange } }) => (
+									<FieldUploadFile
+										onChange={onChange}
+										value={value}
+										currentFile={
+											data?.avatarPath ||
+											'/uploads/user-avatar/avatar-default.png'
+										}
+										folder="user-avatar"
+										placeholder="Фото профиля"
+									/>
+								)}
+							/>
+							<div className={clsx(styles['wrapper-checkbox'])}>
+								<div className={styles.checkbox}>
+									<p>USER</p>
+									<Controller
+										control={control}
+										name="isUser"
+										render={({ field }) => (
+											<CheckboxRights
+												required
+												type="checkbox"
+												defaultChecked={data.rights.includes(
+													UserRole.USER
+												)}
+												{...register('isUser', { value: field.value })}
+											/>
+										)}
+									/>
+								</div>
+								<div className={styles.checkbox}>
+									<p>ADMIN</p>
+									<Controller
+										control={control}
+										name="isAdmin"
+										render={({ field }) => (
+											<CheckboxRights
+												type="checkbox"
+												defaultChecked={data.rights.includes(
+													UserRole.ADMIN
+												)}
+												{...register('isAdmin', { value: field.value })}
+											/>
+										)}
+									/>
+								</div>
+								<div className={styles.checkbox}>
+									<p>MANAGER</p>
+									<Controller
+										control={control}
+										name="isManager"
+										render={({ field }) => (
+											<CheckboxRights
+												type="checkbox"
+												defaultChecked={data.rights.includes(
+													UserRole.MANAGER
+												)}
+												{...register('isManager', { value: field.value })}
+											/>
+										)}
+									/>
+								</div>
+								<div className={styles.checkbox}>
+									<p>PREMIUM</p>
+									<Controller
+										control={control}
+										name="isPremium"
+										render={({ field }) => (
+											<CheckboxRights
+												type="checkbox"
+												defaultChecked={data.rights.includes(
+													UserRole.PREMIUM
+												)}
+												{...register('isPremium', { value: field.value })}
+											/>
+										)}
+									/>
+								</div>
+							</div>
+							<FieldId
+								type="text"
+								error={errors.id}
+								defaultValue={data.id}
+								placeholder="ID"
+								{...register('id', {
+									pattern: {
+										value: validId,
+										message:
+											'Минимальная и максимальная длина - 25 символов. Первые 2 символа - буквы. Далее идут буквы и цифры.'
 									}
-									folder="user-avatar"
-									placeholder="Фото профиля"
-								/>
-							)}
-						/>
-						<div className={clsx(styles['wrapper-checkbox'])}>
-							<div className={styles.checkbox}>
-								<p>USER</p>
-								<Controller
-									control={control}
-									name="isUser"
-									render={({ field }) => (
-										<CheckboxRights
-											required
-											type="checkbox"
-											defaultChecked={data.rights.includes(UserRole.USER)}
-											{...register('isUser', { value: field.value })}
-										/>
-									)}
-								/>
-							</div>
-							<div className={styles.checkbox}>
-								<p>ADMIN</p>
-								<Controller
-									control={control}
-									name="isAdmin"
-									render={({ field }) => (
-										<CheckboxRights
-											type="checkbox"
-											defaultChecked={data.rights.includes(UserRole.ADMIN)}
-											{...register('isAdmin', { value: field.value })}
-										/>
-									)}
-								/>
-							</div>
-							<div className={styles.checkbox}>
-								<p>MANAGER</p>
-								<Controller
-									control={control}
-									name="isManager"
-									render={({ field }) => (
-										<CheckboxRights
-											type="checkbox"
-											defaultChecked={data.rights.includes(
-												UserRole.MANAGER
-											)}
-											{...register('isManager', { value: field.value })}
-										/>
-									)}
-								/>
-							</div>
-							<div className={styles.checkbox}>
-								<p>PREMIUM</p>
-								<Controller
-									control={control}
-									name="isPremium"
-									render={({ field }) => (
-										<CheckboxRights
-											type="checkbox"
-											defaultChecked={data.rights.includes(
-												UserRole.PREMIUM
-											)}
-											{...register('isPremium', { value: field.value })}
-										/>
-									)}
-								/>
-							</div>
-						</div>
-						<FieldId
-							type="text"
-							error={errors.id}
-							defaultValue={data.id}
-							placeholder="ID"
-							{...register('id', {
-								pattern: {
-									value: validId,
-									message:
-										'Минимальная и максимальная длина - 25 символов. Первые 2 символа - буквы. Далее идут буквы и цифры.'
-								}
-							})}
-						/>
-						<FieldName
-							type="text"
-							error={errors.name}
-							defaultValue={data.name}
-							placeholder="Имя"
-							{...register('name', {
-								pattern: {
-									value: validName,
-									message:
-										'Минимальная длина должна быть более 2 символов. Можно использовать цифры, начиная со второго символа, и специальный символ «-».'
-								}
-							})}
-						/>
-						<FieldEmail
-							type="email"
-							error={errors.email}
-							defaultValue={data?.email}
-							placeholder="Email"
-							{...register('email', {
-								pattern: {
-									value: validEmail,
-									message: 'Проверьте правильность ввода email'
-								}
-							})}
-						/>
-						<FieldEmail
-							type="tel"
-							error={errors.phone}
-							defaultValue={data?.phone || ''}
-							placeholder="Телефон"
-							{...register('phone', {
-								pattern: {
-									value: validPhone,
-									message: 'Проверьте правильность ввода номера телефона'
-								}
-							})}
-						/>
-						<FieldPassword
-							type="password"
-							error={errors.password}
-							placeholder="Пароль"
-							{...register('password', {
-								pattern: {
-									value: validPassword,
-									message:
-										'Мин. длина 6 символов. Должен содержать 1 цифру 0-9, 1 строчную букву a-z и 1 заглавную букву A-Z.'
-								}
-							})}
-						/>
+								})}
+							/>
+							<FieldName
+								type="text"
+								error={errors.name}
+								defaultValue={data.name}
+								placeholder="Имя"
+								{...register('name', {
+									pattern: {
+										value: validName,
+										message:
+											'Минимальная длина должна быть более 2 символов. Можно использовать цифры, начиная со второго символа, и специальный символ «-».'
+									}
+								})}
+							/>
+							<FieldEmail
+								type="email"
+								error={errors.email}
+								defaultValue={data?.email}
+								placeholder="Email"
+								{...register('email', {
+									pattern: {
+										value: validEmail,
+										message: 'Проверьте правильность ввода email'
+									}
+								})}
+							/>
+							<FieldEmail
+								type="tel"
+								error={errors.phone}
+								defaultValue={data?.phone || ''}
+								placeholder="Телефон"
+								{...register('phone', {
+									pattern: {
+										value: validPhone,
+										message: 'Проверьте правильность ввода номера телефона'
+									}
+								})}
+							/>
+							<FieldPassword
+								type="password"
+								error={errors.password}
+								placeholder="Пароль"
+								{...register('password', {
+									pattern: {
+										value: validPassword,
+										message:
+											'Мин. длина 6 символов. Должен содержать 1 цифру 0-9, 1 строчную букву a-z и 1 заглавную букву A-Z.'
+									}
+								})}
+							/>
 							<div className={styles.actions}>
 								<Button>Сохранить</Button>
 							</div>

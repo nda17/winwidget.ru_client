@@ -8,7 +8,12 @@ import FieldEmail from '@/components/ui/form-elements/auth-page/field-email/Fiel
 import FieldPhone from '@/components/ui/form-elements/auth-page/field-phone/FieldPhone'
 import FieldSmsCode from '@/components/ui/form-elements/auth-page/field-sms-code/FieldSmsCode'
 import FieldPassword from '@/components/ui/form-elements/auth-page/field-password/FieldPassword'
-import { validEmail, validPassword, validPhone, validPhoneCode } from '@/shared/regex'
+import {
+	validEmail,
+	validPassword,
+	validPhone,
+	validPhoneCode
+} from '@/shared/regex'
 import clsx from 'clsx'
 import { NextPage } from 'next'
 
@@ -89,13 +94,12 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 								type="text"
 								error={errors.code}
 								data-validated={
-									touchedFields.code || isSubmitted
-										? 'true'
-										: undefined
+									touchedFields.code || isSubmitted ? 'true' : undefined
 								}
 							/>
 							<div className={styles['verification-hint']}>
-								Код отправлен на email {emailValue}. Код действует 10 минут.
+								Код отправлен на email {emailValue}. Код действует 10
+								минут.
 							</div>
 							<div className={styles['link-actions']}>
 								<button
@@ -138,7 +142,9 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 								data-validated={
 									touchedFields.phone || isSubmitted ? 'true' : undefined
 								}
-								data-mask-empty={phoneMask.isMaskEmpty ? 'true' : undefined}
+								data-mask-empty={
+									phoneMask.isMaskEmpty ? 'true' : undefined
+								}
 								disabled={!isLogin && isPhoneCodeRequested}
 								onFocus={phoneMask.onFocus}
 								onClick={phoneMask.onClick}
@@ -147,7 +153,7 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 								onInput={phoneMask.onInput}
 								onPaste={phoneMask.onPaste}
 								onBlur={phoneMask.onBlur}
-								ref={(element) => {
+								ref={element => {
 									phoneRegister.ref(element)
 									phoneInputRef.current = element
 								}}
@@ -168,9 +174,7 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 								type="text"
 								error={errors.code}
 								data-validated={
-									touchedFields.code || isSubmitted
-										? 'true'
-										: undefined
+									touchedFields.code || isSubmitted ? 'true' : undefined
 								}
 							/>
 							<div className={styles['verification-hint']}>
@@ -212,7 +216,9 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 				data-validated={
 					touchedFields.password || isSubmitted ? 'true' : undefined
 				}
-				disabled={!isLogin && authMethod === 'email' && isEmailCodeRequested}
+				disabled={
+					!isLogin && authMethod === 'email' && isEmailCodeRequested
+				}
 			/>
 
 			<div className={clsx(styles['wrapper-button'])}>

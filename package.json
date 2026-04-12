@@ -6,7 +6,8 @@
 		"dev": "next dev",
 		"build": "next build",
 		"start": "next start",
-		"lint": "next lint"
+		"lint": "next lint",
+		"format": "prettier --write --no-error-on-unmatched-pattern \"src/**/*.{ts,tsx,scss}\" \"*.{js,mjs,ts,json}\""
 	},
 	"dependencies": {
 		"@tanstack/react-query": "^5.63.0",
@@ -35,6 +36,7 @@
 		"eslint": "^8.57.1",
 		"eslint-config-next": "^14.2.23",
 		"postcss": "^8.4.49",
+		"prettier": "^3.8.2",
 		"sass": "^1.83.1",
 		"tailwindcss": "^3.4.17",
 		"typescript": "^5.7.3"

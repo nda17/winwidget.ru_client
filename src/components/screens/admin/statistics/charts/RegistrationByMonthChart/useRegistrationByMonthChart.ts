@@ -12,7 +12,7 @@ export const useRegistrationsByMonthChart = () => {
 					datasets: [
 						{
 							label: 'Регистрации',
-							data: data.map((item) => item.count),
+							data: data.map(item => item.count),
 							borderColor: '#E6A34D',
 							backgroundColor: 'rgba(230, 163, 77, 0.18)',
 							fill: true,

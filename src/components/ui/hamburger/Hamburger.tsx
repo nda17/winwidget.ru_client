@@ -6,14 +6,14 @@ import { NextPage } from 'next'
 
 const Hamburger: NextPage = () => {
 	const visibleVeilBackground = useVeilBackgroundStore(
-		(state) => state.visible
+		state => state.visible
 	)
 	const changeVisibleVeilBackground = useVeilBackgroundStore(
-		(state) => state.setVisible
+		state => state.setVisible
 	)
-	const visibleHamburger = useHamburgerStore((state) => state.visible)
+	const visibleHamburger = useHamburgerStore(state => state.visible)
 	const changeVisibleHamburger = useHamburgerStore(
-		(state) => state.setVisible
+		state => state.setVisible
 	)
 
 	const changeStateMenu = () => {

@@ -10,7 +10,7 @@ import { usePathname } from 'next/navigation'
 const MenuItem: NextPage<{ item: IMenuItem }> = ({ item }) => {
 	const pathname = usePathname()
 	const changeVisibleHamburger = useHamburgerStore(
-		(state) => state.setVisible
+		state => state.setVisible
 	)
 
 	const closeMenu = () => {

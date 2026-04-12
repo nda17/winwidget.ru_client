@@ -1,5 +1,5 @@
-import { useRegistrationsByMonthChart } from '@/components/screens/admin/statistics/charts/RegistrationByMonthChart/useRegistrationByMonthChart';
-import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader';
+import { useRegistrationsByMonthChart } from '@/components/screens/admin/statistics/charts/RegistrationByMonthChart/useRegistrationByMonthChart'
+import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import {
 	CategoryScale,
 	Chart as ChartJS,
@@ -8,9 +8,9 @@ import {
 	LinearScale,
 	PointElement,
 	Tooltip
-} from 'chart.js';
-import { FC } from 'react';
-import { Line } from 'react-chartjs-2';
+} from 'chart.js'
+import { FC } from 'react'
+import { Line } from 'react-chartjs-2'
 
 ChartJS.register(
 	CategoryScale,
@@ -19,10 +19,10 @@ ChartJS.register(
 	LineElement,
 	Tooltip,
 	Legend
-);
+)
 
 const RegistrationByMonthChart: FC = () => {
-	const { data, isPending } = useRegistrationsByMonthChart();
+	const { data, isPending } = useRegistrationsByMonthChart()
 
 	return isPending ? (
 		<SkeletonLoader count={1} className="w-full h-full" />
@@ -69,7 +69,7 @@ const RegistrationByMonthChart: FC = () => {
 				}
 			}}
 		/>
-	) : null;
-};
+	) : null
+}
 
-export default RegistrationByMonthChart;
+export default RegistrationByMonthChart

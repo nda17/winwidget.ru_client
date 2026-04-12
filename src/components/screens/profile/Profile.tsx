@@ -104,7 +104,7 @@ const Profile: NextPage = () => {
 	const emailValue = watchEmailBinding('email')
 	const phoneValue = watchPhoneBinding('phone')
 
-	const handleProfileSubmit = handleSubmit(async (data) => {
+	const handleProfileSubmit = handleSubmit(async data => {
 		const isSuccess = await onSubmit(data)
 
 		if (isSuccess) {
@@ -148,40 +148,36 @@ const Profile: NextPage = () => {
 		}
 	}
 
-	const handleEmailVerification = handleEmailBindingSubmit(
-		async (data) => {
-			const isSuccess = await confirmEmailCode({
-				email: data.email.trim(),
-				code: data.code.trim()
+	const handleEmailVerification = handleEmailBindingSubmit(async data => {
+		const isSuccess = await confirmEmailCode({
+			email: data.email.trim(),
+			code: data.code.trim()
+		})
+
+		if (isSuccess) {
+			resetEmailBindingForm({
+				email: '',
+				code: ''
 			})
-
-			if (isSuccess) {
-				resetEmailBindingForm({
-					email: '',
-					code: ''
-				})
-				resetEmailBinding()
-			}
+			resetEmailBinding()
 		}
-	)
+	})
 
-	const handlePhoneVerification = handlePhoneBindingSubmit(
-		async (data) => {
-			const isSuccess = await confirmPhoneCode({
-				phone: data.phone.trim(),
-				code: data.code.trim()
+	const handlePhoneVerification = handlePhoneBindingSubmit(async data => {
+		const isSuccess = await confirmPhoneCode({
+			phone: data.phone.trim(),
+			code: data.code.trim()
+		})
+
+		if (isSuccess) {
+			resetPhoneBindingForm({
+				phone: '',
+				code: ''
 			})
-
-			if (isSuccess) {
-				resetPhoneBindingForm({
-					phone: '',
-					code: ''
-				})
-				phoneMask.reset()
-				resetPhoneBinding()
-			}
+			phoneMask.reset()
+			resetPhoneBinding()
 		}
-	)
+	})
 
 	const resetEmailFlow = () => {
 		resetEmailBindingForm({
@@ -435,7 +431,7 @@ const Profile: NextPage = () => {
 											: undefined
 									}
 									{...phoneRegistration}
-									ref={(element) => {
+									ref={element => {
 										phoneRegistration.ref(element)
 										phoneInputRef.current = element
 									}}
@@ -445,7 +441,7 @@ const Profile: NextPage = () => {
 									onBeforeInput={phoneMask.onBeforeInput}
 									onInput={phoneMask.onInput}
 									onPaste={phoneMask.onPaste}
-									onBlur={(event) => {
+									onBlur={event => {
 										phoneMask.onBlur(event)
 										phoneRegistration.onBlur(event)
 									}}

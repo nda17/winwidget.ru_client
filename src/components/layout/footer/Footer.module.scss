@@ -1,6 +1,10 @@
 .footer {
 	@apply p-4 relative z-10 flex justify-center border-t;
-	background: linear-gradient(180deg, rgba(19, 27, 34, 0.98) 0%, rgba(22, 29, 37, 0.98) 100%);
+	background: linear-gradient(
+		180deg,
+		rgba(19, 27, 34, 0.98) 0%,
+		rgba(22, 29, 37, 0.98) 100%
+	);
 	border-color: rgba(255, 255, 255, 0.08);
 
 	.layout-container {

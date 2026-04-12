@@ -65,7 +65,7 @@ const useRestorePasswordForm = () => {
 		resetPhoneMask()
 	}, [authMethod, resetPhoneMask, setValue])
 
-	const onSubmit: SubmitHandler<IRestorePassword> = async (data) => {
+	const onSubmit: SubmitHandler<IRestorePassword> = async data => {
 		if (!isRecaptchaReady) {
 			toast.error('Капча недоступна')
 			return

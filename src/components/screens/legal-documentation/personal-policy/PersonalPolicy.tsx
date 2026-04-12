@@ -465,7 +465,7 @@ const PersonalPolicy: NextPage = () => {
 					</p>
 				</div>
 				<div className={styles.contentsGrid}>
-					{navigationSections.map((section) => (
+					{navigationSections.map(section => (
 						<a
 							key={section.href}
 							href={section.href}
@@ -485,17 +485,17 @@ const PersonalPolicy: NextPage = () => {
 				</p>
 
 				<div className={styles.definitionGrid}>
-					{definitions.map((definition) => (
+					{definitions.map(definition => (
 						<div key={definition.term} className={styles.infoCard}>
 							<h3 className={styles.cardTitle}>{definition.term}</h3>
-							{definition.description.map((paragraph) => (
+							{definition.description.map(paragraph => (
 								<p key={paragraph} className={styles.cardText}>
 									{paragraph}
 								</p>
 							))}
 							{definition.items ? (
 								<ul className={styles.cardList}>
-									{definition.items.map((item) => (
+									{definition.items.map(item => (
 										<li key={item}>{item}</li>
 									))}
 								</ul>
@@ -591,12 +591,12 @@ const PersonalPolicy: NextPage = () => {
 				</p>
 
 				<div className={styles.infoGrid}>
-					{collectionVariants.map((variant) => (
+					{collectionVariants.map(variant => (
 						<div key={variant.title} className={styles.infoCard}>
 							<h4 className={styles.cardTitle}>{variant.title}</h4>
 							<p className={styles.cardText}>{variant.subtitle}</p>
 							<ul className={styles.cardList}>
-								{variant.items.map((item) => (
+								{variant.items.map(item => (
 									<li key={item}>{item}</li>
 								))}
 							</ul>
@@ -634,11 +634,11 @@ const PersonalPolicy: NextPage = () => {
 				</p>
 
 				<div className={styles.infoGrid}>
-					{processedDataGroups.map((group) => (
+					{processedDataGroups.map(group => (
 						<div key={group.title} className={styles.infoCard}>
 							<h4 className={styles.cardTitle}>{group.title}</h4>
 							<ul className={styles.cardList}>
-								{group.items.map((item) => (
+								{group.items.map(item => (
 									<li key={item}>{item}</li>
 								))}
 							</ul>
@@ -726,7 +726,7 @@ const PersonalPolicy: NextPage = () => {
 					Приложении № 1 к политике, включает в себя:
 				</p>
 				<ul className={styles.list}>
-					{processedActions.map((action) => (
+					{processedActions.map(action => (
 						<li key={action}>{action}</li>
 					))}
 				</ul>
@@ -769,11 +769,11 @@ const PersonalPolicy: NextPage = () => {
 				</p>
 
 				<div className={styles.infoGrid}>
-					{thirdParties.map((company) => (
+					{thirdParties.map(company => (
 						<div key={company.title} className={styles.infoCard}>
 							<h4 className={styles.cardTitle}>{company.title}</h4>
 							<ul className={styles.cardList}>
-								{company.details.map((detail) => (
+								{company.details.map(detail => (
 									<li key={detail}>{detail}</li>
 								))}
 							</ul>
@@ -811,11 +811,11 @@ const PersonalPolicy: NextPage = () => {
 				</p>
 
 				<div className={styles.infoGrid}>
-					{protectionMeasures.map((measure) => (
+					{protectionMeasures.map(measure => (
 						<div key={measure.title} className={styles.infoCard}>
 							<h4 className={styles.cardTitle}>{measure.title}</h4>
 							<ul className={styles.cardList}>
-								{measure.items.map((item) => (
+								{measure.items.map(item => (
 									<li key={item}>{item}</li>
 								))}
 							</ul>
@@ -865,17 +865,17 @@ const PersonalPolicy: NextPage = () => {
 				</p>
 
 				<div className={styles.infoGrid}>
-					{rights.map((right) => (
+					{rights.map(right => (
 						<div key={right.title} className={styles.infoCard}>
 							<h3 className={styles.cardTitle}>{right.title}</h3>
-							{right.description.map((paragraph) => (
+							{right.description.map(paragraph => (
 								<p key={paragraph} className={styles.cardText}>
 									{paragraph}
 								</p>
 							))}
 							{right.items ? (
 								<ul className={styles.cardList}>
-									{right.items.map((item) => (
+									{right.items.map(item => (
 										<li key={item}>{item}</li>
 									))}
 								</ul>
@@ -952,7 +952,7 @@ const PersonalPolicy: NextPage = () => {
 				</p>
 
 				<div className={styles.infoGrid}>
-					{cookieTypes.map((item) => (
+					{cookieTypes.map(item => (
 						<div key={item.title} className={styles.infoCard}>
 							<h3 className={styles.cardTitle}>{item.title}</h3>
 							<p className={styles.cardText}>{item.description}</p>
@@ -1029,7 +1029,7 @@ const PersonalPolicy: NextPage = () => {
 				</p>
 
 				<div className={styles.infoGrid}>
-					{appendixGoals.map((goal) => (
+					{appendixGoals.map(goal => (
 						<div key={goal.title} className={styles.infoCard}>
 							<h3 className={styles.cardTitle}>{goal.title}</h3>
 							{goal.subjects ? (
@@ -1043,7 +1043,7 @@ const PersonalPolicy: NextPage = () => {
 										<strong>Перечень данных:</strong>
 									</p>
 									<ul className={styles.cardList}>
-										{goal.data.map((item) => (
+										{goal.data.map(item => (
 											<li key={item}>{item}</li>
 										))}
 									</ul>
@@ -1060,7 +1060,7 @@ const PersonalPolicy: NextPage = () => {
 										<strong>Способы:</strong>
 									</p>
 									<ul className={styles.cardList}>
-										{goal.methods.map((item) => (
+										{goal.methods.map(item => (
 											<li key={item}>{item}</li>
 										))}
 									</ul>

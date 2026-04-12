@@ -22,7 +22,10 @@ const RestorePasswordForm: NextPage = () => {
 	} = useRestorePasswordForm()
 
 	return (
-		<form onSubmit={handleSubmit(onSubmit, onInvalid)} className={styles.form}>
+		<form
+			onSubmit={handleSubmit(onSubmit, onInvalid)}
+			className={styles.form}
+		>
 			<div className={styles['auth-method-toggle']}>
 				<button
 					type="button"
@@ -89,7 +92,7 @@ const RestorePasswordForm: NextPage = () => {
 							onInput={phoneMask.onInput}
 							onPaste={phoneMask.onPaste}
 							onBlur={phoneMask.onBlur}
-							ref={(element) => {
+							ref={element => {
 								phoneRegister.ref(element)
 								phoneInputRef.current = element
 							}}

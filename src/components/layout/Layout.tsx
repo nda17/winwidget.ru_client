@@ -13,9 +13,9 @@ import { useEffect } from 'react'
 
 const Layout: NextPage<ILayout> = ({ children }) => {
 	const visibleVeilBackground = useVeilBackgroundStore(
-		(state) => state.visible
+		state => state.visible
 	)
-	const auth = useAuthStore((state) => state.auth)
+	const auth = useAuthStore(state => state.auth)
 	const pathname = usePathname()
 	const isRecaptchaPage =
 		pathname === PUBLIC_PAGES.LOGIN ||

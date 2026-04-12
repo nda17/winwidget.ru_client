@@ -19,7 +19,9 @@ export const useUploadFile = (
 
 		onError(error) {
 			if (axios.isAxiosError(error)) {
-				toast.error(`Ошибка загрузки файла: ${error.response?.data?.message}`)
+				toast.error(
+					`Ошибка загрузки файла: ${error.response?.data?.message}`
+				)
 			}
 		}
 	})

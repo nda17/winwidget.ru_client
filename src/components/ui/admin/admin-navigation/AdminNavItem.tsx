@@ -9,8 +9,9 @@ const AdminNavItem: NextPage<{ item: INavItem }> = ({
 	item: { link, title, option }
 }) => {
 	const pathname = usePathname()
-	const isActive = pathname === link || Boolean(option && pathname.startsWith(option))
-	
+	const isActive =
+		pathname === link || Boolean(option && pathname.startsWith(option))
+
 	return (
 		<li>
 			<Link href={link}>

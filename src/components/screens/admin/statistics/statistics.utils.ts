@@ -38,8 +38,9 @@ export const getSortedRegistrations = (
 	})
 }
 
-export const getRegistrationLabels = (items: IUserRegistrationsByMonth[]) =>
-	items.map((item) => `${item.month} ${item.year}`)
+export const getRegistrationLabels = (
+	items: IUserRegistrationsByMonth[]
+) => items.map(item => `${item.month} ${item.year}`)
 
 export const getOverviewChartData = (
 	overview: IStatisticsOverview | undefined
@@ -55,6 +56,5 @@ export const getOverviewChartData = (
 		{ label: '2+ способов входа', value: overview.multiLoginUsers },
 		{ label: 'Админы', value: overview.adminUsers },
 		{ label: 'Менеджеры', value: overview.managerUsers }
-	]
-		.filter((item) => item.value > 0)
+	].filter(item => item.value > 0)
 }

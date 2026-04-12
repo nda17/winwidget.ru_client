@@ -11,8 +11,8 @@ import { MouseEvent } from 'react'
 import toast from 'react-hot-toast'
 
 const LogoutButton: NextPage = () => {
-	const setAuth = useAuthStore((state) => state.setAuth)
-	const setAuthResolved = useAuthStore((state) => state.setAuthResolved)
+	const setAuth = useAuthStore(state => state.setAuth)
+	const setAuthResolved = useAuthStore(state => state.setAuthResolved)
 	const { replace } = useRouter()
 	const queryClient = useQueryClient()
 

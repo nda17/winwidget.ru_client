@@ -9,7 +9,7 @@ import { NextPage } from 'next'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
-const CookieConsentPopup: NextPage<ICookieConsent> = (status) => {
+const CookieConsentPopup: NextPage<ICookieConsent> = status => {
 	const [showPopup, setShowPopup] = useState(`${status}`)
 
 	const accept = () => {

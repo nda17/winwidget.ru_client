@@ -9,18 +9,21 @@ export const useProfileIdentityBinding = () => {
 	const [emailCodeRequested, setEmailCodeRequested] = useState(false)
 	const [phoneCodeRequested, setPhoneCodeRequested] = useState(false)
 
-	const { mutateAsync: sendEmailCodeAsync, isPending: isSendingEmailCode } =
-		useMutation({
-			mutationKey: ['profile-send-email-code'],
-			mutationFn: (email: string) => userService.sendProfileEmailCode({ email }),
-			onSuccess() {
-				setEmailCodeRequested(true)
-				toast.success('Код подтверждения отправлен на email')
-			},
-			onError(error) {
-				toast.error(`Привязка email: ${errorCatch(error)}`)
-			}
-		})
+	const {
+		mutateAsync: sendEmailCodeAsync,
+		isPending: isSendingEmailCode
+	} = useMutation({
+		mutationKey: ['profile-send-email-code'],
+		mutationFn: (email: string) =>
+			userService.sendProfileEmailCode({ email }),
+		onSuccess() {
+			setEmailCodeRequested(true)
+			toast.success('Код подтверждения отправлен на email')
+		},
+		onError(error) {
+			toast.error(`Привязка email: ${errorCatch(error)}`)
+		}
+	})
 
 	const {
 		mutateAsync: verifyEmailCodeAsync,
@@ -39,18 +42,21 @@ export const useProfileIdentityBinding = () => {
 		}
 	})
 
-	const { mutateAsync: sendPhoneCodeAsync, isPending: isSendingPhoneCode } =
-		useMutation({
-			mutationKey: ['profile-send-phone-code'],
-			mutationFn: (phone: string) => userService.sendProfilePhoneCode({ phone }),
-			onSuccess() {
-				setPhoneCodeRequested(true)
-				toast.success('Код подтверждения отправлен по SMS')
-			},
-			onError(error) {
-				toast.error(`Привязка телефона: ${errorCatch(error)}`)
-			}
-		})
+	const {
+		mutateAsync: sendPhoneCodeAsync,
+		isPending: isSendingPhoneCode
+	} = useMutation({
+		mutationKey: ['profile-send-phone-code'],
+		mutationFn: (phone: string) =>
+			userService.sendProfilePhoneCode({ phone }),
+		onSuccess() {
+			setPhoneCodeRequested(true)
+			toast.success('Код подтверждения отправлен по SMS')
+		},
+		onError(error) {
+			toast.error(`Привязка телефона: ${errorCatch(error)}`)
+		}
+	})
 
 	const {
 		mutateAsync: verifyPhoneCodeAsync,

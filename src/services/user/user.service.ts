@@ -40,7 +40,7 @@ class UserService {
 				params: searchTerm
 					? {
 							searchTerm
-					  }
+						}
 					: {}
 			}
 		)

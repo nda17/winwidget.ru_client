@@ -3,7 +3,11 @@
 	top: calc(100% + 0.75rem);
 	width: min(22rem, calc(100vw - 1.5rem));
 	border: 1px solid rgba(255, 255, 255, 0.08);
-	background: linear-gradient(180deg, rgba(19, 27, 34, 0.98) 0%, rgba(22, 29, 37, 0.98) 100%);
+	background: linear-gradient(
+		180deg,
+		rgba(19, 27, 34, 0.98) 0%,
+		rgba(22, 29, 37, 0.98) 100%
+	);
 	box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
 	animation: fadeIn 0.2s ease-in-out;
 }

@@ -41,7 +41,7 @@ export const useUserEdit = (
 		}
 	})
 
-	const onSubmit: SubmitHandler<IUserEditInput> = async (data) => {
+	const onSubmit: SubmitHandler<IUserEditInput> = async data => {
 		await mutateAsync(data)
 	}
 

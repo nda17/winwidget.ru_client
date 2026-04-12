@@ -6,7 +6,6 @@
 
 		.input-field {
 			@apply w-full outline-none p-1 border-b border-b-black border-solid transition-colors mb-[1.1rem];
-
 		}
 	}
 
@@ -14,5 +13,3 @@
 		@apply text-firebrick text-[11px] absolute bottom-[-14px] leading-[1.25];
 	}
 }
-
-

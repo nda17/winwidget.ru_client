@@ -111,7 +111,7 @@ const ConsentProcessing: NextPage = () => {
 					</p>
 				</div>
 				<div className={styles.contentsGrid}>
-					{navigationSections.map((section) => (
+					{navigationSections.map(section => (
 						<a
 							key={section.href}
 							href={section.href}
@@ -138,7 +138,7 @@ const ConsentProcessing: NextPage = () => {
 				</p>
 
 				<div className={styles.infoGrid}>
-					{consentSteps.map((step) => (
+					{consentSteps.map(step => (
 						<div key={step.title} className={styles.infoCard}>
 							<h3 className={styles.cardTitle}>{step.title}</h3>
 							<p className={styles.cardText}>{step.description}</p>
@@ -167,7 +167,7 @@ const ConsentProcessing: NextPage = () => {
 					персональных данных:
 				</p>
 				<div className={styles.pillGrid}>
-					{personalDataList.map((item) => (
+					{personalDataList.map(item => (
 						<div key={item} className={styles.pill}>
 							{item}
 						</div>
@@ -190,7 +190,7 @@ const ConsentProcessing: NextPage = () => {
 					5. Способы автоматизированной обработки персональных данных
 				</h2>
 				<div className={styles.pillGrid}>
-					{processingMethods.map((method) => (
+					{processingMethods.map(method => (
 						<div key={method} className={styles.pill}>
 							{method}
 						</div>

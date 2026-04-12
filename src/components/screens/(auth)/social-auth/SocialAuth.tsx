@@ -9,8 +9,8 @@ import { useEffect } from 'react'
 const SocialAuthPage: NextPage = () => {
 	const searchParams = useSearchParams()
 	const router = useRouter()
-	const setAuth = useAuthStore((state) => state.setAuth)
-	const setAuthResolved = useAuthStore((state) => state.setAuthResolved)
+	const setAuth = useAuthStore(state => state.setAuth)
+	const setAuthResolved = useAuthStore(state => state.setAuthResolved)
 
 	useEffect(() => {
 		const accessToken = searchParams.get('accessToken')

@@ -22,7 +22,8 @@ const Statistics: FC = () => {
 				<div className={styles['section-head']}>
 					<h3 className={styles['section-title']}>Графики и динамика</h3>
 					<p className={styles['section-subtitle']}>
-						Визуализация тренда регистраций и структуры текущих показателей.
+						Визуализация тренда регистраций и структуры текущих
+						показателей.
 					</p>
 				</div>
 				<div className={styles['charts-grid']}>
@@ -36,7 +37,9 @@ const Statistics: FC = () => {
 						</div>
 					</div>
 					<div className={styles['chart-card']}>
-						<h3 className={styles['chart-title']}>Регистрации по месяцам</h3>
+						<h3 className={styles['chart-title']}>
+							Регистрации по месяцам
+						</h3>
 						<p className={styles['chart-subtitle']}>
 							Столбцы удобны для сравнения объёма между периодами.
 						</p>

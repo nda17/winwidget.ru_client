@@ -12,10 +12,10 @@ import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
 
 const useUser = () => {
-	const auth = useAuthStore((state) => state.auth)
-	const isAuthResolved = useAuthStore((state) => state.isAuthResolved)
-	const setAuth = useAuthStore((state) => state.setAuth)
-	const setAuthResolved = useAuthStore((state) => state.setAuthResolved)
+	const auth = useAuthStore(state => state.auth)
+	const isAuthResolved = useAuthStore(state => state.isAuthResolved)
+	const setAuth = useAuthStore(state => state.setAuth)
+	const setAuthResolved = useAuthStore(state => state.setAuthResolved)
 	const queryClient = useQueryClient()
 	const pathname = usePathname()
 	const hasAccessToken = getAccessToken() !== null
@@ -118,10 +118,7 @@ const useUser = () => {
 		}
 
 		window.addEventListener('focus', handleVisibilityChange)
-		document.addEventListener(
-			'visibilitychange',
-			handleVisibilityChange
-		)
+		document.addEventListener('visibilitychange', handleVisibilityChange)
 
 		return () => {
 			window.removeEventListener('focus', handleVisibilityChange)

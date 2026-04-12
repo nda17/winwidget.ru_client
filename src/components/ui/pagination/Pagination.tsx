@@ -17,7 +17,7 @@ const Pagination: NextPage<IPagination> = ({
 				<MaterialIcon name="MdOutlineNavigateBefore" />
 			</button>
 			<ul>
-				{listPage.map((page) => (
+				{listPage.map(page => (
 					<li key={page}>
 						<span
 							className={clsx({

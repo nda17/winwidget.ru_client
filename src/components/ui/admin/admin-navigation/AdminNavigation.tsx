@@ -7,7 +7,7 @@ import { NextPage } from 'next'
 const AdminNavigation: NextPage = () => {
 	return (
 		<ul className={clsx(styles['nav-list'])}>
-			{navItems?.map((item) => (
+			{navItems?.map(item => (
 				<AdminNavItem key={item.link} item={item} />
 			))}
 		</ul>

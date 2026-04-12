@@ -32,7 +32,7 @@ const RegistrationByMonthBarChart: FC = () => {
 				datasets: [
 					{
 						label: 'Регистрации по месяцам',
-						data: data.map((item) => item.count),
+						data: data.map(item => item.count),
 						backgroundColor: '#BE496B',
 						borderRadius: 8
 					}

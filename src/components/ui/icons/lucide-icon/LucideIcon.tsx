@@ -1,6 +1,6 @@
-import { ILucideIcon } from '@/components/ui/icons/lucide-icon/lucide-icon.interface';
-import { icons } from 'lucide-react';
-import { FC } from 'react';
+import { ILucideIcon } from '@/components/ui/icons/lucide-icon/lucide-icon.interface'
+import { icons } from 'lucide-react'
+import { FC } from 'react'
 
 const LucideIcon: FC<ILucideIcon> = ({
 	name,
@@ -9,8 +9,8 @@ const LucideIcon: FC<ILucideIcon> = ({
 	className,
 	size
 }) => {
-	const IconComponent = icons[name];
-	const DefaultIcon = icons['GripVertical'];
+	const IconComponent = icons[name]
+	const DefaultIcon = icons['GripVertical']
 
 	return icons[name] ? (
 		<IconComponent
@@ -21,7 +21,7 @@ const LucideIcon: FC<ILucideIcon> = ({
 		/>
 	) : (
 		<DefaultIcon />
-	);
-};
+	)
+}
 
-export default LucideIcon;
+export default LucideIcon

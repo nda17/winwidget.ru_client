@@ -1,7 +1,7 @@
-import styles from '@/components/ui/logo-image/LogoImage.module.scss';
-import { PUBLIC_PAGES } from '@/config/pages/public.config';
-import { NextPage } from 'next';
-import Link from 'next/link';
+import styles from '@/components/ui/logo-image/LogoImage.module.scss'
+import { PUBLIC_PAGES } from '@/config/pages/public.config'
+import { NextPage } from 'next'
+import Link from 'next/link'
 
 const LogoImage: NextPage = () => {
 	return (

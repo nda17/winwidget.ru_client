@@ -1,9 +1,9 @@
-import { TypeLucideIconName } from '@/shared/types/icon.types';
+import { TypeLucideIconName } from '@/shared/types/icon.types'
 
 export interface ILucideIcon {
-	name: TypeLucideIconName;
-	fill?: string;
-	color?: string;
-	className?: string;
-	size?: number;
+	name: TypeLucideIconName
+	fill?: string
+	color?: string
+	className?: string
+	size?: number
 }

@@ -30,7 +30,7 @@ const redirectToLogin = () => {
 	}
 }
 
-axiosInterceptorsRequest.interceptors.request.use((config) => {
+axiosInterceptorsRequest.interceptors.request.use(config => {
 	const accessToken = getAccessToken()
 
 	if (config?.headers && accessToken) {
@@ -41,8 +41,8 @@ axiosInterceptorsRequest.interceptors.request.use((config) => {
 })
 
 axiosInterceptorsRequest.interceptors.response.use(
-	(config) => config,
-	async (error) => {
+	config => config,
+	async error => {
 		const originalRequest = error.config
 
 		if (

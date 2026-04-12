@@ -10,12 +10,10 @@ const AdminActions: NextPage<IAdminActions> = ({ editUrl, userId }) => {
 	const { push } = useRouter()
 
 	const changeVisibleVeilBackground = useVeilBackgroundStore(
-		(state) => state.setVisible
+		state => state.setVisible
 	)
-	const changeVisiblePopup = useAlertPopupStore(
-		(state) => state.setVisible
-	)
-	const addIdInPopup = useAlertPopupStore((state) => state.addId)
+	const changeVisiblePopup = useAlertPopupStore(state => state.setVisible)
+	const addIdInPopup = useAlertPopupStore(state => state.addId)
 
 	const changeStatePopup = () => {
 		changeVisibleVeilBackground()

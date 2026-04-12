@@ -20,7 +20,9 @@ type PhoneMaskHandlers = {
 	isMaskEmpty: boolean
 }
 
-export const usePhoneMask = <TFieldValues extends FieldValues & { phone?: string }>(
+export const usePhoneMask = <
+	TFieldValues extends FieldValues & { phone?: string }
+>(
 	setValue: UseFormSetValue<TFieldValues>,
 	inputRef: React.RefObject<HTMLInputElement>
 ): PhoneMaskHandlers => {
@@ -39,7 +41,10 @@ export const usePhoneMask = <TFieldValues extends FieldValues & { phone?: string
 		if (!digitsOnly) return ''
 
 		// Full number like 79991234567 or 89991234567
-		if (digitsOnly.length === 11 && (digitsOnly.startsWith('7') || digitsOnly.startsWith('8'))) {
+		if (
+			digitsOnly.length === 11 &&
+			(digitsOnly.startsWith('7') || digitsOnly.startsWith('8'))
+		) {
 			const rest = digitsOnly.slice(1) // 10 digits
 			return rest.slice(1, 10) // drop leading 9 (fixed in mask), keep 9 digits
 		}
@@ -82,11 +87,15 @@ export const usePhoneMask = <TFieldValues extends FieldValues & { phone?: string
 		const isEmpty = digitsRef.current.length === 0
 		updateMaskEmpty(isEmpty)
 		syncingRef.current = true
-		setValue(phoneField, nextValue as PathValue<TFieldValues, typeof phoneField>, {
-			shouldValidate: interactedRef.current,
-			shouldDirty: interactedRef.current,
-			shouldTouch: interactedRef.current
-		})
+		setValue(
+			phoneField,
+			nextValue as PathValue<TFieldValues, typeof phoneField>,
+			{
+				shouldValidate: interactedRef.current,
+				shouldDirty: interactedRef.current,
+				shouldTouch: interactedRef.current
+			}
+		)
 		syncingRef.current = false
 		moveCursor()
 	}, [inputRef, moveCursor, phoneField, setValue, updateMaskEmpty])
@@ -177,11 +186,15 @@ export const usePhoneMask = <TFieldValues extends FieldValues & { phone?: string
 	const onBlur = useCallback(() => {
 		if (!digitsRef.current.length) {
 			updateMaskEmpty(true)
-			setValue(phoneField, '' as PathValue<TFieldValues, typeof phoneField>, {
-				shouldDirty: interactedRef.current,
-				shouldValidate: interactedRef.current,
-				shouldTouch: interactedRef.current
-			})
+			setValue(
+				phoneField,
+				'' as PathValue<TFieldValues, typeof phoneField>,
+				{
+					shouldDirty: interactedRef.current,
+					shouldValidate: interactedRef.current,
+					shouldTouch: interactedRef.current
+				}
+			)
 		}
 	}, [phoneField, setValue, updateMaskEmpty])
 
@@ -189,10 +202,14 @@ export const usePhoneMask = <TFieldValues extends FieldValues & { phone?: string
 		digitsRef.current = ''
 		interactedRef.current = false
 		updateMaskEmpty(true)
-		setValue(phoneField, '' as PathValue<TFieldValues, typeof phoneField>, {
-			shouldDirty: false,
-			shouldValidate: false
-		})
+		setValue(
+			phoneField,
+			'' as PathValue<TFieldValues, typeof phoneField>,
+			{
+				shouldDirty: false,
+				shouldValidate: false
+			}
+		)
 	}, [phoneField, setValue, updateMaskEmpty])
 
 	return {
