@@ -1,3 +1,7 @@
 .header {
-	@apply z-10;
+	@apply sticky top-0 z-10 px-3 pt-3;
+}
+
+.header-shell {
+	@apply mx-auto w-full max-w-[88rem] relative;
 }

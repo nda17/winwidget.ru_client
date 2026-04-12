@@ -1,11 +1,12 @@
 .hamburger {
-	@apply z-10;
+	@apply z-10 flex items-center justify-center transition-transform;
 
 	> svg {
-		@apply w-[1.7rem] h-[1.7rem];
+		@apply w-[1.55rem] h-[1.55rem];
 	}
 
 	&:hover {
+		@apply scale-[1.04];
 		cursor: pointer;
 	}
 }

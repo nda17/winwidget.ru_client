@@ -1,7 +1,7 @@
 .logo {
-	@apply w-16 h-16 transition-all;
+	@apply transition-all;
 
 	&:hover {
-		@apply scale-[.9];
+		transform: translateY(-1px) scale(0.98);
 	}
 }

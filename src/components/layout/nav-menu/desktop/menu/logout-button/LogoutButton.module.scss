@@ -1,15 +1,24 @@
 .link-auth-button {
-	@apply flex items-center transition-transform text-white;
+	@apply inline-flex items-center gap-2 rounded-max px-3 py-2 text-sm font-500 text-gray-300 transition-all;
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	background: rgba(255, 255, 255, 0.04);
+	box-shadow: 0 4px 18px rgba(0, 0, 0, 0.14);
 
 	> svg {
-		@apply w-[1.5rem] h-[1.5rem] mr-[.2rem] transition-all;
+		@apply w-[1.15rem] h-[1.15rem] transition-all rounded-max p-[0.18rem];
+		flex-shrink: 0;
+		background: rgba(255, 255, 255, 0.06);
 	}
 
 	&:hover {
-		@apply scale-[.98] text-gray-300;
+		@apply text-white;
+		transform: translateY(-1px);
+		border-color: rgba(255, 255, 255, 0.16);
+		background: rgba(255, 255, 255, 0.08);
+		box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
 
 		> svg {
-			@apply scale-[1.07];
+			background: rgba(255, 255, 255, 0.1);
 		}
 	}
 }

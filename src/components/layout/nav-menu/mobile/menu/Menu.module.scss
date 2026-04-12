@@ -1,3 +1,9 @@
 .wrapper {
-	@apply absolute z-5 top-0 right-0 pl-8 pr-8 pt-[10rem] pb-10 min-h-[35rem] bg-[#131b22];
+	@apply absolute right-0 z-5 p-4 rounded-[1.2rem];
+	top: calc(100% + 0.75rem);
+	width: min(22rem, calc(100vw - 1.5rem));
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	background: linear-gradient(180deg, rgba(19, 27, 34, 0.98) 0%, rgba(22, 29, 37, 0.98) 100%);
+	box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+	animation: fadeIn 0.2s ease-in-out;
 }

@@ -1,7 +1,16 @@
 .link-auth-button {
-	@apply flex items-center text-[1.1rem] text-white;
+	@apply flex items-center gap-3 rounded-layout px-3 py-3 text-[1rem] font-500 text-gray-300 transition-all;
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	background: rgba(255, 255, 255, 0.04);
 
 	> svg {
-		@apply w-[1.5rem] h-[1.5rem] mr-[.5rem];
+		@apply w-[1.15rem] h-[1.15rem] rounded-max p-[0.2rem];
+		background: rgba(255, 255, 255, 0.06);
+	}
+
+	&:hover {
+		@apply text-white;
+		border-color: rgba(255, 255, 255, 0.16);
+		background: rgba(255, 255, 255, 0.08);
 	}
 }

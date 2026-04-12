@@ -1,4 +1,4 @@
-import styles from '@/components/layout/nav-menu/mobile/MobileNavbar.module.scss'
+import styles from '@/components/layout/nav-menu/mobile/MobileNavBar.module.scss'
 import Menu from '@/components/layout/nav-menu/mobile/menu/Menu'
 import Navigation from '@/components/layout/nav-menu/mobile/navigation/Navigation'
 import { useClickOutside } from '@/hooks/useClickOutside'

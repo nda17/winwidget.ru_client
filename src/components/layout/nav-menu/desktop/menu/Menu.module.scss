@@ -1,3 +1,3 @@
 .wrapper {
-	@apply flex;
+	@apply relative z-1 flex items-center justify-between gap-4 flex-auto;
 }

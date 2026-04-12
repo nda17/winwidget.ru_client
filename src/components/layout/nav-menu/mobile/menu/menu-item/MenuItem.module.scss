@@ -1,19 +1,38 @@
 .wrapper {
-	@apply mb-2;
-
 	.link-button {
-		@apply flex items-center text-white;
+		@apply flex items-center gap-3 rounded-layout px-3 py-3 text-[1rem] font-500 text-gray-300 transition-all;
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		background: rgba(255, 255, 255, 0.04);
 
 		> svg {
-			@apply w-[1.5rem] h-[1.5rem] mr-[.5rem] fill-yellow-700;
+			@apply w-[1.15rem] h-[1.15rem] rounded-max p-[0.2rem];
+			fill: #d9dae8;
+			background: rgba(255, 255, 255, 0.06);
 		}
-	}
 
-	&:last-child {
-		@apply mb-2;
+		&:hover {
+			@apply text-white;
+			border-color: rgba(255, 255, 255, 0.16);
+			background: rgba(255, 255, 255, 0.08);
+
+			> svg {
+				fill: #ffffff;
+				background: rgba(255, 255, 255, 0.1);
+			}
+		}
 	}
 }
 
 .active {
-	@apply italic;
+	.link-button {
+		@apply text-white;
+		border-color: rgba(255, 255, 255, 0.18);
+		background: rgba(255, 255, 255, 0.1);
+		box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+
+		> svg {
+			fill: #ffffff;
+			background: rgba(255, 255, 255, 0.12);
+		}
+	}
 }
