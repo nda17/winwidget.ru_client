@@ -10,7 +10,7 @@ export interface IStatisticsOverview {
 	totalUsers: number
 	activeUsers30d: number
 	newUsers30d: number
-	unconfirmedUsers: number
+	multiLoginUsers: number
 	premiumUsers: number
 	adminUsers: number
 	managerUsers: number

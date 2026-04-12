@@ -134,11 +134,13 @@ const StatisticsInsights: FC = () => {
 				<p className={styles.caption}>Пользователи с premium-доступом</p>
 			</div>
 			<div className={styles.card}>
-				<p className={styles.label}>Без подтверждения email</p>
+				<p className={styles.label}>С 2+ способами входа</p>
 				<p className={styles.value}>
-					{formatStatValue(overview?.unconfirmedUsers ?? 0)}
+					{formatStatValue(overview?.multiLoginUsers ?? 0)}
 				</p>
-				<p className={styles.caption}>Пользователи, не завершившие подтверждение</p>
+				<p className={styles.caption}>
+					Пользователи с привязанными несколькими способами входа
+				</p>
 			</div>
 			<div className={styles.card}>
 				<p className={styles.label}>Роли команды</p>

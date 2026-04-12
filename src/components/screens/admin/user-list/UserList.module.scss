@@ -178,15 +178,15 @@
 		white-space: nowrap;
 	}
 
-	.status-badge {
-		@apply inline-flex items-center rounded-full px-3 py-1 text-[0.75rem] font-semibold whitespace-nowrap;
+	.methods-list {
+		@apply flex flex-wrap gap-2;
 	}
 
-	.status-badge-success {
-		@apply bg-green-100 text-green-700;
+	.method-badge {
+		@apply inline-flex items-center rounded-full px-3 py-1 text-[0.75rem] font-semibold whitespace-nowrap bg-gray-300 bg-opacity-40 text-gray-700;
 	}
 
-	.status-badge-pending {
+	.method-badge-empty {
 		@apply bg-red-100 text-red-700;
 	}
 

@@ -10,6 +10,7 @@ import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import SubHeading from '@/components/ui/sub-heading/SubHeading'
 import { ADMIN_PAGES } from '@/config/pages/admin.config'
 import useUserList from '@/hooks/useUserList'
+import { UserLoginMethod } from '@/shared/types/user.types'
 import clsx from 'clsx'
 import { NextPage } from 'next'
 import { useEffect, useState } from 'react'
@@ -70,23 +71,21 @@ const UserList: NextPage = () => {
 		}
 	}
 
-	const getUserStatus = (user: (typeof activePage)[number]) => {
-		if (user.email) {
-			return {
-				label: 'Email подтвержден',
-				tone: 'success'
-			}
-		}
+	const loginMethodLabels: Record<UserLoginMethod, string> = {
+		EMAIL: 'Email',
+		PHONE: 'Телефон',
+		GOOGLE: 'Google',
+		GITHUB: 'GitHub'
+	}
 
-		return user.isPhoneVerified
-			? {
-					label: 'Телефон подтвержден',
-					tone: 'success'
-				}
-			: {
-					label: 'Телефон не подтвержден',
-					tone: 'pending'
-				}
+	const getLoginMethods = (user: (typeof activePage)[number]) => {
+		return (
+			user.loginMethods?.map((method) => loginMethodLabels[method]) ?? []
+		)
+	}
+
+	const getRoleLabels = (user: (typeof activePage)[number]) => {
+		return user.rights
 	}
 
 	return (
@@ -170,7 +169,7 @@ const UserList: NextPage = () => {
 									<th>Имя</th>
 									<th>Email</th>
 									<th>Телефон</th>
-									<th>Статус</th>
+									<th>Способы входа</th>
 									<th>Роли</th>
 									<th>Дата регистрации</th>
 									<th>Действия</th>
@@ -254,7 +253,8 @@ const UserList: NextPage = () => {
 					</div>
 					<div className={styles['mobile-list']}>
 						{activePage.map((user) => {
-							const status = getUserStatus(user)
+							const loginMethods = getLoginMethods(user)
+							const roles = getRoleLabels(user)
 
 							return (
 								<div key={user.id} className={styles['user-card']}>
@@ -295,23 +295,36 @@ const UserList: NextPage = () => {
 											</span>
 										</div>
 										<div className={styles['user-card-row']}>
-											<span className={styles['card-label']}>Статус</span>
-											<span
-												className={clsx(
-													styles['status-badge'],
-													status.tone === 'success'
-														? styles['status-badge-success']
-														: styles['status-badge-pending']
-												)}
-											>
-												{status.label}
+											<span className={styles['card-label']}>
+												Способы входа
 											</span>
+											<div className={styles['methods-list']}>
+												{loginMethods.length ? (
+													loginMethods.map((method) => (
+														<span
+															key={`${user.id}-${method}`}
+															className={styles['method-badge']}
+														>
+															{method}
+														</span>
+													))
+												) : (
+													<span
+														className={clsx(
+															styles['method-badge'],
+															styles['method-badge-empty']
+														)}
+													>
+														Не привязаны
+													</span>
+												)}
+											</div>
 										</div>
 										<div className={styles['user-card-row']}>
 											<span className={styles['card-label']}>Роли</span>
 											<div className={styles['roles-list']}>
-												{user.rights.length ? (
-													user.rights.map((role) => (
+												{roles.length ? (
+													roles.map((role) => (
 														<span
 															key={role}
 															className={styles['role-badge']}
@@ -347,7 +360,7 @@ const UserList: NextPage = () => {
 									<th>Имя</th>
 									<th>Email</th>
 									<th>Телефон</th>
-									<th>Статус</th>
+									<th>Способы входа</th>
 									<th>Роли</th>
 									<th>Дата регистрации</th>
 									<th>Действия</th>
@@ -355,7 +368,8 @@ const UserList: NextPage = () => {
 							</thead>
 							<tbody>
 								{activePage.map((user) => {
-									const status = getUserStatus(user)
+									const loginMethods = getLoginMethods(user)
+									const roles = getRoleLabels(user)
 
 									return (
 										<tr key={user.id}>
@@ -380,21 +394,32 @@ const UserList: NextPage = () => {
 												</span>
 											</td>
 											<td>
-												<span
-													className={clsx(
-														styles['status-badge'],
-														status.tone === 'success'
-															? styles['status-badge-success']
-															: styles['status-badge-pending']
+												<div className={styles['methods-list']}>
+													{loginMethods.length ? (
+														loginMethods.map((method) => (
+															<span
+																key={`${user.id}-${method}`}
+																className={styles['method-badge']}
+															>
+																{method}
+															</span>
+														))
+													) : (
+														<span
+															className={clsx(
+																styles['method-badge'],
+																styles['method-badge-empty']
+															)}
+														>
+															Не привязаны
+														</span>
 													)}
-												>
-													{status.label}
-												</span>
+												</div>
 											</td>
 											<td>
 												<div className={styles['roles-list']}>
-													{user.rights.length ? (
-														user.rights.map((role) => (
+													{roles.length ? (
+														roles.map((role) => (
 															<span
 																key={role}
 																className={styles['role-badge']}

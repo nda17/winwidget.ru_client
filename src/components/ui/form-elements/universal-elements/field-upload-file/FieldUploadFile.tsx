@@ -25,7 +25,7 @@ const FieldUploadFile: NextPage<IUploadField> = ({
 			</p>
 			<label className={clsx(styles['label-input'])}>
 				<div className={clsx(styles['custom-input'])}>
-					<span className={styles.button}>Choose file</span>
+					<span className={styles.button}>Загрузить файл</span>
 				</div>
 				<input
 					type="file"

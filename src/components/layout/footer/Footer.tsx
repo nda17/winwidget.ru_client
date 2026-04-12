@@ -13,37 +13,11 @@ const Footer: NextPage = () => {
 		<footer className={styles.footer}>
 			<div className={clsx(styles['layout-container'])}>
 				<div className={clsx(styles['information-wrapper'])}>
-					<div className={clsx(styles['socials-wrapper'])}>
-						<h4 className={clsx(styles['title-block'])}>Мы в соцсетях:</h4>
-
-						<div className={clsx(styles['link-icon-wrapper'])}>
-							<Link
-								href={PUBLIC_PAGES.SOCIALS_LINK_VK}
-								className={clsx(styles['link-icon'])}
-							>
-								<FontAwesomeIcon name="FaVk" fill="gray" />
-							</Link>
-							<Link
-								href={PUBLIC_PAGES.SOCIALS_LINK_TG}
-								className={clsx(styles['link-icon'])}
-							>
-								<FontAwesomeIcon name="FaTelegram" fill="gray" />
-							</Link>
-						</div>
-					</div>
-
 					<div className={clsx(styles['contacts-wrapper'])}>
-						<h4 className={clsx(styles['title-block'])}>Контакты:</h4>
+						<h4 className={clsx(styles['title-block'])}>О нас:</h4>
 						<p className={clsx(styles['info-llc'])}>ООО «ЮБС»</p>
 						<p className={clsx(styles['info-llc'])}>ИНН: 2700019628</p>
 						<p className={clsx(styles['info-llc'])}>ОГРН: 1232700016460</p>
-
-						<a
-							href="tel:+79990860186"
-							className={clsx(styles['link-contact'])}
-						>
-							+79990860186
-						</a>
 
 						<a
 							href="mailto:info@winwidget.ru"
@@ -51,6 +25,23 @@ const Footer: NextPage = () => {
 						>
 							info@winwidget.ru
 						</a>
+
+						<div className={clsx(styles['socials-wrapper'])}>
+							<div className={clsx(styles['link-icon-wrapper'])}>
+								<Link
+									href={PUBLIC_PAGES.SOCIALS_LINK_VK}
+									className={clsx(styles['link-icon'])}
+								>
+									<FontAwesomeIcon name="FaVk" fill="gray" />
+								</Link>
+								<Link
+									href={PUBLIC_PAGES.SOCIALS_LINK_TG}
+									className={clsx(styles['link-icon'])}
+								>
+									<FontAwesomeIcon name="FaTelegram" fill="gray" />
+								</Link>
+							</div>
+						</div>
 					</div>
 
 					<div className={clsx(styles['legal-wrapper'])}>
@@ -70,16 +61,16 @@ const Footer: NextPage = () => {
 							Политика обработки персональных данных
 						</Link>
 						<Link
+							href={PUBLIC_PAGES.COOKIE_NOTICE}
+							className={clsx(styles['link-legal'])}
+						>
+							Политика обработки Cookie
+						</Link>
+						<Link
 							href={PUBLIC_PAGES.OFERTA}
 							className={clsx(styles['link-legal'])}
 						>
 							Договор-оферта
-						</Link>
-						<Link
-							href={PUBLIC_PAGES.COOKIE_NOTICE}
-							className={clsx(styles['link-legal'])}
-						>
-							Обработка Cookie
 						</Link>
 					</div>
 				</div>

@@ -52,7 +52,7 @@ export const getOverviewChartData = (
 		{ label: 'Активные за 30 дней', value: overview.activeUsers30d },
 		{ label: 'Новые за 30 дней', value: overview.newUsers30d },
 		{ label: 'Премиум', value: overview.premiumUsers },
-		{ label: 'Без подтверждения', value: overview.unconfirmedUsers },
+		{ label: '2+ способов входа', value: overview.multiLoginUsers },
 		{ label: 'Админы', value: overview.adminUsers },
 		{ label: 'Менеджеры', value: overview.managerUsers }
 	]

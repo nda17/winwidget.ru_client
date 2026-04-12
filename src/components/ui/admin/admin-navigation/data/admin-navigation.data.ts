@@ -8,6 +8,7 @@ export const navItems: INavItem[] = [
 	},
 	{
 		title: 'Пользователи',
-		link: ADMIN_PAGES.USER_LIST
+		link: ADMIN_PAGES.USER_LIST,
+		option: ADMIN_PAGES.USER
 	}
 ]

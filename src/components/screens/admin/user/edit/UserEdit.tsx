@@ -15,6 +15,7 @@ import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import SubHeading from '@/components/ui/sub-heading/SubHeading'
 import UserInfo from '@/components/ui/user-info/UserInfo'
 import { UserRole } from '@/services/auth/auth.types'
+import { UserLoginMethod } from '@/shared/types/user.types'
 import {
 	validEmail,
 	validId,
@@ -37,6 +38,23 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 	} = useForm<IUserEditInput>({ mode: 'onChange' })
 
 	const { isLoading, data, onSubmit } = useUserEdit(setValue, params)
+
+	const loginMethodLabels: Record<UserLoginMethod, string> = {
+		EMAIL: 'Email',
+		PHONE: 'Телефон',
+		GOOGLE: 'Google',
+		GITHUB: 'GitHub'
+	}
+
+	const getLoginMethods = () => {
+		if (!data?.loginMethods?.length) {
+			return 'Не привязаны'
+		}
+
+		return data.loginMethods
+			.map((method) => loginMethodLabels[method])
+			.join(', ')
+	}
 
 	return (
 		<div className={styles.wrapper}>
@@ -154,14 +172,10 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 								{data.phone || 'Нет данных'}
 							</p>
 							<p className={styles['info-field']}>
-								<span className={styles['info-label']}>Статус:</span>{' '}
-								<span className={styles['info-status']}>
-									{data.email
-										? 'Email подтвержден'
-										: data.isPhoneVerified
-											? 'Телефон подтвержден'
-											: 'Телефон не подтвержден'}
-								</span>
+								<span className={styles['info-label']}>
+									Способы входа:
+								</span>{' '}
+								{getLoginMethods()}
 							</p>
 							<p className={styles['info-field']}>
 								<span className={styles['info-label']}>Роли:</span>{' '}

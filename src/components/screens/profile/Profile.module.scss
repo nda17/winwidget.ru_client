@@ -9,7 +9,9 @@
 		@apply w-full max-w-[42rem] flex flex-col gap-5;
 	}
 
-	.profile-summary-section {
+	.profile-summary-section,
+	.profile-identity-section,
+	.profile-edit-section {
 		@apply w-full rounded-layout border border-gray-300 bg-white px-5 py-5 shadow-sm;
 	}
 
@@ -41,12 +43,37 @@
 		@apply font-semibold text-gray-700;
 	}
 
-	.info-status {
-		@apply text-gray-600;
+	.profile-identity-section {
+		@apply flex flex-col gap-4;
 	}
 
-	.profile-edit-section {
-		@apply w-full mb-6 rounded-layout border border-gray-300 bg-white px-5 py-5 shadow-sm;
+	.identity-grid,
+	.loading-identity-grid {
+		@apply grid gap-4 md:grid-cols-2;
+	}
+
+	.identity-card {
+		@apply rounded-2xl border border-gray-300 bg-bg-color p-4 flex flex-col gap-3;
+	}
+
+	.identity-title {
+		@apply text-lg font-semibold text-gray-900;
+	}
+
+	.identity-description {
+		@apply text-sm leading-relaxed text-gray-600 min-h-[3rem];
+	}
+
+	.identity-hint {
+		@apply text-sm leading-relaxed text-gray-600;
+	}
+
+	.identity-actions {
+		@apply flex flex-wrap gap-3 pt-1;
+	}
+
+	.identity-reset {
+		@apply w-fit text-sm font-medium text-gray-600 underline underline-offset-4 transition-colors hover:text-gray-900;
 	}
 
 	.profile-edit-form {
@@ -66,7 +93,7 @@
 	}
 
 	.loading-button {
-		@apply h-10 w-[7.5rem];
+		@apply h-10 w-[9.5rem];
 	}
 
 	.profile-edit-actions {

@@ -8,6 +8,12 @@ export interface IProfileEditInput {
 	password?: string
 }
 
+export interface IProfileIdentityCodeInput {
+	email?: string
+	phone?: string
+	code?: string
+}
+
 class UserService {
 	private _BASE_URL = '/users'
 
@@ -63,6 +69,44 @@ class UserService {
 		return axiosInterceptorsRequest.patch<boolean>(
 			`${this._BASE_URL}/profile`,
 			data
+		)
+	}
+
+	async sendProfileEmailCode(data: IProfileIdentityCodeInput) {
+		return axiosInterceptorsRequest.post(
+			`${this._BASE_URL}/profile/bind/email/send-code`,
+			{
+				email: data.email
+			}
+		)
+	}
+
+	async verifyProfileEmailCode(data: IProfileIdentityCodeInput) {
+		return axiosInterceptorsRequest.post<IUser>(
+			`${this._BASE_URL}/profile/bind/email/verify`,
+			{
+				email: data.email,
+				code: data.code
+			}
+		)
+	}
+
+	async sendProfilePhoneCode(data: IProfileIdentityCodeInput) {
+		return axiosInterceptorsRequest.post(
+			`${this._BASE_URL}/profile/bind/phone/send-code`,
+			{
+				phone: data.phone
+			}
+		)
+	}
+
+	async verifyProfilePhoneCode(data: IProfileIdentityCodeInput) {
+		return axiosInterceptorsRequest.post<IUser>(
+			`${this._BASE_URL}/profile/bind/phone/verify`,
+			{
+				phone: data.phone,
+				code: data.code
+			}
 		)
 	}
 }
