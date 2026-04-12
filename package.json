@@ -7,7 +7,12 @@
 		"build": "next build",
 		"start": "next start",
 		"lint": "next lint",
-		"format": "prettier --write --no-error-on-unmatched-pattern \"src/**/*.{ts,tsx,scss}\" \"*.{js,mjs,ts,json}\""
+		"format": "prettier --write --no-error-on-unmatched-pattern \"src/**/*.{ts,tsx,scss}\" \"*.{js,mjs,ts,json}\"",
+		"prepare": "husky"
+	},
+	"lint-staged": {
+		"*.{ts,tsx,js,mjs,json,scss,md}": "prettier --write",
+		"*.{ts,tsx}": "eslint --fix --max-warnings=0"
 	},
 	"dependencies": {
 		"@tanstack/react-query": "^5.63.0",
@@ -35,6 +40,8 @@
 		"autoprefixer": "^10.4.20",
 		"eslint": "^8.57.1",
 		"eslint-config-next": "^14.2.23",
+		"husky": "^9.1.7",
+		"lint-staged": "^16.4.0",
 		"postcss": "^8.4.49",
 		"prettier": "^3.8.2",
 		"sass": "^1.83.1",
