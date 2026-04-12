@@ -8,6 +8,7 @@ class PublicPages {
 	FREE_CONTENT = '/free-content'
 	PREMIUM_CONTENT = '/premium-content'
 	PERSONAL_POLICY = '/legal-documentation/personal-policy'
+	CONSENT_PROCESSING = '/legal-documentation/consent-processing'
 	COOKIE_NOTICE = '/legal-documentation/cookie-notice'
 	OFERTA = '/legal-documentation/oferta'
 	SOCIALS_LINK_VK = 'https://vk.ru'

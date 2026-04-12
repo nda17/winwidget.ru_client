@@ -58,22 +58,28 @@ const Footer: NextPage = () => {
 							Правовая информация:
 						</h4>
 						<Link
+							href={PUBLIC_PAGES.CONSENT_PROCESSING}
+							className={clsx(styles['link-legal'])}
+						>
+							Согласие на обработку персональных данных
+						</Link>
+						<Link
 							href={PUBLIC_PAGES.PERSONAL_POLICY}
 							className={clsx(styles['link-legal'])}
 						>
 							Политика обработки персональных данных
 						</Link>
 						<Link
-							href={PUBLIC_PAGES.COOKIE_NOTICE}
-							className={clsx(styles['link-legal'])}
-						>
-							Согласие на обработку персональных данных
-						</Link>
-						<Link
 							href={PUBLIC_PAGES.OFERTA}
 							className={clsx(styles['link-legal'])}
 						>
 							Договор-оферта
+						</Link>
+						<Link
+							href={PUBLIC_PAGES.COOKIE_NOTICE}
+							className={clsx(styles['link-legal'])}
+						>
+							Обработка Cookie
 						</Link>
 					</div>
 				</div>

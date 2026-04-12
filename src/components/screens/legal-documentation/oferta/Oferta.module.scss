@@ -114,10 +114,6 @@
 	@apply mb-4 text-[1.45rem] font-bold leading-tight text-secondary md:text-[1.7rem];
 }
 
-.sectionSubtitle {
-	@apply mt-6 mb-3 border-l-4 border-primary pl-4 text-[1.08rem] font-semibold leading-6 text-secondary;
-}
-
 .paragraph {
 	@apply max-w-[68ch] text-base leading-7 text-gray-700;
 
@@ -131,7 +127,7 @@
 }
 
 .infoCard {
-	@apply max-h-[18rem] rounded-[1.25rem] border border-gray-300 bg-bg-color p-4 shadow-sm;
+	@apply h-full rounded-[1.25rem] border border-gray-300 bg-bg-color p-4 shadow-sm;
 }
 
 .cardTitle {
@@ -143,18 +139,6 @@
 
 	& + & {
 		margin-top: 0.75rem;
-	}
-}
-
-.browserGrid {
-	@apply mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3;
-}
-
-.browserLink {
-	@apply flex items-center rounded-[1rem] border border-gray-300 bg-bg-color px-4 py-3 text-sm font-medium text-secondary shadow-sm transition-all;
-
-	&:hover {
-		@apply -translate-y-0.5 border-primary text-primary shadow-md;
 	}
 }
 
