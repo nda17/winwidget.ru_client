@@ -5,8 +5,8 @@ import type { Metadata } from 'next'
 import { PropsWithChildren } from 'react'
 
 export const metadata: Metadata = {
-	title: 'Auth-form',
-	description: 'Auth-form'
+	title: 'Winwidget.ru',
+	description: 'Виджеты для генерации продаж'
 }
 
 const RootLayout = ({ children }: PropsWithChildren<unknown>) => {
