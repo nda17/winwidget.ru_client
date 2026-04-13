@@ -6,13 +6,14 @@ import { NextPage } from 'next'
 export const SearchField: NextPage<ISearchField> = ({
 	searchTerm,
 	handleSearch,
-	handleClear
+	handleClear,
+	placeholder = 'Поиск...'
 }) => {
 	return (
 		<div className={styles.searchField}>
 			<MaterialIcon name="MdSearch" />
 			<input
-				placeholder="Email"
+				placeholder={placeholder}
 				value={searchTerm}
 				onChange={handleSearch}
 			/>
