@@ -32,7 +32,7 @@ export const useUserEdit = (
 		mutationFn: (data: IUserEditInput) =>
 			UserService.updateUser(userId, data),
 		onSuccess() {
-			toast.success('Изменени данных пользователя сохранены')
+			toast.success('Изменения данных пользователя сохранены')
 			router.push('/admin/user-list')
 			queryClient.invalidateQueries({ queryKey: ['get-user-by-id'] })
 		},

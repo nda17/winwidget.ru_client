@@ -12,6 +12,12 @@ class PaymentService {
 			`${this._BASE_URL}/create`
 		)
 	}
+
+	async verifyPayment() {
+		return axiosInterceptorsRequest.post<{ activated: boolean }>(
+			`${this._BASE_URL}/verify`
+		)
+	}
 }
 
 const paymentService = new PaymentService()
