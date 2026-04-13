@@ -31,14 +31,14 @@ const PremiumContentItem: NextPage = () => {
 
 	return (
 		<div className={styles.wrapper}>
-			<Heading text="Премиум-материал № 1" />
+			<Heading text="Премиум-контент" />
 			{isLoadingProfile || isLoadingPremium ? (
 				<CirclesLoader />
 			) : (
 				user?.isLoggedIn &&
 				(data ? (
 					<>
-						<SubHeading text="Это премиум-материал № 1, у вас есть доступ к этому контенту." />
+						<SubHeading text="Это премиум-контент, у вас есть доступ к этому контенту:" />
 						Lorem ipsum dolor, sit amet consectetur adipisicing elit. Est
 						facilis nulla, modi accusantium, atque eius quasi consequuntur
 						aut id eaque nisi. Fugit inventore odio mollitia facere aliquam

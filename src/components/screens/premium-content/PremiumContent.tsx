@@ -16,7 +16,7 @@ const PremiumContent: NextPage = () => {
 					href={`${PUBLIC_PAGES.PREMIUM_CONTENT}/content?id=1`}
 					className={styles.link}
 				>
-					Премиум-материал № 1
+					Премиум-контент
 				</Link>
 			</div>
 		</div>
