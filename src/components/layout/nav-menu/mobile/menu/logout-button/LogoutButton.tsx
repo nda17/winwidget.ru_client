@@ -4,6 +4,7 @@ import { PUBLIC_PAGES } from '@/config/pages/public.config'
 import authService from '@/services/auth/auth.service'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import { useHamburgerStore } from '@/store/hamburger-store/hamburger-store'
+import { useVeilBackgroundStore } from '@/store/veil-background-store/veil-background-store'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
 import { NextPage } from 'next'
@@ -12,7 +13,8 @@ import { MouseEvent } from 'react'
 import toast from 'react-hot-toast'
 
 const LogoutButton: NextPage = () => {
-	const setAuth = useAuthStore((state) => state.setAuth)
+	const setAuth = useAuthStore(state => state.setAuth)
+	const setAuthResolved = useAuthStore(state => state.setAuthResolved)
 	const { replace } = useRouter()
 	const queryClient = useQueryClient()
 
@@ -21,26 +23,34 @@ const LogoutButton: NextPage = () => {
 			mutationKey: ['logout'],
 			mutationFn: () => authService.logout(),
 			onSuccess() {
-				toast.success('Logout')
+				toast.success('Вы вышли из аккаунта')
 				queryClient.clear()
-				setAuth()
+				setAuth(false)
+				setAuthResolved(true)
+				closeMenu()
+				replace(PUBLIC_PAGES.LOGIN)
+			},
+			onError() {
+				toast.error('Не удалось завершить выход. Попробуйте ещё раз.')
 			}
 		}
 	)
 
 	const changeVisibleHamburger = useHamburgerStore(
-		(state) => state.setVisible
+		state => state.setVisible
+	)
+	const changeVisibleVeilBackground = useVeilBackgroundStore(
+		state => state.setVisible
 	)
 
 	const closeMenu = () => {
-		changeVisibleHamburger()
+		changeVisibleHamburger(false)
+		changeVisibleVeilBackground(false)
 	}
 
 	const logoutHandler = (e: MouseEvent) => {
 		e.preventDefault()
 		mutateLogout()
-		closeMenu()
-		replace(PUBLIC_PAGES.LOGIN)
 	}
 
 	return (
@@ -50,7 +60,7 @@ const LogoutButton: NextPage = () => {
 			className={clsx(styles['link-auth-button'])}
 		>
 			<MaterialIcon name="MdLogout" fill="red" />
-			Logout
+			Выйти
 		</button>
 	)
 }

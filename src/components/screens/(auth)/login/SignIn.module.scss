@@ -1,11 +1,41 @@
 .wrapper {
-	@apply flex items-center justify-center;
+	@apply flex items-center justify-center px-4 py-14 md:py-20;
+	min-height: calc(100dvh - 8rem);
 
 	.form {
-		@apply bg-[#131b22] p-8 rounded-lg shadow-md;
+		@apply w-full max-w-[30rem] rounded-[1.75rem] border p-6 md:p-8;
+		background: linear-gradient(
+			180deg,
+			rgba(19, 27, 34, 0.98) 0%,
+			rgba(22, 29, 37, 0.98) 100%
+		);
+		border-color: rgba(255, 255, 255, 0.08);
+		box-shadow: 0 24px 64px rgba(9, 13, 17, 0.18);
 
 		.title {
-			@apply text-white font-bold mb-4;
+			@apply text-white font-semibold text-[1.85rem] leading-none mb-2;
+		}
+
+		.subtitle {
+			@apply text-[0.94rem] leading-6 mb-6;
+			color: rgba(217, 218, 232, 0.74);
+		}
+
+		.auth-actions {
+			@apply mt-5 flex flex-wrap gap-2 border-t pt-4;
+			border-color: rgba(255, 255, 255, 0.08);
+		}
+
+		.auth-link {
+			@apply rounded-full border px-3 py-2 text-[0.82rem] font-medium transition-all;
+			color: rgba(217, 218, 232, 0.84);
+			background: rgba(255, 255, 255, 0.03);
+			border-color: rgba(255, 255, 255, 0.08);
+
+			&:hover {
+				@apply text-white;
+				background: rgba(255, 255, 255, 0.08);
+			}
 		}
 	}
 }

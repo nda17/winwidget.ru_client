@@ -8,37 +8,47 @@ import {
 import { jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 
+const verifyAccessToken = async (
+	accessToken: string,
+	jwtSecret: string
+): Promise<TUserDataState | null> => {
+	const { payload }: { payload: ITokenInside } = await jwtVerify(
+		accessToken,
+		new TextEncoder().encode(jwtSecret)
+	)
+
+	if (!payload) {
+		return null
+	}
+
+	return transformUserToState(payload)
+}
+
 export const getServerAuth = async (): Promise<TUserDataState | null> => {
-	const JWT_SECRET = process.env.JWT_SECRET
+	const jwtSecret = process.env.JWT_SECRET
 	let accessToken = cookies().get(EnumTokens.ACCESS_TOKEN)?.value
 	const refreshToken = cookies().get(EnumTokens.REFRESH_TOKEN)?.value
+
+	if (!jwtSecret) {
+		return null
+	}
+
+	if (accessToken) {
+		try {
+			return await verifyAccessToken(accessToken, jwtSecret)
+		} catch (error) {
+			accessToken = null
+		}
+	}
 
 	if (!refreshToken) {
 		return null
 	}
 
-	if (!accessToken) {
-		try {
-			const data = await authService.getNewTokensByRefresh(refreshToken)
-			accessToken = data.accessToken
-		} catch (error) {
-			return null
-		}
-	}
-
 	try {
 		const data = await authService.getNewTokensByRefresh(refreshToken)
 		accessToken = data.accessToken
-		const { payload }: { payload: ITokenInside } = await jwtVerify(
-			accessToken,
-			new TextEncoder().encode(`${JWT_SECRET}`)
-		)
-
-		if (!payload) {
-			return null
-		}
-
-		return transformUserToState(payload)
+		return await verifyAccessToken(accessToken, jwtSecret)
 	} catch (error) {
 		return null
 	}

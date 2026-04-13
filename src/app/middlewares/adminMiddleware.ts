@@ -10,16 +10,16 @@ export const adminMiddleware = async (request: NextRequest) => {
 		user?.isAdmin &&
 		user?.rights?.includes(UserRole.ADMIN)
 	) {
-		NextResponse.redirect(new URL('/admin', request.url))
-	} else if (
+		return NextResponse.next()
+	}
+
+	if (
 		user?.isLoggedIn &&
 		!user?.isAdmin &&
 		!user?.rights?.includes(UserRole.ADMIN)
 	) {
-		return NextResponse.error()
-	} else {
-		return NextResponse.redirect(new URL('/logout', request.url))
+		return NextResponse.redirect(new URL('/profile', request.url))
 	}
 
-	return NextResponse.next()
+	return NextResponse.redirect(new URL('/logout', request.url))
 }

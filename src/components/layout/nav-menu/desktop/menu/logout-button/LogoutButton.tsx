@@ -11,7 +11,8 @@ import { MouseEvent } from 'react'
 import toast from 'react-hot-toast'
 
 const LogoutButton: NextPage = () => {
-	const setAuth = useAuthStore((state) => state.setAuth)
+	const setAuth = useAuthStore(state => state.setAuth)
+	const setAuthResolved = useAuthStore(state => state.setAuthResolved)
 	const { replace } = useRouter()
 	const queryClient = useQueryClient()
 
@@ -20,10 +21,14 @@ const LogoutButton: NextPage = () => {
 			mutationKey: ['logout'],
 			mutationFn: () => authService.logout(),
 			onSuccess() {
-				toast.success('Logout')
+				toast.success('Вы вышли из аккаунта')
 				queryClient.clear()
-				setAuth()
+				setAuth(false)
+				setAuthResolved(true)
 				replace(PUBLIC_PAGES.LOGIN)
+			},
+			onError() {
+				toast.error('Не удалось завершить выход. Попробуйте ещё раз.')
 			}
 		}
 	)
@@ -40,7 +45,7 @@ const LogoutButton: NextPage = () => {
 			className={clsx(styles['link-auth-button'])}
 		>
 			<MaterialIcon name="MdLogout" fill="red" />
-			{isLogoutLoading ? 'Wait...' : 'Logout'}
+			{isLogoutLoading ? 'Подождите...' : 'Выйти'}
 		</button>
 	)
 }

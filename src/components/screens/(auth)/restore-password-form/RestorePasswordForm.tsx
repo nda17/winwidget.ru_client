@@ -2,56 +2,112 @@
 import styles from '@/components/screens/(auth)/auth-form/AuthForm.module.scss'
 import useRestorePasswordForm from '@/components/screens/(auth)/restore-password-form/useRestorePasswordForm'
 import FieldEmail from '@/components/ui/form-elements/auth-page/field-email/FieldEmail'
-import { validEmail } from '@/shared/regex'
+import FieldPhone from '@/components/ui/form-elements/auth-page/field-phone/FieldPhone'
+import { validEmail, validPhone } from '@/shared/regex'
 import clsx from 'clsx'
 import { NextPage } from 'next'
-import ReCAPTCHA from 'react-google-recaptcha'
 
 const RestorePasswordForm: NextPage = () => {
 	const {
 		handleSubmit,
 		isLoading,
 		onSubmit,
-		recaptchaRef,
+		onInvalid,
 		register,
-		formState: { errors }
+		formState: { errors, touchedFields, isSubmitted },
+		authMethod,
+		setAuthMethod,
+		phoneInputRef,
+		phoneMask
 	} = useRestorePasswordForm()
 
 	return (
-		<form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
-			<FieldEmail
-				{...register('email', {
-					required: 'Email is required!',
-					pattern: {
-						value: validEmail,
-						message: 'Please enter a valid email'
-					}
-				})}
-				placeholder="Enter email:"
-				type="email"
-				error={errors.email}
-			/>
+		<form
+			onSubmit={handleSubmit(onSubmit, onInvalid)}
+			className={styles.form}
+		>
+			<div className={styles['auth-method-toggle']}>
+				<button
+					type="button"
+					className={clsx(
+						styles['method-button'],
+						authMethod === 'email' && styles['method-button-active']
+					)}
+					onClick={() => setAuthMethod('email')}
+				>
+					Email
+				</button>
+				<button
+					type="button"
+					className={clsx(
+						styles['method-button'],
+						authMethod === 'phone' && styles['method-button-active']
+					)}
+					onClick={() => setAuthMethod('phone')}
+				>
+					Телефон
+				</button>
+			</div>
 
-			<ReCAPTCHA
-				hl="en"
-				ref={recaptchaRef}
-				size="normal"
-				sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY as string}
-				theme="dark"
-				className={styles.recaptcha}
-			/>
+			{authMethod === 'email' ? (
+				<FieldEmail
+					{...register('email', {
+						required: 'Введите email',
+						pattern: {
+							value: validEmail,
+							message: 'Проверьте правильность ввода email'
+						}
+					})}
+					placeholder="Email:"
+					type="email"
+					error={errors.email}
+					data-validated={
+						touchedFields.email || isSubmitted ? 'true' : undefined
+					}
+				/>
+			) : (
+				(() => {
+					const phoneRegister = register('phone', {
+						required: 'Введите номер телефона',
+						pattern: {
+							value: validPhone,
+							message: 'Проверьте правильность ввода номера телефона'
+						}
+					})
+
+					return (
+						<FieldPhone
+							{...phoneRegister}
+							placeholder="Телефон:"
+							type="tel"
+							error={errors.phone}
+							data-validated={
+								touchedFields.phone || isSubmitted ? 'true' : undefined
+							}
+							data-mask-empty={phoneMask.isMaskEmpty ? 'true' : undefined}
+							onFocus={phoneMask.onFocus}
+							onClick={phoneMask.onClick}
+							onKeyDown={phoneMask.onKeyDown}
+							onBeforeInput={phoneMask.onBeforeInput}
+							onInput={phoneMask.onInput}
+							onPaste={phoneMask.onPaste}
+							onBlur={phoneMask.onBlur}
+							ref={element => {
+								phoneRegister.ref(element)
+								phoneInputRef.current = element
+							}}
+						/>
+					)
+				})()
+			)}
 
 			<div className={clsx(styles['wrapper-button'])}>
 				<button
 					type="submit"
-					className={clsx(
-						styles['button-primary'],
-						'bg-red-600',
-						isLoading ? 'opacity-75 cursor-not-allowed' : ''
-					)}
+					className={clsx(styles['button-primary'])}
 					disabled={isLoading}
 				>
-					Restore password
+					Восстановить пароль
 				</button>
 			</div>
 		</form>

@@ -1,7 +1,30 @@
 .wrapper {
-	@apply bg-[#131b22] p-4 relative;
+	@apply relative w-full;
 
 	.layout-container {
-		@apply flex justify-between items-center;
+		@apply flex justify-between items-center gap-3 px-4 py-[0.7rem];
+	}
+
+	.brand {
+		@apply flex items-center gap-2 min-w-0;
+	}
+
+	.brand-copy {
+		@apply flex flex-col min-w-0;
+	}
+
+	.brand-title {
+		@apply text-[0.74rem] font-700 uppercase tracking-[0.14em] text-white whitespace-nowrap;
+	}
+
+	.brand-subtitle {
+		@apply text-[0.63rem] text-gray-300 leading-tight whitespace-nowrap;
+	}
+
+	.menu-toggle {
+		@apply flex items-center justify-center flex-shrink-0 rounded-max p-[0.45rem] z-10;
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		background: rgba(255, 255, 255, 0.06);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 	}
 }

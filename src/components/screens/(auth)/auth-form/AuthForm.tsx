@@ -5,74 +5,248 @@ import AuthToggle from '@/components/screens/(auth)/auth-form/auth-toggle/AuthTo
 import SocialMediaButtons from '@/components/screens/(auth)/auth-form/social-media-buttons/SocialMediaButtons'
 import useAuthForm from '@/components/screens/(auth)/auth-form/useAuthForm'
 import FieldEmail from '@/components/ui/form-elements/auth-page/field-email/FieldEmail'
+import FieldPhone from '@/components/ui/form-elements/auth-page/field-phone/FieldPhone'
+import FieldSmsCode from '@/components/ui/form-elements/auth-page/field-sms-code/FieldSmsCode'
 import FieldPassword from '@/components/ui/form-elements/auth-page/field-password/FieldPassword'
-import { validEmail, validPassword } from '@/shared/regex'
+import {
+	validEmail,
+	validPassword,
+	validPhone,
+	validPhoneCode
+} from '@/shared/regex'
 import clsx from 'clsx'
 import { NextPage } from 'next'
-import ReCAPTCHA from 'react-google-recaptcha'
 
 const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 	const {
 		handleSubmit,
 		isLoading,
 		onSubmit,
-		recaptchaRef,
 		register,
-		formState: { errors }
+		formState: { errors, touchedFields, isSubmitted },
+		authMethod,
+		setAuthMethod,
+		isPhoneCodeRequested,
+		isEmailCodeRequested,
+		emailValue,
+		phoneValue,
+		phoneInputRef,
+		phoneMask,
+		resendEmailCode,
+		resetEmailCodeStep,
+		resetPhoneCodeStep
 	} = useAuthForm(isLogin)
 
 	return (
 		<form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
-			<FieldEmail
-				{...register('email', {
-					required: 'Email is required!',
-					pattern: {
-						value: validEmail,
-						message: 'Please enter a valid email'
-					}
-				})}
-				placeholder="Enter email:"
-				type="email"
-				error={errors.email}
-			/>
+			<div className={styles['auth-method-toggle']}>
+				<button
+					type="button"
+					className={clsx(
+						styles['method-button'],
+						authMethod === 'email' && styles['method-button-active']
+					)}
+					onClick={() => setAuthMethod('email')}
+				>
+					Email
+				</button>
+				<button
+					type="button"
+					className={clsx(
+						styles['method-button'],
+						authMethod === 'phone' && styles['method-button-active']
+					)}
+					onClick={() => setAuthMethod('phone')}
+				>
+					Телефон
+				</button>
+			</div>
+
+			{authMethod === 'email' ? (
+				<>
+					<FieldEmail
+						{...register('email', {
+							required: 'Введите email',
+							pattern: {
+								value: validEmail,
+								message: 'Проверьте правильность ввода email'
+							}
+						})}
+						placeholder="Email:"
+						type="email"
+						error={errors.email}
+						data-validated={
+							touchedFields.email || isSubmitted ? 'true' : undefined
+						}
+						disabled={!isLogin && isEmailCodeRequested}
+					/>
+					{!isLogin && isEmailCodeRequested && (
+						<>
+							<FieldSmsCode
+								{...register('code', {
+									required: 'Введите код из email',
+									pattern: {
+										value: validPhoneCode,
+										message: 'Код должен содержать 4-6 цифр'
+									}
+								})}
+								placeholder="Код из email:"
+								type="text"
+								error={errors.code}
+								data-validated={
+									touchedFields.code || isSubmitted ? 'true' : undefined
+								}
+							/>
+							<div className={styles['verification-hint']}>
+								Код отправлен на email {emailValue}. Код действует 10
+								минут.
+							</div>
+							<div className={styles['link-actions']}>
+								<button
+									type="button"
+									className={styles['link-button']}
+									onClick={resendEmailCode}
+									disabled={isLoading}
+								>
+									Отправить код повторно
+								</button>
+								<button
+									type="button"
+									className={styles['link-button']}
+									onClick={resetEmailCodeStep}
+									disabled={isLoading}
+								>
+									Изменить email
+								</button>
+							</div>
+						</>
+					)}
+				</>
+			) : (
+				<>
+					{(() => {
+						const phoneRegister = register('phone', {
+							required: 'Введите номер телефона',
+							pattern: {
+								value: validPhone,
+								message: 'Проверьте правильность ввода номера телефона'
+							}
+						})
+
+						return (
+							<FieldPhone
+								{...phoneRegister}
+								placeholder="Телефон:"
+								type="tel"
+								error={errors.phone}
+								data-validated={
+									touchedFields.phone || isSubmitted ? 'true' : undefined
+								}
+								data-mask-empty={
+									phoneMask.isMaskEmpty ? 'true' : undefined
+								}
+								disabled={!isLogin && isPhoneCodeRequested}
+								onFocus={phoneMask.onFocus}
+								onClick={phoneMask.onClick}
+								onKeyDown={phoneMask.onKeyDown}
+								onBeforeInput={phoneMask.onBeforeInput}
+								onInput={phoneMask.onInput}
+								onPaste={phoneMask.onPaste}
+								onBlur={phoneMask.onBlur}
+								ref={element => {
+									phoneRegister.ref(element)
+									phoneInputRef.current = element
+								}}
+							/>
+						)
+					})()}
+					{!isLogin && isPhoneCodeRequested && (
+						<>
+							<FieldSmsCode
+								{...register('code', {
+									required: 'Введите код из SMS',
+									pattern: {
+										value: validPhoneCode,
+										message: 'Код должен содержать 4-6 цифр'
+									}
+								})}
+								placeholder="Код из SMS:"
+								type="text"
+								error={errors.code}
+								data-validated={
+									touchedFields.code || isSubmitted ? 'true' : undefined
+								}
+							/>
+							<div className={styles['verification-hint']}>
+								Код отправлен на номер {phoneValue}
+							</div>
+							<div className={styles['link-actions']}>
+								<button
+									type="button"
+									className={styles['link-button']}
+									onClick={resetPhoneCodeStep}
+									disabled={isLoading}
+								>
+									Изменить номер
+								</button>
+							</div>
+						</>
+					)}
+				</>
+			)}
 
 			<FieldPassword
 				{...register('password', {
-					pattern: {
-						value: validPassword,
-						message:
-							'Min length should more 6 symbols. Contains 1 number 0-9, 1 Latin letter a-z, 1 Latin letter A-Z'
-					}
+					required:
+						!isLogin && authMethod === 'email' && isEmailCodeRequested
+							? false
+							: 'Введите пароль',
+					pattern:
+						!isLogin && authMethod === 'email' && isEmailCodeRequested
+							? undefined
+							: {
+									value: validPassword,
+									message:
+										'Мин. длина 6 символов. Должен содержать 1 цифру 0-9, 1 строчную букву a-z и 1 заглавную букву A-Z.'
+								}
 				})}
-				placeholder="Enter password:"
+				placeholder="Пароль:"
 				type="password"
 				error={errors.password}
-			/>
-
-			<ReCAPTCHA
-				hl="en"
-				ref={recaptchaRef}
-				size="normal"
-				sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY as string}
-				theme="dark"
-				className={styles.recaptcha}
+				data-validated={
+					touchedFields.password || isSubmitted ? 'true' : undefined
+				}
+				disabled={
+					!isLogin && authMethod === 'email' && isEmailCodeRequested
+				}
 			/>
 
 			<div className={clsx(styles['wrapper-button'])}>
 				<button
 					type="submit"
-					className={clsx(
-						styles['button-primary'],
-						isLogin ? 'bg-green-500' : 'bg-yellow-700',
-						isLoading ? 'opacity-75 cursor-not-allowed' : ''
-					)}
+					className={clsx(styles['button-primary'])}
 					disabled={isLoading}
 				>
-					{isLoading ? 'Loading...' : isLogin ? 'Sign in' : 'Sign up'}
+					{isLoading
+						? 'Загрузка...'
+						: isLogin
+							? 'Войти'
+							: authMethod === 'phone'
+								? !isPhoneCodeRequested
+									? 'Получить код'
+									: 'Зарегистрироваться'
+								: !isEmailCodeRequested
+									? 'Получить код'
+									: 'Подтвердить email'}
 				</button>
 			</div>
 
-			<SocialMediaButtons />
+			<div className={styles['social-section']}>
+				<div className={styles['section-divider']}>
+					<span>или продолжить через</span>
+				</div>
+				<SocialMediaButtons />
+			</div>
 
 			<AuthToggle isLogin={isLogin} />
 		</form>

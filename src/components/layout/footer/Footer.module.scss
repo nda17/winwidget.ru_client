@@ -1,14 +1,27 @@
+/* .header {
+	@apply w-full rounded-b-[1.2rem];
+	background: #131b22;
+	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+} */
 .footer {
-	@apply bg-[#131b22] p-4 relative z-10;
+	@apply p-4 relative z-3 flex justify-center border-t;
+	background: linear-gradient(
+		180deg,
+		rgba(19, 27, 34, 0.98) 0%,
+		rgba(22, 29, 37, 0.98) 100%
+	);
+	border-color: rgba(255, 255, 255, 0.08);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 
 	.layout-container {
-		@apply lg:container flex items-center justify-between relative;
+		@apply flex flex-col max-w-[88rem] w-full;
 
 		.information-wrapper {
-			@apply flex;
+			@apply flex flex-col gap-[.6rem] sm:flex-row sm:justify-end mb-4;
 
 			.socials-wrapper {
-				@apply flex flex-col mr-2 w-[5.938rem];
+				@apply flex flex-col mr-2 items-center sm:items-baseline gap-3 sm:gap-[.7rem];
 
 				.title-block {
 					@apply text-white font-500 text-[.8rem] select-none;
@@ -38,14 +51,14 @@
 			}
 
 			.contacts-wrapper {
-				@apply flex flex-col mr-2 w-[5.938rem];
+				@apply flex flex-col mr-2 items-center sm:items-baseline gap-3 sm:gap-[.7rem];
 
 				.title-block {
 					@apply text-white font-500 text-[.8rem] select-none;
 				}
 
 				.info-llc {
-					@apply text-white text-[.7rem] leading-[.8rem] select-none;
+					@apply text-gray-300 text-[.7rem] leading-[.8rem] select-none;
 				}
 
 				.link-contact {
@@ -58,7 +71,7 @@
 			}
 
 			.legal-wrapper {
-				@apply flex flex-col w-[5.938rem];
+				@apply flex flex-col items-center sm:items-baseline gap-3 sm:gap-[.7rem];
 
 				.title-block {
 					@apply text-white font-500 text-[.8rem] select-none;
@@ -75,10 +88,13 @@
 		}
 
 		.inform-wrapper {
-			@apply max-w-[10.5rem] flex flex-col items-center absolute right-0 left-0 m-auto select-none;
+			@apply flex flex-col select-none items-center;
 			.text-inform,
 			.date-inform {
-				@apply text-[#ffffff] text-[.8rem] leading-[.9rem];
+				@apply text-gray-300 text-[.8rem] leading-[.9rem];
+			}
+			.ybs-inform-wrapper {
+				@apply flex gap-1 mb-3 items-center;
 			}
 		}
 	}

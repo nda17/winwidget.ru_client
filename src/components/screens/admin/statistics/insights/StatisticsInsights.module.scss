@@ -1,0 +1,19 @@
+.wrapper {
+	@apply grid gap-4 sm:gap-5 md:grid-cols-2 xl:grid-cols-4 mb-8;
+
+	.card {
+		@apply rounded-2xl bg-[#f3f4f6] p-4 sm:p-5 border border-[#e5e7eb];
+
+		.label {
+			@apply text-[0.85rem] text-[#5b6470] mb-2;
+		}
+
+		.value {
+			@apply text-[1.5rem] sm:text-[1.8rem] leading-none font-semibold text-[#131b22] mb-2;
+		}
+
+		.caption {
+			@apply text-[0.8rem] text-[#6b7280];
+		}
+	}
+}

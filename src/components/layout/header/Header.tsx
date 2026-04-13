@@ -7,8 +7,10 @@ import { NextPage } from 'next'
 const Header: NextPage = () => {
 	return (
 		<header className={styles.header}>
-			<MobileNavBar />
-			<DesktopNavBar />
+			<div className={styles['header-shell']}>
+				<MobileNavBar />
+				<DesktopNavBar />
+			</div>
 		</header>
 	)
 }

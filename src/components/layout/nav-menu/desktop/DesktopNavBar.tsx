@@ -8,7 +8,15 @@ const DesktopNavBar: NextPage = () => {
 	return (
 		<div className={styles.wrapper}>
 			<div className={clsx(styles['layout-container'])}>
-				<LogoImage />
+				<div className={styles.brand}>
+					<LogoImage />
+					<div className={styles['brand-copy']}>
+						<span className={styles['brand-title']}>WinWidget</span>
+						<span className={styles['brand-subtitle']}>
+							Виджеты для роста заявок
+						</span>
+					</div>
+				</div>
 				<Menu />
 			</div>
 		</div>

@@ -12,14 +12,12 @@ const AlertPopup: NextPage<IAlertPopup> = ({ removeHandler, text }) => {
 	const popupRef = useRef(null)
 
 	const changeVisibleVeilBackground = useVeilBackgroundStore(
-		(state) => state.setVisible
+		state => state.setVisible
 	)
-	const visiblePopup = useAlertPopupStore((state) => state.visible)
-	const changeVisiblePopup = useAlertPopupStore(
-		(state) => state.setVisible
-	)
-	const id = useAlertPopupStore((state) => state.itemId)
-	const clearStatePopup = useAlertPopupStore((state) => state.clear)
+	const visiblePopup = useAlertPopupStore(state => state.visible)
+	const changeVisiblePopup = useAlertPopupStore(state => state.setVisible)
+	const id = useAlertPopupStore(state => state.itemId)
+	const clearStatePopup = useAlertPopupStore(state => state.clear)
 
 	const closePopup = () => {
 		changeVisibleVeilBackground()

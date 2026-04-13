@@ -2,125 +2,276 @@ import styles from '@/components/screens/legal-documentation/cookie-notice/Cooki
 import Heading from '@/components/ui/heading/Heading'
 import { NextPage } from 'next'
 
+const navigationSections = [
+	{ href: '#general', label: '1. Общие положения' },
+	{ href: '#consent', label: '2. Согласие и условия обработки' },
+	{ href: '#terms', label: '3. Основные понятия' }
+]
+
+const browserLinks = [
+	{
+		name: 'Google Chrome',
+		url: 'https://support.google.com/chrome/answer/95647?hl=ru'
+	},
+	{
+		name: 'Microsoft Edge',
+		url: 'https://support.microsoft.com/ru-ru/windows/%D1%83%D0%BF%D1%80%D0%B0%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D0%B5-%D1%84%D0%B0%D0%B9%D0%BB%D0%B0%D0%BC%D0%B8-cookie-%D0%B2-microsoft-edge-%D0%BF%D1%80%D0%BE%D1%81%D0%BC%D0%BE%D1%82%D1%80-%D1%80%D0%B0%D0%B7%D1%80%D0%B5%D1%88%D0%B5%D0%BD%D0%B8%D0%B5-%D0%B1%D0%BB%D0%BE%D0%BA%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0-%D1%83%D0%B4%D0%B0%D0%BB%D0%B5%D0%BD%D0%B8%D0%B5-%D0%B8-%D0%B8%D1%81%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5-168dab11-0753-043d-7c16-ede5947fc64d'
+	},
+	{
+		name: 'Internet Explorer',
+		url: 'https://support.microsoft.com/en-us/windows/manage-cookies-in-microsoft-edge-view-allow-block-delete-and-use-168dab11-0753-043d-7c16-ede5947fc64d'
+	},
+	{
+		name: 'Opera',
+		url: 'https://help.opera.com/ru/latest/web-preferences/#%D0%A3%D0%BF%D1%80%D0%B0%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D0%B5-%D1%84%D0%B0%D0%B9%D0%BB%D0%B0%D0%BC%D0%B8-cookie'
+	},
+	{
+		name: 'Mozilla Firefox',
+		url: 'https://support.mozilla.org/ru/kb/kuki-informaciya-kotoruyu-veb-sajty-hranyat-na-vas'
+	},
+	{
+		name: 'Safari',
+		url: 'https://support.apple.com/ru-ru/105082'
+	},
+	{
+		name: 'Samsung Browser',
+		url: 'https://www.samsung.com/ru/support/mobile-devices/how-to-clear-the-cache-history-or-cookies/'
+	}
+]
+
+const cookieTypes = [
+	{
+		title: 'Сеансовые cookie',
+		description:
+			'Сохраняются в браузере только на протяжении вашего сеанса в браузере, то есть до тех пор, пока вы не уйдете с сайта.'
+	},
+	{
+		title: 'Постоянные cookie',
+		description:
+			'Сохраняются в вашем браузере после завершения сеанса, если вы не удалили их вручную.'
+	},
+	{
+		title: 'Функциональные cookie',
+		description:
+			'Позволяют сайту запомнить ваши варианты выбора, узнавать вас при повторном посещении и персонализировать просмотр.'
+	},
+	{
+		title: 'Cookie-сборщики информации',
+		description:
+			'Получают и накапливают информацию о посещенных страницах, наличии сообщений об ошибках и других технических данных. Такая информация используется анонимно для совершенствования работы сайта.'
+	},
+	{
+		title: 'Cookie для аналитики и тестирования',
+		description:
+			'Позволяют выявлять и подсчитывать количество посетителей, отслеживать перемещение по сайту и тестировать различные версии функций и параметров сайта.'
+	}
+]
+
 const CookieNotice: NextPage = () => {
 	return (
 		<div className={styles.wrapper}>
-			<Heading text="Cookie Notice" />
-			<p>
-				Our site, like most others, uses cookies and other similar
-				technologies (pixel tags, etc.) to provide services that best suit
-				your interests and needs, as well as collect statistical and
-				marketing information to analyze and improve our services and
-				sites.
-				<br />
-				<br />
-				By using this site, you agree to use of cookies and other similar
-				technologies in in accordance with this Notice.
-				<br />
-				<br />
-				If you do not agree for us to use this file type, you must set your
-				browser settings accordingly or not to use our site.
-				<br />
-				<br />
-				Please note that when blocking or deleting cookies, we cannot
-				guarantee the correct operation of our site in your browser.
-				<br />
-				<br />
-				Cookies that are stored through the website do not contain
-				information on the basis of which you can be identified. What What
-				is a cookie and other similar technologies Cookie file is a small
-				text file saved on your computer, smartphone or other device you
-				use to visit Internet sites.
-				<br />
-				<br />
-				Some pages you visit may also collect information using pixel tags
-				and web beacons, which are electronic images called single pixel
-				(1x1) or empty GIF images.
-				<br />
-				<br />
-				Cookies may be placed on your device by us ({`"own"`} cookies) or
-				other operators (cookies {`"third parties"`})
-				<br />
-				We use two types of cookies on the site: session cookies and
-				{`"persistent cookies"`}.
-				<br />
-				Session cookies are temporary files that remain on the device until
-				you leave the site.
-				<br />
-				Persistent cookies remain on the device for a long time time or
-				until you manually delete them (how long is the cookie will remain
-				on your device will depend on the duration or the “lifetime” of a
-				particular file and your browser settings).
-				<br />
-				Cookies come in different types:
-				<br />
-				<br />
-				Necessary. These files are needed to ensure proper operation site,
-				use of its functions. Disabling the use of such files will lead to
-				a drop in site performance, making it impossible use its components
-				and services. Cookies related to productivity, efficiency and
-				analytics. Data files allow you to analyze the interaction of
-				visitors with the site, optimize website content, measure the
-				effectiveness of advertising campaigns, providing information about
-				the number of site visitors, time of its use, errors that occur.
-				<br />
-				<br />
-				Functional cookies remember users who have already visited our
-				website, their individual parameters (such as language and region,
-				for example) and preferences, and help to individualize site
-				content.
-				<br />
-				<br />
-				Advertising cookies determine which websites you visit and how
-				often what links you have selected that allows you to be shown
-				advertisements that will be of interest to you. Electronic mail. We
-				may also use technologies that allow track whether you opened, read
-				or forwarded certain messages sent by us to your email mail. This
-				is necessary to make our means of communication more useful for the
-				user.
-				<br />
-				Buttons for accessing social networks. They are used to users could
-				share a link to the page on social media networks or make an
-				electronic bookmark.
-				<br />
-				These buttons are links to social networking websites, owned by
-				third parties, who, in turn, may record information about your
-				activity on the Internet, including on our website. Please see the
-				relevant terms of use and privacy policies of such sites to
-				understand how they use your data and how You can opt out of their
-				use of your data or delete it.
-				<br />
-				<br />
-				Third party web services.
-				<br />
-				We sometimes use third-party web services on this site. For
-				example, to display certain elements (images, videos,
-				presentations, etc.), organizing surveys, etc. As in in the case of
-				social media access buttons, we cannot prevent these sites or
-				external domains from collecting information about how you use the
-				{`site's`} content.
-				<br />
-				<br />
-				How to manage cookies?
-				<br />
-				Most internet browsers are initially configured to automatic
-				acceptance of cookies. At any time you can change your browser
-				settings to block cookies or alert you when they are sent to your
-				device (refer to the manual using a specific browser).
-				<br />
-				Disabling cookies may affect your online experience. If you use
-				multiple devices and/or browsers to Internet access, the
-				corresponding settings must be changed in each of them.
-				<br />
-				<br />
-				Final provisions
-				<br />
-				At our sole discretion, we may change this from time to time.
-				Notification.
-				<br />
-				If you have any questions, you can contact us using contacts,
-				posted on our website.
-			</p>
+			<div className={styles.hero}>
+				<Heading text="Политика в отношении файлов cookie" />
+				<p className={styles.lead}>
+					Сервис{' '}
+					<a className={styles.link} href="https://winwidget.ru/">
+						https://winwidget.ru/
+					</a>{' '}
+					использует технические, маркетинговые и аналитические cookie,
+					включая файлы партнеров, чтобы обеспечивать корректную работу
+					сайта, улучшать пользовательский опыт и анализировать
+					посещаемость.
+				</p>
+
+				<div className={styles.heroMeta}>
+					<div className={styles.heroMetaItem}>
+						<span className={styles.heroMetaLabel}>Сайт</span>
+						<span className={styles.heroMetaValue}>winwidget.ru</span>
+					</div>
+					<div className={styles.heroMetaItem}>
+						<span className={styles.heroMetaLabel}>Поддержка</span>
+						<span className={styles.heroMetaValue}>info@winwidget.ru</span>
+					</div>
+					<div className={styles.heroMetaItem}>
+						<span className={styles.heroMetaLabel}>Аналитика</span>
+						<span className={styles.heroMetaValue}>Яндекс.Метрика</span>
+					</div>
+				</div>
+
+				<div className={styles.notice}>
+					<p className={styles.noticeTitle}>Важно</p>
+					<p className={styles.paragraph}>
+						Если вы не принимаете условия политики, вы можете изменить
+						настройки браузера или прекратить использование сайта.
+						Блокировка всех cookie может ограничить доступ к отдельным
+						функциям и разделам сайта.
+					</p>
+				</div>
+			</div>
+
+			<nav
+				className={styles.contents}
+				aria-label="Навигация по cookie policy"
+			>
+				<div className={styles.contentsHeader}>
+					<h2 className={styles.contentsTitle}>Содержание</h2>
+					<p className={styles.contentsText}>
+						Быстрый переход к основным разделам политики.
+					</p>
+				</div>
+				<div className={styles.contentsGrid}>
+					{navigationSections.map(section => (
+						<a
+							key={section.href}
+							href={section.href}
+							className={styles.contentsLink}
+						>
+							{section.label}
+						</a>
+					))}
+				</div>
+			</nav>
+
+			<section id="general" className={styles.section}>
+				<h2 className={styles.sectionTitle}>1. Общие положения</h2>
+				<p className={styles.paragraph}>
+					Сервис{' '}
+					<a className={styles.link} href="https://winwidget.ru/">
+						https://winwidget.ru/
+					</a>{' '}
+					использует собственные технические и маркетинговые файлы cookie,
+					а также файлы cookie партнеров (третьих лиц, установленных в
+					Политике конфиденциальности по адресу{' '}
+					<a
+						className={styles.link}
+						href="https://winwidget.ru/documents/privacy.pdf"
+					>
+						https://winwidget.ru/documents/privacy.pdf
+					</a>
+					, в пункте 8 настоящей Политики), чтобы предоставлять
+					пользователям возможности для просмотра и использования страниц
+					сайта.
+				</p>
+				<p className={styles.paragraph}>
+					Часть cookie позволяет проверять качество работы сайта, улучшать
+					его характеристики, собирать статистику посещений, принимать меры
+					по развитию сервиса и показывать рекламный контент с учетом
+					интересов пользователей.
+				</p>
+				<p className={styles.paragraph}>
+					Большинство интернет-браузеров настроены принимать файлы cookie
+					автоматически. При этом пользователь может самостоятельно
+					изменить настройки браузера: отключить или ограничить
+					использование cookie и получать уведомления об их использовании.
+				</p>
+				<p className={styles.paragraph}>
+					Если используются разные устройства, необходимо убедиться, что на
+					каждом из них браузер настроен в соответствии с вашим решением по
+					использованию файлов cookie. Для этого следует воспользоваться
+					инструкцией соответствующего браузера.
+				</p>
+			</section>
+
+			<section id="consent" className={styles.section}>
+				<h2 className={styles.sectionTitle}>
+					2. Согласие и условия обработки файлов cookie
+				</h2>
+				<p className={styles.paragraph}>
+					Продолжая просмотр страниц сайта{' '}
+					<a className={styles.link} href="https://winwidget.ru/">
+						https://winwidget.ru/
+					</a>
+					, вы принимаете условия политики в отношении использования
+					cookie, а также соглашаетесь с передачей полученных с помощью
+					cookie данных третьим лицам и с получением маркетинговых
+					материалов, размещаемых на сайте.
+				</p>
+				<p className={styles.paragraph}>
+					Если вы не принимаете условия политики, вы можете изменить
+					настройки браузера или прекратить просмотр страниц сайта. При
+					этом блокирование всех cookie, включая важные, может закрыть
+					доступ к сайту, его отдельным функциям или разделам.
+				</p>
+
+				<h3 className={styles.sectionSubtitle}>
+					Как изменить настройки cookie
+				</h3>
+				<p className={styles.paragraph}>
+					Определите, какой браузер используется на вашем устройстве, и
+					перейдите по соответствующей ссылке, чтобы узнать, как управлять
+					настройками cookie.
+				</p>
+				<div className={styles.browserGrid}>
+					{browserLinks.map(browser => (
+						<a
+							key={browser.name}
+							className={styles.browserLink}
+							href={browser.url}
+							target="_blank"
+							rel="noreferrer"
+						>
+							{browser.name}
+						</a>
+					))}
+				</div>
+				<p className={styles.paragraph}>
+					Если вашего программного обеспечения нет в списке, пожалуйста,
+					напишите в службу поддержки на адрес{' '}
+					<a className={styles.link} href="mailto:info@winwidget.ru">
+						info@winwidget.ru
+					</a>
+					.
+				</p>
+			</section>
+
+			<section id="terms" className={styles.section}>
+				<h2 className={styles.sectionTitle}>3. Основные понятия</h2>
+				<p className={styles.paragraph}>
+					Cookie - это небольшой файл, создаваемый сайтом и хранящийся
+					локально в интернет-браузере или файловой системе вашего
+					компьютера или мобильного устройства.
+				</p>
+
+				<div className={styles.infoGrid}>
+					{cookieTypes.map(item => (
+						<div key={item.title} className={styles.infoCard}>
+							<h3 className={styles.cardTitle}>{item.title}</h3>
+							<p className={styles.cardText}>{item.description}</p>
+						</div>
+					))}
+				</div>
+
+				<p className={styles.paragraph}>
+					Чтобы узнать, как используют cookie наши партнеры, ознакомьтесь с
+					их политиками конфиденциальности, размещенными на их официальных
+					веб-сайтах.
+				</p>
+
+				<div className={styles.infoCard}>
+					<h3 className={styles.cardTitle}>Яндекс.Метрика</h3>
+					<p className={styles.cardText}>
+						Мы используем сервис Яндекс.Метрика, который позволяет
+						анализировать активность посетителей сайта и улучшать его
+						работу. Сервис получает данные на анонимной основе, не собирает
+						сведения о личности посетителя сайта и не идентифицирует его
+						как физическое лицо.
+					</p>
+					<p className={styles.cardText}>
+						Полученные сведения могут использоваться владельцем сайта и
+						нашими партнерами для улучшения работы сайта и его разделов.
+					</p>
+					<p className={styles.cardText}>
+						<a
+							className={styles.link}
+							href="https://yandex.ru/legal/metrica_api/?lang=ru"
+							target="_blank"
+							rel="noreferrer"
+						>
+							Условия использования сервиса API Яндекс.Метрики
+						</a>
+					</p>
+				</div>
+			</section>
 		</div>
 	)
 }

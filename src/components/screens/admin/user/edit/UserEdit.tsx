@@ -15,11 +15,13 @@ import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import SubHeading from '@/components/ui/sub-heading/SubHeading'
 import UserInfo from '@/components/ui/user-info/UserInfo'
 import { UserRole } from '@/services/auth/auth.types'
+import { UserLoginMethod } from '@/shared/types/user.types'
 import {
 	validEmail,
 	validId,
 	validName,
-	validPassword
+	validPassword,
+	validPhone
 } from '@/shared/regex'
 import { IParamsUrl } from '@/shared/types/params-url.types'
 import clsx from 'clsx'
@@ -37,154 +39,314 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 
 	const { isLoading, data, onSubmit } = useUserEdit(setValue, params)
 
+	const loginMethodLabels: Record<UserLoginMethod, string> = {
+		EMAIL: 'Email',
+		PHONE: 'Телефон',
+		GOOGLE: 'Google',
+		GITHUB: 'GitHub',
+		YANDEX: 'Яндекс'
+	}
+
+	const getLoginMethods = () => {
+		if (!data?.loginMethods?.length) {
+			return 'Не привязаны'
+		}
+
+		return data.loginMethods
+			.map(method => loginMethodLabels[method])
+			.join(', ')
+	}
+
 	return (
 		<div className={styles.wrapper}>
-			<Heading text="Admin page" />
+			<Heading text="Панель администратора" />
 			<AdminNavigation />
-			<SubHeading text="Edit user" />
-			<UserInfo
-				avatarPath={data?.avatarPath}
-				name={data?.name}
-				isLoading={isLoading}
-			/>
 			{isLoading ? (
-				<SkeletonLoader count={6} className="h-5 mb-4" />
-			) : (
-				<>
-					<form onSubmit={handleSubmit(onSubmit)}>
-						<Controller
-							control={control}
-							name="avatarPath"
-							render={({ field: { value, onChange } }) => (
-								<FieldUploadFile
-									onChange={onChange}
-									value={value}
-									currentFile={
-										data?.avatarPath ||
-										'/uploads/user-avatar/avatar-default.png'
-									}
-									folder="user-avatar"
-									placeholder="Avatar"
-								/>
-							)}
-						/>
-						<div className={clsx(styles['wrapper-checkbox'])}>
-							<div className={styles.checkbox}>
-								<p>USER</p>
-								<Controller
-									control={control}
-									name="isUser"
-									render={({ field }) => (
-										<CheckboxRights
-											required
-											type="checkbox"
-											defaultChecked={data.rights.includes(UserRole.USER)}
-											{...register('isUser', { value: field.value })}
-										/>
-									)}
-								/>
-							</div>
-							<div className={styles.checkbox}>
-								<p>ADMIN</p>
-								<Controller
-									control={control}
-									name="isAdmin"
-									render={({ field }) => (
-										<CheckboxRights
-											type="checkbox"
-											defaultChecked={data.rights.includes(UserRole.ADMIN)}
-											{...register('isAdmin', { value: field.value })}
-										/>
-									)}
-								/>
-							</div>
-							<div className={styles.checkbox}>
-								<p>MANAGER</p>
-								<Controller
-									control={control}
-									name="isManager"
-									render={({ field }) => (
-										<CheckboxRights
-											type="checkbox"
-											defaultChecked={data.rights.includes(
-												UserRole.MANAGER
-											)}
-											{...register('isManager', { value: field.value })}
-										/>
-									)}
-								/>
-							</div>
-							<div className={styles.checkbox}>
-								<p>PREMIUM</p>
-								<Controller
-									control={control}
-									name="isPremium"
-									render={({ field }) => (
-										<CheckboxRights
-											type="checkbox"
-											defaultChecked={data.rights.includes(
-												UserRole.PREMIUM
-											)}
-											{...register('isPremium', { value: field.value })}
-										/>
-									)}
-								/>
-							</div>
+				<div className={styles['loading-content']}>
+					<div className={styles['loading-section']}>
+						<SubHeading text="Редактирование данных пользователя" />
+						<div className={styles['loading-user-info']}>
+							<SkeletonLoader
+								count={1}
+								circle
+								className={styles['loading-avatar']}
+							/>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-user-name']}
+							/>
 						</div>
-						<FieldId
-							type="text"
-							error={errors.id}
-							defaultValue={data.id}
-							placeholder="ID"
-							{...register('id', {
-								pattern: {
-									value: validId,
-									message:
-										'Min and max length 25 characters. First 2 characters of letters. Next are letters and numbers'
-								}
-							})}
+						<div className={styles['loading-meta']}>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-meta-line']}
+							/>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-meta-line']}
+							/>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-meta-line']}
+							/>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-meta-line']}
+							/>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-meta-line-short']}
+							/>
+						</div>
+					</div>
+					<div className={styles['loading-section']}>
+						<SubHeading text="Поля редактирования" />
+						<div className={styles['loading-form']}>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-upload']}
+							/>
+							<div className={styles['loading-checkboxes']}>
+								<SkeletonLoader
+									count={1}
+									className={styles['loading-checkbox']}
+								/>
+								<SkeletonLoader
+									count={1}
+									className={styles['loading-checkbox']}
+								/>
+								<SkeletonLoader
+									count={1}
+									className={styles['loading-checkbox']}
+								/>
+								<SkeletonLoader
+									count={1}
+									className={styles['loading-checkbox']}
+								/>
+							</div>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-input']}
+							/>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-input']}
+							/>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-input']}
+							/>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-input']}
+							/>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-input']}
+							/>
+							<SkeletonLoader
+								count={1}
+								className={styles['loading-button']}
+							/>
+						</div>
+					</div>
+				</div>
+			) : (
+				<div className={styles.content}>
+					<div className={styles['summary-section']}>
+						<SubHeading text="Редактирование данных пользователя" />
+						<UserInfo
+							avatarPath={data?.avatarPath}
+							name={data?.name}
+							isLoading={isLoading}
 						/>
-						<FieldName
-							type="text"
-							error={errors.name}
-							defaultValue={data.name}
-							placeholder="Name"
-							{...register('name', {
-								pattern: {
-									value: validName,
-									message:
-										'Min length must be greater than 2 characters. Numbers from the second character and the special character "-" can be used'
-								}
-							})}
-						/>
-						<FieldEmail
-							type="email"
-							error={errors.email}
-							defaultValue={data?.email}
-							placeholder="Email"
-							{...register('email', {
-								required: 'Email is required!',
-								pattern: {
-									value: validEmail,
-									message: 'Please enter a valid email'
-								}
-							})}
-						/>
-						<FieldPassword
-							type="password"
-							error={errors.password}
-							placeholder="Password"
-							{...register('password', {
-								pattern: {
-									value: validPassword,
-									message:
-										'Min length should more 6 symbols. Contains 1 number 0-9, 1 Latin letter a-z, 1 Latin letter A-Z'
-								}
-							})}
-						/>
-						<Button>Save</Button>
-					</form>
-				</>
+						<div className={styles['summary-meta']}>
+							<p className={styles['info-field']}>
+								<span className={styles['info-label']}>ID:</span> {data.id}
+							</p>
+							<p className={styles['info-field']}>
+								<span className={styles['info-label']}>Email:</span>{' '}
+								{data.email || 'Нет данных'}
+							</p>
+							<p className={styles['info-field']}>
+								<span className={styles['info-label']}>Телефон:</span>{' '}
+								{data.phone || 'Нет данных'}
+							</p>
+							<p className={styles['info-field']}>
+								<span className={styles['info-label']}>
+									Способы входа:
+								</span>{' '}
+								{getLoginMethods()}
+							</p>
+							<p className={styles['info-field']}>
+								<span className={styles['info-label']}>Роли:</span>{' '}
+								{data.rights.join(', ')}
+							</p>
+							<p className={styles['info-field']}>
+								<span className={styles['info-label']}>
+									Дата регистрации:
+								</span>{' '}
+								{data.createdAt.replace(/\T.*/, '')}
+							</p>
+						</div>
+					</div>
+					<div className={styles['edit-section']}>
+						<SubHeading text="Поля редактирования" />
+						<form
+							onSubmit={handleSubmit(onSubmit)}
+							className={styles['edit-form']}
+						>
+							<Controller
+								control={control}
+								name="avatarPath"
+								render={({ field: { value, onChange } }) => (
+									<FieldUploadFile
+										onChange={onChange}
+										value={value}
+										currentFile={
+											data?.avatarPath ||
+											'/uploads/user-avatar/avatar-default.png'
+										}
+										folder="user-avatar"
+										placeholder="Фото профиля"
+									/>
+								)}
+							/>
+							<div className={clsx(styles['wrapper-checkbox'])}>
+								<div className={styles.checkbox}>
+									<p>USER</p>
+									<Controller
+										control={control}
+										name="isUser"
+										render={({ field }) => (
+											<CheckboxRights
+												required
+												type="checkbox"
+												defaultChecked={data.rights.includes(
+													UserRole.USER
+												)}
+												{...register('isUser', { value: field.value })}
+											/>
+										)}
+									/>
+								</div>
+								<div className={styles.checkbox}>
+									<p>ADMIN</p>
+									<Controller
+										control={control}
+										name="isAdmin"
+										render={({ field }) => (
+											<CheckboxRights
+												type="checkbox"
+												defaultChecked={data.rights.includes(
+													UserRole.ADMIN
+												)}
+												{...register('isAdmin', { value: field.value })}
+											/>
+										)}
+									/>
+								</div>
+								<div className={styles.checkbox}>
+									<p>MANAGER</p>
+									<Controller
+										control={control}
+										name="isManager"
+										render={({ field }) => (
+											<CheckboxRights
+												type="checkbox"
+												defaultChecked={data.rights.includes(
+													UserRole.MANAGER
+												)}
+												{...register('isManager', { value: field.value })}
+											/>
+										)}
+									/>
+								</div>
+								<div className={styles.checkbox}>
+									<p>PREMIUM</p>
+									<Controller
+										control={control}
+										name="isPremium"
+										render={({ field }) => (
+											<CheckboxRights
+												type="checkbox"
+												defaultChecked={data.rights.includes(
+													UserRole.PREMIUM
+												)}
+												{...register('isPremium', { value: field.value })}
+											/>
+										)}
+									/>
+								</div>
+							</div>
+							<FieldId
+								type="text"
+								error={errors.id}
+								defaultValue={data.id}
+								placeholder="ID"
+								{...register('id', {
+									pattern: {
+										value: validId,
+										message:
+											'Минимальная и максимальная длина - 25 символов. Первые 2 символа - буквы. Далее идут буквы и цифры.'
+									}
+								})}
+							/>
+							<FieldName
+								type="text"
+								error={errors.name}
+								defaultValue={data.name}
+								placeholder="Имя"
+								{...register('name', {
+									pattern: {
+										value: validName,
+										message:
+											'Минимальная длина должна быть более 2 символов. Можно использовать цифры, начиная со второго символа, и специальный символ «-».'
+									}
+								})}
+							/>
+							<FieldEmail
+								type="email"
+								error={errors.email}
+								defaultValue={data?.email}
+								placeholder="Email"
+								{...register('email', {
+									pattern: {
+										value: validEmail,
+										message: 'Проверьте правильность ввода email'
+									}
+								})}
+							/>
+							<FieldEmail
+								type="tel"
+								error={errors.phone}
+								defaultValue={data?.phone || ''}
+								placeholder="Телефон"
+								{...register('phone', {
+									pattern: {
+										value: validPhone,
+										message: 'Проверьте правильность ввода номера телефона'
+									}
+								})}
+							/>
+							<FieldPassword
+								type="password"
+								error={errors.password}
+								placeholder="Пароль"
+								{...register('password', {
+									pattern: {
+										value: validPassword,
+										message:
+											'Мин. длина 6 символов. Должен содержать 1 цифру 0-9, 1 строчную букву a-z и 1 заглавную букву A-Z.'
+									}
+								})}
+							/>
+							<div className={styles.actions}>
+								<Button>Сохранить</Button>
+							</div>
+						</form>
+					</div>
+				</div>
 			)}
 		</div>
 	)

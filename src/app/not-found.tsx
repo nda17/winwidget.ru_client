@@ -1,16 +1,23 @@
 import styles from '@/assets/styles/not-found.module.scss'
-import Heading from '@/components/ui/heading/Heading'
 import { Metadata } from 'next'
+import Link from 'next/link'
 
 export const metadata: Metadata = {
-	title: 'Not found',
-	description: 'Not found page'
+	title: '404 — Страница не найдена',
+	description: 'Запрашиваемая страница не существует'
 }
 
 const Error404 = () => {
 	return (
 		<div className={styles.wrapper}>
-			<Heading text="404 - Page Not Found" />
+			<div className={styles.code}>404</div>
+			<h1 className={styles.title}>Страница не найдена</h1>
+			<p className={styles.description}>
+				Возможно, страница была удалена или вы перешли по неверной ссылке
+			</p>
+			<Link href="/" className={styles.button}>
+				На главную
+			</Link>
 		</div>
 	)
 }

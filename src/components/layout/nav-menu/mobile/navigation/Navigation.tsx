@@ -8,8 +8,18 @@ const Navigation: NextPage = () => {
 	return (
 		<div className={styles.wrapper}>
 			<div className={clsx(styles['layout-container'])}>
-				<LogoImage />
-				<Hamburger />
+				<div className={styles.brand}>
+					<LogoImage />
+					<div className={styles['brand-copy']}>
+						<span className={styles['brand-title']}>Winwidget</span>
+						<span className={styles['brand-subtitle']}>
+							Виджеты для сайта
+						</span>
+					</div>
+				</div>
+				<div className={styles['menu-toggle']}>
+					<Hamburger />
+				</div>
 			</div>
 		</div>
 	)

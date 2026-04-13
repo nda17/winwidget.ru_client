@@ -5,8 +5,8 @@ import { NextPage } from 'next'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-	title: 'Edit user',
-	description: 'User data editing page'
+	title: 'Редактирование данных пользователя',
+	description: 'Страница редактированиданных пользователя'
 }
 
 const UserEditPage: NextPage<IParamsUrl> = ({ params }) => {

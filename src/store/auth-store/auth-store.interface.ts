@@ -1,4 +1,6 @@
 export interface IAuthStore {
 	auth: boolean
-	setAuth: () => void
+	isAuthResolved: boolean
+	setAuth: (value: boolean) => void
+	setAuthResolved: (value: boolean) => void
 }

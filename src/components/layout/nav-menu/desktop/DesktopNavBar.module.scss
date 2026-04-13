@@ -1,7 +1,24 @@
 .wrapper {
-	@apply bg-[#131b22] p-4 hidden lg:flex;
+	@apply hidden lg:flex w-full;
 
 	.layout-container {
-		@apply container w-full flex justify-between items-center;
+		@apply container w-full flex justify-between items-center gap-4 px-4 py-[0.65rem];
+	}
+
+	.brand {
+		@apply flex items-center gap-2 min-w-fit pr-4;
+		border-right: 1px solid rgba(255, 255, 255, 0.12);
+	}
+
+	.brand-copy {
+		@apply flex flex-col;
+	}
+
+	.brand-title {
+		@apply text-[0.8rem] font-700 uppercase tracking-[0.14em] text-white;
+	}
+
+	.brand-subtitle {
+		@apply text-[0.66rem] text-gray-300 leading-tight whitespace-nowrap;
 	}
 }

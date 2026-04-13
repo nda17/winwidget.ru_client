@@ -1,3 +1,4 @@
 .wrapper {
-	@apply flex flex-col;
+	@apply flex flex-col gap-2 pb-3;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }

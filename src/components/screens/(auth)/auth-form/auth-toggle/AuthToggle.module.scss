@@ -1,19 +1,32 @@
 .wrapper {
-	@apply text-center text-base mt-3;
+	@apply mt-5 border-t pt-4 text-center text-[0.9rem];
+	border-color: rgba(255, 255, 255, 0.08);
 
 	.toggle-link-block {
-		@apply text-white;
+		@apply mb-2;
+		color: rgba(217, 218, 232, 0.7);
 
 		.sign-in-button {
-			@apply text-green-500 text-base;
+			@apply font-medium transition-colors;
+			color: #ffffff;
 		}
 
 		.sign-up-button {
-			@apply text-yellow-700 text-base;
+			@apply font-medium transition-colors;
+			color: #ffffff;
 		}
 
 		.restore-password-button {
-			@apply text-red-500 text-base;
+			@apply text-[0.86rem] transition-colors;
+			color: rgba(217, 218, 232, 0.82);
+		}
+
+		.sign-in-button,
+		.sign-up-button,
+		.restore-password-button {
+			&:hover {
+				color: #ffffff;
+			}
 		}
 	}
 }

@@ -15,6 +15,8 @@ const FieldUploadFile: NextPage<IUploadField> = ({
 	onChange
 }) => {
 	const { uploadFile, isLoading } = useUploadFile(onChange, folder)
+	const currentImageSrc = currentFile ? encodeURI(currentFile) : ''
+	const valueImageSrc = value ? encodeURI(value) : ''
 
 	return (
 		<div className={styles.wrapper} style={style}>
@@ -23,7 +25,7 @@ const FieldUploadFile: NextPage<IUploadField> = ({
 			</p>
 			<label className={clsx(styles['label-input'])}>
 				<div className={clsx(styles['custom-input'])}>
-					<span className={styles.button}>Choose file</span>
+					<span className={styles.button}>Загрузить файл</span>
 				</div>
 				<input
 					type="file"
@@ -38,7 +40,7 @@ const FieldUploadFile: NextPage<IUploadField> = ({
 							</div>
 						) : value ? (
 							<Image
-								src={value}
+								src={valueImageSrc}
 								alt={placeholder}
 								priority
 								fill
@@ -46,7 +48,7 @@ const FieldUploadFile: NextPage<IUploadField> = ({
 							/>
 						) : (
 							<Image
-								src={currentFile}
+								src={currentImageSrc}
 								alt={placeholder}
 								priority
 								fill

@@ -2,8 +2,8 @@ import CookieNotice from '@/components/screens/legal-documentation/cookie-notice
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-	title: 'Cookie Notice',
-	description: 'Cookie Notice page'
+	title: 'Политика в отношении файлов cookie',
+	description: 'Политика в отношении файлов cookie Winwidget.ru'
 }
 
 const CookieNoticePage = () => {

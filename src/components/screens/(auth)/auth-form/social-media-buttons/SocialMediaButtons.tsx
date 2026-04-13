@@ -12,14 +12,24 @@ const SocialMediaButtons = () => {
 				className={styles.button}
 				type="button"
 			>
-				<FontAwesomeIcon name="FaGoogle" fill="#000000" />
+				<FontAwesomeIcon name="FaGoogle" fill="currentColor" />
+				<span>Google</span>
+			</button>
+			<button
+				onClick={() => router.push('/auth/yandex')}
+				className={styles.button}
+				type="button"
+			>
+				<FontAwesomeIcon name="FaYandex" fill="currentColor" />
+				<span>Яндекс</span>
 			</button>
 			<button
 				onClick={() => router.push('/auth/github')}
 				className={styles.button}
 				type="button"
 			>
-				<FontAwesomeIcon name="FaGithub" fill="#000000" />
+				<FontAwesomeIcon name="FaGithub" fill="currentColor" />
+				<span>GitHub</span>
 			</button>
 		</div>
 	)
