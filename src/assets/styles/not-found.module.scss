@@ -1,3 +1,35 @@
 .wrapper {
-	@apply flex flex-col items-center  justify-center;
+	@apply flex flex-col items-center justify-center text-center flex-1 w-full py-24 px-4;
+
+	.code {
+		@apply text-[8rem] font-bold leading-none mb-4 select-none;
+		color: #131b22;
+	}
+
+	.title {
+		@apply text-2xl font-semibold mb-3;
+		color: #131b22;
+	}
+
+	.description {
+		@apply text-[0.95rem] leading-relaxed mb-8 max-w-sm;
+		color: rgba(19, 27, 34, 0.55);
+	}
+
+	.button {
+		@apply inline-flex items-center gap-[0.45rem] rounded-max px-[0.8rem] py-[0.48rem] text-[0.82rem] font-500 transition-all;
+		color: rgba(217, 218, 232, 0.84);
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		background: rgba(255, 255, 255, 0.04);
+		box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12);
+		background: #131b22;
+
+		&:hover {
+			color: #ffffff;
+			transform: translateY(-1px);
+			border-color: rgba(255, 255, 255, 0.16);
+			background: lighten(#131b22, 5%);
+			box-shadow: 0 8px 16px rgba(0, 0, 0, 0.16);
+		}
+	}
 }
