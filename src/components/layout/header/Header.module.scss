@@ -1,8 +1,9 @@
 .header {
-	@apply w-full lg:min-h-32 lg:flex lg:items-center;
-	background: #131b22;
-	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
-	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	@apply w-full lg:min-h-32 lg:flex lg:items-center flex min-h-[8rem] items-center relative z-10;
+}
+
+.headerAbsolute {
+	@apply absolute top-0;
 }
 
 .header-shell {

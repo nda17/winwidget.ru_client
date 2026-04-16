@@ -3,6 +3,10 @@
 @tailwind utilities;
 
 @layer base {
+	html {
+		scroll-behavior: smooth;
+	}
+
 	* {
 		box-sizing: border-box;
 	}
@@ -44,6 +48,10 @@
 		@apply m-0 text-base font-inherit;
 	}
 
+	h2 {
+		@apply leading-[2.5rem];
+	}
+
 	input[type='file'],
 	input[type='file']::-webkit-file-upload-button {
 		@apply cursor-pointer focus:outline-none;
@@ -65,7 +73,7 @@
 
 @layer components {
 	.container {
-		@apply sm:max-w-[540px] md:max-w-[720px] lg:max-w-[960px] xl:max-w-[1140px] xxl:max-w-[1320px];
+		@apply sm:max-w-[540px] md:max-w-[720px] lg:max-w-[960px] xl:max-w-[1140px] xxl:max-w-[1440px];
 	}
 }
 
@@ -79,4 +87,11 @@ body.hide-recaptcha-badge .grecaptcha-badge {
 	visibility: hidden !important;
 	opacity: 0 !important;
 	pointer-events: none !important;
+}
+
+:root {
+	--font-family: var(--font-unbounded);
+	--second-family: var(--font-roboto);
+	--third-family: var(--font-inter);
+	--font4: var(--font-poppins);
 }
