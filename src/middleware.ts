@@ -1,6 +1,5 @@
 import { adminMiddleware } from '@/app/middlewares/adminMiddleware'
 import { authMiddleware } from '@/app/middlewares/authMiddleware'
-import { managerMiddleware } from '@/app/middlewares/managerMiddleware'
 import { profileMiddleware } from '@/app/middlewares/profileMiddleware'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -20,11 +19,11 @@ export const middleware = (request: NextRequest) => {
 		case /^\/profile/.test(pathname):
 			return profileMiddleware(request)
 
+		case /^\/cabinet(\/.*)?$/.test(pathname):
+			return profileMiddleware(request)
+
 		case /^\/admin(\/.*)?$/.test(pathname):
 			return adminMiddleware(request)
-
-		case /^\/manager(\/.*)?$/.test(pathname):
-			return managerMiddleware(request)
 	}
 
 	return NextResponse.next()
