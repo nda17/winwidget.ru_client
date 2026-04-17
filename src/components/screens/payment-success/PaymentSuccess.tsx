@@ -1,96 +1,108 @@
 'use client'
-import styles from '@/assets/styles/payment-success.module.scss'
-import { PUBLIC_PAGES } from '@/config/pages/public.config'
-import useUser from '@/hooks/useUser'
-import paymentService from '@/services/payment/payment.service'
-import { useQueryClient } from '@tanstack/react-query'
-import Link from 'next/link'
-import { useEffect, useState } from 'react'
 
-const POLL_INTERVAL_MS = 3000
-const POLL_TIMEOUT_MS = 20000
+import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { PUBLIC_PAGES } from '@/config/pages/public.config'
+import subscriptionService from '@/services/subscription/subscription.service'
+import styles from '@/assets/styles/payment-success.module.scss'
+
+const planLabel: Record<string, string> = {
+	EASY: 'Easy',
+	HARD: 'Hard'
+}
 
 const PaymentSuccess = () => {
 	const queryClient = useQueryClient()
-	const { user } = useUser()
 	const [isVerifying, setIsVerifying] = useState(false)
+	const [verified, setVerified] = useState(false)
 
-	useEffect(() => {
-		queryClient.invalidateQueries({ queryKey: ['get-profile'] })
+	const { data: subscription } = useQuery({
+		queryKey: ['subscription'],
+		queryFn: subscriptionService.getMySubscription,
+		refetchInterval: verified ? false : 3000
+	})
 
-		const interval = setInterval(() => {
-			queryClient.invalidateQueries({ queryKey: ['get-profile'] })
-		}, POLL_INTERVAL_MS)
+	const isActivated =
+		verified &&
+		subscription?.status === 'ACTIVE' &&
+		subscription?.plan !== 'TRIAL'
 
-		const timeout = setTimeout(() => {
-			clearInterval(interval)
-		}, POLL_TIMEOUT_MS)
-
-		return () => {
-			clearInterval(interval)
-			clearTimeout(timeout)
-		}
-	}, [queryClient])
-
-	const handleVerify = async () => {
+	const handleVerify = useCallback(async () => {
 		setIsVerifying(true)
 		try {
-			const response = await paymentService.verifyPayment()
-			if (response.data.activated) {
-				queryClient.invalidateQueries({ queryKey: ['get-profile'] })
-			}
+			await subscriptionService.verifyPayment()
+			queryClient.invalidateQueries({ queryKey: ['subscription'] })
+			queryClient.invalidateQueries({ queryKey: ['widgets'] })
+			setVerified(true)
 		} finally {
 			setIsVerifying(false)
 		}
-	}
+	}, [queryClient])
 
-	if (user?.isPremium) {
+	useEffect(() => {
+		handleVerify()
+	}, [handleVerify])
+
+	if (isActivated) {
 		return (
-			<div className={styles.wrapper}>
-				<h1 className={styles.title}>Подписка активирована</h1>
-				<p className={styles.description}>
-					Теперь вам доступен весь премиум-контент
-				</p>
-				<div className={styles.actions}>
-					<Link
-						href={PUBLIC_PAGES.PREMIUM_CONTENT}
-						className={styles.button}
-					>
-						Перейти к контенту
-					</Link>
-					<Link
-						href={PUBLIC_PAGES.USER_PROFILE}
-						className={styles['button-secondary']}
-					>
-						В профиль
-					</Link>
+			<div className={styles.page}>
+				<div className={styles.blobPurple} />
+				<div className={styles.blobPink} />
+				<div className={styles.blobYellow} />
+
+				<div className={styles.card}>
+					<div className={`${styles.icon} ${styles.iconSuccess}`}>✓</div>
+					<h1 className={styles.title}>Подписка активирована!</h1>
+					<p className={styles.description}>
+						Тариф{' '}
+						<span className={styles.planName}>
+							{planLabel[subscription!.plan] ?? subscription!.plan}
+						</span>{' '}
+						успешно подключён. Виджеты уже работают.
+					</p>
+					<div className={styles.actions}>
+						<Link href={PUBLIC_PAGES.CABINET} className={styles.button}>
+							Перейти в кабинет
+						</Link>
+					</div>
 				</div>
 			</div>
 		)
 	}
 
 	return (
-		<div className={styles.wrapper}>
-			<h1 className={styles.title}>
-				Ожидаем ответа от платежной системы...
-			</h1>
-			<p className={styles.description}>
-				Нажмите кнопку ниже чтобы запросить статус платежа вручную
-			</p>
-			<div className={styles.actions}>
-				<button
-					className={styles.button}
-					onClick={handleVerify}
-					disabled={isVerifying}
-				>
-					{isVerifying ? 'Проверяем...' : 'Проверить статус'}
-				</button>
-				<Link
-					href={PUBLIC_PAGES.USER_PROFILE}
-					className={styles['button-secondary']}
-				>
-					В профиль
-				</Link>
+		<div className={styles.page}>
+			<div className={styles.blobPurple} />
+			<div className={styles.blobPink} />
+			<div className={styles.blobYellow} />
+
+			<div className={styles.card}>
+				<div className={`${styles.icon} ${styles.iconLoading}`}>
+					<div className={styles.spinner} />
+				</div>
+				<h1 className={styles.title}>
+					Ожидаем ответа от платёжной системы...
+				</h1>
+				<p className={styles.description}>
+					Обычно это занимает несколько секунд. Если подписка не
+					активировалась — нажмите кнопку ниже.
+				</p>
+				<div className={styles.actions}>
+					<button
+						className={styles.button}
+						onClick={handleVerify}
+						disabled={isVerifying}
+					>
+						{isVerifying ? 'Проверяем...' : 'Проверить статус'}
+					</button>
+					<Link
+						href={PUBLIC_PAGES.CABINET}
+						className={styles.buttonSecondary}
+					>
+						В кабинет
+					</Link>
+				</div>
 			</div>
 		</div>
 	)
