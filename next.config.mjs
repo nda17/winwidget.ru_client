@@ -1,22 +1,27 @@
 /** @type {import('next').NextConfig} */
+const apiBase =
+	process.env.NEXT_PUBLIC_MODE === 'production'
+		? process.env.NEXT_PUBLIC_PRODUCTION_HOST
+		: 'http://localhost:4200'
+
 const nextConfig = {
 	rewrites: () => {
 		return [
 			{
 				source: '/auth/google',
-				destination: 'http://localhost:4200/auth/google'
+				destination: `${apiBase}/auth/google`
 			},
 			{
 				source: '/auth/github',
-				destination: 'http://localhost:4200/auth/github'
+				destination: `${apiBase}/auth/github`
 			},
 			{
 				source: '/auth/yandex',
-				destination: 'http://localhost:4200/auth/yandex'
+				destination: `${apiBase}/auth/yandex`
 			},
 			{
 				source: '/uploads/:path*',
-				destination: `http://localhost:4200/uploads/:path*`
+				destination: `${apiBase}/uploads/:path*`
 			}
 		]
 	},
@@ -39,6 +44,12 @@ const nextConfig = {
 				hostname: 'avatars.yandex.net',
 				port: '',
 				pathname: '/**'
+			},
+			{
+				protocol: 'https',
+				hostname: 'winwidget.ru',
+				port: '',
+				pathname: '/uploads/**'
 			}
 		]
 	}
