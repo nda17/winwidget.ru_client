@@ -4,7 +4,17 @@ const robots = (): MetadataRoute.Robots => {
 	return {
 		rules: {
 			userAgent: '*',
-			disallow: ['/auth/', '/profile/', '/manager/', '/admin/']
+			disallow: [
+				'/admin/',
+				'/cabinet/',
+				'/widgets/',
+				'/payment/',
+				'/logout/',
+				'/login/',
+				'/register/',
+				'/restore-password/',
+				'/social-auth/'
+			]
 		}
 	}
 }
