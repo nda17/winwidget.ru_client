@@ -20,9 +20,7 @@ const useUser = () => {
 	const pathname = usePathname()
 	const hasAccessToken = getAccessToken() !== null
 	const isProtectedPath =
-		pathname === PUBLIC_PAGES.USER_PROFILE ||
-		pathname === PUBLIC_PAGES.MANAGER ||
-		pathname.startsWith('/admin')
+		pathname === PUBLIC_PAGES.USER_PROFILE || pathname.startsWith('/admin')
 
 	const { data, isLoading } = useQuery({
 		queryKey: ['get-profile', auth],
