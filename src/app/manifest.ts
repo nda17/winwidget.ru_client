@@ -2,8 +2,8 @@ import { MetadataRoute } from 'next'
 
 const manifest = (): MetadataRoute.Manifest => {
 	return {
-		name: 'WinWidget — виджеты для вашего сайта',
-		short_name: 'WinWidget',
+		name: 'Winwidget — виджеты для вашего сайта',
+		short_name: 'Winwidget',
 		description: 'Продающие виджеты для повышения конверсии сайта',
 		start_url: '/',
 		display: 'standalone',
