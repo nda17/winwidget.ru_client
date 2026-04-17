@@ -11,9 +11,7 @@ export interface IStatisticsOverview {
 	activeUsers30d: number
 	newUsers30d: number
 	multiLoginUsers: number
-	premiumUsers: number
 	adminUsers: number
-	managerUsers: number
 }
 
 class StatisticsService {
