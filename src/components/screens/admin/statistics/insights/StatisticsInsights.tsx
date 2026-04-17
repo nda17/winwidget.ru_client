@@ -53,9 +53,7 @@ const StatisticsInsights: FC = () => {
 				100
 			: 0
 	const publicRegistrations = Math.max(
-		(overview?.totalUsers ?? 0) -
-			(overview?.adminUsers ?? 0) -
-			(overview?.managerUsers ?? 0),
+		(overview?.totalUsers ?? 0) - (overview?.adminUsers ?? 0),
 		0
 	)
 
@@ -66,9 +64,7 @@ const StatisticsInsights: FC = () => {
 				<p className={styles.value}>
 					{formatStatValue(publicRegistrations)}
 				</p>
-				<p className={styles.caption}>
-					Без учёта администраторов и менеджеров
-				</p>
+				<p className={styles.caption}>Без учёта администраторов</p>
 			</div>
 			<div className={styles.card}>
 				<p className={styles.label}>Последний месяц</p>
@@ -138,13 +134,6 @@ const StatisticsInsights: FC = () => {
 				</p>
 			</div>
 			<div className={styles.card}>
-				<p className={styles.label}>Премиум-пользователи</p>
-				<p className={styles.value}>
-					{formatStatValue(overview?.premiumUsers ?? 0)}
-				</p>
-				<p className={styles.caption}>Пользователи с premium-доступом</p>
-			</div>
-			<div className={styles.card}>
 				<p className={styles.label}>С 2+ способами входа</p>
 				<p className={styles.value}>
 					{formatStatValue(overview?.multiLoginUsers ?? 0)}
@@ -154,15 +143,12 @@ const StatisticsInsights: FC = () => {
 				</p>
 			</div>
 			<div className={styles.card}>
-				<p className={styles.label}>Роли команды</p>
+				<p className={styles.label}>Администраторы</p>
 				<p className={styles.value}>
-					{formatStatValue(
-						(overview?.adminUsers ?? 0) + (overview?.managerUsers ?? 0)
-					)}
+					{formatStatValue(overview?.adminUsers ?? 0)}
 				</p>
 				<p className={styles.caption}>
-					Админы: {formatStatValue(overview?.adminUsers ?? 0)} | Менеджеры:{' '}
-					{formatStatValue(overview?.managerUsers ?? 0)}
+					Пользователи с правами администратора
 				</p>
 			</div>
 		</div>

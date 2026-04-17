@@ -1,12 +1,15 @@
 'use client'
 import VeilBackground from '@/components//ui/veil-background/VeilBackground'
+import Snowflakes from '@/components/ui/snowflakes/Snowflakes'
 import styles from '@/components/layout/Layout.module.scss'
 import Footer from '@/components/layout/footer/Footer'
 import Header from '@/components/layout/header/Header'
 import { ILayout } from '@/components/layout/layout.interface'
 import { PUBLIC_PAGES } from '@/config/pages/public.config'
+import siteSettingsService from '@/services/site-settings/site-settings.service'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import { useVeilBackgroundStore } from '@/store/veil-background-store/veil-background-store'
+import { useQuery } from '@tanstack/react-query'
 import { NextPage } from 'next'
 import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
@@ -16,6 +19,12 @@ const Layout: NextPage<ILayout> = ({ children }) => {
 		state => state.visible
 	)
 	const auth = useAuthStore(state => state.auth)
+
+	const { data: siteSettings } = useQuery({
+		queryKey: ['site-settings'],
+		queryFn: siteSettingsService.get,
+		staleTime: 60_000
+	})
 	const pathname = usePathname()
 	const isRecaptchaPage =
 		pathname === PUBLIC_PAGES.LOGIN ||
@@ -35,11 +44,26 @@ const Layout: NextPage<ILayout> = ({ children }) => {
 		}
 	}, [auth, isRecaptchaPage])
 
+	const isLandingPage = pathname === PUBLIC_PAGES.HOME
+	const isWidgetPreview = pathname.startsWith('/page/')
+
+	if (isWidgetPreview) {
+		return <>{children}</>
+	}
+
 	return (
 		<div className={styles.layout}>
-			<Header />
+			{siteSettings?.snowflakeEnabled && <Snowflakes />}
+			{siteSettings?.bannerEnabled && siteSettings.bannerText && (
+				<div className={styles.banner}>
+					<span>{siteSettings.bannerText}</span>
+				</div>
+			)}
+			<Header isAbsolute={isLandingPage} />
 			{visibleVeilBackground && <VeilBackground />}
-			<main className={styles.main}>{children}</main>
+			<main className={isLandingPage ? styles.mainLanding : styles.main}>
+				{children}
+			</main>
 			<Footer />
 		</div>
 	)

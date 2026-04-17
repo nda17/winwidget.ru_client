@@ -1,10 +1,10 @@
 'use client'
-import CirclesLoader from '@/components/ui/circles-loader/CirclesLoader'
 import { saveTokenStorage } from '@/services/auth/auth.helper'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import { NextPage } from 'next'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect } from 'react'
+import toast from 'react-hot-toast'
 
 const SocialAuthPage: NextPage = () => {
 	const searchParams = useSearchParams()
@@ -13,17 +13,18 @@ const SocialAuthPage: NextPage = () => {
 	const setAuthResolved = useAuthStore(state => state.setAuthResolved)
 
 	useEffect(() => {
+		const toastId = toast.loading('Загрузка...')
 		const accessToken = searchParams.get('accessToken')
 		if (accessToken) {
 			saveTokenStorage(accessToken)
 			setAuth(true)
 			setAuthResolved(true)
 		}
-
+		toast.dismiss(toastId)
 		router.replace('/')
 	}, [router, searchParams, setAuth, setAuthResolved])
 
-	return <CirclesLoader />
+	return null
 }
 
 export default SocialAuthPage

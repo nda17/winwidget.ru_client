@@ -246,38 +246,6 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 										)}
 									/>
 								</div>
-								<div className={styles.checkbox}>
-									<p>MANAGER</p>
-									<Controller
-										control={control}
-										name="isManager"
-										render={({ field }) => (
-											<CheckboxRights
-												type="checkbox"
-												defaultChecked={data.rights.includes(
-													UserRole.MANAGER
-												)}
-												{...register('isManager', { value: field.value })}
-											/>
-										)}
-									/>
-								</div>
-								<div className={styles.checkbox}>
-									<p>PREMIUM</p>
-									<Controller
-										control={control}
-										name="isPremium"
-										render={({ field }) => (
-											<CheckboxRights
-												type="checkbox"
-												defaultChecked={data.rights.includes(
-													UserRole.PREMIUM
-												)}
-												{...register('isPremium', { value: field.value })}
-											/>
-										)}
-									/>
-								</div>
 							</div>
 							<FieldId
 								type="text"

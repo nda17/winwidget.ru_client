@@ -1,0 +1,145 @@
+'use client'
+
+import AdminNavigation from '@/components/ui/admin/admin-navigation/AdminNavigation'
+import Heading from '@/components/ui/heading/Heading'
+import SubHeading from '@/components/ui/sub-heading/SubHeading'
+import legalPagesService from '@/services/legal-pages/legal-pages.service'
+import {
+	useMutation,
+	useQuery,
+	useQueryClient
+} from '@tanstack/react-query'
+import dynamic from 'next/dynamic'
+import { NextPage } from 'next'
+import { useState } from 'react'
+import toast from 'react-hot-toast'
+import styles from './AdminContentSettings.module.scss'
+
+const Editor = dynamic(
+	() => import('@/components/ui/tiptap-editor/TiptapEditor'),
+	{ ssr: false }
+)
+
+const PAGES = [
+	{
+		slug: 'personal-policy',
+		label: 'Политика обработки персональных данных'
+	},
+	{
+		slug: 'consent-processing',
+		label: 'Согласие на обработку персональных данных'
+	},
+	{ slug: 'cookie-notice', label: 'Политика обработки Cookie' },
+	{ slug: 'oferta', label: 'Договор-оферта' }
+] as const
+
+type Slug = (typeof PAGES)[number]['slug']
+
+const AdminContentSettings: NextPage = () => {
+	const [activeSlug, setActiveSlug] = useState<Slug>('personal-policy')
+	const [drafts, setDrafts] = useState<Record<string, string>>({})
+	const queryClient = useQueryClient()
+
+	const { data: pages, isLoading } = useQuery({
+		queryKey: ['legal-pages'],
+		queryFn: legalPagesService.getAll
+	})
+
+	const [isSaving, setIsSaving] = useState(false)
+
+	const save = (slug: Slug) => {
+		setIsSaving(true)
+		const promise = legalPagesService
+			.update(slug, drafts[slug] ?? '')
+			.then(() => {
+				queryClient.invalidateQueries({ queryKey: ['legal-pages'] })
+				setDrafts(prev => {
+					const next = { ...prev }
+					delete next[slug]
+					return next
+				})
+			})
+			.finally(() => setIsSaving(false))
+		toast.promise(promise, {
+			loading: 'Сохранение...',
+			success: 'Сохранено',
+			error: 'Ошибка сохранения'
+		})
+	}
+
+	const activePage = pages?.find(p => p.slug === activeSlug)
+	const activeContent =
+		activeSlug in drafts ? drafts[activeSlug] : (activePage?.content ?? '')
+	const isDirty = activeSlug in drafts
+
+	return (
+		<div className={styles.wrapper}>
+			<Heading text="Панель администратора" />
+			<AdminNavigation />
+
+			<SubHeading text="Юридические страницы" />
+
+			<div className={styles.pageTabs}>
+				{PAGES.map(page => (
+					<button
+						key={page.slug}
+						className={`${styles.pageTab} ${activeSlug === page.slug ? styles.pageTabActive : ''}`}
+						onClick={() => setActiveSlug(page.slug)}
+					>
+						{page.label}
+					</button>
+				))}
+			</div>
+
+			<div className={styles.section}>
+				<div className={styles.sectionHeader}>
+					<p className={styles.fieldLabel}>
+						{PAGES.find(p => p.slug === activeSlug)?.label}
+					</p>
+					{isDirty && (
+						<span className={styles.dirtyBadge}>
+							Несохранённые изменения
+						</span>
+					)}
+				</div>
+
+				{isLoading ? (
+					<p className={styles.loading}>Загрузка...</p>
+				) : (
+					<Editor
+						value={activeContent}
+						onChange={html =>
+							setDrafts(prev => ({ ...prev, [activeSlug]: html }))
+						}
+					/>
+				)}
+
+				<div className={styles.btnRow}>
+					<button
+						className={styles.saveBtn}
+						disabled={!isDirty || isSaving}
+						onClick={() => save(activeSlug)}
+					>
+						Сохранить
+					</button>
+					{isDirty && (
+						<button
+							className={styles.resetBtn}
+							onClick={() =>
+								setDrafts(prev => {
+									const next = { ...prev }
+									delete next[activeSlug]
+									return next
+								})
+							}
+						>
+							Сбросить
+						</button>
+					)}
+				</div>
+			</div>
+		</div>
+	)
+}
+
+export default AdminContentSettings

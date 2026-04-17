@@ -24,9 +24,9 @@ const Hamburger: NextPage = () => {
 	return (
 		<div className={styles.hamburger} onClick={changeStateMenu}>
 			{visibleVeilBackground && visibleHamburger ? (
-				<MaterialIcon name={'MdClose'} fill="#ffffff" />
+				<MaterialIcon name={'MdClose'} fill="currentColor" />
 			) : (
-				<MaterialIcon name={'MdMenu'} fill="#ffffff" />
+				<MaterialIcon name={'MdMenu'} fill="currentColor" />
 			)}
 		</div>
 	)

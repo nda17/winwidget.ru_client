@@ -1,5 +1,5 @@
 import styles from '@/components/layout/nav-menu/desktop/menu/menu-item/MenuItem.module.scss'
-import { IMenuItem } from '@/components/layout/nav-menu/desktop/menu/menu-item/menu-item.interface'
+import { IMenuItem } from '@/components/layout/nav-menu/menu-item.interface'
 import MaterialIcon from '@/components/ui/icons/MaterialIcon'
 import clsx from 'clsx'
 import { NextPage } from 'next'

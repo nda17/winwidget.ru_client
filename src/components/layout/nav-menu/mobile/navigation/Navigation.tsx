@@ -4,21 +4,26 @@ import LogoImage from '@/components/ui/logo-image/LogoImage'
 import clsx from 'clsx'
 import { NextPage } from 'next'
 
-const Navigation: NextPage = () => {
+interface NavigationProps {
+	isDark?: boolean
+}
+
+const Navigation: NextPage<NavigationProps> = ({ isDark }) => {
 	return (
 		<div className={styles.wrapper}>
 			<div className={clsx(styles['layout-container'])}>
 				<div className={styles.brand}>
 					<LogoImage />
-					<div className={styles['brand-copy']}>
-						<span className={styles['brand-title']}>Winwidget</span>
-						<span className={styles['brand-subtitle']}>
-							Виджеты для сайта
-						</span>
-					</div>
 				</div>
-				<div className={styles['menu-toggle']}>
-					<Hamburger />
+				<div className={styles.right}>
+					<div
+						className={clsx(
+							styles['menu-toggle'],
+							!isDark && styles['menu-toggle--light']
+						)}
+					>
+						<Hamburger />
+					</div>
 				</div>
 			</div>
 		</div>

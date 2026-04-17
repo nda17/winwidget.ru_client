@@ -1,17 +1,14 @@
 import clsx from 'clsx'
-import { NextPage } from 'next'
+import { FC } from 'react'
 import Skeleton, { SkeletonProps } from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 
-const SkeletonLoader: NextPage<SkeletonProps> = ({
-	className,
-	...rest
-}) => {
+const SkeletonLoader: FC<SkeletonProps> = ({ className, ...rest }) => {
 	return (
 		<Skeleton
 			{...rest}
-			baseColor="#c2c2c2"
-			highlightColor="#94938f"
+			baseColor="#ede7f8"
+			highlightColor="#f8f5ff"
 			className={clsx(['rounded-lg', 'select-none'], className)}
 		/>
 	)

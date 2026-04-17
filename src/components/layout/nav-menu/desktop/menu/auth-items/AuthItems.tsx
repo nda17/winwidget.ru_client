@@ -17,22 +17,49 @@ const AuthItems: NextPage = () => {
 
 	return (
 		<>
+			{!auth && (
+				<MenuItem
+					item={{
+						icon: 'MdApps',
+						link: '/#tools',
+						title: 'Виджеты'
+					}}
+				/>
+			)}
+			{!auth && (
+				<MenuItem
+					item={{
+						icon: 'MdDiamond',
+						link: '/#pricing',
+						title: 'Тарифы'
+					}}
+				/>
+			)}
+			{!auth && (
+				<MenuItem
+					item={{
+						icon: 'MdHelpOutline',
+						link: '/#faq',
+						title: 'Вопросы'
+					}}
+				/>
+			)}
 			{auth && (
 				<MenuItem
 					item={{
-						icon: 'MdSettings',
-						link: PUBLIC_PAGES.USER_PROFILE,
-						title: 'Профиль'
+						icon: 'MdSpaceDashboard',
+						link: PUBLIC_PAGES.CABINET,
+						title: 'Личный кабинет'
 					}}
 				/>
 			)}
 
-			{user?.isManager && (
+			{auth && (
 				<MenuItem
 					item={{
-						icon: 'MdGroup',
-						link: PUBLIC_PAGES.MANAGER,
-						title: 'Менеджер'
+						icon: 'MdPayment',
+						link: PUBLIC_PAGES.PAYMENT,
+						title: 'Оплата'
 					}}
 				/>
 			)}
@@ -42,7 +69,7 @@ const AuthItems: NextPage = () => {
 					item={{
 						icon: 'MdOutlineLock',
 						link: ADMIN_PAGES.HOME,
-						title: 'Админ'
+						title: 'Админ панель'
 					}}
 				/>
 			)}
@@ -50,9 +77,19 @@ const AuthItems: NextPage = () => {
 			{!auth && (
 				<MenuItem
 					item={{
-						icon: 'MdLogout',
+						icon: 'MdLogin',
 						link: PUBLIC_PAGES.LOGIN,
-						title: 'Войти'
+						title: 'Вход'
+					}}
+				/>
+			)}
+
+			{!auth && (
+				<MenuItem
+					item={{
+						icon: 'MdPersonAdd',
+						link: PUBLIC_PAGES.REGISTER,
+						title: 'Регистрация'
 					}}
 				/>
 			)}

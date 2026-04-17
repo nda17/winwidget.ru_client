@@ -1,5 +1,5 @@
 import styles from '@/components/layout/nav-menu/mobile/menu/menu-item/MenuItem.module.scss'
-import { IMenuItem } from '@/components/layout/nav-menu/mobile/menu/menu-item/menu-item.interface'
+import { IMenuItem } from '@/components/layout/nav-menu/menu-item.interface'
 import MaterialIcon from '@/components/ui/icons/MaterialIcon'
 import { useHamburgerStore } from '@/store/hamburger-store/hamburger-store'
 import { useVeilBackgroundStore } from '@/store/veil-background-store/veil-background-store'

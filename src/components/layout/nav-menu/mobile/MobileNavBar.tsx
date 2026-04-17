@@ -7,7 +7,11 @@ import { useVeilBackgroundStore } from '@/store/veil-background-store/veil-backg
 import { NextPage } from 'next'
 import { useRef } from 'react'
 
-const MobileNavbar: NextPage = () => {
+interface MobileNavbarProps {
+	isDark?: boolean
+}
+
+const MobileNavbar: NextPage<MobileNavbarProps> = ({ isDark }) => {
 	const visibleVeilBackground = useVeilBackgroundStore(
 		state => state.visible
 	)
@@ -29,7 +33,7 @@ const MobileNavbar: NextPage = () => {
 
 	return (
 		<div className={styles.wrapper}>
-			<Navigation />
+			<Navigation isDark={isDark} />
 			{visibleVeilBackground && visibleHamburger && (
 				<>
 					<div ref={menuRef}>
