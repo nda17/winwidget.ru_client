@@ -76,7 +76,7 @@ const useAuthForm = (isLogin: boolean) => {
 	const setAuth = useAuthStore(state => state.setAuth)
 	const setAuthResolved = useAuthStore(state => state.setAuthResolved)
 
-	const whiteListRedirect = ['/?', '/free-content?', '/premium-content?']
+	const whiteListRedirect = ['/?']
 	const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email')
 	const [isPhoneCodeRequested, setIsPhoneCodeRequested] = useState(false)
 	const [isEmailCodeRequested, setIsEmailCodeRequested] = useState(false)

@@ -10,5 +10,17 @@ export const navItems: INavItem[] = [
 		title: 'Пользователи',
 		link: ADMIN_PAGES.USER_LIST,
 		option: ADMIN_PAGES.USER
+	},
+	{
+		title: 'Общие настройки',
+		link: ADMIN_PAGES.SETTINGS
+	},
+	{
+		title: 'Контент',
+		link: ADMIN_PAGES.LANDING
+	},
+	{
+		title: 'Заметки',
+		link: ADMIN_PAGES.NOTES
 	}
 ]

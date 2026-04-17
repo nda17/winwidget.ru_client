@@ -16,12 +16,15 @@ export const useProfileIdentityBinding = () => {
 		mutationKey: ['profile-send-email-code'],
 		mutationFn: (email: string) =>
 			userService.sendProfileEmailCode({ email }),
-		onSuccess() {
+		onMutate: () => toast.loading('Отправляем код на email...'),
+		onSuccess(_, __, toastId) {
 			setEmailCodeRequested(true)
-			toast.success('Код подтверждения отправлен на email')
+			toast.success('Код подтверждения отправлен на email', {
+				id: toastId
+			})
 		},
-		onError(error) {
-			toast.error(`Привязка email: ${errorCatch(error)}`)
+		onError(error, _, toastId) {
+			toast.error(`Привязка email: ${errorCatch(error)}`, { id: toastId })
 		}
 	})
 
@@ -32,13 +35,17 @@ export const useProfileIdentityBinding = () => {
 		mutationKey: ['profile-verify-email-code'],
 		mutationFn: ({ email, code }: { email: string; code: string }) =>
 			userService.verifyProfileEmailCode({ email, code }),
-		onSuccess() {
+		onMutate: () =>
+			toast.loading('Проверяем код, пожалуйста подождите...'),
+		onSuccess(_, __, toastId) {
 			setEmailCodeRequested(false)
-			toast.success('Email успешно привязан')
+			toast.success('Email успешно привязан', { id: toastId })
 			queryClient.invalidateQueries({ queryKey: ['get-profile'] })
 		},
-		onError(error) {
-			toast.error(`Подтверждение email: ${errorCatch(error)}`)
+		onError(error, _, toastId) {
+			toast.error(`Подтверждение email: ${errorCatch(error)}`, {
+				id: toastId
+			})
 		}
 	})
 
@@ -49,12 +56,15 @@ export const useProfileIdentityBinding = () => {
 		mutationKey: ['profile-send-phone-code'],
 		mutationFn: (phone: string) =>
 			userService.sendProfilePhoneCode({ phone }),
-		onSuccess() {
+		onMutate: () => toast.loading('Отправляем SMS с кодом...'),
+		onSuccess(_, __, toastId) {
 			setPhoneCodeRequested(true)
-			toast.success('Код подтверждения отправлен по SMS')
+			toast.success('Код подтверждения отправлен по SMS', { id: toastId })
 		},
-		onError(error) {
-			toast.error(`Привязка телефона: ${errorCatch(error)}`)
+		onError(error, _, toastId) {
+			toast.error(`Привязка телефона: ${errorCatch(error)}`, {
+				id: toastId
+			})
 		}
 	})
 
@@ -65,13 +75,17 @@ export const useProfileIdentityBinding = () => {
 		mutationKey: ['profile-verify-phone-code'],
 		mutationFn: ({ phone, code }: { phone: string; code: string }) =>
 			userService.verifyProfilePhoneCode({ phone, code }),
-		onSuccess() {
+		onMutate: () =>
+			toast.loading('Проверяем код, пожалуйста подождите...'),
+		onSuccess(_, __, toastId) {
 			setPhoneCodeRequested(false)
-			toast.success('Телефон успешно привязан')
+			toast.success('Телефон успешно привязан', { id: toastId })
 			queryClient.invalidateQueries({ queryKey: ['get-profile'] })
 		},
-		onError(error) {
-			toast.error(`Подтверждение телефона: ${errorCatch(error)}`)
+		onError(error, _, toastId) {
+			toast.error(`Подтверждение телефона: ${errorCatch(error)}`, {
+				id: toastId
+			})
 		}
 	})
 

@@ -13,12 +13,16 @@ export const useProfileEdit = () => {
 		mutationKey: ['update-profile'],
 		mutationFn: (data: IProfileEditInput) =>
 			userService.updateProfile(data),
-		onSuccess() {
-			toast.success('Изменения профиля сохранены')
+		onMutate: () =>
+			toast.loading('Сохраняем профиль, пожалуйста подождите...'),
+		onSuccess(_, __, toastId) {
+			toast.success('Изменения профиля сохранены', { id: toastId })
 			queryClient.invalidateQueries({ queryKey: ['get-profile'] })
 		},
-		onError(error) {
-			toast.error(`Изменение данных профиля: ${errorCatch(error)}`)
+		onError(error, _, toastId) {
+			toast.error(`Изменение данных профиля: ${errorCatch(error)}`, {
+				id: toastId
+			})
 		}
 	})
 
