@@ -2,8 +2,8 @@ import RestorePassword from '@/components/screens/(auth)/restore-password/Restor
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-	title: 'Restore password',
-	description: 'Restore password page'
+	title: 'Восстановление пароля',
+	description: 'Восстановление доступа к аккаунту Winwidget'
 }
 
 const RestorePasswordPage = async () => {
