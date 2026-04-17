@@ -1,9 +1,9 @@
 .header {
-	@apply w-full lg:min-h-32 lg:flex lg:items-center flex min-h-[8rem] items-center relative z-10;
+	@apply w-full lg:min-h-32 lg:flex lg:items-center flex min-h-[8rem] items-center relative;
 }
 
 .headerAbsolute {
-	@apply absolute top-0;
+	@apply absolute top-0 z-50;
 }
 
 .header-shell {

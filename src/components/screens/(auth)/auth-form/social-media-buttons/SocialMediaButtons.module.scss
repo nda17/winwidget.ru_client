@@ -3,13 +3,12 @@
 
 	.button {
 		@apply flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-[0.92rem] font-medium transition-all;
-		color: rgba(217, 218, 232, 0.84);
-		background: rgba(255, 255, 255, 0.04);
-		border-color: rgba(255, 255, 255, 0.08);
+		color: #7b3fa0;
+		background: #f3eeff;
+		border-color: #e0d6f0;
 
 		&:hover {
-			@apply text-white;
-			background: rgba(255, 255, 255, 0.08);
+			background: #e0d6f0;
 			transform: translateY(-1px);
 		}
 

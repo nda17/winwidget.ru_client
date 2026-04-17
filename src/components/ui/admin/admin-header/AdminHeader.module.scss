@@ -1,8 +1,8 @@
 .header {
-	@apply flex flex-col lg:flex-row items-center justify-between mb-8;
+	@apply flex flex-col lg:flex-row items-center justify-between mb-6;
 
 	> div {
-		@apply mb-8 lg:mb-0;
+		@apply mb-3 lg:mb-0;
 	}
 
 	> button {
