@@ -1,4 +1,4 @@
-import Oferta from '@/components/screens/legal-documentation/oferta/Oferta'
+import LegalPageContent from '@/components/screens/legal-documentation/LegalPageContent'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -6,8 +6,23 @@ export const metadata: Metadata = {
 	description: 'Публичная оферта Winwidget.ru'
 }
 
-const OfertaPage = () => {
-	return <Oferta />
+async function fetchContent(): Promise<string> {
+	try {
+		const res = await fetch(
+			`${process.env.NEXT_PUBLIC_API_URL}/legal-pages/oferta`,
+			{ next: { revalidate: 60 } }
+		)
+		if (!res.ok) return ''
+		const data = await res.json()
+		return data?.content ?? ''
+	} catch {
+		return ''
+	}
+}
+
+const OfertaPage = async () => {
+	const content = await fetchContent()
+	return <LegalPageContent html={content} />
 }
 
 export default OfertaPage

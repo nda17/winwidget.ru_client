@@ -1,5 +1,4 @@
 'use client'
-import CirclesLoader from '@/components/ui/circles-loader/CirclesLoader'
 import { PUBLIC_PAGES } from '@/config/pages/public.config'
 import authService from '@/services/auth/auth.service'
 import { useAuthStore } from '@/store/auth-store/auth-store'
@@ -25,11 +24,14 @@ const LogoutPage = () => {
 	})
 
 	useEffect(() => {
+		const toastId = toast.loading('Загрузка...')
 		const logout = async () => {
 			try {
 				await mutateLogout()
+				toast.dismiss(toastId)
 				replace(PUBLIC_PAGES.LOGIN)
 			} catch {
+				toast.dismiss(toastId)
 				toast.error('Не удалось завершить выход. Попробуйте ещё раз.')
 				replace(PUBLIC_PAGES.HOME)
 			}
@@ -38,7 +40,7 @@ const LogoutPage = () => {
 		void logout()
 	}, [mutateLogout, replace])
 
-	return <CirclesLoader />
+	return null
 }
 
 export default LogoutPage
