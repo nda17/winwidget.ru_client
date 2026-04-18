@@ -4,6 +4,19 @@ import {
 	Plan,
 	Subscription
 } from '@/services/widget/widget.types'
+import { IUser } from '@/shared/types/user.types'
+
+export interface IAdminSubscription extends Subscription {
+	user: Pick<IUser, 'id' | 'name' | 'email'>
+}
+
+export interface IAdminActivateInput {
+	userId: string
+	plan: Plan
+	billingPeriod?: BillingPeriod
+	startsAt?: string
+	extendIfActive?: boolean
+}
 
 const subscriptionService = {
 	async getMySubscription(): Promise<Subscription> {
@@ -30,6 +43,28 @@ const subscriptionService = {
 	async verifyPayment(): Promise<{ activated: boolean }> {
 		const { data } =
 			await axiosInterceptorsRequest.post('/payments/verify')
+		return data
+	},
+
+	async adminGetAll(): Promise<IAdminSubscription[]> {
+		const { data } = await axiosInterceptorsRequest.get(
+			'/subscriptions/admin/list'
+		)
+		return data
+	},
+
+	async adminActivate(body: IAdminActivateInput): Promise<Subscription> {
+		const { data } = await axiosInterceptorsRequest.post(
+			'/subscriptions/admin/activate',
+			body
+		)
+		return data
+	},
+
+	async adminCancel(userId: string): Promise<Subscription> {
+		const { data } = await axiosInterceptorsRequest.patch(
+			`/subscriptions/admin/${userId}/cancel`
+		)
 		return data
 	}
 }
