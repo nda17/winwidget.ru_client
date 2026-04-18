@@ -166,7 +166,7 @@ const Pricing = () => {
 							<button
 								className={styles.buyBtn}
 								style={{ background: plan.color }}
-								disabled={payMutation.isPending || isCurrentPlan}
+								disabled={payMutation.isPending}
 								onClick={() =>
 									payMutation.mutate({
 										plan: plan.key,
@@ -174,7 +174,7 @@ const Pricing = () => {
 									})
 								}
 							>
-								{isCurrentPlan ? 'Активен' : 'Подключить'}
+								{isCurrentPlan ? 'Продлить' : 'Подключить'}
 							</button>
 						</div>
 					)
@@ -188,8 +188,8 @@ const Pricing = () => {
 
 			{isActive && currentPlan !== 'TRIAL' && (
 				<p className={styles.noteCarryover}>
-					При смене или продлении тарифа оставшиеся дни текущей подписки
-					переносятся на новый период.
+					Оплачивать подписку можно сколько угодно раз — срок суммируется.
+					При смене тарифа оставшиеся дни переносятся на новый период.
 				</p>
 			)}
 		</div>
