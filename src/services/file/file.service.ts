@@ -15,6 +15,12 @@ class FileService {
 			}
 		)
 	}
+
+	async delete(filePath: string) {
+		return axiosInterceptorsRequest.delete('/files', {
+			params: { filePath }
+		})
+	}
 }
 
 const fileService = new FileService()

@@ -22,6 +22,9 @@ export interface IUploadField {
 	placeholder: string
 	error?: FieldError
 	style?: CSSProperties
+	canDelete?: boolean
+	disabled?: boolean
+	onDelete?: () => Promise<void>
 }
 
 export interface IButton extends ButtonHTMLAttributes<HTMLButtonElement> {}

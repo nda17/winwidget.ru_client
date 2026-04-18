@@ -5,7 +5,10 @@ import { useProfileIdentityBinding } from '@/components/screens/profile/useProfi
 import FieldUploadFile from '@/components/ui/form-elements/universal-elements/field-upload-file/FieldUploadFile'
 import { usePhoneMask } from '@/hooks/usePhoneMask'
 import useUser from '@/hooks/useUser'
-import { IProfileEditInput } from '@/services/user/user.service'
+import fileService from '@/services/file/file.service'
+import userService, {
+	IProfileEditInput
+} from '@/services/user/user.service'
 import {
 	validEmail,
 	validName,
@@ -13,16 +16,38 @@ import {
 	validPhone,
 	validPhoneCode
 } from '@/shared/regex'
+import { useQueryClient } from '@tanstack/react-query'
 import { useRef } from 'react'
+import toast from 'react-hot-toast'
 import { Controller, useForm } from 'react-hook-form'
 import styles from './Cabinet.module.scss'
 
 type EmailBindingForm = { email: string; code: string }
 type PhoneBindingForm = { phone: string; code: string }
 
+const DEFAULT_AVATAR = '/uploads/user-avatar/avatar-default.png'
+
 const CabinetProfile = () => {
 	const { user } = useUser()
+	const queryClient = useQueryClient()
 	const { onSubmit, isLoading: isSaving } = useProfileEdit()
+
+	const handleDeleteAvatar = async () => {
+		const currentAvatar = user?.avatarPath
+		if (currentAvatar && currentAvatar.startsWith('/uploads/')) {
+			try {
+				await fileService.delete(currentAvatar)
+			} catch {
+				// файл мог быть уже удалён — продолжаем
+			}
+		}
+		try {
+			await userService.updateProfile({ avatarPath: null })
+			queryClient.invalidateQueries({ queryKey: ['get-profile'] })
+		} catch {
+			toast.error('Не удалось удалить фото профиля')
+		}
+	}
 	const {
 		emailCodeRequested,
 		phoneCodeRequested,
@@ -349,12 +374,11 @@ const CabinetProfile = () => {
 								<FieldUploadFile
 									onChange={onChange}
 									value={value}
-									currentFile={
-										user?.avatarPath ||
-										'/uploads/user-avatar/avatar-default.png'
-									}
+									currentFile={user?.avatarPath || DEFAULT_AVATAR}
 									folder="user-avatar"
 									placeholder="Фото профиля"
+									canDelete
+									onDelete={handleDeleteAvatar}
 								/>
 							)}
 						/>

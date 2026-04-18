@@ -48,16 +48,16 @@ const Cabinet: FC = () => {
 					<div className="w-[52px] h-[52px] flex-shrink-0">
 						<SkeletonLoader count={1} circle className="w-full h-full" />
 					</div>
-				) : user?.avatarPath ? (
+				) : (
 					<Image
-						src={user.avatarPath}
+						src={
+							user?.avatarPath || '/uploads/user-avatar/avatar-default.png'
+						}
 						alt={displayName}
 						width={52}
 						height={52}
 						className={styles.avatarImg}
 					/>
-				) : (
-					<div className={styles.avatarPlaceholder}>👤</div>
 				)}
 				<div className={styles.headerInfo}>
 					{isLoading ? (
