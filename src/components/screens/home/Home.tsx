@@ -11,6 +11,7 @@ import styles from './Home.module.scss'
 import HomePricing from './pricing/HomePricing'
 import HomeSteps from './steps/HomeSteps'
 import HomeTools from './tools/HomeTools'
+import Analysis from './analysis/Analysis'
 
 const Home = () => {
 	const auth = useAuthStore(state => state.auth)
@@ -55,8 +56,9 @@ const Home = () => {
 				</div>
 			</div>
 			<CurvedCarousel />
-			<HomeSteps />
+			<Analysis />
 			<HomeTools />
+			<HomeSteps />
 			<HomePricing />
 			<HomeFaq />
 			<div className={styles.offerWrapper}>
