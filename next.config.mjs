@@ -2,9 +2,10 @@
 const apiBase =
 	process.env.NEXT_PUBLIC_MODE === 'production'
 		? process.env.NEXT_PUBLIC_PRODUCTION_HOST
-		: 'http://localhost:4200'
+		: process.env.NEXT_PUBLIC_DEVELOPMENT_HOST || 'http://localhost:4200'
 
 const nextConfig = {
+	output: 'standalone',
 	rewrites: () => {
 		return [
 			{
@@ -50,6 +51,18 @@ const nextConfig = {
 				hostname: 'winwidget.ru',
 				port: '',
 				pathname: '/uploads/**'
+			},
+			{
+				protocol: 'https',
+				hostname: 's3.twcstorage.ru',
+				port: '',
+				pathname: '/**'
+			},
+			{
+				protocol: 'https',
+				hostname: 'cdn.winwidget.ru',
+				port: '',
+				pathname: '/**'
 			}
 		]
 	}
