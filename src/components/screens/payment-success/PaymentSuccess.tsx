@@ -47,10 +47,6 @@ const PaymentSuccess = () => {
 	if (isActivated) {
 		return (
 			<div className={styles.page}>
-				<div className={styles.blobPurple} />
-				<div className={styles.blobPink} />
-				<div className={styles.blobYellow} />
-
 				<div className={styles.card}>
 					<div className={`${styles.icon} ${styles.iconSuccess}`}>✓</div>
 					<h1 className={styles.title}>Подписка активирована!</h1>
@@ -73,10 +69,6 @@ const PaymentSuccess = () => {
 
 	return (
 		<div className={styles.page}>
-			<div className={styles.blobPurple} />
-			<div className={styles.blobPink} />
-			<div className={styles.blobYellow} />
-
 			<div className={styles.card}>
 				<div className={`${styles.icon} ${styles.iconLoading}`}>
 					<div className={styles.spinner} />
