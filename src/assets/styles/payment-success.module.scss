@@ -1,23 +1,5 @@
 .page {
-	@apply min-h-[100vh] flex items-center justify-center bg-transparent px-[1rem] py-[2rem] relative overflow-hidden;
-}
-
-.blobPurple,
-.blobPink,
-.blobYellow {
-	@apply absolute rounded-[50%] opacity-[0.18] pointer-events-none blur-[100px];
-}
-
-.blobPurple {
-	@apply w-[500px] h-[500px] bg-[#470b58] top-[-100px] left-[-120px];
-}
-
-.blobPink {
-	@apply w-[400px] h-[400px] bg-[#c21b84] bottom-[-80px] right-[-80px];
-}
-
-.blobYellow {
-	@apply w-[320px] h-[320px] bg-[#f8bd31] top-[40%] right-[5%];
+	@apply min-h-[100vh] w-full flex items-center justify-center bg-transparent px-[1rem] py-[2rem] relative;
 }
 
 .card {
@@ -47,7 +29,7 @@
 }
 
 .iconSuccess {
-	background: linear-gradient(135deg, #f3eeff, #fce0f4);
+	@apply bg-[linear-gradient(135deg,#f3eeff,#fce0f4)];
 }
 
 .spinner {
@@ -66,16 +48,8 @@
 }
 
 .planName {
-	@apply font-bold;
-	background: linear-gradient(
-		85.54deg,
-		#f8bd31 2.77%,
-		#fa595e 56.06%,
-		#c21b84 97.51%
-	);
-	-webkit-background-clip: text;
+	@apply font-bold bg-[linear-gradient(85.54deg,#f8bd31_2.77%,#fa595e_56.06%,#c21b84_97.51%)] bg-clip-text text-transparent;
 	-webkit-text-fill-color: transparent;
-	background-clip: text;
 }
 
 .actions {

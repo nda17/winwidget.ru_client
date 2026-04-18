@@ -1,10 +1,6 @@
 .wrapper {
 	@apply w-full max-w-[56rem] mx-auto px-4 flex flex-col items-center;
 
-	.subtitle {
-		@apply text-2xl font-bold mb-4;
-	}
-
 	.profile-content {
 		@apply w-full max-w-[42rem] flex flex-col gap-5;
 	}

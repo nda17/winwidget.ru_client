@@ -1,0 +1,71 @@
+.section {
+	@apply max-w-[860px] mx-auto px-4 pt-[3rem] pb-[2rem] md:pt-[4rem] md:pb-[3rem] lg:py-[8rem];
+}
+
+.title {
+	@apply text-[32px] font-semibold text-center mb-[2.5rem] text-[#1a1a1a];
+	font-family: var(--font-family);
+}
+
+.list {
+	@apply flex flex-col gap-3;
+}
+
+.item {
+	@apply rounded-[16px] border border-[#e0d6f0] bg-white overflow-hidden transition-[border-color,box-shadow] duration-200;
+
+	&.itemOpen {
+		@apply border-[#c4a8e8] shadow-[0_4px_20px_rgb(100_60_180/0.08)];
+	}
+}
+
+.question {
+	@apply w-full flex items-center justify-between gap-4 px-6 py-5 text-left cursor-pointer bg-transparent border-none outline-none text-[16px] font-medium text-[#1a1a1a] transition-colors duration-200;
+	font-family: var(--font-family);
+
+	&:hover {
+		@apply text-[#7b3fa0];
+	}
+}
+
+.icon {
+	@apply shrink-0 text-[#9b72c8];
+	transition:
+		transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+		color 0.2s ease;
+
+	.itemOpen & {
+		@apply text-[#7b3fa0];
+	}
+
+	&.iconOpen {
+		@apply rotate-180;
+	}
+}
+
+.answerWrapper {
+	@apply max-h-0 overflow-hidden;
+	transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+
+	&.answerOpen {
+		@apply max-h-[400px];
+	}
+}
+
+.answer {
+	@apply px-6 pb-5 text-[15px] leading-relaxed text-[#555];
+	font-family: var(--second-family);
+
+	code {
+		@apply bg-[#f3eeff] text-[#7b3fa0] rounded-[6px] px-[6px] py-[2px] text-[13px];
+		font-family: 'Courier New', monospace;
+	}
+
+	a {
+		@apply text-[#7b3fa0] no-underline transition-colors duration-200;
+
+		&:hover {
+			@apply text-[#5a2b7a];
+		}
+	}
+}

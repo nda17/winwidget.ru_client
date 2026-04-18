@@ -1,6 +1,22 @@
+.banner {
+	@apply w-full text-white text-center px-[1rem] py-[0.625rem] text-[0.9rem] font-medium z-[100] relative;
+	background: linear-gradient(
+		87.12deg,
+		#470b58 1.98%,
+		#c21b84 50.27%,
+		#fa595e 74.42%,
+		#f8bd31 98.56%
+	);
+}
+
 .layout {
-	@apply flex flex-col min-h-full relative;
+	@apply max-w-[1440px] flex flex-col min-h-full m-0auto relative bg-[#f8f5ff];
+	overflow-x: clip;
+
 	.main {
-		@apply py-4 container flex justify-center flex-auto relative;
+		@apply flex justify-center flex-auto relative p-[12px];
+	}
+	.mainLanding {
+		@apply flex-auto relative w-full min-h-[40rem] lg:min-h-[60rem]  m-0auto;
 	}
 }

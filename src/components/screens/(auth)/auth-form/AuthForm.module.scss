@@ -2,32 +2,30 @@
 	@apply w-full mx-auto overflow-hidden min-h-[22.699rem] z-10;
 
 	.auth-method-toggle {
-		@apply mb-5 grid grid-cols-2 gap-2 rounded-[1.15rem] border p-1;
-		background: rgba(255, 255, 255, 0.04);
-		border-color: rgba(255, 255, 255, 0.08);
+		@apply mb-5 grid grid-cols-2 gap-2 rounded-[1.15rem] border border-[#e0d6f0] p-1 bg-[#f8f5ff];
 
 		.method-button {
-			@apply rounded-[0.9rem] px-4 py-3 text-[0.95rem] font-medium transition-all;
-			color: rgba(217, 218, 232, 0.76);
+			@apply rounded-[0.9rem] px-4 py-3 text-[0.95rem] font-medium transition-all text-[#888];
 
 			&:hover {
-				color: #ffffff;
-				background: rgba(255, 255, 255, 0.04);
+				@apply text-[#7b3fa0] bg-[#f3eeff];
 			}
 		}
 
 		.method-button-active {
-			color: #131b22;
-			background: linear-gradient(135deg, #f7fafc 0%, #dfe7f1 100%);
-			box-shadow: 0 8px 24px rgba(255, 255, 255, 0.14);
+			@apply text-white shadow-[0_4px_16px_rgb(100_60_180/0.2)];
+			background: linear-gradient(
+				87.12deg,
+				#470b58 1.98%,
+				#c21b84 50.27%,
+				#fa595e 74.42%,
+				#f8bd31 98.56%
+			);
 		}
 	}
 
 	.verification-hint {
-		@apply rounded-2xl border px-4 py-3 text-[0.78rem] leading-5 mb-3;
-		color: rgba(217, 218, 232, 0.82);
-		background: rgba(255, 255, 255, 0.04);
-		border-color: rgba(255, 255, 255, 0.08);
+		@apply rounded-2xl border border-[#e0d6f0] px-4 py-3 text-[0.78rem] leading-5 mb-3 text-[#666] bg-[#f8f5ff];
 	}
 
 	.link-actions {
@@ -35,19 +33,14 @@
 	}
 
 	.link-button {
-		@apply rounded-full border px-3 py-2 text-[0.76rem] font-medium transition-all;
-		color: rgba(217, 218, 232, 0.82);
-		background: rgba(255, 255, 255, 0.03);
-		border-color: rgba(255, 255, 255, 0.08);
+		@apply rounded-full border border-[#e0d6f0] px-3 py-2 text-[0.76rem] font-medium transition-all text-[#7b3fa0] bg-[#f3eeff];
 
 		&:hover:not(:disabled) {
-			@apply text-white;
-			background: rgba(255, 255, 255, 0.08);
+			@apply bg-[#e0d6f0];
 		}
 
 		&:disabled {
-			@apply cursor-not-allowed;
-			opacity: 0.65;
+			@apply cursor-not-allowed opacity-[0.65];
 		}
 	}
 
@@ -55,20 +48,21 @@
 		@apply mb-4;
 
 		.button-primary {
-			@apply mt-1 w-full rounded-2xl px-4 py-3.5 text-[0.95rem] font-semibold transition-all duration-300 ease-in-out;
-			color: #131b22;
-			background: linear-gradient(135deg, #f7fafc 0%, #dfe7f1 100%);
-			box-shadow: 0 18px 30px rgba(223, 231, 241, 0.18);
+			@apply mt-1 w-full rounded-2xl px-4 py-3.5 text-[0.95rem] font-semibold transition-all duration-300 ease-in-out text-white shadow-[0_8px_24px_rgb(100_60_180/0.2)];
+			background: linear-gradient(
+				87.12deg,
+				#470b58 1.98%,
+				#c21b84 50.27%,
+				#fa595e 74.42%,
+				#f8bd31 98.56%
+			);
 
 			&:hover:not(:disabled) {
-				transform: translateY(-1px);
-				box-shadow: 0 20px 34px rgba(223, 231, 241, 0.24);
+				@apply -translate-y-px opacity-90 shadow-[0_12px_30px_rgb(100_60_180/0.28)];
 			}
 
 			&:disabled {
-				@apply cursor-not-allowed;
-				opacity: 0.72;
-				box-shadow: none;
+				@apply cursor-not-allowed opacity-60 shadow-none;
 			}
 		}
 	}
@@ -78,22 +72,15 @@
 	}
 
 	.section-divider {
-		@apply relative mb-4 text-center text-[0.76rem] uppercase tracking-[0.16em];
-		color: rgba(217, 218, 232, 0.46);
+		@apply relative mb-4 text-center text-[0.76rem] uppercase tracking-[0.16em] text-[#bbb];
 
 		&::before {
 			content: '';
-			@apply absolute left-0 right-0 top-1/2;
-			border-top: 1px solid rgba(255, 255, 255, 0.08);
+			@apply absolute left-0 right-0 top-1/2 border-t border-[#e0d6f0];
 		}
 
 		span {
-			@apply relative px-3;
-			background: linear-gradient(
-				180deg,
-				rgba(19, 27, 34, 0.98) 0%,
-				rgba(22, 29, 37, 0.98) 100%
-			);
+			@apply relative px-3 bg-white;
 		}
 	}
 }

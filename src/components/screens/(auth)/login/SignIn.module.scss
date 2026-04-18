@@ -3,38 +3,25 @@
 	min-height: calc(100dvh - 8rem);
 
 	.form {
-		@apply w-full max-w-[30rem] rounded-[1.75rem] border p-6 md:p-8;
-		background: linear-gradient(
-			180deg,
-			rgba(19, 27, 34, 0.98) 0%,
-			rgba(22, 29, 37, 0.98) 100%
-		);
-		border-color: rgba(255, 255, 255, 0.08);
-		box-shadow: 0 24px 64px rgba(9, 13, 17, 0.18);
+		@apply w-full max-w-[30rem] rounded-[1.75rem] border border-[#e0d6f0] p-6 md:p-8 bg-white shadow-[0_24px_64px_rgb(100_60_180/0.08)];
 
 		.title {
-			@apply text-white font-semibold text-[1.85rem] leading-none mb-2;
+			@apply font-semibold text-[1.85rem] leading-none mb-2 text-[#1a1a1a];
 		}
 
 		.subtitle {
-			@apply text-[0.94rem] leading-6 mb-6;
-			color: rgba(217, 218, 232, 0.74);
+			@apply text-[0.94rem] leading-6 mb-6 text-[#888];
 		}
 
 		.auth-actions {
-			@apply mt-5 flex flex-wrap gap-2 border-t pt-4;
-			border-color: rgba(255, 255, 255, 0.08);
+			@apply mt-5 flex flex-wrap gap-2 border-t border-[#e0d6f0] pt-4;
 		}
 
 		.auth-link {
-			@apply rounded-full border px-3 py-2 text-[0.82rem] font-medium transition-all;
-			color: rgba(217, 218, 232, 0.84);
-			background: rgba(255, 255, 255, 0.03);
-			border-color: rgba(255, 255, 255, 0.08);
+			@apply rounded-full border border-[#e0d6f0] px-3 py-2 text-[0.82rem] font-medium transition-all text-[#7b3fa0] bg-[#f3eeff];
 
 			&:hover {
-				@apply text-white;
-				background: rgba(255, 255, 255, 0.08);
+				@apply bg-[#e0d6f0];
 			}
 		}
 	}

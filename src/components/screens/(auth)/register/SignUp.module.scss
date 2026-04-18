@@ -4,21 +4,18 @@
 
 	.form {
 		@apply w-full max-w-[30rem] rounded-[1.75rem] border p-6 md:p-8;
-		background: linear-gradient(
-			180deg,
-			rgba(19, 27, 34, 0.98) 0%,
-			rgba(22, 29, 37, 0.98) 100%
-		);
-		border-color: rgba(255, 255, 255, 0.08);
-		box-shadow: 0 24px 64px rgba(9, 13, 17, 0.18);
+		background: #ffffff;
+		border-color: #e0d6f0;
+		box-shadow: 0 24px 64px rgb(100 60 180 / 0.08);
 
 		.title {
-			@apply text-white font-semibold text-[1.85rem] leading-none mb-2;
+			@apply font-semibold text-[1.85rem] leading-none mb-2;
+			color: #1a1a1a;
 		}
 
 		.subtitle {
 			@apply text-[0.94rem] leading-6 mb-6;
-			color: rgba(217, 218, 232, 0.74);
+			color: #888;
 		}
 	}
 }

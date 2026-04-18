@@ -1,30 +1,39 @@
 .wrapper {
-	@apply relative w-full;
+	@apply relative w-full z-[25];
 
 	.layout-container {
 		@apply flex justify-between items-center gap-3 px-4 py-[0.7rem];
 	}
 
 	.brand {
-		@apply flex items-center gap-2 min-w-0;
+		@apply flex items-center;
 	}
 
-	.brand-copy {
-		@apply flex flex-col min-w-0;
-	}
-
-	.brand-title {
-		@apply text-[0.74rem] font-700 uppercase tracking-[0.14em] text-white whitespace-nowrap;
-	}
-
-	.brand-subtitle {
-		@apply text-[0.63rem] text-gray-300 leading-tight whitespace-nowrap;
+	.right {
+		@apply flex items-center gap-2;
 	}
 
 	.menu-toggle {
-		@apply flex items-center justify-center flex-shrink-0 rounded-max p-[0.45rem] z-10;
-		border: 1px solid rgba(255, 255, 255, 0.12);
-		background: rgba(255, 255, 255, 0.06);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+		@apply flex items-center justify-center shrink-0 cursor-pointer w-10 h-10 rounded-full border-[1.5px] border-white/30 bg-white/[0.18] backdrop-blur-[8px] transition-[background,border-color] duration-200;
+
+		&:hover {
+			@apply bg-white/[0.28] border-white/[0.45];
+		}
+
+		svg {
+			@apply w-5 h-5 text-white;
+		}
+
+		&--light {
+			@apply bg-[#470b58]/[0.07] border-[#470b58]/20 backdrop-blur-none;
+
+			&:hover {
+				@apply bg-[#470b58]/[0.12] border-[#470b58]/30;
+			}
+
+			svg {
+				@apply text-[#470b58];
+			}
+		}
 	}
 }

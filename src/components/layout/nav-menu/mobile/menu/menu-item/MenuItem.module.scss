@@ -1,38 +1,29 @@
 .wrapper {
 	.link-button {
-		@apply flex items-center gap-3 rounded-layout px-3 py-3 text-[1rem] font-500 text-gray-300 transition-all;
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		background: rgba(255, 255, 255, 0.04);
+		@apply text-[15px] bg-transparent text-[#444] font-medium flex items-center gap-[10px] w-full px-[14rem] py-[11rem] rounded-[12px] border border-transparent transition-[background,border-color,color] duration-200;
+		font-family: var(--second-family);
 
 		> svg {
-			@apply w-[1.15rem] h-[1.15rem] rounded-max p-[0.2rem];
-			fill: #d9dae8;
-			background: rgba(255, 255, 255, 0.06);
+			@apply w-[18px] h-[18px] shrink-0 text-[#c21b84] fill-[#c21b84];
 		}
 
 		&:hover {
-			@apply text-white;
-			border-color: rgba(255, 255, 255, 0.16);
-			background: rgba(255, 255, 255, 0.08);
-
-			> svg {
-				fill: #ffffff;
-				background: rgba(255, 255, 255, 0.1);
-			}
+			@apply bg-[#f8f0ff] border-[#c21b84]/[0.18] text-[#470b58];
 		}
 	}
 }
 
 .active {
 	.link-button {
-		@apply text-white;
-		border-color: rgba(255, 255, 255, 0.18);
-		background: rgba(255, 255, 255, 0.1);
-		box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+		@apply border-[#c21b84]/[0.28] text-[#470b58] font-semibold;
+		background: linear-gradient(
+			135deg,
+			rgba(71, 11, 88, 0.07) 0%,
+			rgba(194, 27, 132, 0.07) 100%
+		);
 
 		> svg {
-			fill: #ffffff;
-			background: rgba(255, 255, 255, 0.12);
+			@apply text-[#470b58] fill-[#470b58];
 		}
 	}
 }
