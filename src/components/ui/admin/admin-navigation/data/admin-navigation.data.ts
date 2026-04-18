@@ -12,12 +12,16 @@ export const navItems: INavItem[] = [
 		option: ADMIN_PAGES.USER
 	},
 	{
-		title: 'Общие настройки',
-		link: ADMIN_PAGES.SETTINGS
+		title: 'Подписки',
+		link: ADMIN_PAGES.SUBSCRIPTIONS
 	},
 	{
 		title: 'Контент',
 		link: ADMIN_PAGES.LANDING
+	},
+	{
+		title: 'Общие настройки',
+		link: ADMIN_PAGES.SETTINGS
 	},
 	{
 		title: 'Заметки',
