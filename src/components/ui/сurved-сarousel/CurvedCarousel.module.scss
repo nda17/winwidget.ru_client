@@ -1,5 +1,5 @@
 .section {
-	@apply relative overflow-visible;
+	@apply relative overflow-visible mt-[-12rem] md:mt-[2rem] lg:mt-0;
 }
 
 .heading {
@@ -11,18 +11,18 @@
 }
 
 .carousel {
-	@apply relative overflow-hidden z-10 top-[-10rem] w-[100vw] left-[50%] h-[460px];
+	@apply relative overflow-hidden z-10 top-[-10rem] w-[100vw] left-1/2 h-[460px] mt-[1.5rem] lg:mt-0;
 	transform: translateX(-50%);
 	perspective: 1200px;
 	perspective-origin: center 40%;
 
 	@media (max-width: 767px) {
-		height: 320px;
+		@apply h-[320px];
 		perspective: 700px;
 	}
 
 	@media (max-width: 479px) {
-		height: 260px;
+		@apply h-[260px];
 		perspective: 500px;
 	}
 }
@@ -33,7 +33,7 @@
 }
 
 .card {
-	@apply absolute left-[50%] top-[50%] w-[280px] h-[340px] rounded-[22px] overflow-hidden ml-[-140px] mt-[-170px];
+	@apply absolute left-1/2 top-1/2 w-[280px] h-[340px] rounded-[22px] overflow-hidden ml-[-140px] mt-[-170px];
 	transform-origin: center center;
 	transform-style: preserve-3d;
 	will-change: transform, opacity;
@@ -42,19 +42,11 @@
 	box-shadow: none;
 
 	@media (max-width: 767px) {
-		width: 200px;
-		height: 240px;
-		margin-left: -100px;
-		margin-top: -120px;
-		border-radius: 16px;
+		@apply w-[200px] h-[240px] -ml-[100px] -mt-[120px] rounded-[16px];
 	}
 
 	@media (max-width: 479px) {
-		width: 156px;
-		height: 188px;
-		margin-left: -78px;
-		margin-top: -94px;
-		border-radius: 14px;
+		@apply w-[156px] h-[188px] -ml-[78px] -mt-[94px] rounded-[14px];
 	}
 }
 
@@ -77,111 +69,88 @@
 
 .cardInner {
 	@apply relative flex flex-col w-full h-full z-2;
-	padding: 1.4rem 1.3rem 1.2rem;
+	@apply pt-[1.4rem] px-[1.3rem] pb-[1.2rem];
 
 	@media (max-width: 767px) {
-		padding: 1rem 1rem 0.9rem;
+		@apply pt-4 px-4 pb-[0.9rem];
 	}
 
 	@media (max-width: 479px) {
-		padding: 0.8rem 0.8rem 0.75rem;
+		@apply pt-[0.8rem] px-[0.8rem] pb-3;
 	}
 }
 
 .iconWrap {
-	@apply flex items-center justify-center rounded-[14px] flex-shrink-0 mb-[1rem] w-[52px] h-[52px];
-	border: 1px solid;
+	@apply flex items-center justify-center rounded-[14px] shrink-0 mb-[1rem] w-[52px] h-[52px] border;
 	backdrop-filter: blur(4px);
 
 	@media (max-width: 767px) {
-		width: 40px;
-		height: 40px;
-		border-radius: 11px;
-		margin-bottom: 0.7rem;
+		@apply w-10 h-10 rounded-[11px] mb-[0.7rem];
 
 		svg {
-			width: 22px;
-			height: 22px;
+			@apply w-[22px] h-[22px];
 		}
 	}
 
 	@media (max-width: 479px) {
-		width: 34px;
-		height: 34px;
-		border-radius: 10px;
-		margin-bottom: 0.55rem;
+		@apply w-[34px] h-[34px] rounded-[10px] mb-[0.55rem];
 
 		svg {
-			width: 18px;
-			height: 18px;
+			@apply w-[18px] h-[18px];
 		}
 	}
 }
 
 .tag {
-	@apply inline-block self-start rounded-[6px] font-semibold mb-[0.6rem] text-[10px] px-[8px] py-[3px];
-	letter-spacing: 0.06em;
-	text-transform: uppercase;
-	border: 1px solid;
+	@apply inline-block self-start rounded-[6px] font-semibold mb-[0.6rem] text-[10px] px-[8px] py-[3px] border tracking-[0.06em] uppercase;
 	font-family: var(--second-family);
 
 	@media (max-width: 767px) {
-		font-size: 9px;
-		padding: 2px 6px;
-		margin-bottom: 0.45rem;
+		@apply text-[9px] mb-[0.45rem];
+		@apply py-[2px] px-[6px];
 	}
 
 	@media (max-width: 479px) {
-		font-size: 8px;
-		padding: 2px 5px;
-		margin-bottom: 0.35rem;
+		@apply text-[8px] mb-[0.35rem];
+		@apply py-[2px] px-[5px];
 	}
 }
 
 .title {
-	@apply font-bold text-white leading-[1.15] mb-[0.55rem] text-[21px];
+	@apply font-bold text-white leading-[1.15] mb-[0.55rem] text-[21px] tracking-[-0.02em];
 	font-family: var(--font-family);
-	letter-spacing: -0.02em;
 	text-shadow: 0 1px 8px rgb(0 0 0 / 0.4);
 
 	@media (max-width: 767px) {
-		font-size: 15px;
-		margin-bottom: 0.4rem;
+		@apply text-[15px] mb-[0.4rem];
 	}
 
 	@media (max-width: 479px) {
-		font-size: 12px;
-		margin-bottom: 0.3rem;
+		@apply text-[12px] mb-[0.3rem];
 	}
 }
 
 .description {
-	@apply leading-[1.5] flex-1 text-[12.5px];
-	color: rgb(255 255 255 / 0.55);
+	@apply leading-[1.5] flex-1 text-[12.5px] text-white/55;
 	font-family: var(--second-family);
 
 	@media (max-width: 767px) {
-		font-size: 10.5px;
-		line-height: 1.45;
+		@apply text-[10.5px] leading-[1.45];
 	}
 
 	@media (max-width: 479px) {
-		font-size: 9.5px;
-		line-height: 1.4;
+		@apply text-[9.5px] leading-[1.4];
 	}
 }
 
 .accentLine {
-	@apply h-[2px] rounded-[2px] mt-[1rem] w-[60%];
-	flex-shrink: 0;
+	@apply h-[2px] rounded-[2px] mt-[1rem] w-[60%] shrink-0;
 
 	@media (max-width: 767px) {
-		margin-top: 0.6rem;
-		width: 50%;
+		@apply mt-[0.6rem] w-1/2;
 	}
 
 	@media (max-width: 479px) {
-		margin-top: 0.5rem;
-		height: 1.5px;
+		@apply mt-[0.5rem] h-[1.5px];
 	}
 }

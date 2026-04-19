@@ -1,0 +1,160 @@
+.page {
+	@apply pt-[5rem] px-4 pb-[8rem] min-h-screen flex flex-col items-center w-full text-[#1a1a1a];
+}
+.title {
+	@apply text-[1.875rem] font-bold mb-6 text-center text-[#1a1a1a];
+}
+.currentPlan {
+	@apply flex items-center gap-4 mb-6 px-5 py-3 rounded-xl text-sm bg-white border border-[#e0d6f0] text-[#555];
+}
+.statusActive {
+	@apply px-2 py-[2px] rounded text-xs font-semibold bg-[#d1fae5] text-[#065f46];
+}
+.statusExpired {
+	@apply px-2 py-[2px] rounded text-xs font-semibold bg-[#fde8e8] text-[#c0392b];
+}
+.trialCard {
+	@apply w-full max-w-[20rem] px-6 py-5 rounded-[1rem] mb-8 text-center bg-white border border-[#e0d6f0];
+}
+.trialTitle {
+	@apply text-xl font-bold mb-1 text-[#7b3fa0];
+}
+.trialDesc {
+	@apply text-sm mb-3 text-[#aaa];
+}
+.periodToggle {
+	@apply flex gap-2 mb-8 p-1 rounded-xl bg-white border border-[#e0d6f0];
+}
+.periodBtn {
+	@apply px-5 py-2 rounded-lg text-sm font-medium cursor-pointer border-none bg-transparent text-[#888] flex items-center gap-2 transition-all duration-200;
+}
+.periodBtn:hover {
+	@apply text-[#7b3fa0];
+}
+.periodActive {
+	@apply text-white #{!important};
+	background: linear-gradient(
+		87.12deg,
+		#470b58 1.98%,
+		#c21b84 50.27%,
+		#fa595e 74.42%,
+		#f8bd31 98.56%
+	);
+}
+.discount {
+	@apply text-xs px-[6px] py-[2px] rounded font-bold bg-[#d1fae5] text-[#065f46];
+}
+.plans {
+	@apply flex gap-6 flex-wrap justify-center mb-8;
+}
+.planCard {
+	@apply flex flex-col items-center p-8 rounded-[1rem] w-72 bg-white border border-[#e0d6f0] transition-[border-color,box-shadow,transform] duration-200;
+}
+.planCard:hover {
+	@apply border-[#c4a8e8] -translate-y-1;
+	box-shadow: 0 8px 32px rgb(100 60 180 / 0.1);
+}
+.planName {
+	@apply text-2xl font-bold mb-4 text-[#7b3fa0];
+}
+.priceBlock {
+	@apply flex items-baseline gap-1 mb-1;
+}
+.price {
+	@apply text-[2.25rem] font-bold text-[#1a1a1a];
+}
+.pricePer {
+	@apply text-base text-[#aaa];
+}
+.yearlyNote {
+	@apply text-sm mb-4 text-[#aaa];
+}
+.features {
+	@apply flex flex-col gap-2 mb-6 text-sm text-left w-full text-[#555];
+}
+.features li {
+	@apply flex items-center gap-2;
+}
+.features li::before {
+	content: '✓';
+	@apply text-[#7b3fa0] font-bold;
+}
+.buyBtn {
+	@apply w-full py-3 rounded-xl font-bold text-sm cursor-pointer border-none text-white transition-[opacity,transform] duration-200;
+	background: linear-gradient(
+		87.12deg,
+		#470b58 1.98%,
+		#c21b84 50.27%,
+		#fa595e 74.42%,
+		#f8bd31 98.56%
+	);
+}
+.buyBtn:hover {
+	@apply opacity-90 -translate-y-px;
+}
+.buyBtn:disabled {
+	@apply opacity-50 cursor-not-allowed translate-y-0;
+}
+.note {
+	@apply text-xs text-center text-[#bbb];
+}
+.noteCarryover {
+	@apply mt-3 text-xs text-center text-[#a78bc4];
+}
+
+@media (max-width: 768px) {
+	.page {
+		@apply py-8 px-4;
+	}
+	.plans {
+		@apply gap-4;
+	}
+	.planCard {
+		@apply w-[calc(50%-0.5rem)] px-5 py-6;
+	}
+	.price {
+		@apply text-[2rem];
+	}
+}
+
+@media (max-width: 560px) {
+	.planCard {
+		@apply w-full max-w-[22rem];
+	}
+}
+
+@media (max-width: 480px) {
+	.page {
+		@apply pt-6 px-3 pb-12;
+	}
+	.title {
+		@apply text-2xl mb-5;
+	}
+	.currentPlan {
+		@apply flex-wrap gap-2 px-4 py-[0.625rem] text-[0.82rem];
+	}
+	.trialCard {
+		@apply max-w-none px-5 py-4 mb-6;
+	}
+	.periodToggle {
+		@apply w-full;
+	}
+	.periodBtn {
+		@apply flex-1 justify-center px-3 py-2 text-[0.82rem];
+	}
+	.plans {
+		@apply gap-[0.875rem];
+	}
+	.planCard {
+		@apply w-full max-w-none p-6;
+	}
+	.planCard:hover {
+		@apply translate-y-0;
+	}
+	.price {
+		@apply text-[1.875rem];
+	}
+	.note {
+		@apply text-[0.7rem] px-2;
+	}
+}

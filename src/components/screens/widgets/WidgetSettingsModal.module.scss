@@ -1,0 +1,193 @@
+.overlay {
+	@apply fixed inset-0 flex items-center justify-center z-50 bg-black/40 backdrop-blur-[4px];
+}
+.modal {
+	@apply relative flex flex-col rounded-[1rem] p-8 w-full max-w-[36rem] bg-white border border-[#e0d6f0] max-h-[90vh] overflow-y-auto;
+	box-shadow: 0 20px 60px rgb(100 60 180 / 0.12);
+}
+.modal::-webkit-scrollbar {
+	@apply hidden;
+}
+.closeBtn {
+	@apply absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full border-none cursor-pointer text-[1.125rem] bg-[#f3eeff] text-[#7b3fa0] transition-[background] duration-200;
+}
+.closeBtn:hover {
+	@apply bg-[#e0d6f0];
+}
+.modalTitle {
+	@apply text-2xl font-bold text-center mb-6 text-[#1a1a1a];
+}
+.tabs {
+	@apply flex gap-6 justify-center mb-6 border-b border-[#e0d6f0] pb-2;
+}
+.tab {
+	@apply text-sm cursor-pointer border-none bg-transparent pb-2 text-[#aaa] transition-colors duration-200;
+}
+.tab:hover {
+	@apply text-[#7b3fa0];
+}
+.tabActive {
+	@apply text-[#7b3fa0] border-b-2 border-[#7b3fa0] font-semibold;
+}
+.tabContent {
+	@apply flex-1;
+}
+.fields {
+	@apply flex flex-col gap-5;
+}
+.field {
+	@apply flex flex-col gap-2;
+}
+.label {
+	@apply text-sm font-medium text-[#555];
+}
+.input {
+	@apply w-full rounded-lg px-4 py-3 text-sm border border-[#e0d6f0] bg-[#f8f5ff] text-[#1a1a1a] outline-none transition-[border-color] duration-200;
+}
+.input:focus {
+	@apply border-[#c4a8e8];
+}
+.input[type='number'] {
+	-moz-appearance: textfield;
+	appearance: textfield;
+}
+.input[type='number']::-webkit-inner-spin-button,
+.input[type='number']::-webkit-outer-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+.input option {
+	@apply bg-white;
+}
+.codeArea {
+	@apply resize-none text-xs min-h-[80px];
+	@apply font-mono;
+}
+.colorRow {
+	@apply flex items-end gap-3;
+}
+.colorRowField {
+	@apply flex flex-col gap-1;
+}
+.colorRowLabel {
+	@apply text-[11px] text-[#7b3fa0] font-medium;
+}
+.colorPicker {
+	@apply w-9 h-9 rounded-[6px] cursor-pointer border border-[#e0d6f0] p-[2px] bg-transparent;
+}
+.checkRow {
+	@apply flex items-center gap-2;
+}
+.checkLabel {
+	@apply text-sm cursor-pointer text-[#555];
+}
+.hint {
+	@apply text-xs text-[#bbb];
+}
+.bonusBlock {
+	@apply flex flex-col gap-2 pb-3 border-b border-[#e0d6f0];
+}
+.bonusBlock:last-child {
+	@apply border-b-0;
+}
+.directLink {
+	@apply flex gap-2;
+}
+.openLink {
+	@apply px-4 py-3 rounded-lg text-sm font-medium shrink-0 no-underline bg-[#f3eeff] text-[#7b3fa0] transition-[background] duration-200;
+}
+.openLink:hover {
+	@apply bg-[#e0d6f0];
+}
+.copyBtn {
+	@apply mt-1 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer border-none bg-[#f3eeff] text-[#7b3fa0] transition-[background] duration-200 self-start;
+}
+.copyBtn:hover {
+	@apply bg-[#e0d6f0];
+}
+.clearColorBtn {
+	@apply shrink-0 w-8 h-8 flex items-center justify-center rounded-[6px] border border-[#e0d6f0] bg-transparent text-[#bbb] text-xs cursor-pointer transition-all duration-150 self-center;
+}
+.clearColorBtn:hover {
+	@apply border-[#e05a5a] text-[#e05a5a];
+}
+.resetAttemptsBtn {
+	@apply mt-1 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer bg-transparent border border-[#e0d6f0] text-[#e05a5a] transition-[background] duration-200 self-start;
+}
+.resetAttemptsBtn:hover {
+	@apply bg-[#fde8e8];
+}
+.resetAttemptsBtn:disabled {
+	@apply opacity-50 cursor-not-allowed;
+}
+.saveBtn {
+	@apply mt-6 w-full py-4 rounded-xl font-bold text-sm tracking-[0.05em] cursor-pointer border-none text-white transition-[opacity,transform] duration-200;
+	background: linear-gradient(
+		87.12deg,
+		#470b58 1.98%,
+		#c21b84 50.27%,
+		#fa595e 74.42%,
+		#f8bd31 98.56%
+	);
+}
+.saveBtn:hover {
+	@apply opacity-90 -translate-y-px;
+}
+.saveBtn:disabled {
+	@apply opacity-60 cursor-not-allowed translate-y-0;
+}
+
+@media (max-width: 600px) {
+	.overlay {
+		@apply items-end;
+	}
+	.modal {
+		@apply rounded-t-[1.25rem] rounded-b-none px-5 py-6 max-h-[92vh] max-w-none;
+	}
+	.tabs {
+		@apply gap-[0.875rem] overflow-x-auto pb-2;
+		-webkit-overflow-scrolling: touch;
+	}
+	.tabs::-webkit-scrollbar {
+		@apply hidden;
+	}
+	.tab {
+		@apply whitespace-nowrap shrink-0 text-[0.85rem];
+	}
+}
+
+@media (max-width: 480px) {
+	.modal {
+		@apply px-4 pt-5 pb-6;
+	}
+	.modalTitle {
+		@apply text-xl mb-5 pr-8;
+	}
+	.tabs {
+		@apply gap-3;
+	}
+	.tab {
+		@apply text-[0.8rem];
+	}
+	.fields {
+		@apply gap-4;
+	}
+	.colorRow {
+		@apply flex-wrap gap-2;
+	}
+	.directLink {
+		@apply flex-col;
+	}
+	.openLink {
+		@apply text-center;
+	}
+	.copyBtn {
+		@apply self-stretch text-center;
+	}
+	.input {
+		@apply px-[0.875rem] py-[0.625rem];
+	}
+	.saveBtn {
+		@apply py-[0.875rem];
+	}
+}

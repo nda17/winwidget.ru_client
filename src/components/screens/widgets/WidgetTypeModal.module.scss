@@ -1,0 +1,77 @@
+.overlay {
+	@apply fixed inset-0 bg-[rgba(20,10,40,0.45)] backdrop-blur-[4px] z-[1000] flex items-center justify-center p-6;
+	-webkit-backdrop-filter: blur(4px);
+}
+
+.modal {
+	@apply relative bg-white rounded-[1.25rem] border border-[#e0d6f0] pt-10 px-8 pb-8 max-w-[540px] w-full;
+	box-shadow: 0 20px 60px rgba(100, 60, 180, 0.15);
+}
+
+.closeBtn {
+	@apply absolute top-4 right-4 bg-transparent border-none text-[1.1rem] text-[#bbb] cursor-pointer leading-none px-2 py-1 rounded-[6px] transition-[color,background] duration-150;
+}
+.closeBtn:hover {
+	@apply text-[#7b3fa0] bg-[#f3eeff];
+}
+
+.title {
+	@apply text-2xl font-bold text-[#1a1a1a] mb-[0.375rem] text-center;
+}
+
+.subtitle {
+	@apply text-sm text-[#aaa] text-center mb-7;
+}
+
+.gridLayout {
+	@apply grid grid-cols-2 gap-4;
+}
+
+.card {
+	@apply relative flex flex-col items-center gap-3 rounded-[1rem] border-2 border-[#e0d6f0] bg-[#f8f5ff] cursor-pointer transition-[border-color,box-shadow,transform] duration-200 text-center;
+	@apply pt-7 px-5 pb-6;
+}
+.card:hover:not(:disabled) {
+	@apply border-[#c4a8e8] -translate-y-[2px];
+	box-shadow: 0 6px 24px rgba(100, 60, 180, 0.1);
+}
+.card:active:not(:disabled) {
+	@apply translate-y-0;
+}
+
+.cardDisabled {
+	@apply opacity-50 cursor-not-allowed;
+}
+
+.badge {
+	@apply absolute top-3 right-3 px-2 py-[2px] rounded-full text-[0.7rem] font-bold bg-[#f3eeff] text-[#7b3fa0] tracking-[0.03em];
+}
+
+.icon {
+	@apply flex items-center justify-center;
+}
+
+.name {
+	@apply text-base font-bold text-[#1a1a1a];
+}
+
+.desc {
+	@apply text-[0.8rem] text-[#888] leading-[1.45];
+}
+
+.creating {
+	@apply text-[0.8rem] text-[#7b3fa0] font-semibold;
+}
+
+@media (max-width: 480px) {
+	.modal {
+		@apply pt-8 px-5 pb-6;
+	}
+	.title {
+		@apply text-xl;
+	}
+	.card {
+		@apply gap-2;
+		@apply pt-5 px-[0.875rem] pb-[1.125rem];
+	}
+}

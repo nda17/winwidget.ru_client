@@ -1,0 +1,328 @@
+.cabinet {
+	@apply pt-[5rem] px-4 pb-[8rem] w-full min-h-screen flex flex-col items-center text-[#1a1a1a];
+}
+.userHeader {
+	@apply w-full max-w-[1100px] flex items-center gap-4 mb-7;
+}
+.avatarImg {
+	@apply w-[52px] h-[52px] rounded-full object-cover shrink-0;
+}
+.avatarPlaceholder {
+	@apply w-[52px] h-[52px] rounded-full bg-[#ede8fc] flex items-center justify-center text-[1.4rem] text-[#7b3fa0] shrink-0;
+}
+.headerInfo {
+	@apply flex-1;
+}
+.headerName {
+	@apply text-[1.1rem] font-bold text-[#1a1a1a];
+}
+.headerSub {
+	@apply text-[0.85rem] text-[#888] mt-[2px];
+}
+.planBadge {
+	@apply inline-block rounded-[20px] text-xs font-semibold text-white mt-[6px] py-[2px] px-[10px];
+	background: linear-gradient(
+		87.12deg,
+		#470b58 1.98%,
+		#c21b84 50.27%,
+		#fa595e 74.42%,
+		#f8bd31 98.56%
+	);
+}
+.planExpires {
+	@apply text-xs mt-1 text-[#aaa];
+}
+.tabs {
+	@apply flex gap-1 bg-white border border-[#e0d6f0] rounded-xl p-1 w-full max-w-[1100px] mb-8;
+}
+.tab {
+	@apply flex-1 rounded-lg border-none bg-transparent text-[#888] text-[0.95rem] font-medium cursor-pointer transition-all duration-200 py-[10px] px-6;
+}
+.tab.tabActive {
+	@apply text-white;
+	background: linear-gradient(
+		87.12deg,
+		#470b58 1.98%,
+		#c21b84 50.27%,
+		#fa595e 74.42%,
+		#f8bd31 98.56%
+	);
+}
+.tab:hover:not(.tabActive) {
+	@apply text-[#7b3fa0] bg-[#f3eeff];
+}
+.content {
+	@apply w-full max-w-[1100px];
+}
+.section {
+	@apply bg-white border border-[#e0d6f0] rounded-[16px] mb-4 p-6;
+}
+.sectionTitle {
+	@apply text-[0.8rem] font-semibold text-[#bbb] uppercase tracking-[0.06em] mb-4;
+}
+.field {
+	@apply flex flex-col gap-[6px] mb-4;
+}
+.field:last-child {
+	@apply mb-0;
+}
+.label {
+	@apply text-[0.85rem] text-[#666];
+}
+.input {
+	@apply bg-[#f8f5ff] border border-[#e0d6f0] rounded-lg text-[#1a1a1a] text-[0.95rem] outline-none w-full transition-[border-color] duration-200 py-[10px] px-[14px];
+}
+.input:focus {
+	@apply border-[#c4a8e8];
+}
+.input::placeholder {
+	@apply text-[#ccc];
+}
+.input.inputError {
+	@apply border-[#e05a5a];
+}
+.errorMsg {
+	@apply text-[0.8rem] text-[#e05a5a];
+}
+.btn {
+	@apply rounded-lg border-none text-white text-sm font-semibold cursor-pointer transition-[opacity,transform] duration-200 py-[9px] px-5;
+	background: linear-gradient(
+		87.12deg,
+		#470b58 1.98%,
+		#c21b84 50.27%,
+		#fa595e 74.42%,
+		#f8bd31 98.56%
+	);
+}
+.btn:hover {
+	@apply opacity-90 -translate-y-px;
+}
+.btn:disabled {
+	@apply opacity-50 cursor-not-allowed translate-y-0;
+}
+.btnOutline {
+	@apply rounded-lg border border-[#c4a8e8] bg-transparent text-[#7b3fa0] text-sm font-semibold cursor-pointer transition-all duration-200 py-[9px] px-5;
+}
+.btnOutline:hover {
+	@apply bg-[#f3eeff];
+}
+.btnOutline:disabled {
+	@apply opacity-50 cursor-not-allowed;
+}
+.btnRow {
+	@apply flex gap-[10px] flex-wrap items-center;
+}
+.resetLink {
+	@apply text-[0.82rem] text-[#bbb] underline cursor-pointer bg-transparent border-none p-0;
+}
+.resetLink:hover {
+	@apply text-[#7b3fa0];
+}
+.hint {
+	@apply text-[0.82rem] text-[#bbb];
+}
+.identityGrid {
+	@apply grid grid-cols-2 gap-[14px];
+}
+@media (max-width: 580px) {
+	.identityGrid {
+		@apply grid-cols-1;
+	}
+}
+.identityCard {
+	@apply bg-[#f8f5ff] border border-[#e0d6f0] rounded-xl flex flex-col gap-[10px] p-[18px];
+}
+.identityTitle {
+	@apply text-base font-semibold text-[#1a1a1a];
+}
+.identityDesc {
+	@apply text-[0.85rem] text-[#888] min-h-[2.4rem];
+}
+.subInfo {
+	@apply flex items-center gap-4 mb-5;
+}
+.leadsCount {
+	@apply text-sm text-[#888];
+}
+.trialDays {
+	@apply text-sm text-[#7b3fa0] font-medium;
+}
+.trialDaysUrgent {
+	@apply text-sm text-[#c0392b] font-semibold;
+}
+.expiredBadge {
+	@apply rounded-[20px] text-[0.8rem] font-semibold bg-[#fde8e8] text-[#c0392b] py-[3px] px-[10px];
+}
+.limitBanner {
+	@apply flex items-center justify-between gap-4 bg-[#fff8f0] rounded-xl flex-wrap mb-5 border-[1.5px] border-[#f5a623] py-4 px-5;
+}
+.limitBannerContent {
+	@apply flex items-start gap-3;
+}
+.limitBannerIcon {
+	@apply text-[1.4rem] shrink-0 leading-[1.2];
+}
+.limitBannerTitle {
+	@apply text-[0.95rem] font-bold text-[#b45309] m-0 mb-1;
+}
+.limitBannerText {
+	@apply text-[0.85rem] text-[#92400e] m-0;
+}
+.limitBannerBtn {
+	@apply shrink-0 rounded-lg text-white text-sm font-semibold no-underline whitespace-nowrap transition-opacity duration-200 py-[9px] px-[22px];
+	background: linear-gradient(
+		87.12deg,
+		#470b58 1.98%,
+		#c21b84 50.27%,
+		#fa595e 74.42%,
+		#f8bd31 98.56%
+	);
+	&:hover {
+		@apply opacity-90;
+	}
+}
+.widgetList {
+	@apply flex flex-col gap-[10px] mb-6;
+}
+.widgetRow {
+	@apply flex items-center gap-[14px] bg-white border border-[#e0d6f0] rounded-xl transition-[border-color,box-shadow] duration-200 py-[14px] px-[18px];
+}
+.widgetRow:hover {
+	@apply border-[#c4a8e8];
+	box-shadow: 0 4px 16px rgb(100 60 180 / 0.07);
+}
+.toggle {
+	@apply relative shrink-0 rounded-full transition-[background] duration-200 cursor-pointer border-none w-12 h-[26px] bg-[#e0d6f0];
+}
+.toggle.toggleOn {
+	background: linear-gradient(90deg, #7b3fa0, #c21b84);
+}
+.toggleThumb {
+	@apply absolute top-1 left-1 rounded-full transition-transform duration-200 w-[18px] h-[18px] bg-white;
+}
+.toggleOn .toggleThumb {
+	@apply translate-x-[22px];
+}
+.widgetName {
+	@apply flex-1 font-medium text-[#1a1a1a];
+}
+.actions {
+	@apply flex flex-wrap items-center gap-[14px];
+}
+.actionBtn {
+	@apply flex items-center gap-1 text-sm cursor-pointer border-none bg-transparent text-[#aaa] no-underline transition-colors duration-150;
+}
+.actionBtn:hover {
+	@apply text-[#7b3fa0];
+}
+.actionBtnDanger {
+	@apply flex items-center gap-1 text-sm cursor-pointer border-none bg-transparent text-[#c0392b] font-semibold transition-colors duration-150;
+}
+.actionBtnDanger:hover {
+	@apply text-[#e74c3c];
+}
+.actionBtnDanger:disabled {
+	@apply opacity-50 cursor-not-allowed;
+}
+.leadsCountBadge {
+	@apply ml-[2px] rounded text-xs font-bold bg-[#f3eeff] text-[#7b3fa0] py-[1px] px-[6px];
+}
+.createBtn {
+	@apply block w-full max-w-[220px] mx-auto rounded-[10px] border-none text-white font-bold text-sm tracking-[0.04em] cursor-pointer transition-[opacity,transform] duration-200 py-[13px] px-7;
+	background: linear-gradient(
+		87.12deg,
+		#470b58 1.98%,
+		#c21b84 50.27%,
+		#fa595e 74.42%,
+		#f8bd31 98.56%
+	);
+}
+.createBtn:hover {
+	@apply opacity-90 -translate-y-px;
+}
+.createBtn:disabled {
+	@apply opacity-50 cursor-not-allowed translate-y-0;
+}
+.loading {
+	@apply text-center text-[#bbb] p-10;
+}
+
+@media (max-width: 768px) {
+	.cabinet {
+		@apply pt-7 px-[14px] pb-[60px];
+	}
+	.userHeader {
+		@apply mb-5;
+	}
+	.tabs {
+		@apply mb-6;
+	}
+	.tab {
+		@apply text-[0.88rem] py-[10px] px-4;
+	}
+	.section {
+		@apply p-[18px];
+	}
+	.widgetRow {
+		@apply gap-[10px] py-3 px-[14px];
+	}
+	.actions {
+		@apply gap-[10px];
+	}
+	.actionBtn {
+		@apply text-[0.82rem];
+	}
+}
+
+@media (max-width: 480px) {
+	.cabinet {
+		@apply pt-4 px-[10px] pb-12;
+	}
+	.userHeader {
+		@apply gap-[10px] mb-4;
+	}
+	.avatarImg,
+	.avatarPlaceholder {
+		@apply w-[42px] h-[42px] text-[1.2rem];
+	}
+	.headerName {
+		@apply text-base;
+	}
+	.tabs {
+		@apply p-[3px] gap-[2px];
+	}
+	.tab {
+		@apply text-[0.82rem] py-[9px] px-[10px];
+	}
+	.section {
+		@apply rounded-xl py-[14px] px-3;
+	}
+	.identityCard {
+		@apply p-[14px];
+	}
+	.widgetRow {
+		@apply flex-wrap gap-2 py-[10px] px-3;
+	}
+	.widgetName {
+		@apply min-w-0 overflow-hidden text-ellipsis whitespace-nowrap;
+	}
+	.actions {
+		@apply w-full justify-end pt-[6px] gap-3 border-t border-[#f0eaf8];
+	}
+	.actionBtn {
+		@apply text-[0.8rem] gap-[3px];
+	}
+	.createBtn {
+		@apply max-w-none;
+	}
+	.btnRow {
+		@apply flex-col items-start;
+	}
+	.btn,
+	.btnOutline {
+		@apply w-full text-center justify-center;
+	}
+	.subInfo {
+		@apply flex-wrap gap-2 mb-[14px];
+	}
+}

@@ -1,0 +1,98 @@
+.section {
+	@apply max-w-[1100px] mx-auto px-4 lg:py-[3rem];
+}
+
+.title {
+	@apply text-[32px] font-semibold text-center mb-[2.5rem] text-[#1a1a1a];
+	font-family: var(--font-family);
+
+	@media (max-width: 640px) {
+		@apply text-2xl mb-[1.8rem];
+	}
+}
+
+.gridLayout {
+	@apply grid gap-4 grid-cols-4;
+
+	@media (max-width: 900px) {
+		@apply grid-cols-2;
+	}
+
+	@media (max-width: 520px) {
+		@apply grid-cols-1;
+	}
+}
+
+/* Step card */
+.card {
+	@apply relative rounded-[20px] bg-white flex flex-col justify-between overflow-hidden min-h-[180px] border-[1.5px] border-transparent;
+	@apply pt-6 px-[1.4rem] pb-[1.3rem] bg-clip-padding;
+	box-shadow: 0 2px 16px rgb(0 0 0 / 0.04);
+
+	/* Gradient border via pseudo-element */
+	&::before {
+		content: '';
+		@apply absolute inset-0 rounded-[inherit] pointer-events-none;
+		@apply p-[1.5px];
+		background: var(--border-gradient);
+		-webkit-mask:
+			linear-gradient(#fff 0 0) content-box,
+			linear-gradient(#fff 0 0);
+		-webkit-mask-composite: xor;
+		mask-composite: exclude;
+	}
+
+	.cardFirst,
+	.cardSecond,
+	.cardThird {
+		@apply w-[4.3rem] h-[3.5rem] relative top-[-1rem] left-[-0.5rem];
+		@apply bg-no-repeat bg-center;
+	}
+
+	.cardFirst {
+		background-image: url('../../../../../public/Setting.svg');
+	}
+
+	.cardSecond {
+		background-image: url('../../../../../public/Document.svg');
+	}
+
+	.cardThird {
+		background-image: url('../../../../../public/Info.svg');
+	}
+}
+
+.text {
+	@apply flex-1 text-[15px] leading-[1.4] text-[#2a2a2a];
+	font-family: var(--second-family);
+}
+
+.num {
+	@apply absolute bottom-[1.1rem] right-[1.3rem] font-bold leading-none opacity-[0.12] text-[36px];
+	font-family: var(--font-family);
+}
+
+/* Result card */
+.cardResult {
+	@apply relative rounded-[20px] overflow-hidden flex flex-col justify-end self-stretch min-h-[180px];
+	@apply pt-6 px-[1.4rem] pb-[1.3rem];
+	background: linear-gradient(
+		135deg,
+		#e8607a 0%,
+		#c43060 50%,
+		#a02050 100%
+	);
+
+	.iconHeart {
+		@apply w-[270px] h-[170px] absolute top-0 right-[-2rem];
+		@apply bg-no-repeat bg-center;
+		background-image: url('../../../../../public/Heart.svg');
+	}
+}
+
+.resultText {
+	@apply font-bold text-white leading-[1.2] relative z-10;
+	@apply text-2xl;
+	font-family: var(--font-family);
+	text-shadow: 0 2px 12px rgb(0 0 0 / 0.15);
+}

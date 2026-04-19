@@ -1,0 +1,273 @@
+/* ── Floating button ── */
+.floatOuter {
+	@apply fixed right-6 bottom-6 z-[29];
+}
+
+.floatBtn {
+	@apply flex flex-col items-center gap-[5px] bg-transparent border-none cursor-pointer p-0 select-none;
+	animation: giftBounce 3s ease-in-out infinite 4s;
+
+	&:hover {
+		animation: none;
+		transform: scale(1.08);
+	}
+
+	.floatIcon {
+		@apply text-[58px] leading-none;
+		filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35))
+			drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+		transform-origin: 50% 100%;
+	}
+
+	.floatLabel {
+		@apply text-[#1a0600] text-[11px] font-black px-3 py-[3px] rounded-[20px] whitespace-nowrap uppercase tracking-[0.8px];
+		background: linear-gradient(135deg, #ffd700, #ff8c00);
+		box-shadow: 0 3px 10px rgba(255, 140, 0, 0.5);
+	}
+}
+
+@keyframes giftBounce {
+	0% {
+		transform: translateY(0) scale(1);
+	}
+	10% {
+		transform: translateY(-14px) scale(1.08);
+	}
+	20% {
+		transform: translateY(0) scale(1);
+	}
+	30% {
+		transform: translateY(-5px) scale(1.03);
+	}
+	40% {
+		transform: translateY(0) scale(1);
+	}
+	100% {
+		transform: translateY(0) scale(1);
+	}
+}
+
+/* ── Overlay ── */
+.overlay {
+	@apply fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto p-3;
+	background: rgba(8, 4, 20, 0.85);
+	backdrop-filter: blur(6px);
+	-webkit-backdrop-filter: blur(6px);
+
+	@media (min-width: 768px) {
+		@apply items-center;
+	}
+}
+
+/* ── Card ── */
+.card {
+	@apply relative flex flex-col items-center rounded-[20px] overflow-hidden gap-7 min-h-[calc(100dvh-24px)] justify-center w-full;
+	padding: 28px 20px 24px;
+	background: #130824;
+	box-shadow:
+		0 0 0 1px rgba(255, 255, 255, 0.08),
+		0 24px 64px rgba(0, 0, 0, 0.55),
+		0 0 80px rgba(101, 16, 255, 0.18);
+
+	&::before {
+		content: '';
+		@apply absolute top-0 h-px pointer-events-none;
+		left: 10%;
+		right: 10%;
+		background: linear-gradient(
+			90deg,
+			transparent,
+			rgba(255, 255, 255, 0.25),
+			transparent
+		);
+	}
+
+	@media (min-width: 768px) {
+		@apply w-full max-w-[940px] max-h-[520px] min-h-0 justify-start;
+		padding: 44px 48px;
+	}
+}
+
+/* ── Close button ── */
+.closeBtn {
+	@apply absolute top-[14px] right-[14px] w-[34px] h-[34px] p-0 rounded-full cursor-pointer flex items-center justify-center transition-[background,transform,border-color] duration-200;
+	background: rgba(255, 255, 255, 0.1);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	color: rgba(255, 255, 255, 0.85);
+	backdrop-filter: blur(4px);
+
+	svg {
+		@apply w-[14px] h-[14px];
+	}
+
+	&:hover {
+		background: rgba(255, 255, 255, 0.2);
+		border-color: rgba(255, 255, 255, 0.25);
+		transform: scale(1.08) rotate(90deg);
+	}
+}
+
+/* ── Content layout ── */
+.content {
+	@apply flex flex-col w-full items-center justify-center gap-6;
+
+	@media (min-width: 768px) {
+		@apply flex-row-reverse gap-12;
+	}
+}
+
+/* ── Controls ── */
+.controls {
+	@apply flex flex-col items-center gap-[14px] w-full;
+
+	@media (min-width: 768px) {
+		@apply max-w-[290px] items-start gap-3;
+	}
+}
+
+.title {
+	@apply font-extrabold text-white text-center leading-[1.2];
+	font-size: clamp(1.4rem, 5vw, 1.9rem);
+	letter-spacing: -0.3px;
+	text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+
+.subtitle {
+	@apply text-[14px] leading-[1.5] text-center;
+	color: rgba(255, 255, 255, 0.7);
+
+	@media (min-width: 768px) {
+		@apply text-left;
+	}
+}
+
+.input {
+	@apply w-full text-white text-[15px] h-12 rounded-xl outline-none;
+	border: 1.5px solid rgba(255, 255, 255, 0.12);
+	background: rgba(255, 255, 255, 0.08);
+	padding: 0 14px;
+	transition:
+		border-color 250ms,
+		background 250ms,
+		box-shadow 250ms;
+	backdrop-filter: blur(4px);
+
+	&::placeholder {
+		color: rgba(255, 255, 255, 0.4);
+	}
+
+	&:focus {
+		border-color: rgba(255, 255, 255, 0.4);
+		background: rgba(255, 255, 255, 0.13);
+		box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06);
+	}
+}
+
+.inputError {
+	border-color: rgba(255, 80, 80, 0.7) !important;
+	background: rgba(255, 60, 60, 0.08) !important;
+	box-shadow: 0 0 0 3px rgba(255, 60, 60, 0.15) !important;
+}
+
+.spinBtn {
+	@apply w-full h-[52px] text-base font-bold text-white cursor-pointer border-none rounded-[14px] relative overflow-hidden;
+	padding: 0 24px;
+	letter-spacing: 0.5px;
+	background: linear-gradient(
+		87.12deg,
+		#470b58 1.98%,
+		#c21b84 50.27%,
+		#fa595e 74.42%,
+		#f8bd31 98.56%
+	);
+	box-shadow:
+		0 4px 20px rgba(194, 27, 132, 0.45),
+		inset 0 1px 0 rgba(255, 255, 255, 0.15);
+	transition:
+		transform 0.15s ease,
+		box-shadow 0.15s ease,
+		filter 0.15s ease;
+
+	&::before {
+		content: '';
+		@apply absolute inset-0 pointer-events-none;
+		background: linear-gradient(
+			180deg,
+			rgba(255, 255, 255, 0.1) 0%,
+			transparent 60%
+		);
+	}
+
+	&:hover:not(:disabled) {
+		transform: translateY(-2px);
+		box-shadow:
+			0 8px 28px rgba(194, 27, 132, 0.6),
+			inset 0 1px 0 rgba(255, 255, 255, 0.15);
+		filter: brightness(1.08);
+	}
+
+	&:active:not(:disabled) {
+		@apply translate-y-0;
+	}
+
+	&:disabled {
+		@apply opacity-60 cursor-not-allowed;
+	}
+}
+
+.salesText {
+	@apply text-[13px] leading-[1.55] text-center rounded-[10px];
+	color: rgba(255, 255, 255, 0.9);
+	padding: 10px 14px;
+	background: linear-gradient(
+		135deg,
+		rgba(71, 11, 88, 0.5) 0%,
+		rgba(194, 27, 132, 0.35) 100%
+	);
+	border: 1px solid rgba(194, 27, 132, 0.4);
+	animation: fadeInUp 0.4s ease;
+
+	@media (min-width: 768px) {
+		@apply text-left;
+	}
+}
+
+@keyframes fadeInUp {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.demoTag {
+	@apply text-[11px] text-center tracking-[0.3px];
+	color: rgba(255, 255, 255, 0.3);
+}
+
+/* ── Wheel ── */
+.wheelWrap {
+	@apply relative max-w-[300px] h-[300px] shrink-0;
+	filter: drop-shadow(0 8px 32px rgba(0, 0, 0, 0.45));
+
+	@media (min-width: 768px) {
+		@apply max-w-[360px] h-[360px];
+	}
+}
+
+.svg {
+	@apply w-full h-full overflow-visible;
+}
+
+.arrow {
+	@apply absolute top-1/2 right-[-18px] w-11 h-11 z-10 pointer-events-none;
+	transform: translateY(-50%);
+	filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+
+	svg {
+		@apply w-full h-full block;
+	}
+}

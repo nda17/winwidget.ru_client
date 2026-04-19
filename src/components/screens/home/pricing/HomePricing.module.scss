@@ -1,0 +1,251 @@
+.section {
+	@apply max-w-[1100px] mx-auto px-4 py-[4rem];
+
+	@media (max-width: 640px) {
+		@apply pt-[2.5rem] pb-[2.5rem];
+	}
+}
+
+.title {
+	@apply text-[32px] font-semibold text-center mb-[2.5rem] text-[#1a1a1a];
+	font-family: var(--font-family);
+
+	@media (max-width: 640px) {
+		@apply text-2xl mb-[1.8rem];
+	}
+}
+
+/* Billing toggle */
+
+.toggle {
+	@apply flex items-center justify-center gap-1 mb-10 bg-[#f0eaf9] rounded-full mx-auto w-fit;
+	@apply p-1;
+}
+
+.toggleBtn {
+	@apply flex items-center gap-2 rounded-full text-sm font-medium text-[#7b5fa0] bg-transparent border-none cursor-pointer whitespace-nowrap;
+	@apply py-2 px-[22px];
+	font-family: var(--second-family);
+	transition:
+		background 0.25s ease,
+		color 0.25s ease,
+		box-shadow 0.25s ease;
+
+	&:hover:not(.toggleBtnActive) {
+		@apply bg-[#e4d8f7];
+	}
+}
+
+.toggleBtnActive {
+	@apply bg-white text-[#1a1a1a];
+	box-shadow: 0 2px 8px rgb(123 63 160 / 0.15);
+}
+
+.toggleDiscount {
+	@apply inline-block rounded-full text-[11px] font-bold text-white leading-[1.4];
+	@apply py-[2px] px-2;
+	font-family: var(--second-family);
+	background: linear-gradient(
+		87.12deg,
+		#470b58 1.98%,
+		#c21b84 50.27%,
+		#fa595e 74.42%,
+		#f8bd31 98.56%
+	);
+}
+
+.gridLayout {
+	@apply grid grid-cols-3 gap-5;
+
+	@media (max-width: 768px) {
+		@apply grid-cols-1 max-w-[420px] mx-auto;
+		@apply gap-10;
+	}
+}
+
+/* Card */
+
+.card {
+	@apply relative rounded-[24px] bg-white border-[1.5px] border-transparent overflow-visible;
+	@apply bg-clip-padding;
+	transition:
+		transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+		box-shadow 0.35s ease;
+
+	/* Gradient border default */
+	&::before {
+		content: '';
+		@apply absolute inset-0 rounded-[inherit] pointer-events-none;
+		@apply p-[1.5px];
+		background: linear-gradient(135deg, #e0d4f7, #f7a8c4);
+		-webkit-mask:
+			linear-gradient(#fff 0 0) content-box,
+			linear-gradient(#fff 0 0);
+		-webkit-mask-composite: xor;
+		mask-composite: exclude;
+		transition: opacity 0.35s ease;
+	}
+
+	/* Hover: gradient fill */
+	&::after {
+		content: '';
+		@apply absolute inset-0 rounded-[inherit] opacity-0 pointer-events-none z-0;
+		background: linear-gradient(
+			85.54deg,
+			#f8bd31 2.77%,
+			#fa595e 56.06%,
+			#c21b84 97.51%
+		);
+		transition: opacity 0.35s ease;
+	}
+
+	&:hover {
+		transform: translateY(-10px);
+		box-shadow:
+			0 20px 60px rgb(248 189 49 / 0.25),
+			0 8px 30px rgb(250 89 94 / 0.3),
+			0 4px 16px rgb(194 27 132 / 0.25);
+
+		&::before {
+			@apply opacity-0;
+		}
+		&::after {
+			@apply opacity-100;
+		}
+
+		.subtitle,
+		.planTitle,
+		.features li,
+		.price,
+		.priceNote,
+		.yearlyTotal {
+			color: #fff !important;
+		}
+
+		.features li::before {
+			background: rgb(255 255 255 / 0.5);
+		}
+
+		.btn {
+			background: linear-gradient(
+				87.12deg,
+				#470b58 1.98%,
+				#c21b84 50.27%,
+				#fa595e 74.42%,
+				#f8bd31 98.56%
+			);
+			@apply text-white;
+		}
+	}
+}
+
+.cardPopular {
+	&::before {
+		background: linear-gradient(135deg, #f8bd31, #fa595e, #c21b84);
+	}
+}
+
+.iconStar {
+	@apply w-[7.5rem] h-[7rem] top-[-36px] right-[-20px] z-[2] pointer-events-none absolute;
+	background-image: url('../../../../../public/Star.svg');
+	background-repeat: no-repeat;
+	background-position: center;
+
+	@media (max-width: 768px) {
+		@apply top-[-2.6rem] right-0 w-32 h-28;
+	}
+}
+
+/* Badge */
+
+.badge {
+	@apply absolute left-1/2 -translate-x-1/2 z-[3] whitespace-nowrap rounded-full text-xs font-semibold text-white;
+	@apply -bottom-[14px] py-[5px] px-[18px];
+	font-family: var(--second-family);
+	background: linear-gradient(
+		87.12deg,
+		#470b58 1.98%,
+		#c21b84 50.27%,
+		#fa595e 74.42%,
+		#f8bd31 98.56%
+	);
+	box-shadow: 0 4px 16px rgb(194 27 132 / 0.35);
+}
+
+/* Card inner */
+
+.cardInner {
+	@apply relative z-[1] flex flex-col justify-between h-full min-h-[320px];
+	@apply pt-[1.8rem] px-[1.6rem] pb-[1.6rem];
+
+	@media (max-width: 640px) {
+		@apply min-h-0;
+		@apply pt-[1.4rem] px-[1.2rem] pb-[1.2rem];
+	}
+}
+
+.subtitle {
+	@apply text-[#aaa] mb-[0.3rem] text-[13px];
+	font-family: var(--second-family);
+	transition: color 0.35s ease;
+}
+
+.planTitle {
+	@apply font-bold text-[#1a1a1a] mb-[1.2rem] leading-[1.1] text-[26px];
+	font-family: var(--font-family);
+	transition: color 0.35s ease;
+}
+
+.features {
+	@apply flex flex-col gap-2 mb-[1.6rem] list-none;
+
+	li {
+		@apply flex items-center gap-2 text-[#555] text-[14px];
+		font-family: var(--second-family);
+		transition: color 0.35s ease;
+
+		&::before {
+			content: '';
+			@apply shrink-0 w-[6px] h-[6px] rounded-full bg-[#c4a8e8];
+			transition: background 0.35s ease;
+		}
+	}
+}
+
+/* Price */
+
+.bottom {
+	@apply flex flex-col gap-4 mt-auto;
+}
+
+.priceWrap {
+	@apply flex items-baseline gap-[0.4rem];
+}
+
+.price {
+	@apply font-bold text-[#1a1a1a] text-[28px];
+	font-family: var(--font-family);
+	transition: color 0.35s ease;
+}
+
+.priceNote {
+	@apply text-[#aaa] text-[13px];
+	font-family: var(--second-family);
+	transition: color 0.35s ease;
+}
+
+.yearlyTotal {
+	@apply text-[#aaa] -mt-2 text-[12px];
+	font-family: var(--second-family);
+}
+
+/* Button */
+
+.btn {
+	@apply block w-full text-center rounded-xl text-[15px] font-semibold text-[#7b3fa0] bg-[#f3eeff] border-none;
+	@apply py-3 px-4;
+	font-family: var(--font-family);
+	transition:
+		background 0.35s ease,
+		color 0.35s ease;
+}

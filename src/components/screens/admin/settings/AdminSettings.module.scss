@@ -1,0 +1,75 @@
+.wrapper {
+	@apply w-full flex flex-col relative;
+}
+
+.section {
+	@apply flex flex-col gap-4 bg-white border border-[#e0d6f0] rounded-xl p-5 max-w-[600px] mx-auto w-full mb-6;
+
+	@media (max-width: 480px) {
+		@apply p-3 rounded-[10px] gap-[14px];
+	}
+}
+
+.toggleRow {
+	@apply flex items-center justify-between gap-4;
+}
+
+.field {
+	@apply flex flex-col gap-[6px];
+}
+
+.fieldLabel {
+	@apply text-[0.9rem] font-semibold text-[#1a1a1a];
+}
+
+.fieldHint {
+	@apply text-[0.8rem] text-[#aaa] mt-[2px];
+}
+
+.charCount {
+	@apply text-[0.78rem] text-[#bbb] text-right;
+}
+
+.toggle {
+	@apply relative shrink-0 rounded-full cursor-pointer border-none w-12 h-[26px] bg-[#e0d6f0] transition-[background] duration-200;
+}
+.toggle.toggleOn {
+	background: linear-gradient(90deg, #7b3fa0, #c21b84);
+}
+.toggle:disabled {
+	@apply opacity-60 cursor-not-allowed;
+}
+.toggleThumb {
+	@apply absolute top-1 left-1 w-[18px] h-[18px] bg-white rounded-full transition-transform duration-200;
+}
+.toggleOn .toggleThumb {
+	@apply translate-x-[22px];
+}
+
+.textarea {
+	@apply w-full bg-[#f8f5ff] border border-[#e0d6f0] rounded-lg text-[#1a1a1a] text-[0.9rem] outline-none resize-y transition-[border-color] duration-200 px-[14px] py-[10px];
+	font-family: inherit;
+}
+.textarea:focus {
+	@apply border-[#c4a8e8];
+}
+.textarea::placeholder {
+	@apply text-[#ccc];
+}
+
+.saveBtn {
+	@apply self-start rounded-lg border-none text-white text-sm font-semibold cursor-pointer transition-opacity duration-200 py-[9px] px-[22px];
+	background: linear-gradient(
+		87.12deg,
+		#470b58 1.98%,
+		#c21b84 50.27%,
+		#fa595e 74.42%,
+		#f8bd31 98.56%
+	);
+}
+.saveBtn:hover {
+	@apply opacity-90;
+}
+.saveBtn:disabled {
+	@apply opacity-50 cursor-not-allowed;
+}
