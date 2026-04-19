@@ -5,9 +5,9 @@ import AuthToggle from '@/components/screens/(auth)/auth-form/auth-toggle/AuthTo
 import SocialMediaButtons from '@/components/screens/(auth)/auth-form/social-media-buttons/SocialMediaButtons'
 import useAuthForm from '@/components/screens/(auth)/auth-form/useAuthForm'
 import FieldEmail from '@/components/ui/form-elements/auth-page/field-email/FieldEmail'
+import FieldPassword from '@/components/ui/form-elements/auth-page/field-password/FieldPassword'
 import FieldPhone from '@/components/ui/form-elements/auth-page/field-phone/FieldPhone'
 import FieldSmsCode from '@/components/ui/form-elements/auth-page/field-sms-code/FieldSmsCode'
-import FieldPassword from '@/components/ui/form-elements/auth-page/field-password/FieldPassword'
 import {
 	validEmail,
 	validPassword,
@@ -98,8 +98,8 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 								}
 							/>
 							<div className={styles['verification-hint']}>
-								Код отправлен на email {emailValue}. Код действует 10
-								минут.
+								Код отправлен на email {emailValue}. <br />
+								Срок действия 10 минут.
 							</div>
 							<div className={styles['link-actions']}>
 								<button
