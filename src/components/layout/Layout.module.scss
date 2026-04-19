@@ -11,7 +11,7 @@
 
 .layout {
 	@apply max-w-[1440px] flex flex-col min-h-full m-0auto relative bg-[#f8f5ff];
-	overflow-x: clip;
+	@apply overflow-x-clip;
 
 	.main {
 		@apply flex justify-center flex-auto relative p-[12px];

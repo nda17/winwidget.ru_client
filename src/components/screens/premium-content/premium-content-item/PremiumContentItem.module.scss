@@ -25,8 +25,7 @@
 		}
 
 		&:disabled {
-			opacity: 0.6;
-			cursor: not-allowed;
+			@apply opacity-60 cursor-not-allowed;
 		}
 	}
 }

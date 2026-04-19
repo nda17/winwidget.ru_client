@@ -4,7 +4,7 @@
 	.item {
 		@apply transition-all;
 		&:hover {
-			transform: scale(1.1);
+			@apply scale-110;
 		}
 	}
 }

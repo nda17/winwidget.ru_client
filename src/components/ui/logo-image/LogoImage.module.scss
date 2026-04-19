@@ -2,6 +2,6 @@
 	@apply transition-all;
 
 	&:hover {
-		transform: translateY(-1px) scale(0.98);
+		@apply -translate-y-px scale-[0.98];
 	}
 }

@@ -2,14 +2,10 @@
 	@apply grid grid-cols-3 gap-3;
 
 	.button {
-		@apply flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-[0.92rem] font-medium transition-all;
-		color: #7b3fa0;
-		background: #f3eeff;
-		border-color: #e0d6f0;
+		@apply flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-[0.92rem] font-medium transition-all text-[#7b3fa0] bg-[#f3eeff] border-[#e0d6f0];
 
 		&:hover {
-			background: #e0d6f0;
-			transform: translateY(-1px);
+			@apply bg-[#e0d6f0] -translate-y-px;
 		}
 
 		> svg {

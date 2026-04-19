@@ -1,0 +1,182 @@
+.wrapper {
+	@apply w-full max-w-[88rem] mx-auto px-4 flex flex-col items-center relative;
+
+	// ── Form card ────────────────────────────────────────────────────
+	.card {
+		@apply w-full rounded-layout border border-gray-300 bg-white shadow-sm p-5 mb-6;
+	}
+
+	.field {
+		@apply flex flex-col gap-1 mb-4 relative;
+	}
+
+	.label {
+		@apply text-sm font-500 text-gray-700;
+	}
+
+	.hint {
+		@apply text-xs text-gray-500 -mt-0.5 mb-1 leading-snug;
+	}
+
+	.input {
+		@apply w-full border border-gray-300 rounded-md px-3 py-2 text-sm outline-none focus:border-primary transition-colors;
+	}
+
+	.select {
+		@apply w-full border border-gray-300 rounded-md px-3 py-2 pr-8 text-sm outline-none focus:border-primary transition-colors bg-white cursor-pointer;
+	}
+
+	.searchWrap {
+		@apply relative;
+	}
+
+	.dropdown {
+		@apply absolute z-3 top-full left-0 right-0 bg-white border border-gray-300 rounded-md shadow-md mt-1 max-h-48 overflow-y-auto;
+	}
+
+	.dropdownItem {
+		@apply flex flex-col px-3 py-2 cursor-pointer hover:bg-gray-300 hover:bg-opacity-20 transition-colors;
+	}
+
+	.dropdownName {
+		@apply text-sm font-500 text-gray-700;
+	}
+
+	.dropdownEmail {
+		@apply text-xs text-gray-600;
+	}
+
+	.selectedUser {
+		@apply flex items-center justify-between border border-gray-300 rounded-md px-3 py-2 bg-gray-300 bg-opacity-10;
+
+		span {
+			@apply text-sm text-gray-700;
+		}
+	}
+
+	.clearBtn {
+		@apply text-gray-500 text-xs hover:text-red-500 transition-colors leading-none;
+	}
+
+	.checkboxField {
+		@apply mb-4;
+	}
+
+	.checkboxLabel {
+		@apply flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none;
+	}
+
+	.checkbox {
+		@apply w-4 h-4 accent-primary cursor-pointer;
+	}
+
+	.activateBtn {
+		@apply bg-primary text-white px-6 py-2 rounded-md text-sm font-500 hover:opacity-80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
+	}
+
+	.skeletonRow {
+		@apply h-8 w-full mb-3;
+	}
+
+	// ── Table ────────────────────────────────────────────────────────
+	.list-section {
+		@apply w-full rounded-layout border border-gray-300 bg-white shadow-sm overflow-hidden mb-6;
+	}
+
+	.list-meta {
+		@apply flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-5 py-4 border-b border-gray-300 bg-gray-300 bg-opacity-20;
+	}
+
+	.meta-title {
+		@apply text-[1.1rem] font-semibold text-gray-700;
+	}
+
+	.meta-subtitle {
+		@apply text-sm text-gray-600;
+	}
+
+	.table-scroll {
+		@apply hidden lg:block w-full overflow-x-auto;
+	}
+
+	.mobile-list {
+		@apply flex flex-col lg:hidden;
+	}
+
+	.table {
+		@apply w-full text-sm;
+
+		thead tr {
+			@apply border-b border-gray-300 bg-gray-300 bg-opacity-10;
+
+			th {
+				@apply text-left px-4 py-3 text-gray-700 font-500 whitespace-nowrap;
+			}
+		}
+
+		tbody tr {
+			@apply border-b border-gray-300 last:border-b-0 hover:bg-gray-300 hover:bg-opacity-10 transition-colors;
+
+			td {
+				@apply px-4 py-3 text-gray-700;
+			}
+		}
+	}
+
+	.sub-card {
+		@apply px-4 py-4 border-b border-gray-300 last:border-b-0 flex flex-col gap-2;
+	}
+
+	.card-row {
+		@apply flex items-start justify-between gap-2;
+	}
+
+	.card-label {
+		@apply text-xs text-gray-600 flex-shrink-0 w-24;
+	}
+
+	.card-value {
+		@apply text-sm text-gray-700 flex flex-col text-right min-w-0 break-words;
+	}
+
+	.card-email {
+		@apply text-xs text-gray-600 break-all;
+	}
+
+	// ── Badges ───────────────────────────────────────────────────────
+	.badge {
+		@apply inline-block px-2 py-0.5 rounded-md text-xs font-500 text-white;
+
+		&.badge-trial {
+			@apply bg-gray-500;
+		}
+
+		&.badge-easy {
+			@apply bg-aqua;
+		}
+
+		&.badge-hard {
+			@apply bg-primary;
+		}
+	}
+
+	.status {
+		@apply inline-block px-2 py-0.5 rounded-md text-xs font-500;
+
+		&.status-active {
+			@apply bg-green-100 text-green-700;
+		}
+
+		&.status-expired {
+			@apply bg-gray-300 text-gray-700;
+		}
+
+		&.status-cancelled {
+			@apply bg-red-100 text-red-500;
+		}
+	}
+
+	.cancelBtn {
+		@apply text-xs text-red-500 border border-red-500 rounded px-2 py-1 hover:bg-red-500 hover:text-white transition-colors;
+	}
+}

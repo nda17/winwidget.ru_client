@@ -1,6 +1,6 @@
 .wrapper {
 	.link-button {
-		@apply text-[15px] bg-transparent text-[#444] font-medium flex items-center gap-[10px] w-full px-[14rem] py-[11rem] rounded-[12px] border border-transparent transition-[background,border-color,color] duration-200;
+		@apply text-[15px] bg-transparent text-[#444] font-medium flex items-center gap-[10px] w-full px-[14px] py-[11px] rounded-[12px] border border-transparent transition-[background,border-color,color] duration-200;
 		font-family: var(--second-family);
 
 		> svg {

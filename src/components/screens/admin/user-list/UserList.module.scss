@@ -102,8 +102,7 @@
 	}
 
 	.user-card-id {
-		@apply mt-1 text-xs text-gray-600;
-		word-break: break-all;
+		@apply mt-1 text-xs text-gray-600 break-all;
 	}
 
 	.user-card-body {
@@ -119,8 +118,7 @@
 	}
 
 	.card-value {
-		@apply text-sm text-gray-700 leading-snug;
-		word-break: break-word;
+		@apply text-sm text-gray-700 leading-snug break-words;
 	}
 
 	.table {
@@ -172,10 +170,7 @@
 	}
 
 	.truncate {
-		@apply block max-w-full;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
+		@apply block max-w-full overflow-hidden text-ellipsis whitespace-nowrap;
 	}
 
 	.methods-list {
