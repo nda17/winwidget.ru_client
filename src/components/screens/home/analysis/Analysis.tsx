@@ -41,7 +41,7 @@ const Analysis = () => {
 				</h3>
 			</span>
 
-			<div className={styles.grid}>
+			<div className={styles.gridLayout}>
 				<div
 					className={styles.card}
 					style={

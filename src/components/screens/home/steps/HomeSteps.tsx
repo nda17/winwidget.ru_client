@@ -5,7 +5,7 @@ const HomeSteps = () => {
 		<section className={styles.section}>
 			<h2 className={styles.title}>Установка проще, чем сварить кофе..</h2>
 
-			<div className={styles.grid}>
+			<div className={styles.gridLayout}>
 				<div
 					className={styles.card}
 					style={

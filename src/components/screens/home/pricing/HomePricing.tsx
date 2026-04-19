@@ -100,7 +100,7 @@ const HomePricing = () => {
 				</button>
 			</div>
 
-			<div className={styles.grid}>
+			<div className={styles.gridLayout}>
 				{PLANS.map(plan => {
 					const pricing: PlanPricing =
 						billing === 'yearly' ? plan.yearly : plan.monthly

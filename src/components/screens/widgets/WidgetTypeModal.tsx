@@ -133,7 +133,7 @@ const WidgetTypeModal = ({ onSelect, onClose, isCreating }: Props) => {
 				<p className={styles.subtitle}>
 					Кликните по виджету, чтобы создать его
 				</p>
-				<div className={styles.grid}>
+				<div className={styles.gridLayout}>
 					{WIDGET_TYPES.map(type => (
 						<button
 							key={type.id}
