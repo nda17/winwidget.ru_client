@@ -26,8 +26,9 @@ const verifyAccessToken = async (
 
 export const getServerAuth = async (): Promise<TUserDataState | null> => {
 	const jwtSecret = process.env.JWT_SECRET
-	let accessToken = cookies().get(EnumTokens.ACCESS_TOKEN)?.value
-	const refreshToken = cookies().get(EnumTokens.REFRESH_TOKEN)?.value
+	const cookieStore = await cookies()
+	let accessToken = cookieStore.get(EnumTokens.ACCESS_TOKEN)?.value
+	const refreshToken = cookieStore.get(EnumTokens.REFRESH_TOKEN)?.value
 
 	if (!jwtSecret) {
 		return null
@@ -48,7 +49,17 @@ export const getServerAuth = async (): Promise<TUserDataState | null> => {
 	try {
 		const data = await authService.getNewTokensByRefresh(refreshToken)
 		accessToken = data.accessToken
-		return await verifyAccessToken(accessToken, jwtSecret)
+		const user = await verifyAccessToken(accessToken, jwtSecret)
+		if (user) {
+			;(await cookies()).set(EnumTokens.ACCESS_TOKEN, accessToken, {
+				httpOnly: false,
+				sameSite: 'strict',
+				secure: process.env.NODE_ENV === 'production',
+				maxAge: 60 * 60,
+				path: '/'
+			})
+		}
+		return user
 	} catch (error) {
 		return null
 	}

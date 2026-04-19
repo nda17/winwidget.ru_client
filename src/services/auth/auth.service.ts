@@ -40,6 +40,8 @@ export enum EnumTokens {
 }
 
 class AuthService {
+	private refreshPromise: Promise<any> | null = null
+
 	async main(type: 'login', data: IFormData, token?: string | null) {
 		const response = await axiosClassicRequest.post<IAuthResponse>(
 			`/auth/${type}`,
@@ -59,15 +61,21 @@ class AuthService {
 	}
 
 	async getNewTokens() {
-		const response = await axiosClassicRequest.post<IAuthResponse>(
-			'/auth/access-token'
-		)
+		if (this.refreshPromise) return this.refreshPromise
 
-		if (response.data.accessToken) {
-			saveTokenStorage(response.data.accessToken)
-		}
+		this.refreshPromise = axiosClassicRequest
+			.post<IAuthResponse>('/auth/access-token')
+			.then(response => {
+				if (response.data.accessToken) {
+					saveTokenStorage(response.data.accessToken)
+				}
+				return response
+			})
+			.finally(() => {
+				this.refreshPromise = null
+			})
 
-		return response
+		return this.refreshPromise
 	}
 
 	async getNewTokensByRefresh(refreshToken: string) {

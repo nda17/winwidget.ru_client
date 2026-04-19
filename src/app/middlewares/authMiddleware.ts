@@ -1,12 +1,13 @@
-import { getMiddlewareAuth } from '@/utils/server/get-middleware-auth'
+import { getAuthWithRefresh } from '@/utils/server/refresh-middleware-token'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const authMiddleware = async (request: NextRequest) => {
-	const user = await getMiddlewareAuth(request)
+	const next = NextResponse.next()
+	const { user } = await getAuthWithRefresh(request, next)
 
-	if (user && user?.isLoggedIn) {
+	if (user?.isLoggedIn) {
 		return NextResponse.redirect(new URL('/', request.url))
 	}
 
-	return NextResponse.next()
+	return next
 }

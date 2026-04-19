@@ -3,6 +3,7 @@ import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import {
 	CategoryScale,
 	Chart as ChartJS,
+	Filler,
 	Legend,
 	LineElement,
 	LinearScale,
@@ -17,6 +18,7 @@ ChartJS.register(
 	LinearScale,
 	PointElement,
 	LineElement,
+	Filler,
 	Tooltip,
 	Legend
 )

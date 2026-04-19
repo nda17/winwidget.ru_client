@@ -6,6 +6,7 @@ import CabinetWidgets from '@/components/screens/cabinet/CabinetWidgets'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import useUser from '@/hooks/useUser'
 import widgetService from '@/services/widget/widget.service'
+import { useAuthStore } from '@/store/auth-store/auth-store'
 import { useQuery } from '@tanstack/react-query'
 import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
@@ -24,11 +25,13 @@ const Cabinet: FC = () => {
 	const initialTab: Tab =
 		searchParams.get('tab') === 'profile' ? 'profile' : 'widgets'
 	const [tab, setTab] = useState<Tab>(initialTab)
+	const auth = useAuthStore(state => state.auth)
 	const { user, isLoading } = useUser()
 
 	const { data } = useQuery({
 		queryKey: ['widgets'],
-		queryFn: widgetService.getMyWidgets
+		queryFn: widgetService.getMyWidgets,
+		enabled: auth
 	})
 
 	const subscription = data?.subscription

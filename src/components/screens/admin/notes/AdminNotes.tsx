@@ -4,6 +4,7 @@ import Heading from '@/components/ui/heading/Heading'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import SubHeading from '@/components/ui/sub-heading/SubHeading'
 import notesService, { Note } from '@/services/notes/notes.service'
+import { useAuthStore } from '@/store/auth-store/auth-store'
 import {
 	useMutation,
 	useQuery,
@@ -15,12 +16,14 @@ import toast from 'react-hot-toast'
 import styles from './AdminNotes.module.scss'
 
 const AdminNotes: NextPage = () => {
+	const auth = useAuthStore(state => state.auth)
 	const queryClient = useQueryClient()
 	const [inputText, setInputText] = useState('')
 
 	const { data: notes = [], isLoading } = useQuery({
 		queryKey: ['notes'],
-		queryFn: notesService.getAll
+		queryFn: notesService.getAll,
+		enabled: auth
 	})
 
 	const createMutation = useMutation({

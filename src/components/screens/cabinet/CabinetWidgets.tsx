@@ -16,6 +16,7 @@ import {
 } from 'react-icons/ri'
 import widgetService from '@/services/widget/widget.service'
 import { Widget } from '@/services/widget/widget.types'
+import { useAuthStore } from '@/store/auth-store/auth-store'
 import WidgetSettingsModal from '@/components/screens/widgets/WidgetSettingsModal'
 import WidgetTypeModal from '@/components/screens/widgets/WidgetTypeModal'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
@@ -33,6 +34,7 @@ const WIDGET_TYPE_NAMES: Record<string, string> = {
 }
 
 const CabinetWidgets = () => {
+	const auth = useAuthStore(state => state.auth)
 	const queryClient = useQueryClient()
 	const [settingsWidget, setSettingsWidget] = useState<Widget | null>(null)
 	const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(
@@ -42,7 +44,8 @@ const CabinetWidgets = () => {
 
 	const { data, isLoading } = useQuery({
 		queryKey: ['widgets'],
-		queryFn: widgetService.getMyWidgets
+		queryFn: widgetService.getMyWidgets,
+		enabled: auth
 	})
 
 	const createMutation = useMutation({

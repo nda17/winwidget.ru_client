@@ -4,6 +4,7 @@ import AdminNavigation from '@/components/ui/admin/admin-navigation/AdminNavigat
 import Heading from '@/components/ui/heading/Heading'
 import SubHeading from '@/components/ui/sub-heading/SubHeading'
 import legalPagesService from '@/services/legal-pages/legal-pages.service'
+import { useAuthStore } from '@/store/auth-store/auth-store'
 import {
 	useMutation,
 	useQuery,
@@ -36,13 +37,15 @@ const PAGES = [
 type Slug = (typeof PAGES)[number]['slug']
 
 const AdminContentSettings: NextPage = () => {
+	const auth = useAuthStore(state => state.auth)
 	const [activeSlug, setActiveSlug] = useState<Slug>('personal-policy')
 	const [drafts, setDrafts] = useState<Record<string, string>>({})
 	const queryClient = useQueryClient()
 
 	const { data: pages, isLoading } = useQuery({
 		queryKey: ['legal-pages'],
-		queryFn: legalPagesService.getAll
+		queryFn: legalPagesService.getAll,
+		enabled: auth
 	})
 
 	const [isSaving, setIsSaving] = useState(false)

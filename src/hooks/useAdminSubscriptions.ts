@@ -4,6 +4,7 @@ import subscriptionService, {
 import { BillingPeriod, Plan } from '@/services/widget/widget.types'
 import userService from '@/services/user/user.service'
 import { useDebounce } from '@/hooks/useDebounce'
+import { useAuthStore } from '@/store/auth-store/auth-store'
 import {
 	useMutation,
 	useQuery,
@@ -18,9 +19,12 @@ const today = () => new Date().toISOString().slice(0, 10)
 const useAdminSubscriptions = () => {
 	const queryClient = useQueryClient()
 
+	const auth = useAuthStore(state => state.auth)
+
 	const { data: subscriptions, isLoading } = useQuery({
 		queryKey: ['admin-subscriptions'],
-		queryFn: () => subscriptionService.adminGetAll()
+		queryFn: () => subscriptionService.adminGetAll(),
+		enabled: auth
 	})
 
 	// ── User search for activation form ──────────────────────────────

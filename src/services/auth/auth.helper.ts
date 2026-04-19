@@ -3,6 +3,7 @@ import Cookies from 'js-cookie'
 
 const accessTokenCookieOptions = {
 	sameSite: 'strict' as const,
+	secure: process.env.NODE_ENV === 'production',
 	expires: 1,
 	path: '/'
 }

@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import widgetService from '@/services/widget/widget.service'
+import { useAuthStore } from '@/store/auth-store/auth-store'
 import {
 	Lead,
 	LeadsStatsResponse,
@@ -18,18 +19,22 @@ interface Props {
 }
 
 const WidgetLeads = ({ widgetId }: Props) => {
+	const auth = useAuthStore(state => state.auth)
+
 	const [exporting, setExporting] = useState<
 		'csv' | 'xlsx' | 'pdf' | null
 	>(null)
 
 	const { data, isLoading } = useQuery({
 		queryKey: ['leads', widgetId],
-		queryFn: () => widgetService.getLeads(widgetId)
+		queryFn: () => widgetService.getLeads(widgetId),
+		enabled: auth
 	})
 
 	const { data: subscription } = useQuery<Subscription>({
 		queryKey: ['subscription'],
-		queryFn: () => widgetService.getSubscription()
+		queryFn: () => widgetService.getSubscription(),
+		enabled: auth
 	})
 
 	const canAccess =
@@ -38,7 +43,7 @@ const WidgetLeads = ({ widgetId }: Props) => {
 	const { data: statsData } = useQuery<LeadsStatsResponse>({
 		queryKey: ['leads-stats', widgetId],
 		queryFn: () => widgetService.getLeadsStats(widgetId),
-		enabled: canAccess
+		enabled: !!auth && canAccess
 	})
 
 	const formatPhone = (raw: string) => {

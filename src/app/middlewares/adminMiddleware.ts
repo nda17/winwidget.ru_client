@@ -1,25 +1,19 @@
-import { UserRole } from '@/services/auth/auth.types'
-import { getMiddlewareAuth } from '@/utils/server/get-middleware-auth'
+import { getAuthWithRefresh } from '@/utils/server/refresh-middleware-token'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const adminMiddleware = async (request: NextRequest) => {
-	const user = await getMiddlewareAuth(request)
+	const next = NextResponse.next()
+	const { user, response } = await getAuthWithRefresh(request, next)
 
-	if (
-		user?.isLoggedIn &&
-		user?.isAdmin &&
-		user?.rights?.includes(UserRole.ADMIN)
-	) {
-		return NextResponse.next()
+	const isAdmin = user?.isLoggedIn && user?.isAdmin
+
+	if (isAdmin) {
+		return response ?? next
 	}
 
-	if (
-		user?.isLoggedIn &&
-		!user?.isAdmin &&
-		!user?.rights?.includes(UserRole.ADMIN)
-	) {
+	if (user?.isLoggedIn) {
 		return NextResponse.redirect(new URL('/profile', request.url))
 	}
 
-	return NextResponse.redirect(new URL('/logout', request.url))
+	return NextResponse.redirect(new URL('/login', request.url))
 }

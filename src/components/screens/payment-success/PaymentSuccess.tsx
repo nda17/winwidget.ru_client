@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { PUBLIC_PAGES } from '@/config/pages/public.config'
 import subscriptionService from '@/services/subscription/subscription.service'
+import { useAuthStore } from '@/store/auth-store/auth-store'
 import styles from '@/assets/styles/payment-success.module.scss'
 
 const planLabel: Record<string, string> = {
@@ -13,6 +14,7 @@ const planLabel: Record<string, string> = {
 }
 
 const PaymentSuccess = () => {
+	const auth = useAuthStore(state => state.auth)
 	const queryClient = useQueryClient()
 	const [isVerifying, setIsVerifying] = useState(false)
 	const [verified, setVerified] = useState(false)
@@ -20,7 +22,8 @@ const PaymentSuccess = () => {
 	const { data: subscription } = useQuery({
 		queryKey: ['subscription'],
 		queryFn: subscriptionService.getMySubscription,
-		refetchInterval: verified ? false : 3000
+		refetchInterval: verified ? false : 3000,
+		enabled: auth
 	})
 
 	const isActivated =

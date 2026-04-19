@@ -1,5 +1,6 @@
 import { useDebounce } from '@/hooks/useDebounce'
 import UserService from '@/services/user/user.service'
+import { useAuthStore } from '@/store/auth-store/auth-store'
 import {
 	useMutation,
 	useQuery,
@@ -10,6 +11,7 @@ import { ChangeEvent, MouseEvent, useState } from 'react'
 import toast from 'react-hot-toast'
 
 const useUserList = () => {
+	const auth = useAuthStore(state => state.auth)
 	const [searchTerm, setSearchTerm] = useState('')
 	const queryClient = useQueryClient()
 	const debouncedSearch = useDebounce(searchTerm, 500)
@@ -17,7 +19,8 @@ const useUserList = () => {
 	const { data, isLoading } = useQuery({
 		queryKey: ['get-user-list', debouncedSearch],
 		queryFn: () => UserService.fetchUserList(debouncedSearch),
-		select: ({ data }) => data
+		select: ({ data }) => data,
+		enabled: auth
 	})
 
 	const { mutateAsync: deleteAsync } = useMutation({

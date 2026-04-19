@@ -1,5 +1,5 @@
 'use client'
-import VeilBackground from '@/components//ui/veil-background/VeilBackground'
+import VeilBackground from '@/components/ui/veil-background/VeilBackground'
 import Snowflakes from '@/components/ui/snowflakes/Snowflakes'
 import styles from '@/components/layout/Layout.module.scss'
 import Footer from '@/components/layout/footer/Footer'

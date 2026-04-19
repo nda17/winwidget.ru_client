@@ -1,4 +1,5 @@
 'use client'
+import AuthProvider from '@/providers/auth-provider/AuthProvider'
 import CookieConsentProvider from '@/providers/cookie-consent-provider/CookieConsentProvider'
 import { IMainProvider } from '@/providers/main-provider/main-provider.interface'
 import { NavigationProvider } from '@/providers/navigation-provider/NavigationProvider'
@@ -21,7 +22,9 @@ const MainProvider: NextPage<IMainProvider> = ({ children }) => {
 			<Toaster />
 			<NetworkStatusProvider />
 			<CookieConsentProvider />
-			<NavigationProvider>{children}</NavigationProvider>
+			<AuthProvider>
+				<NavigationProvider>{children}</NavigationProvider>
+			</AuthProvider>
 		</QueryClientProvider>
 	)
 }

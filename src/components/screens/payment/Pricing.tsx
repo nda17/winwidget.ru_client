@@ -2,6 +2,7 @@
 
 import subscriptionService from '@/services/subscription/subscription.service'
 import { BillingPeriod, Plan } from '@/services/widget/widget.types'
+import { useAuthStore } from '@/store/auth-store/auth-store'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
@@ -31,11 +32,13 @@ const PLANS = [
 ]
 
 const Pricing = () => {
+	const auth = useAuthStore(state => state.auth)
 	const [period, setPeriod] = useState<BillingPeriod>('MONTHLY')
 
 	const { data: subscription, isLoading: subLoading } = useQuery({
 		queryKey: ['subscription'],
-		queryFn: subscriptionService.getMySubscription
+		queryFn: subscriptionService.getMySubscription,
+		enabled: auth
 	})
 
 	const payMutation = useMutation({

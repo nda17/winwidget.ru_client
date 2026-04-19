@@ -1,5 +1,6 @@
 import { IUserEditInput } from '@/components/screens/admin/user/edit/user-edit.interface'
 import UserService from '@/services/user/user.service'
+import { useAuthStore } from '@/store/auth-store/auth-store'
 import {
 	useMutation,
 	useQuery,
@@ -13,6 +14,7 @@ export const useUserEdit = (
 	setValue: UseFormSetValue<IUserEditInput>,
 	params: { id: string }
 ) => {
+	const auth = useAuthStore(state => state.auth)
 	const router = useRouter()
 	const userId = params.id
 	const queryClient = useQueryClient()
@@ -20,7 +22,8 @@ export const useUserEdit = (
 	const { data, isLoading, isError } = useQuery({
 		queryKey: ['get-user-by-id', userId],
 		queryFn: () => UserService.fetchUserById(userId),
-		select: ({ data }) => data
+		select: ({ data }) => data,
+		enabled: auth && !!userId
 	})
 
 	if (isError) {
