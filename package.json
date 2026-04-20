@@ -17,6 +17,7 @@
 	},
 	"dependencies": {
 		"@tanstack/react-query": "^5.63.0",
+		"@tiptap/core": "^3.22.3",
 		"@tiptap/extension-link": "^3.22.3",
 		"@tiptap/extension-text-align": "^3.22.3",
 		"@tiptap/extension-underline": "^3.22.3",
