@@ -141,11 +141,6 @@ const RootLayout = ({ children }: PropsWithChildren<unknown>) => {
 			className={`${inter.variable} ${roboto.variable} ${unbounded.variable} ${poppins.variable}`}
 		>
 			<body>
-				<script
-					src="https://api.winwidget.ru/widgets/wheel.js"
-					data-key="e740f1eadbd4"
-					async
-				></script>
 				<MainProvider>
 					<Layout>{children}</Layout>
 				</MainProvider>
