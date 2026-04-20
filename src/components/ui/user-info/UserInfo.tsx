@@ -9,9 +9,8 @@ const UserInfo: NextPage<IUserInfo> = ({
 	name,
 	isLoading
 }: IUserInfo) => {
-	const imageSrc = encodeURI(
-		avatarPath || '/uploads/user-avatar/avatar-default.png'
-	)
+	const DEFAULT_AVATAR = '/avatar-default.svg'
+	const imageSrc = encodeURI(avatarPath || DEFAULT_AVATAR)
 
 	return (
 		<div className={styles.wrapper}>
@@ -27,6 +26,9 @@ const UserInfo: NextPage<IUserInfo> = ({
 					width={70}
 					height={70}
 					unoptimized
+					onError={e => {
+						;(e.currentTarget as HTMLImageElement).src = DEFAULT_AVATAR
+					}}
 				/>
 			)}
 

@@ -9,7 +9,7 @@ import { NextPage } from 'next'
 import Image from 'next/image'
 import { useState } from 'react'
 
-const DEFAULT_AVATAR = '/uploads/user-avatar/avatar-default.png'
+const DEFAULT_AVATAR = '/avatar-default.svg'
 
 const FieldUploadFile: NextPage<IUploadField> = ({
 	currentFile,

@@ -53,9 +53,7 @@ const Cabinet: FC = () => {
 					</div>
 				) : (
 					<Image
-						src={
-							user?.avatarPath || '/uploads/user-avatar/avatar-default.png'
-						}
+						src={user?.avatarPath || '/avatar-default.svg'}
 						alt={displayName}
 						width={52}
 						height={52}

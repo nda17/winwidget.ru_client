@@ -25,7 +25,7 @@ import styles from './Cabinet.module.scss'
 type EmailBindingForm = { email: string; code: string }
 type PhoneBindingForm = { phone: string; code: string }
 
-const DEFAULT_AVATAR = '/uploads/user-avatar/avatar-default.png'
+const DEFAULT_AVATAR = '/avatar-default.svg'
 
 const CabinetProfile = () => {
 	const { user } = useUser()
