@@ -1,5 +1,5 @@
 .wrapper {
-	@apply grid grid-cols-3 gap-3;
+	@apply gap-3 flex justify-center flex-col sm:flex-row;
 
 	.button {
 		@apply flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-[0.92rem] font-medium transition-all text-[#7b3fa0] bg-[#f3eeff] border-[#e0d6f0];
@@ -9,7 +9,7 @@
 		}
 
 		> svg {
-			@apply h-[1.1rem] w-[1.1rem];
+			@apply h-[1.1rem] w-[1.1rem] shrink-0;
 			fill: currentColor;
 		}
 	}
