@@ -55,6 +55,7 @@
 .answer {
 	@apply px-6 pb-5 text-[15px] leading-relaxed text-[#555];
 	font-family: var(--second-family);
+	white-space: pre-line;
 
 	code {
 		@apply bg-[#f3eeff] text-[#7b3fa0] rounded-[6px] px-[6px] py-[2px] text-[13px];

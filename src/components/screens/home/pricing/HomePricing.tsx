@@ -78,7 +78,7 @@ const PLANS = [
 ]
 
 const HomePricing = () => {
-	const [billing, setBilling] = useState<BillingPeriod>('monthly')
+	const [billing, setBilling] = useState<BillingPeriod>('yearly')
 
 	return (
 		<section id="pricing" className={styles.section}>
