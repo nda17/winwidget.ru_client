@@ -107,7 +107,7 @@ const HomePricing = () => {
 					return (
 						<div
 							key={plan.key}
-							className={`${styles.card} ${plan.popular ? styles.cardPopular : ''}`}
+							className={`${styles.card} ${plan.popular ? styles.cardPopular : ''} ${billing === 'yearly' ? styles.cardYearly : ''}`}
 						>
 							{plan.star && <span className={styles.iconStar}></span>}
 							{plan.badge && (

@@ -70,7 +70,8 @@
 	@apply bg-clip-padding;
 	transition:
 		transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-		box-shadow 0.35s ease;
+		box-shadow 0.35s ease,
+		background-color 0.35s ease;
 
 	/* Gradient border default */
 	&::before {
@@ -136,6 +137,25 @@
 			);
 			@apply text-white;
 		}
+	}
+}
+
+.cardYearly {
+	background: linear-gradient(145deg, #e8d5ff 0%, #ffd6f0 100%);
+
+	&::before {
+		background: linear-gradient(135deg, #a855f7, #ec4899, #f97316);
+	}
+
+	.btn {
+		background: linear-gradient(
+			87.12deg,
+			#470b58 1.98%,
+			#c21b84 50.27%,
+			#fa595e 74.42%,
+			#f8bd31 98.56%
+		);
+		@apply text-white;
 	}
 }
 

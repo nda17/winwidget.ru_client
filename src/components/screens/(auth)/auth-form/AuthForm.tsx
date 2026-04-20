@@ -98,8 +98,8 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 								}
 							/>
 							<div className={styles['verification-hint']}>
-								Код отправлен на email {emailValue}. <br />
-								Срок действия 10 минут.
+								Код отправлен на email {emailValue}. Срок действия 10
+								минут.
 							</div>
 							<div className={styles['link-actions']}>
 								<button
