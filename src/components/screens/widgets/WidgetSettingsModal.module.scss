@@ -145,7 +145,7 @@
 		@apply rounded-t-[1.25rem] rounded-b-none px-5 py-6 max-h-[92vh] max-w-none;
 	}
 	.tabs {
-		@apply gap-[0.875rem] overflow-x-auto pb-2;
+		@apply gap-[0.875rem] pb-2;
 		-webkit-overflow-scrolling: touch;
 	}
 	.tabs::-webkit-scrollbar {
