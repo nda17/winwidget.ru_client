@@ -1,6 +1,6 @@
 import '@/assets/styles/globals.scss'
 import Layout from '@/components/layout/Layout'
-import MainProvider from '@/providers/main-provider/MainProvider'
+import MainProvider from '@/providers/Main-provider/MainProvider'
 import type { Metadata } from 'next'
 import { Inter, Poppins, Roboto, Unbounded } from 'next/font/google'
 import { PropsWithChildren } from 'react'
