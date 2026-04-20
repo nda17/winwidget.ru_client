@@ -12,7 +12,7 @@ export const adminMiddleware = async (request: NextRequest) => {
 	}
 
 	if (user?.isLoggedIn) {
-		return NextResponse.redirect(new URL('/profile', request.url))
+		return NextResponse.redirect(new URL('/cabinet', request.url))
 	}
 
 	return NextResponse.redirect(new URL('/login', request.url))

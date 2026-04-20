@@ -16,9 +16,6 @@ export const middleware = (request: NextRequest) => {
 		case /^\/(register|login|restore-password)$/.test(pathname):
 			return authMiddleware(request)
 
-		case /^\/profile/.test(pathname):
-			return profileMiddleware(request)
-
 		case /^\/cabinet(\/.*)?$/.test(pathname):
 			return profileMiddleware(request)
 

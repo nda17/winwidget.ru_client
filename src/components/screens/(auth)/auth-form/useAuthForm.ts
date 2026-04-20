@@ -210,7 +210,7 @@ const useAuthForm = (isLogin: boolean) => {
 				setAuthResolved(true)
 				toast.success('Email подтвержден. Регистрация завершена')
 				reset()
-				router.replace('/profile')
+				router.replace('/cabinet')
 				queryClient.invalidateQueries({ queryKey: ['get-profile'] })
 			})
 		},
@@ -293,7 +293,7 @@ const useAuthForm = (isLogin: boolean) => {
 				reset()
 				setIsPhoneCodeRequested(false)
 				queryClient.invalidateQueries({ queryKey: ['get-profile'] })
-				router.replace('/profile')
+				router.replace('/cabinet')
 			})
 		},
 		onError(error) {

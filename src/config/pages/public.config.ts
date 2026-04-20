@@ -3,7 +3,7 @@ class PublicPages {
 	LOGIN = '/login'
 	REGISTER = '/register'
 	RESTORE_PASSWORD = '/restore-password'
-	USER_PROFILE = '/profile'
+	USER_PROFILE = '/cabinet'
 	PERSONAL_POLICY = '/legal-documentation/personal-policy'
 	CONSENT_PROCESSING = '/legal-documentation/consent-processing'
 	COOKIE_NOTICE = '/legal-documentation/cookie-notice'
