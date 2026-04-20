@@ -178,7 +178,7 @@ const WidgetLeads = ({ widgetId }: Props) => {
 	return (
 		<div className={styles.page}>
 			<div className={styles.header}>
-				<Link href="/widgets" className={styles.backLink}>
+				<Link href="/cabinet" className={styles.backLink}>
 					← Виджеты
 				</Link>
 			</div>
