@@ -24,6 +24,9 @@ export interface IUploadField {
 	style?: CSSProperties
 	canDelete?: boolean
 	disabled?: boolean
+	showFilePath?: boolean
+	onUploadComplete?: (fileUrl: string) => Promise<void> | void
+	uploadSuccessMessage?: string
 	onDelete?: () => Promise<void>
 }
 

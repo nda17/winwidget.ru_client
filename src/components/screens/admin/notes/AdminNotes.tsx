@@ -1,5 +1,6 @@
 'use client'
 import AdminNavigation from '@/components/ui/admin/admin-navigation/AdminNavigation'
+import ConfirmDialog from '@/components/ui/confirm-dialog/ConfirmDialog'
 import Heading from '@/components/ui/heading/Heading'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import SubHeading from '@/components/ui/sub-heading/SubHeading'
@@ -19,6 +20,7 @@ const AdminNotes: NextPage = () => {
 	const auth = useAuthStore(state => state.auth)
 	const queryClient = useQueryClient()
 	const [inputText, setInputText] = useState('')
+	const [deleteTarget, setDeleteTarget] = useState<Note | null>(null)
 
 	const { data: notes = [], isLoading } = useQuery({
 		queryKey: ['notes'],
@@ -75,11 +77,28 @@ const AdminNotes: NextPage = () => {
 		if (e.key === 'Enter') handleAdd()
 	}
 
+	const confirmDelete = () => {
+		if (!deleteTarget) return
+
+		deleteMutation.mutate(deleteTarget.id)
+		setDeleteTarget(null)
+	}
+
 	const pending = notes.filter(n => !n.done)
 	const done = notes.filter(n => n.done)
 
 	return (
 		<div className={styles.wrapper}>
+			{deleteTarget && (
+				<ConfirmDialog
+					title="Удалить заметку?"
+					message="Заметка будет удалёна без возможности восстановления"
+					confirmLabel="Удалить"
+					cancelLabel="Отмена"
+					onConfirm={confirmDelete}
+					onCancel={() => setDeleteTarget(null)}
+				/>
+			)}
 			<Heading text="Панель администратора" />
 			<AdminNavigation />
 			<SubHeading text="Заметки" />
@@ -118,7 +137,7 @@ const AdminNotes: NextPage = () => {
 							<NoteList
 								notes={pending}
 								onToggle={handleToggle}
-								onDelete={n => deleteMutation.mutate(n.id)}
+								onDelete={setDeleteTarget}
 							/>
 						)}
 						{done.length > 0 && (
@@ -129,7 +148,7 @@ const AdminNotes: NextPage = () => {
 								<NoteList
 									notes={done}
 									onToggle={handleToggle}
-									onDelete={n => deleteMutation.mutate(n.id)}
+									onDelete={setDeleteTarget}
 								/>
 							</>
 						)}

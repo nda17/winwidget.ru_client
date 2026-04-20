@@ -8,8 +8,9 @@ import clsx from 'clsx'
 import { NextPage } from 'next'
 import Image from 'next/image'
 import { useState } from 'react'
+import toast from 'react-hot-toast'
 
-const DEFAULT_AVATAR = '/avatar-default.svg'
+const DEFAULT_AVATAR = '/avatar-default.png'
 
 const FieldUploadFile: NextPage<IUploadField> = ({
 	currentFile,
@@ -20,21 +21,44 @@ const FieldUploadFile: NextPage<IUploadField> = ({
 	onChange,
 	canDelete,
 	disabled,
+	showFilePath,
+	onUploadComplete,
+	uploadSuccessMessage,
 	onDelete
 }) => {
 	const [isDeleting, setIsDeleting] = useState(false)
-	const { uploadFile, isLoading } = useUploadFile(onChange, folder)
+	const { uploadFile, isLoading } = useUploadFile(onChange, folder, {
+		onUploadComplete,
+		successMessage: uploadSuccessMessage
+	})
 	const currentImageSrc = currentFile ? encodeURI(currentFile) : ''
 	const valueImageSrc = value ? encodeURI(value) : ''
 	const busy = isLoading || isDeleting
 	const hasCustomAvatar =
 		value || (currentFile && currentFile !== DEFAULT_AVATAR)
+	const fileLabel = value
+		? onUploadComplete
+			? 'Файл загружен'
+			: 'Новый файл загружен'
+		: currentFile
+			? currentFile === DEFAULT_AVATAR
+				? 'Фото по умолчанию'
+				: 'Файл загружен'
+			: 'Файл не выбран'
+	const displayLabel = showFilePath
+		? value || currentFile || fileLabel
+		: fileLabel
 
 	const handleDelete = async () => {
 		if (!onDelete) return
+		const toastId = toast.loading('Удаляем файл...')
 		setIsDeleting(true)
 		try {
 			await onDelete()
+			onChange('')
+			toast.success('Файл удалён', { id: toastId })
+		} catch {
+			toast.error('Не удалось удалить файл', { id: toastId })
 		} finally {
 			setIsDeleting(false)
 		}
@@ -92,9 +116,7 @@ const FieldUploadFile: NextPage<IUploadField> = ({
 
 	return (
 		<div className={styles.wrapper} style={style}>
-			<p className={clsx(styles['field-path'])}>
-				{value ? value : currentFile}
-			</p>
+			<p className={clsx(styles['field-path'])}>{displayLabel}</p>
 			{disabled ? (
 				avatarPreview
 			) : (

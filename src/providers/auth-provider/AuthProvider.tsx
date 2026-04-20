@@ -2,96 +2,102 @@
 import { PUBLIC_PAGES } from '@/config/pages/public.config'
 import {
 	getAccessToken,
+	isAccessTokenValid,
 	removeFromStorage
 } from '@/services/auth/auth.helper'
 import authService from '@/services/auth/auth.service'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import { useQueryClient } from '@tanstack/react-query'
 import { usePathname } from 'next/navigation'
-import { useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
+
+const ACCESS_TOKEN_REFRESH_THRESHOLD_MS = 60 * 1000
 
 const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 	const setAuth = useAuthStore(state => state.setAuth)
 	const setAuthResolved = useAuthStore(state => state.setAuthResolved)
 	const queryClient = useQueryClient()
 	const pathname = usePathname()
+	const isMountedRef = useRef(true)
 	const isProtectedPath =
-		pathname === PUBLIC_PAGES.USER_PROFILE || pathname.startsWith('/admin')
+		pathname === PUBLIC_PAGES.USER_PROFILE ||
+		pathname.startsWith(`${PUBLIC_PAGES.USER_PROFILE}/`) ||
+		pathname.startsWith('/admin')
 
-	useEffect(() => {
-		let ignore = false
+	const syncSession = useCallback(async () => {
+		const accessToken = getAccessToken()
 
-		const syncSession = async () => {
-			if (getAccessToken()) {
-				if (!ignore) {
-					setAuth(true)
-					setAuthResolved(true)
-				}
+		if (
+			isAccessTokenValid(accessToken, ACCESS_TOKEN_REFRESH_THRESHOLD_MS)
+		) {
+			if (isMountedRef.current) {
+				setAuth(true)
+				setAuthResolved(true)
+			}
+
+			return
+		}
+
+		if (isMountedRef.current) {
+			setAuthResolved(false)
+		}
+
+		try {
+			await authService.getNewTokens()
+
+			if (isMountedRef.current) {
+				setAuth(true)
+				setAuthResolved(true)
+				queryClient.invalidateQueries({ queryKey: ['get-profile'] })
+			}
+		} catch {
+			removeFromStorage()
+
+			if (!isMountedRef.current) {
 				return
 			}
 
-			try {
-				await authService.getNewTokens()
+			setAuth(false)
+			setAuthResolved(true)
+			queryClient.removeQueries({ queryKey: ['get-profile'] })
 
-				if (!ignore) {
-					setAuth(true)
-					setAuthResolved(true)
-					queryClient.invalidateQueries({ queryKey: ['get-profile'] })
-				}
-			} catch {
-				if (!ignore) {
-					removeFromStorage()
-					setAuth(false)
-					setAuthResolved(true)
-					queryClient.removeQueries({ queryKey: ['get-profile'] })
-					if (isProtectedPath) {
-						window.location.href = PUBLIC_PAGES.LOGIN
-					}
-				}
+			if (isProtectedPath) {
+				window.location.href = PUBLIC_PAGES.LOGIN
 			}
 		}
+	}, [isProtectedPath, queryClient, setAuth, setAuthResolved])
 
+	useEffect(() => {
+		isMountedRef.current = true
 		void syncSession()
 
 		return () => {
-			ignore = true
+			isMountedRef.current = false
 		}
-	}, [pathname, isProtectedPath, queryClient, setAuth, setAuthResolved])
+	}, [syncSession])
 
 	useEffect(() => {
 		const handleVisibilityChange = () => {
-			if (document.visibilityState !== 'visible') return
-			if (getAccessToken()) return
+			if (document.visibilityState !== 'visible') {
+				return
+			}
 
-			void authService
-				.getNewTokens()
-				.then(() => {
-					setAuth(true)
-					setAuthResolved(true)
-					queryClient.invalidateQueries({ queryKey: ['get-profile'] })
-				})
-				.catch(() => {
-					removeFromStorage()
-					setAuth(false)
-					setAuthResolved(true)
-					queryClient.removeQueries({ queryKey: ['get-profile'] })
-					if (isProtectedPath) {
-						window.location.href = PUBLIC_PAGES.LOGIN
-					}
-				})
+			void syncSession()
 		}
 
 		window.addEventListener('focus', handleVisibilityChange)
+		window.addEventListener('pageshow', handleVisibilityChange)
 		document.addEventListener('visibilitychange', handleVisibilityChange)
 
 		return () => {
 			window.removeEventListener('focus', handleVisibilityChange)
+			window.removeEventListener('pageshow', handleVisibilityChange)
 			document.removeEventListener(
 				'visibilitychange',
 				handleVisibilityChange
 			)
 		}
-	}, [isProtectedPath, queryClient, setAuth, setAuthResolved])
+	}, [syncSession])
 
 	return <>{children}</>
 }

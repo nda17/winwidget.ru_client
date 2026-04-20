@@ -203,9 +203,10 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 									<FieldUploadFile
 										onChange={onChange}
 										value={value}
-										currentFile={data?.avatarPath || '/avatar-default.svg'}
+										currentFile={data?.avatarPath || '/avatar-default.png'}
 										folder="user-avatar"
 										placeholder="Фото профиля"
+										showFilePath
 									/>
 								)}
 							/>

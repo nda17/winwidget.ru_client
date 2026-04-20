@@ -9,7 +9,7 @@ const UserInfo: NextPage<IUserInfo> = ({
 	name,
 	isLoading
 }: IUserInfo) => {
-	const DEFAULT_AVATAR = '/avatar-default.svg'
+	const DEFAULT_AVATAR = '/avatar-default.png'
 	const imageSrc = encodeURI(avatarPath || DEFAULT_AVATAR)
 
 	return (

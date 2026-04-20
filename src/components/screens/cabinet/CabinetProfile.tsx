@@ -18,14 +18,32 @@ import {
 } from '@/shared/regex'
 import { useQueryClient } from '@tanstack/react-query'
 import { useRef } from 'react'
-import toast from 'react-hot-toast'
 import { Controller, useForm } from 'react-hook-form'
 import styles from './Cabinet.module.scss'
 
 type EmailBindingForm = { email: string; code: string }
 type PhoneBindingForm = { phone: string; code: string }
 
-const DEFAULT_AVATAR = '/avatar-default.svg'
+const DEFAULT_AVATAR = '/avatar-default.png'
+
+const isManagedAvatarFile = (avatarPath?: string | null) => {
+	return Boolean(
+		avatarPath &&
+		avatarPath !== DEFAULT_AVATAR &&
+		(avatarPath.startsWith('/uploads/') ||
+			avatarPath.includes('/user-avatar/'))
+	)
+}
+
+const deleteAvatarFileSilently = async (avatarPath?: string | null) => {
+	if (!isManagedAvatarFile(avatarPath)) return
+
+	try {
+		await fileService.delete(avatarPath)
+	} catch {
+		// файл мог быть уже удалён или недоступен — профиль уже обновлён
+	}
+}
 
 const CabinetProfile = () => {
 	const { user } = useUser()
@@ -34,18 +52,25 @@ const CabinetProfile = () => {
 
 	const handleDeleteAvatar = async () => {
 		const currentAvatar = user?.avatarPath
-		if (currentAvatar && currentAvatar.startsWith('/uploads/')) {
-			try {
-				await fileService.delete(currentAvatar)
-			} catch {
-				// файл мог быть уже удалён — продолжаем
-			}
-		}
+		await userService.updateProfile({ avatarPath: null })
+		await queryClient.invalidateQueries({ queryKey: ['get-profile'] })
+		await deleteAvatarFileSilently(currentAvatar)
+	}
+
+	const handleUploadAvatar = async (avatarPath: string) => {
+		const previousAvatar = user?.avatarPath
+
 		try {
-			await userService.updateProfile({ avatarPath: null })
-			queryClient.invalidateQueries({ queryKey: ['get-profile'] })
-		} catch {
-			toast.error('Не удалось удалить фото профиля')
+			await userService.updateProfile({ avatarPath })
+		} catch (error) {
+			await deleteAvatarFileSilently(avatarPath)
+			throw error
+		}
+
+		await queryClient.invalidateQueries({ queryKey: ['get-profile'] })
+
+		if (previousAvatar !== avatarPath) {
+			await deleteAvatarFileSilently(previousAvatar)
 		}
 	}
 	const {
@@ -378,6 +403,8 @@ const CabinetProfile = () => {
 									folder="user-avatar"
 									placeholder="Фото профиля"
 									canDelete
+									onUploadComplete={handleUploadAvatar}
+									uploadSuccessMessage="Фото профиля обновлено"
 									onDelete={handleDeleteAvatar}
 								/>
 							)}
@@ -409,7 +436,7 @@ const CabinetProfile = () => {
 						<input
 							type="password"
 							className={`${styles.input} ${errors.password ? styles.inputError : ''}`}
-							placeholder="Оставьте пустым, чтобы не менять"
+							placeholder="Введите новый пароль"
 							{...register('password', {
 								pattern: {
 									value: validPassword,

@@ -5,13 +5,9 @@ import Heading from '@/components/ui/heading/Heading'
 import SubHeading from '@/components/ui/sub-heading/SubHeading'
 import legalPagesService from '@/services/legal-pages/legal-pages.service'
 import { useAuthStore } from '@/store/auth-store/auth-store'
-import {
-	useMutation,
-	useQuery,
-	useQueryClient
-} from '@tanstack/react-query'
-import dynamic from 'next/dynamic'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { NextPage } from 'next'
+import dynamic from 'next/dynamic'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 import styles from './AdminContentSettings.module.scss'
@@ -80,7 +76,7 @@ const AdminContentSettings: NextPage = () => {
 			<Heading text="Панель администратора" />
 			<AdminNavigation />
 
-			<SubHeading text="Юридические страницы" />
+			<SubHeading text="Редактирование юридических страниц" />
 
 			<div className={styles.pageTabs}>
 				{PAGES.map(page => (

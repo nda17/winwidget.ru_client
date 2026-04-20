@@ -39,8 +39,7 @@ const Cabinet: FC = () => {
 		? planLabel[subscription.plan] || subscription.plan
 		: null
 
-	const displayName =
-		user?.name || user?.email || user?.phone || 'Пользователь'
+	const displayName = user?.name || 'Пользователь'
 	const displaySub = user?.email || user?.phone || ''
 
 	return (
@@ -53,7 +52,7 @@ const Cabinet: FC = () => {
 					</div>
 				) : (
 					<Image
-						src={user?.avatarPath || '/avatar-default.svg'}
+						src={user?.avatarPath || '/avatar-default.png'}
 						alt={displayName}
 						width={52}
 						height={52}

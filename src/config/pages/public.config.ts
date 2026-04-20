@@ -9,7 +9,7 @@ class PublicPages {
 	COOKIE_NOTICE = '/legal-documentation/cookie-notice'
 	OFERTA = '/legal-documentation/oferta'
 	SOCIALS_LINK_VK = 'https://vk.ru'
-	SOCIALS_LINK_TG = 'https://web.telegram.org/k/'
+	SOCIALS_LINK_TG = 'https://t.me/ybs_one'
 	CABINET = '/cabinet'
 	PAYMENT = '/payment'
 }

@@ -9,6 +9,18 @@ import { NextRequest, NextResponse } from 'next/server'
 const ACCESS_TOKEN_COOKIE = 'accessToken'
 const REFRESH_TOKEN_COOKIE = 'refreshToken'
 
+const getApiUrl = () => {
+	const apiHost =
+		process.env.NEXT_PUBLIC_MODE === 'production'
+			? process.env.NEXT_PUBLIC_PRODUCTION_HOST
+			: process.env.NEXT_PUBLIC_DEVELOPMENT_HOST
+
+	return (
+		process.env.NEXT_PUBLIC_API_URL ||
+		(apiHost ? `${apiHost}/api` : 'http://localhost:4200/api')
+	)
+}
+
 interface IRefreshResult {
 	user: TUserDataState | null
 	response: NextResponse | null
@@ -40,12 +52,8 @@ export const getAuthWithRefresh = async (
 		return { user: null, response: null }
 	}
 
-	const apiUrl =
-		process.env.NEXT_PUBLIC_API_URL ||
-		process.env.NEXT_PUBLIC_DEVELOPMENT_HOST + '/api'
-
 	try {
-		const res = await fetch(`${apiUrl}/auth/access-token`, {
+		const res = await fetch(`${getApiUrl()}/auth/access-token`, {
 			method: 'POST',
 			headers: { Cookie: `${REFRESH_TOKEN_COOKIE}=${refreshToken}` },
 			cache: 'no-store'
@@ -74,6 +82,7 @@ export const getAuthWithRefresh = async (
 		baseResponse.cookies.set(ACCESS_TOKEN_COOKIE, newAccessToken, {
 			httpOnly: false,
 			sameSite: 'strict',
+			secure: process.env.NODE_ENV === 'production',
 			maxAge: 60 * 60,
 			path: '/'
 		})

@@ -124,8 +124,14 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 		process.env.NEXT_PUBLIC_MODE === 'production'
 			? process.env.NEXT_PUBLIC_PRODUCTION_HOST || 'https://winwidget.ru'
 			: process.env.NEXT_PUBLIC_DEVELOPMENT_HOST || 'http://localhost:4200'
+	const publicSiteUrl = (
+		process.env.NEXT_PUBLIC_SITE_URL ||
+		(process.env.NEXT_PUBLIC_MODE === 'production'
+			? 'https://winwidget.ru'
+			: '')
+	).replace(/\/$/, '')
 	const scriptCode = `<script src="${apiUrl}/widgets/wheel.js" data-key="${widget.publicKey}" async></script>`
-	const directLink = `/page/${widget.publicKey}`
+	const directLink = `${publicSiteUrl}/page/${widget.publicKey}`
 
 	return (
 		<div
@@ -1167,6 +1173,15 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 										Открыть
 									</a>
 								</div>
+								<button
+									className={styles.copyBtn}
+									onClick={() => {
+										navigator.clipboard.writeText(directLink)
+										toast.success('Ссылка скопирована')
+									}}
+								>
+									Скопировать
+								</button>
 							</div>
 						</div>
 					)}

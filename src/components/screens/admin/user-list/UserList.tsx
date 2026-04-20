@@ -3,7 +3,7 @@ import styles from '@/components/screens/admin/user-list/UserList.module.scss'
 import AdminActions from '@/components/ui/admin/admin-actions/AdminActions'
 import AdminHeader from '@/components/ui/admin/admin-header/AdminHeader'
 import AdminNavigation from '@/components/ui/admin/admin-navigation/AdminNavigation'
-import AlertPopup from '@/components/ui/alert-popup/AlertPopup'
+import ConfirmDialog from '@/components/ui/confirm-dialog/ConfirmDialog'
 import Heading from '@/components/ui/heading/Heading'
 import Pagination from '@/components/ui/pagination/Pagination'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
@@ -25,11 +25,9 @@ const UserList: NextPage = () => {
 		deleteAsync
 	} = useUserList()
 
-	const textPopup =
-		'The data will be deleted without the possibility of recovery.'
-
 	//Pagination settings
 	const [currentPage, setCurrentPage] = useState(1)
+	const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
 	const itemQuantity = 10
 	const totalItems = data?.length ?? 0
 	const totalPages = Math.max(1, Math.ceil(totalItems / itemQuantity))
@@ -89,10 +87,34 @@ const UserList: NextPage = () => {
 		return user.rights
 	}
 
+	const deleteTarget = data?.find(user => user.id === deleteTargetId)
+	const deleteTargetLabel =
+		deleteTarget?.name ||
+		deleteTarget?.email ||
+		deleteTarget?.phone ||
+		deleteTargetId ||
+		'пользователя'
+
+	const confirmDelete = () => {
+		if (!deleteTargetId) return
+
+		void deleteAsync(deleteTargetId)
+		setDeleteTargetId(null)
+	}
+
 	return (
 		<div className={styles.wrapper}>
+			{deleteTargetId && (
+				<ConfirmDialog
+					title="Удалить пользователя?"
+					message={`Пользователь ${deleteTargetLabel} будет удалён без возможности восстановления.`}
+					confirmLabel="Удалить"
+					cancelLabel="Отмена"
+					onConfirm={confirmDelete}
+					onCancel={() => setDeleteTargetId(null)}
+				/>
+			)}
 			<Heading text="Панель администратора" />
-			<AlertPopup removeHandler={deleteAsync} text={textPopup} />
 			<AdminNavigation />
 			<AdminHeader
 				handleSearch={handleSearch}
@@ -274,6 +296,7 @@ const UserList: NextPage = () => {
 										<AdminActions
 											editUrl={`${ADMIN_PAGES.USER}/edit/${user.id}`}
 											userId={user.id}
+											onDelete={setDeleteTargetId}
 										/>
 									</div>
 									<div className={styles['user-card-body']}>
@@ -439,6 +462,7 @@ const UserList: NextPage = () => {
 													<AdminActions
 														editUrl={`${ADMIN_PAGES.USER}/edit/${user.id}`}
 														userId={user.id}
+														onDelete={setDeleteTargetId}
 													/>
 												</div>
 											</td>
