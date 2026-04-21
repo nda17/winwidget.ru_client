@@ -10,13 +10,15 @@
 }
 
 .layout {
-	@apply max-w-[1440px] flex flex-col min-h-full m-0auto relative bg-[#f8f5ff];
+	@apply max-w-[1440px] flex flex-col min-h-full m-0 relative bg-[#f8f5ff];
+	margin-inline: auto;
 	@apply overflow-x-clip;
 
 	.main {
 		@apply flex justify-center flex-auto relative p-[12px];
 	}
 	.mainLanding {
-		@apply flex-auto relative w-full min-h-[40rem] lg:min-h-[60rem]  m-0auto;
+		@apply flex-auto relative w-full min-h-[40rem] lg:min-h-[60rem] m-0;
+		margin-inline: auto;
 	}
 }
