@@ -3,8 +3,27 @@
 
 	.heroBackground {
 		@apply absolute z-1 top-[-12px] left-[-187px] w-[1877px] h-[1173px] opacity-[0.3] m-0auto;
-		background-image: url('../../../../../public/bg.jpg');
+		background-image: url('../../../../assets/images/hero/hero-bg-desktop.webp');
+		background-image: image-set(
+			url('../../../../assets/images/hero/hero-bg-desktop.avif')
+				type('image/avif'),
+			url('../../../../assets/images/hero/hero-bg-desktop.webp')
+				type('image/webp')
+		);
+		background-position: center;
+		background-repeat: no-repeat;
+		background-size: cover;
 		transform: rotate(548deg);
+
+		@media (max-width: 767px) {
+			background-image: url('../../../../assets/images/hero/hero-bg-mobile.webp');
+			background-image: image-set(
+				url('../../../../assets/images/hero/hero-bg-mobile.avif')
+					type('image/avif'),
+				url('../../../../assets/images/hero/hero-bg-mobile.webp')
+					type('image/webp')
+			);
+		}
 	}
 
 	.heroFirstCircle,
