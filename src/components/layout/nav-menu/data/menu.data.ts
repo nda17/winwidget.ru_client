@@ -4,7 +4,7 @@ import { PUBLIC_PAGES } from '@/config/pages/public.config'
 export const staticMenu: IMenu = {
 	items: [
 		{
-			icon: 'MdHome',
+			icon: 'home',
 			link: PUBLIC_PAGES.HOME,
 			title: 'Главная'
 		}

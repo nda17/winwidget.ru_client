@@ -1,4 +1,4 @@
-import MaterialIcon from '@/components/ui/icons/MaterialIcon'
+import AppIcon from '@/components/ui/icons/AppIcon'
 import styles from '@/components/ui/search-field/SearchField.module.scss'
 import { ISearchField } from '@/components/ui/search-field/search-field.interface'
 import { NextPage } from 'next'
@@ -11,7 +11,7 @@ export const SearchField: NextPage<ISearchField> = ({
 }) => {
 	return (
 		<div className={styles.searchField}>
-			<MaterialIcon name="MdSearch" />
+			<AppIcon name="search" />
 			<input
 				placeholder={placeholder}
 				value={searchTerm}
@@ -19,7 +19,7 @@ export const SearchField: NextPage<ISearchField> = ({
 			/>
 			{!searchTerm ? null : (
 				<span onClick={handleClear}>
-					<MaterialIcon name="MdClose" />
+					<AppIcon name="close" />
 				</span>
 			)}
 		</div>

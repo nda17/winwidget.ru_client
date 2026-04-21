@@ -14,14 +14,14 @@
 	}
 
 	.menu-toggle {
-		@apply flex items-center justify-center shrink-0 cursor-pointer w-10 h-10 rounded-full border-[1.5px] border-white/30 bg-white/[0.18] backdrop-blur-[8px] transition-[background,border-color] duration-200;
+		@apply flex items-center justify-center shrink-0 cursor-pointer w-11 h-11 rounded-full border-[1.5px] border-white/30 bg-white/[0.18] backdrop-blur-[8px] transition-[background,border-color] duration-200;
 
 		&:hover {
 			@apply bg-white/[0.28] border-white/[0.45];
 		}
 
 		svg {
-			@apply w-5 h-5 text-white;
+			@apply w-6 h-6 text-white;
 		}
 
 		&--light {

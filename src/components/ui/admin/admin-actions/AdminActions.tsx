@@ -1,6 +1,6 @@
 import styles from '@/components/ui/admin/admin-actions/AdminActions.module.scss'
 import { IAdminActions } from '@/components/ui/admin/admin-actions/admin-actions.interface'
-import MaterialIcon from '@/components/ui/icons/MaterialIcon'
+import AppIcon from '@/components/ui/icons/AppIcon'
 import { NextPage } from 'next'
 import { useRouter } from 'next/navigation'
 
@@ -14,7 +14,7 @@ const AdminActions: NextPage<IAdminActions> = ({
 	return (
 		<div className={styles.wrapper}>
 			<button className={styles.item} onClick={() => push(editUrl)}>
-				<MaterialIcon name="MdEdit" />
+				<AppIcon name="edit" />
 			</button>
 			<button
 				className={styles.item}
@@ -22,7 +22,7 @@ const AdminActions: NextPage<IAdminActions> = ({
 					onDelete?.(userId)
 				}}
 			>
-				<MaterialIcon name="MdClose" />
+				<AppIcon name="close" />
 			</button>
 		</div>
 	)

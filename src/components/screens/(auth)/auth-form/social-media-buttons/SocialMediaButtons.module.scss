@@ -9,7 +9,7 @@
 		}
 
 		> svg {
-			@apply h-[1.1rem] w-[1.1rem] shrink-0;
+			@apply h-[1.1rem] w-[1.1rem] shrink-0 overflow-visible;
 			fill: currentColor;
 		}
 	}

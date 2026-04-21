@@ -1,5 +1,5 @@
 import styles from '@/components/screens/(auth)/auth-form/social-media-buttons/SocialMediaButtons.module.scss'
-import FontAwesomeIcon from '@/components/ui/icons/FontAwesomeIcon'
+import AppIcon from '@/components/ui/icons/AppIcon'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 
@@ -18,7 +18,7 @@ const SocialMediaButtons = () => {
 				className={styles.button}
 				type="button"
 			>
-				<FontAwesomeIcon name="FaGoogle" fill="currentColor" />
+				<AppIcon name="google" fill="currentColor" />
 				<span>Google</span>
 			</button>
 			<button
@@ -26,7 +26,7 @@ const SocialMediaButtons = () => {
 				className={styles.button}
 				type="button"
 			>
-				<FontAwesomeIcon name="FaYandex" fill="currentColor" />
+				<AppIcon name="yandex" fill="currentColor" />
 				<span>Яндекс</span>
 			</button>
 			<button
@@ -34,7 +34,7 @@ const SocialMediaButtons = () => {
 				className={styles.button}
 				type="button"
 			>
-				<FontAwesomeIcon name="FaGithub" fill="currentColor" />
+				<AppIcon name="github" fill="currentColor" />
 				<span>GitHub</span>
 			</button>
 		</div>

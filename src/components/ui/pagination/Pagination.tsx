@@ -1,4 +1,4 @@
-import MaterialIcon from '@/components/ui/icons/MaterialIcon'
+import AppIcon from '@/components/ui/icons/AppIcon'
 import styles from '@/components/ui/pagination/Pagination.module.scss'
 import { IPagination } from '@/components/ui/pagination/paginate.interface'
 import clsx from 'clsx'
@@ -14,7 +14,7 @@ const Pagination: NextPage<IPagination> = ({
 	return (
 		<div className={styles.pagination}>
 			<button onClick={prevPage} type="button">
-				<MaterialIcon name="MdOutlineNavigateBefore" />
+				<AppIcon name="navigate-before" />
 			</button>
 			<ul>
 				{listPage.map(page => (
@@ -32,7 +32,7 @@ const Pagination: NextPage<IPagination> = ({
 				))}
 			</ul>
 			<button onClick={nextPage} type="button">
-				<MaterialIcon name="MdOutlineNavigateNext" />
+				<AppIcon name="navigate-next" />
 			</button>
 		</div>
 	)

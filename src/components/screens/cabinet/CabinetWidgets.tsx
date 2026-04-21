@@ -7,18 +7,18 @@ import {
 } from '@tanstack/react-query'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
-import {
-	RiExternalLinkLine,
-	RiFileListLine,
-	RiSettings3Line,
-	RiDeleteBinLine,
-	RiCheckLine
-} from 'react-icons/ri'
 import widgetService from '@/services/widget/widget.service'
 import { Widget } from '@/services/widget/widget.types'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import WidgetSettingsModal from '@/components/screens/widgets/WidgetSettingsModal'
 import WidgetTypeModal from '@/components/screens/widgets/WidgetTypeModal'
+import {
+	CheckIcon,
+	DeleteIcon,
+	ExternalLinkIcon,
+	FileListIcon,
+	SettingsIcon
+} from '@/components/ui/icons/ActionIcons'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import styles from './Cabinet.module.scss'
 
@@ -249,14 +249,14 @@ const CabinetWidgets = () => {
 									rel="noopener noreferrer"
 									className={styles.actionBtn}
 								>
-									<RiExternalLinkLine size={15} /> открыть
+									<ExternalLinkIcon size={17} /> открыть
 								</a>
 
 								<a
 									href={`/widgets/${widget.id}/leads`}
 									className={styles.actionBtn}
 								>
-									<RiFileListLine size={15} /> заявки
+									<FileListIcon size={17} /> заявки
 									{widget._count?.leads ? (
 										<span className={styles.leadsCountBadge}>
 											{widget._count.leads}
@@ -268,7 +268,7 @@ const CabinetWidgets = () => {
 									className={styles.actionBtn}
 									onClick={() => setSettingsWidget(widget)}
 								>
-									<RiSettings3Line size={15} /> настройки
+									<SettingsIcon size={17} /> настройки
 								</button>
 
 								{confirmDeleteId === widget.id ? (
@@ -282,7 +282,7 @@ const CabinetWidgets = () => {
 												'...'
 											) : (
 												<>
-													<RiCheckLine size={14} /> удалить
+													<CheckIcon size={16} /> удалить
 												</>
 											)}
 										</button>
@@ -298,7 +298,7 @@ const CabinetWidgets = () => {
 										className={styles.actionBtn}
 										onClick={() => setConfirmDeleteId(widget.id)}
 									>
-										<RiDeleteBinLine size={15} /> удалить
+										<DeleteIcon size={17} /> удалить
 									</button>
 								)}
 							</div>

@@ -2,10 +2,10 @@
 	@apply max-w-[85%] flex justify-center m-auto pt-4;
 
 	> button > svg {
-		@apply w-8 h-8 transition-all;
+		@apply w-9 h-9 transition-all;
 
 		&:hover {
-			@apply fill-black;
+			@apply fill-black text-black;
 		}
 	}
 

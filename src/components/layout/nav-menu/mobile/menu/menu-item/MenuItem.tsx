@@ -1,6 +1,6 @@
 import styles from '@/components/layout/nav-menu/mobile/menu/menu-item/MenuItem.module.scss'
 import { IMenuItem } from '@/components/layout/nav-menu/menu-item.interface'
-import MaterialIcon from '@/components/ui/icons/MaterialIcon'
+import AppIcon from '@/components/ui/icons/AppIcon'
 import { useHamburgerStore } from '@/store/hamburger-store/hamburger-store'
 import { useVeilBackgroundStore } from '@/store/veil-background-store/veil-background-store'
 import clsx from 'clsx'
@@ -30,7 +30,7 @@ const MenuItem: NextPage<{ item: IMenuItem }> = ({ item }) => {
 			})}
 		>
 			<Link href={item.link} className={clsx(styles['link-button'])}>
-				<MaterialIcon name={item.icon} />
+				<AppIcon name={item.icon} />
 				{item.title}
 			</Link>
 		</li>

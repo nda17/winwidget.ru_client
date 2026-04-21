@@ -30,7 +30,7 @@ const AuthItems: NextPage = () => {
 			{!auth && (
 				<MenuItem
 					item={{
-						icon: 'MdApps',
+						icon: 'apps',
 						link: '/#tools',
 						title: 'Виджеты'
 					}}
@@ -39,7 +39,7 @@ const AuthItems: NextPage = () => {
 			{!auth && (
 				<MenuItem
 					item={{
-						icon: 'MdDiamond',
+						icon: 'diamond',
 						link: '/#pricing',
 						title: 'Тарифы'
 					}}
@@ -48,7 +48,7 @@ const AuthItems: NextPage = () => {
 			{!auth && (
 				<MenuItem
 					item={{
-						icon: 'MdHelpOutline',
+						icon: 'help',
 						link: '/#faq',
 						title: 'Вопросы'
 					}}
@@ -57,7 +57,7 @@ const AuthItems: NextPage = () => {
 			{auth && (
 				<MenuItem
 					item={{
-						icon: 'MdSpaceDashboard',
+						icon: 'dashboard',
 						link: PUBLIC_PAGES.CABINET,
 						title: 'Личный кабинет'
 					}}
@@ -67,7 +67,7 @@ const AuthItems: NextPage = () => {
 			{auth && (
 				<MenuItem
 					item={{
-						icon: 'MdPayment',
+						icon: 'payment',
 						link: PUBLIC_PAGES.PAYMENT,
 						title: 'Оплата'
 					}}
@@ -77,7 +77,7 @@ const AuthItems: NextPage = () => {
 			{user?.isAdmin && (
 				<MenuItem
 					item={{
-						icon: 'MdOutlineLock',
+						icon: 'lock',
 						link: ADMIN_PAGES.HOME,
 						title: 'Админ панель'
 					}}
@@ -87,7 +87,7 @@ const AuthItems: NextPage = () => {
 			{!auth && (
 				<MenuItem
 					item={{
-						icon: 'MdLogin',
+						icon: 'login',
 						link: PUBLIC_PAGES.LOGIN,
 						title: 'Вход'
 					}}
@@ -97,7 +97,7 @@ const AuthItems: NextPage = () => {
 			{!auth && (
 				<MenuItem
 					item={{
-						icon: 'MdPersonAdd',
+						icon: 'person-add',
 						link: PUBLIC_PAGES.REGISTER,
 						title: 'Регистрация'
 					}}

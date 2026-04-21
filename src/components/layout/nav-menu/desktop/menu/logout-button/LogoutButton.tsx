@@ -1,5 +1,5 @@
 import styles from '@/components/layout/nav-menu/desktop/menu/logout-button/LogoutButton.module.scss'
-import MaterialIcon from '@/components/ui/icons/MaterialIcon'
+import AppIcon from '@/components/ui/icons/AppIcon'
 import { useLogout } from '@/hooks/useLogout'
 import clsx from 'clsx'
 import { NextPage } from 'next'
@@ -19,7 +19,7 @@ const LogoutButton: NextPage = () => {
 			disabled={isPending}
 			className={clsx(styles['link-auth-button'])}
 		>
-			<MaterialIcon name="MdLogout" fill="red" />
+			<AppIcon name="logout" fill="red" />
 			{isPending ? 'Подождите...' : 'Выйти'}
 		</button>
 	)

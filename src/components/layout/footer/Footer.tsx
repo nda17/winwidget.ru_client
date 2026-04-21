@@ -1,5 +1,5 @@
 import styles from '@/components/layout/footer/Footer.module.scss'
-import FontAwesomeIcon from '@/components/ui/icons/FontAwesomeIcon'
+import AppIcon from '@/components/ui/icons/AppIcon'
 import { PUBLIC_PAGES } from '@/config/pages/public.config'
 import clsx from 'clsx'
 import { NextPage } from 'next'
@@ -32,13 +32,13 @@ const Footer: NextPage = () => {
 									href={PUBLIC_PAGES.SOCIALS_LINK_VK}
 									className={clsx(styles['link-icon'])}
 								>
-									<FontAwesomeIcon name="FaVk" fill="#000000" />
+									<AppIcon name="vk" fill="#000000" />
 								</Link>
 								<Link
 									href={PUBLIC_PAGES.SOCIALS_LINK_TG}
 									className={clsx(styles['link-icon'])}
 								>
-									<FontAwesomeIcon name="FaTelegram" fill="#000000" />
+									<AppIcon name="telegram" fill="#000000" />
 								</Link>
 							</div>
 						</div>

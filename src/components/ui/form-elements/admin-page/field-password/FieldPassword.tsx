@@ -1,6 +1,6 @@
 import styles from '@/components/ui/form-elements/admin-page/field-password/FieldPassword.module.scss'
 import { IField } from '@/components/ui/form-elements/form.interface'
-import FontAwesomeIcon from '@/components/ui/icons/FontAwesomeIcon'
+import AppIcon from '@/components/ui/icons/AppIcon'
 import clsx from 'clsx'
 import { forwardRef, useState } from 'react'
 
@@ -28,9 +28,9 @@ const FieldPassword = forwardRef<HTMLInputElement, IField>(
 						onClick={toggleVisiblePassword}
 					>
 						{typeInputPassword ? (
-							<FontAwesomeIcon name="FaRegEye" />
+							<AppIcon name="eye" />
 						) : (
-							<FontAwesomeIcon name="FaRegEyeSlash" />
+							<AppIcon name="eye-off" />
 						)}
 					</span>
 				</label>

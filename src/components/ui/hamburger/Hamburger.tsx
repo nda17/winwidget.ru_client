@@ -1,5 +1,5 @@
 import styles from '@/components/ui/hamburger/Hamburger.module.scss'
-import MaterialIcon from '@/components/ui/icons/MaterialIcon'
+import AppIcon from '@/components/ui/icons/AppIcon'
 import { useHamburgerStore } from '@/store/hamburger-store/hamburger-store'
 import { useVeilBackgroundStore } from '@/store/veil-background-store/veil-background-store'
 import { NextPage } from 'next'
@@ -24,9 +24,9 @@ const Hamburger: NextPage = () => {
 	return (
 		<div className={styles.hamburger} onClick={changeStateMenu}>
 			{visibleVeilBackground && visibleHamburger ? (
-				<MaterialIcon name={'MdClose'} fill="currentColor" />
+				<AppIcon name="close" fill="currentColor" />
 			) : (
-				<MaterialIcon name={'MdMenu'} fill="currentColor" />
+				<AppIcon name="menu" fill="currentColor" />
 			)}
 		</div>
 	)

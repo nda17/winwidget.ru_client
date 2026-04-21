@@ -1,6 +1,6 @@
 import styles from '@/components/layout/nav-menu/desktop/menu/menu-item/MenuItem.module.scss'
 import { IMenuItem } from '@/components/layout/nav-menu/menu-item.interface'
-import MaterialIcon from '@/components/ui/icons/MaterialIcon'
+import AppIcon from '@/components/ui/icons/AppIcon'
 import clsx from 'clsx'
 import { NextPage } from 'next'
 import Link from 'next/link'
@@ -16,7 +16,7 @@ const MenuItem: NextPage<{ item: IMenuItem }> = ({ item }) => {
 			})}
 		>
 			<Link href={item.link} className={clsx(styles['link-button'])}>
-				<MaterialIcon name={item.icon} />
+				<AppIcon name={item.icon} />
 				{item.title}
 			</Link>
 		</li>

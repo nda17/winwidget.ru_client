@@ -1,7 +1,7 @@
 'use client'
 import styles from '@/components/ui/cookie-consent-popup/CookieConsentPopup.module.scss'
 import { ICookieConsent } from '@/components/ui/cookie-consent-popup/cookie-consent.interface'
-import MaterialIcon from '@/components/ui/icons/MaterialIcon'
+import AppIcon from '@/components/ui/icons/AppIcon'
 import { PUBLIC_PAGES } from '@/config/pages/public.config'
 import clsx from 'clsx'
 import Cookies from 'js-cookie'
@@ -26,7 +26,7 @@ const CookieConsentPopup: NextPage<ICookieConsent> = status => {
 			<div className={clsx(styles['wrapper-content'])}>
 				<div className={styles.heading}>
 					<div className={clsx(styles['image-cookie'])}>
-						<MaterialIcon name="MdCookie" fill="#dd850b" />
+						<AppIcon name="cookie" fill="#dd850b" />
 					</div>
 					<div className={styles['heading-copy']}>
 						<h2 className={clsx(styles['text-heading'])}>
