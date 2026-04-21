@@ -24,12 +24,15 @@ const MenuItem: NextPage<{ item: IMenuItem }> = ({ item }) => {
 
 	return (
 		<li
-			onClick={closeMenu}
 			className={clsx([styles.wrapper], {
 				[styles.active]: pathname === item.link
 			})}
 		>
-			<Link href={item.link} className={clsx(styles['link-button'])}>
+			<Link
+				href={item.link}
+				className={clsx(styles['link-button'])}
+				onClick={closeMenu}
+			>
 				<AppIcon name={item.icon} />
 				{item.title}
 			</Link>

@@ -6,12 +6,12 @@ interface Props {
 
 const LegalPageContent = ({ html }: Props) => {
 	return (
-		<div className={styles.wrapper}>
+		<article className={styles.wrapper}>
 			<div
 				className={styles.content}
 				dangerouslySetInnerHTML={{ __html: html }}
 			/>
-		</div>
+		</article>
 	)
 }
 

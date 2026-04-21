@@ -26,7 +26,10 @@ const Footer: NextPage = () => {
 							info@winwidget.ru
 						</a>
 
-						<div className={clsx(styles['socials-wrapper'])}>
+						<nav
+							className={clsx(styles['socials-wrapper'])}
+							aria-label="Социальные сети"
+						>
 							<div className={clsx(styles['link-icon-wrapper'])}>
 								<Link
 									href={PUBLIC_PAGES.SOCIALS_LINK_VK}
@@ -41,10 +44,13 @@ const Footer: NextPage = () => {
 									<AppIcon name="telegram" fill="#000000" />
 								</Link>
 							</div>
-						</div>
+						</nav>
 					</div>
 
-					<div className={clsx(styles['legal-wrapper'])}>
+					<nav
+						className={clsx(styles['legal-wrapper'])}
+						aria-label="Правовая информация"
+					>
 						<h4 className={clsx(styles['title-block'])}>
 							Правовая информация:
 						</h4>
@@ -72,7 +78,7 @@ const Footer: NextPage = () => {
 						>
 							Договор-оферта
 						</Link>
-					</div>
+					</nav>
 				</div>
 
 				<div className={clsx(styles['inform-wrapper'])}>

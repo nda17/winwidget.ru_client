@@ -75,8 +75,10 @@ const Pricing = () => {
 	const isActive = subscription?.status === 'ACTIVE'
 
 	return (
-		<div className={styles.page}>
-			<h1 className={styles.title}>Оплата</h1>
+		<section className={styles.page} aria-labelledby="pricing-page-title">
+			<h1 id="pricing-page-title" className={styles.title}>
+				Оплата
+			</h1>
 
 			{subscription && (
 				<div className={styles.currentPlan}>
@@ -102,32 +104,42 @@ const Pricing = () => {
 			)}
 
 			{/* Trial info */}
-			<div className={styles.trialCard}>
-				<div className={styles.trialTitle}>Тест-драйв</div>
-				<div className={styles.trialDesc}>Бесплатно при регистрации</div>
+			<section
+				className={styles.trialCard}
+				aria-labelledby="pricing-trial-title"
+			>
+				<h2 id="pricing-trial-title" className={styles.trialTitle}>
+					Тест-драйв
+				</h2>
+				<p className={styles.trialDesc}>Бесплатно при регистрации</p>
 				<ul className={styles.features}>
 					<li>1 виджет</li>
 					<li>До 10 заявок</li>
 					<li>7 дней</li>
 				</ul>
-			</div>
+			</section>
 
 			{/* Period toggle */}
-			<div className={styles.periodToggle}>
-				<button
-					className={`${styles.periodBtn} ${!isYearly ? styles.periodActive : ''}`}
-					onClick={() => setPeriod('MONTHLY')}
-				>
-					Ежемесячно
-				</button>
-				<button
-					className={`${styles.periodBtn} ${isYearly ? styles.periodActive : ''}`}
-					onClick={() => setPeriod('YEARLY')}
-				>
-					За год
-					<span className={styles.discount}>−60%</span>
-				</button>
-			</div>
+			<fieldset className={styles.periodGroup}>
+				<legend className="srOnly">Период оплаты</legend>
+				<div className={styles.periodToggle}>
+					<button
+						type="button"
+						className={`${styles.periodBtn} ${!isYearly ? styles.periodActive : ''}`}
+						onClick={() => setPeriod('MONTHLY')}
+					>
+						Ежемесячно
+					</button>
+					<button
+						type="button"
+						className={`${styles.periodBtn} ${isYearly ? styles.periodActive : ''}`}
+						onClick={() => setPeriod('YEARLY')}
+					>
+						За год
+						<span className={styles.discount}>−60%</span>
+					</button>
+				</div>
+			</fieldset>
 
 			<div className={styles.plans}>
 				{PLANS.map(plan => {
@@ -136,15 +148,21 @@ const Pricing = () => {
 						currentPlan === plan.key &&
 						(!currentPeriod || currentPeriod === period) &&
 						isActive
+					const titleId = `plan-${plan.key.toLowerCase()}-title`
 
 					return (
-						<div key={plan.key} className={styles.planCard}>
-							<div
+						<article
+							key={plan.key}
+							className={styles.planCard}
+							aria-labelledby={titleId}
+						>
+							<h2
+								id={titleId}
 								className={styles.planName}
 								style={{ color: plan.color }}
 							>
 								{plan.name}
-							</div>
+							</h2>
 
 							<div className={styles.priceBlock}>
 								<span className={styles.price}>{price} ₽</span>
@@ -167,6 +185,7 @@ const Pricing = () => {
 							</ul>
 
 							<button
+								type="button"
 								className={styles.buyBtn}
 								style={{ background: plan.color }}
 								disabled={payMutation.isPending}
@@ -179,7 +198,7 @@ const Pricing = () => {
 							>
 								{isCurrentPlan ? 'Продлить' : 'Подключить'}
 							</button>
-						</div>
+						</article>
 					)
 				})}
 			</div>
@@ -195,7 +214,7 @@ const Pricing = () => {
 					При смене тарифа оставшиеся дни переносятся на новый период.
 				</p>
 			)}
-		</div>
+		</section>
 	)
 }
 

@@ -159,14 +159,15 @@ const WidgetLeads = ({ widgetId }: Props) => {
 <div class="print-hint">Нажмите Ctrl+P (⌘P на Mac) → «Сохранить как PDF»</div>
 <h1>Заявки — всего ${leads.length}</h1>
 <table>
+  <caption style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Таблица заявок по виджету</caption>
   <thead>
     <tr>
-      <th>#</th>
-      <th>Дата</th>
-      <th>Телефон</th>
-      <th>Email</th>
-      <th>Бонус</th>
-      <th>Страница</th>
+      <th scope="col">#</th>
+      <th scope="col">Дата</th>
+      <th scope="col">Телефон</th>
+      <th scope="col">Email</th>
+      <th scope="col">Бонус</th>
+      <th scope="col">Страница</th>
     </tr>
   </thead>
   <tbody>${rows}</tbody>
@@ -297,14 +298,27 @@ const WidgetLeads = ({ widgetId }: Props) => {
 					</div>
 
 					<table className={styles.table}>
+						<caption className="srOnly">Таблица заявок по виджету</caption>
 						<thead>
 							<tr>
-								<th className={styles.th}>#</th>
-								<th className={styles.th}>Дата</th>
-								<th className={styles.th}>Телефон</th>
-								<th className={styles.th}>Email</th>
-								<th className={styles.th}>Бонус</th>
-								<th className={styles.th}>Страница</th>
+								<th className={styles.th} scope="col">
+									#
+								</th>
+								<th className={styles.th} scope="col">
+									Дата
+								</th>
+								<th className={styles.th} scope="col">
+									Телефон
+								</th>
+								<th className={styles.th} scope="col">
+									Email
+								</th>
+								<th className={styles.th} scope="col">
+									Бонус
+								</th>
+								<th className={styles.th} scope="col">
+									Страница
+								</th>
 							</tr>
 						</thead>
 						<tbody>

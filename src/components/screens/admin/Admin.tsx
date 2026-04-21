@@ -8,12 +8,12 @@ import { NextPage } from 'next'
 
 const Admin: NextPage = () => {
 	return (
-		<div className={styles.wrapper}>
+		<section className={styles.wrapper}>
 			<Heading text="Панель администратора" />
 			<AdminNavigation />
 			<SubHeading text="Дашборд" />
 			<Statistics />
-		</div>
+		</section>
 	)
 }
 

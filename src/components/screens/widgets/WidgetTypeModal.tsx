@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 import styles from './WidgetTypeModal.module.scss'
 
 interface WidgetType {
@@ -119,18 +119,36 @@ interface Props {
 }
 
 const WidgetTypeModal = ({ onSelect, onClose, isCreating }: Props) => {
+	const titleId = useId()
+	const descriptionId = useId()
+
 	return (
-		<div className={styles.overlay} onClick={onClose}>
-			<div className={styles.modal} onClick={e => e.stopPropagation()}>
+		<div className={styles.overlay}>
+			<button
+				type="button"
+				className={styles.backdrop}
+				onClick={onClose}
+				aria-label="Закрыть окно выбора типа виджета"
+			/>
+			<div
+				className={styles.modal}
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby={titleId}
+				aria-describedby={descriptionId}
+			>
 				<button
+					type="button"
 					className={styles.closeBtn}
 					onClick={onClose}
 					aria-label="Закрыть"
 				>
 					✕
 				</button>
-				<h2 className={styles.title}>Выберите тип виджета</h2>
-				<p className={styles.subtitle}>
+				<h2 id={titleId} className={styles.title}>
+					Выберите тип виджета
+				</h2>
+				<p id={descriptionId} className={styles.subtitle}>
 					Кликните по виджету, чтобы создать его
 				</p>
 				<div className={styles.gridLayout}>

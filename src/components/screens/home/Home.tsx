@@ -1,17 +1,17 @@
 'use client'
 
 import CurvedCarousel from '@/components/ui/сurved-сarousel/CurvedCarousel'
+import Analysis from '@/components/screens/home/analysis/Analysis'
+import CtaBanner from '@/components/screens/home/cta-banner/CtaBanner'
 import { PUBLIC_PAGES } from '@/config/pages/public.config'
+import DemoWheel from '@/components/screens/home/demo-wheel/DemoWheel'
+import HomeFaq from '@/components/screens/home/faq/HomeFaq'
+import HeroSection from '@/components/screens/home/hero/HeroSection'
+import HomePricing from '@/components/screens/home/pricing/HomePricing'
+import HomeSteps from '@/components/screens/home/steps/HomeSteps'
+import HomeTools from '@/components/screens/home/tools/HomeTools'
 import { useAuthStore } from '@/store/auth-store/auth-store'
-import CtaBanner from './cta-banner/CtaBanner'
 import styles from './Home.module.scss'
-import HeroSection from './hero/HeroSection'
-import DemoWheel from './demo-wheel/DemoWheel'
-import HomeFaq from './faq/HomeFaq'
-import HomePricing from './pricing/HomePricing'
-import HomeSteps from './steps/HomeSteps'
-import HomeTools from './tools/HomeTools'
-import Analysis from './analysis/Analysis'
 
 const Home = () => {
 	const auth = useAuthStore(state => state.auth)

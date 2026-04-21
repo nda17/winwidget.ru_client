@@ -13,11 +13,11 @@
 		@apply translate-x-[5%] md:translate-x-[0%];
 	}
 
-	> span {
-		@apply absolute right-[.4rem] sm:right-[1rem];
+	> button {
+		@apply absolute right-[.4rem] sm:right-[1rem] border-none bg-transparent p-0;
 	}
 
-	> span > svg {
+	> button > svg {
 		@apply fill-primary text-primary w-5 lg:w-7 h-5 lg:h-7 cursor-pointer animate-fadeIn;
 	}
 

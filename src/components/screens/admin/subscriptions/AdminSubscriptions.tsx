@@ -70,7 +70,7 @@ const AdminSubscriptions: NextPage = () => {
 	const changeActivePage = (page: number) => setCurrentPage(page)
 
 	return (
-		<div className={styles.wrapper}>
+		<section className={styles.wrapper}>
 			{cancelTargetId && (
 				<ConfirmDialog
 					title="Отменить подписку?"
@@ -119,22 +119,24 @@ const AdminSubscriptions: NextPage = () => {
 							{userSearchResults && userSearchResults.length > 0 && (
 								<ul className={styles.dropdown}>
 									{userSearchResults.map(u => (
-										<li
-											key={u.id}
-											className={styles.dropdownItem}
-											onClick={() =>
-												selectUser(
-													u.id,
-													`${u.name || 'Без имени'} (${u.email || u.phone || u.id})`
-												)
-											}
-										>
-											<span className={styles.dropdownName}>
-												{u.name || 'Без имени'}
-											</span>
-											<span className={styles.dropdownEmail}>
-												{u.email || u.phone || u.id}
-											</span>
+										<li key={u.id}>
+											<button
+												type="button"
+												className={styles.dropdownItem}
+												onClick={() =>
+													selectUser(
+														u.id,
+														`${u.name || 'Без имени'} (${u.email || u.phone || u.id})`
+													)
+												}
+											>
+												<span className={styles.dropdownName}>
+													{u.name || 'Без имени'}
+												</span>
+												<span className={styles.dropdownEmail}>
+													{u.email || u.phone || u.id}
+												</span>
+											</button>
 										</li>
 									))}
 								</ul>
@@ -344,17 +346,20 @@ const AdminSubscriptions: NextPage = () => {
 					{/* Desktop table */}
 					<div className={styles['table-scroll']}>
 						<table className={styles.table}>
+							<caption className="srOnly">
+								Список активных и архивных подписок пользователей
+							</caption>
 							<thead>
 								<tr>
-									<th>Пользователь</th>
-									<th>Email</th>
-									<th>Тариф</th>
-									<th>Период</th>
-									<th>Статус</th>
-									<th>Начало</th>
-									<th>Окончание</th>
-									<th>Лиды</th>
-									<th>Действия</th>
+									<th scope="col">Пользователь</th>
+									<th scope="col">Email</th>
+									<th scope="col">Тариф</th>
+									<th scope="col">Период</th>
+									<th scope="col">Статус</th>
+									<th scope="col">Начало</th>
+									<th scope="col">Окончание</th>
+									<th scope="col">Лиды</th>
+									<th scope="col">Действия</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -420,7 +425,7 @@ const AdminSubscriptions: NextPage = () => {
 					<p className={styles['meta-subtitle']}>Подписок пока нет</p>
 				</div>
 			)}
-		</div>
+		</section>
 	)
 }
 

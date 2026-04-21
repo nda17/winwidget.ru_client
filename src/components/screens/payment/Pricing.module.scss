@@ -22,8 +22,11 @@
 .trialDesc {
 	@apply text-sm mb-3 text-[#aaa];
 }
+.periodGroup {
+	@apply border-none p-0 m-0 mb-8;
+}
 .periodToggle {
-	@apply flex gap-2 mb-8 p-1 rounded-xl bg-white border border-[#e0d6f0];
+	@apply flex gap-2 p-1 rounded-xl bg-white border border-[#e0d6f0];
 }
 .periodBtn {
 	@apply px-5 py-2 rounded-lg text-sm font-medium cursor-pointer border-none bg-transparent text-[#888] flex items-center gap-2 transition-all duration-200;

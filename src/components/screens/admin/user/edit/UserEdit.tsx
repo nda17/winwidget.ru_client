@@ -58,7 +58,7 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 	}
 
 	return (
-		<div className={styles.wrapper}>
+		<section className={styles.wrapper}>
 			<Heading text="Панель администратора" />
 			<AdminNavigation />
 			{isLoading ? (
@@ -314,7 +314,7 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 					</div>
 				</div>
 			)}
-		</div>
+		</section>
 	)
 }
 

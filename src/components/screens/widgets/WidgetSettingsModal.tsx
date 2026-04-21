@@ -3,7 +3,7 @@
 import widgetService from '@/services/widget/widget.service'
 import { Widget, WidgetConfig } from '@/services/widget/widget.types'
 import { useMutation } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import toast from 'react-hot-toast'
 import styles from './WidgetSettingsModal.module.scss'
 
@@ -19,6 +19,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 	const [tab, setTab] = useState<Tab>('main')
 	const [config, setConfig] = useState<WidgetConfig>({ ...widget.config })
 	const [name, setName] = useState(widget.name)
+	const titleId = useId()
 	const [cooldownInput, setCooldownInput] = useState(
 		String(widget.config.spinCooldownDays ?? 0)
 	)
@@ -134,15 +135,29 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 	const directLink = `${publicSiteUrl}/page/${widget.publicKey}`
 
 	return (
-		<div
-			className={styles.overlay}
-			onClick={e => e.target === e.currentTarget && onClose()}
-		>
-			<div className={styles.modal}>
-				<button className={styles.closeBtn} onClick={onClose}>
+		<div className={styles.overlay}>
+			<button
+				type="button"
+				className={styles.backdrop}
+				onClick={onClose}
+				aria-label="Закрыть настройки виджета"
+			/>
+			<div
+				className={styles.modal}
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby={titleId}
+			>
+				<button
+					type="button"
+					className={styles.closeBtn}
+					onClick={onClose}
+				>
 					✕
 				</button>
-				<h2 className={styles.modalTitle}>Настройки</h2>
+				<h2 id={titleId} className={styles.modalTitle}>
+					Настройки
+				</h2>
 
 				<div className={styles.tabs}>
 					{(['main', 'bonuses', 'integrations', 'code'] as Tab[]).map(
@@ -165,7 +180,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 					{tab === 'main' && (
 						<div className={styles.fields}>
 							<div className={styles.field}>
-								<label className={styles.label}>Название виджета:</label>
+								<p className={styles.label}>Название виджета:</p>
 								<input
 									className={styles.input}
 									value={name}
@@ -176,7 +191,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>Основной цвет:</label>
+								<p className={styles.label}>Основной цвет:</p>
 								<div className={styles.colorRow}>
 									<input
 										type="color"
@@ -209,7 +224,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>Цвет фона виджета</label>
+								<p className={styles.label}>Цвет фона виджета</p>
 								<div className={styles.colorRow}>
 									<input
 										type="color"
@@ -242,9 +257,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
-									Цвет кнопки «Крутить»:
-								</label>
+								<p className={styles.label}>Цвет кнопки «Крутить»:</p>
 								<div className={styles.colorRow}>
 									<input
 										type="color"
@@ -276,9 +289,9 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
+								<p className={styles.label}>
 									Цвет волчка (центральный круг колеса):
-								</label>
+								</p>
 								<div className={styles.colorRow}>
 									<input
 										type="color"
@@ -311,7 +324,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>Цвет стрелки:</label>
+								<p className={styles.label}>Цвет стрелки:</p>
 								<div className={styles.colorRow}>
 									<input
 										type="color"
@@ -341,9 +354,9 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
+								<p className={styles.label}>
 									Длительность анимации прокрутки (сек):
-								</label>
+								</p>
 								<input
 									className={styles.input}
 									type="number"
@@ -363,9 +376,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
-									Кнопка открытия — пульсация
-								</label>
+								<p className={styles.label}>Кнопка открытия — пульсация</p>
 								<div className={styles.checkRow}>
 									<input
 										type="checkbox"
@@ -389,10 +400,10 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
+								<p className={styles.label}>
 									Сторона расположения кнопки для открытия виджета на вашем
 									сайте:
-								</label>
+								</p>
 								<select
 									className={styles.input}
 									value={config.buttonSide ?? 'right'}
@@ -413,10 +424,10 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
+								<p className={styles.label}>
 									Высота расположения кнопки для открытия виджета на вашем
 									сайте:
-								</label>
+								</p>
 								<input
 									className={styles.input}
 									type="number"
@@ -437,9 +448,9 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
+								<p className={styles.label}>
 									Количество секунд до авто-открытия виджета:
-								</label>
+								</p>
 								<input
 									className={styles.input}
 									type="number"
@@ -461,9 +472,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
-									Сбор данных клиента:
-								</label>
+								<p className={styles.label}>Сбор данных клиента:</p>
 								<select
 									className={styles.input}
 									value={config.dataType}
@@ -488,7 +497,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>Заголовок виджета:</label>
+								<p className={styles.label}>Заголовок виджета:</p>
 								<input
 									className={styles.input}
 									value={config.title}
@@ -500,9 +509,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
-									Подзаголовок виджета:
-								</label>
+								<p className={styles.label}>Подзаголовок виджета:</p>
 								<input
 									className={styles.input}
 									value={config.subtitle}
@@ -522,9 +529,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
-									Сообщение после выигрыша:
-								</label>
+								<p className={styles.label}>Сообщение после выигрыша:</p>
 								<input
 									className={styles.input}
 									value={config.winMessage}
@@ -539,9 +544,9 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
+								<p className={styles.label}>
 									Антифрод уведомление «уже участвовали» — заголовок:
-								</label>
+								</p>
 								<input
 									className={styles.input}
 									value={config.alreadyPlayedTitle ?? ''}
@@ -558,9 +563,9 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
+								<p className={styles.label}>
 									Антифрод уведомление «уже участвовали» — подзаголовок:
-								</label>
+								</p>
 								<input
 									className={styles.input}
 									value={config.alreadyPlayedSubtitle ?? ''}
@@ -577,9 +582,9 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
+								<p className={styles.label}>
 									Ссылка на политику конфиденциальности:
-								</label>
+								</p>
 								<input
 									className={styles.input}
 									value={config.privacyUrl}
@@ -594,9 +599,9 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
+								<p className={styles.label}>
 									Текст в кнопке старта вращения:
-								</label>
+								</p>
 								<input
 									className={styles.input}
 									value={config.buttonText}
@@ -610,9 +615,9 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
+								<p className={styles.label}>
 									Скрыть виджет после участия:
-								</label>
+								</p>
 								<div className={styles.checkRow}>
 									<input
 										type="checkbox"
@@ -636,9 +641,9 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
+								<p className={styles.label}>
 									Повторное участие — раз в N дней:
-								</label>
+								</p>
 								<input
 									className={styles.input}
 									type="number"
@@ -669,7 +674,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>Сброс попыток:</label>
+								<p className={styles.label}>Сброс попыток:</p>
 
 								{!confirmResetAttempts ? (
 									<button
@@ -729,7 +734,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>Фильтр заявок:</label>
+								<p className={styles.label}>Фильтр заявок:</p>
 								<div className={styles.checkRow}>
 									<input
 										type="checkbox"
@@ -821,7 +826,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</p>
 							{config.bonuses.map((bonus, i) => (
 								<div key={i} className={styles.bonusBlock}>
-									<label className={styles.label}>Бонус #{i + 1}</label>
+									<p className={styles.label}>Бонус #{i + 1}</p>
 									<input
 										className={styles.input}
 										value={bonus.name}
@@ -917,9 +922,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 					{tab === 'integrations' && (
 						<div className={styles.fields}>
 							<div className={styles.field}>
-								<label className={styles.label}>
-									Отправка заявок на Email
-								</label>
+								<p className={styles.label}>Отправка заявок на Email</p>
 								<input
 									className={styles.input}
 									type="email"
@@ -939,9 +942,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
-									Отправка заявок в Telegram
-								</label>
+								<p className={styles.label}>Отправка заявок в Telegram</p>
 								<input
 									className={styles.input}
 									value={config.integrations.telegramChatId || ''}
@@ -962,9 +963,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
-									Внешний URL (Webhook)
-								</label>
+								<p className={styles.label}>Внешний URL (Webhook)</p>
 								<input
 									className={styles.input}
 									type="url"
@@ -987,9 +986,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
-									Отправка заявок в Битрикс24
-								</label>
+								<p className={styles.label}>Отправка заявок в Битрикс24</p>
 								<input
 									className={styles.input}
 									type="url"
@@ -1012,9 +1009,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
-									amoCRM — домен аккаунта
-								</label>
+								<p className={styles.label}>amoCRM — домен аккаунта</p>
 								<input
 									className={styles.input}
 									value={config.integrations.amoCrmDomain || ''}
@@ -1034,9 +1029,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
-									amoCRM — токен доступа
-								</label>
+								<p className={styles.label}>amoCRM — токен доступа</p>
 								<input
 									className={styles.input}
 									type="password"
@@ -1058,9 +1051,9 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
+								<p className={styles.label}>
 									Яндекс Метрика — ID счётчика
-								</label>
+								</p>
 								<input
 									className={styles.input}
 									value={config.integrations.yandexMetrikaId || ''}
@@ -1081,9 +1074,9 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>
+								<p className={styles.label}>
 									Ретаргетинг ВКонтакте — ID пикселя
-								</label>
+								</p>
 								<input
 									className={styles.input}
 									value={config.integrations.vkPixelId || ''}
@@ -1104,7 +1097,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>Roistat</label>
+								<p className={styles.label}>Roistat</p>
 								<div className={styles.checkRow}>
 									<input
 										type="checkbox"
@@ -1136,7 +1129,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 					{tab === 'code' && (
 						<div className={styles.fields}>
 							<div className={styles.field}>
-								<label className={styles.label}>Код виджета</label>
+								<p className={styles.label}>Код виджета</p>
 								<p className={styles.hint}>
 									Добавьте этот код на сайт перед тегом &lt;/body&gt;
 								</p>
@@ -1147,6 +1140,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 									onClick={e => (e.target as HTMLTextAreaElement).select()}
 								/>
 								<button
+									type="button"
 									className={styles.copyBtn}
 									onClick={() => {
 										navigator.clipboard.writeText(scriptCode)
@@ -1158,7 +1152,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							</div>
 
 							<div className={styles.field}>
-								<label className={styles.label}>Прямая ссылка</label>
+								<p className={styles.label}>Прямая ссылка</p>
 								<p className={styles.hint}>
 									Если не требуется подключение виджета к сайту
 								</p>
@@ -1179,6 +1173,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 									</a>
 								</div>
 								<button
+									type="button"
 									className={styles.copyBtn}
 									onClick={() => {
 										navigator.clipboard.writeText(directLink)

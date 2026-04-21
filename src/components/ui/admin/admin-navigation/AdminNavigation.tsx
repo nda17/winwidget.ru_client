@@ -6,11 +6,13 @@ import { NextPage } from 'next'
 
 const AdminNavigation: NextPage = () => {
 	return (
-		<ul className={clsx(styles['nav-list'])}>
-			{navItems?.map(item => (
-				<AdminNavItem key={item.link} item={item} />
-			))}
-		</ul>
+		<nav aria-label="Навигация администратора">
+			<ul className={clsx(styles['nav-list'])}>
+				{navItems?.map(item => (
+					<AdminNavItem key={item.link} item={item} />
+				))}
+			</ul>
+		</nav>
 	)
 }
 

@@ -10,7 +10,7 @@ interface NavigationProps {
 
 const Navigation: NextPage<NavigationProps> = ({ isDark }) => {
 	return (
-		<div className={styles.wrapper}>
+		<nav className={styles.wrapper} aria-label="Мобильная навигация">
 			<div className={clsx(styles['layout-container'])}>
 				<div className={styles.brand}>
 					<LogoImage />
@@ -26,7 +26,7 @@ const Navigation: NextPage<NavigationProps> = ({ isDark }) => {
 					</div>
 				</div>
 			</div>
-		</div>
+		</nav>
 	)
 }
 

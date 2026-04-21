@@ -13,10 +13,14 @@
 		@apply flex items-center overflow-scroll;
 
 		> li {
-			@apply text-[1.1rem] mr-2 cursor-pointer transition-all;
+			@apply mr-2;
 
-			&:hover {
-				@apply text-gray-900;
+			> button {
+				@apply text-[1.1rem] cursor-pointer transition-all border-none bg-transparent p-0;
+
+				&:hover {
+					@apply text-gray-900;
+				}
 			}
 
 			&:last-child {

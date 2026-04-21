@@ -1,19 +1,18 @@
 import styles from '@/components/layout/nav-menu/desktop/DesktopNavBar.module.scss'
 import Menu from '@/components/layout/nav-menu/desktop/menu/Menu'
-import LogoImage from '@/components/ui/logo-image/LogoImage'
 import clsx from 'clsx'
 import { NextPage } from 'next'
 
 const DesktopNavBar: NextPage = () => {
 	return (
-		<div className={styles.wrapper}>
+		<nav className={styles.wrapper} aria-label="Основная навигация">
 			<div className={clsx(styles['layout-container'])}>
-				<div className={styles.logo}>
+				{/* <div className={styles.logo}>
 					<LogoImage />
-				</div>
+				</div> */}
 				<Menu />
 			</div>
-		</div>
+		</nav>
 	)
 }
 

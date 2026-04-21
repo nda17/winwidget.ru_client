@@ -1,6 +1,6 @@
 'use client'
 
-import { FC } from 'react'
+import { FC, useId } from 'react'
 import styles from './ConfirmDialog.module.scss'
 
 interface IConfirmDialogProps {
@@ -20,16 +20,43 @@ const ConfirmDialog: FC<IConfirmDialogProps> = ({
 	onConfirm,
 	onCancel
 }) => {
+	const titleId = useId()
+	const messageId = useId()
+
 	return (
-		<div className={styles.overlay} onClick={onCancel}>
-			<div className={styles.dialog} onClick={e => e.stopPropagation()}>
-				<h3 className={styles.title}>{title}</h3>
-				<p className={styles.message}>{message}</p>
+		<div className={styles.overlay}>
+			<button
+				type="button"
+				className={styles.backdrop}
+				onClick={onCancel}
+				aria-label="Закрыть диалог"
+			/>
+			<div
+				className={styles.dialog}
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby={titleId}
+				aria-describedby={messageId}
+			>
+				<h3 id={titleId} className={styles.title}>
+					{title}
+				</h3>
+				<p id={messageId} className={styles.message}>
+					{message}
+				</p>
 				<div className={styles.actions}>
-					<button className={styles.cancelBtn} onClick={onCancel}>
+					<button
+						type="button"
+						className={styles.cancelBtn}
+						onClick={onCancel}
+					>
 						{cancelLabel}
 					</button>
-					<button className={styles.confirmBtn} onClick={onConfirm}>
+					<button
+						type="button"
+						className={styles.confirmBtn}
+						onClick={onConfirm}
+					>
 						{confirmLabel}
 					</button>
 				</div>

@@ -52,7 +52,7 @@ const AdminSettings: NextPage = () => {
 	}
 
 	return (
-		<div className={styles.wrapper}>
+		<section className={styles.wrapper}>
 			<Heading text="Панель администратора" />
 			<AdminNavigation />
 
@@ -130,16 +130,20 @@ const AdminSettings: NextPage = () => {
 						</div>
 
 						<div className={styles.field}>
-							<label className={styles.fieldLabel}>Текст баннера</label>
+							<label htmlFor="banner-text" className={styles.fieldLabel}>
+								Текст баннера
+							</label>
 							<textarea
+								id="banner-text"
 								className={styles.textarea}
 								placeholder="Например: Технические работы с 22:00 до 00:00. Сервис может быть недоступен."
 								value={bannerText}
 								onChange={e => setBannerText(e.target.value)}
 								rows={3}
 								maxLength={300}
+								aria-describedby="banner-text-count"
 							/>
-							<span className={styles.charCount}>
+							<span id="banner-text-count" className={styles.charCount}>
 								{bannerText.length} / 300
 							</span>
 						</div>
@@ -156,7 +160,7 @@ const AdminSettings: NextPage = () => {
 					</>
 				)}
 			</div>
-		</div>
+		</section>
 	)
 }
 

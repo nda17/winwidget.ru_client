@@ -4,15 +4,17 @@ import { NextPage } from 'next'
 
 const SignIn: NextPage = () => {
 	return (
-		<div className={styles.wrapper}>
+		<section className={styles.wrapper} aria-labelledby="sign-in-title">
 			<div className={styles.form}>
-				<h2 className={styles.title}>Вход</h2>
+				<h1 id="sign-in-title" className={styles.title}>
+					Вход
+				</h1>
 				<p className={styles.subtitle}>
 					Войдите в личный кабинет и управляйте виджетами в одной панели.
 				</p>
 				<AuthForm isLogin />
 			</div>
-		</div>
+		</section>
 	)
 }
 

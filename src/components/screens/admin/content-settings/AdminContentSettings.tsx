@@ -72,7 +72,7 @@ const AdminContentSettings: NextPage = () => {
 	const isDirty = activeSlug in drafts
 
 	return (
-		<div className={styles.wrapper}>
+		<section className={styles.wrapper}>
 			<Heading text="Панель администратора" />
 			<AdminNavigation />
 
@@ -137,7 +137,7 @@ const AdminContentSettings: NextPage = () => {
 					)}
 				</div>
 			</div>
-		</div>
+		</section>
 	)
 }
 

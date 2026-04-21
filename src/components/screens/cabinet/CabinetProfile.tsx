@@ -391,7 +391,7 @@ const CabinetProfile = () => {
 				<p className={styles.sectionTitle}>Редактирование профиля</p>
 				<form onSubmit={handleProfileSubmit}>
 					<div className={styles.field}>
-						<label className={styles.label}>Фото профиля</label>
+						<p className={styles.label}>Фото профиля</p>
 						<Controller
 							control={control}
 							name="avatarPath"
@@ -412,8 +412,11 @@ const CabinetProfile = () => {
 					</div>
 
 					<div className={styles.field}>
-						<label className={styles.label}>Имя</label>
+						<label htmlFor="profile-name" className={styles.label}>
+							Имя
+						</label>
 						<input
+							id="profile-name"
 							className={`${styles.input} ${errors.name ? styles.inputError : ''}`}
 							placeholder="Имя"
 							defaultValue={user?.name || ''}
@@ -423,17 +426,23 @@ const CabinetProfile = () => {
 									message: 'Мин. длина 2 символа'
 								}
 							})}
+							aria-describedby={
+								errors.name ? 'profile-name-error' : undefined
+							}
 						/>
 						{errors.name && (
-							<span className={styles.errorMsg}>
+							<span id="profile-name-error" className={styles.errorMsg}>
 								{errors.name.message}
 							</span>
 						)}
 					</div>
 
 					<div className={styles.field}>
-						<label className={styles.label}>Новый пароль</label>
+						<label htmlFor="profile-password" className={styles.label}>
+							Новый пароль
+						</label>
 						<input
+							id="profile-password"
 							type="password"
 							className={`${styles.input} ${errors.password ? styles.inputError : ''}`}
 							placeholder="Введите новый пароль"
@@ -444,9 +453,15 @@ const CabinetProfile = () => {
 										'Мин. 6 символов: цифра, строчная и заглавная буква'
 								}
 							})}
+							aria-describedby={
+								errors.password ? 'profile-password-error' : undefined
+							}
 						/>
 						{errors.password && (
-							<span className={styles.errorMsg}>
+							<span
+								id="profile-password-error"
+								className={styles.errorMsg}
+							>
 								{errors.password.message}
 							</span>
 						)}

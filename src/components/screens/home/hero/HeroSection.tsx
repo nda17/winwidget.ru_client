@@ -20,16 +20,17 @@ const HeroSection = ({ ctaHref, onScrollToFaq }: IHeroSectionProps) => {
 	} as CSSProperties
 
 	return (
-		<div className={styles.heroWrapper}>
+		<section className={styles.heroWrapper} aria-labelledby="hero-title">
 			<div
 				className={styles.heroBackground}
 				style={heroBackgroundStyle}
+				aria-hidden="true"
 			></div>
-			<div className={styles.heroFirstCircle}></div>
-			<div className={styles.heroSecondCircle}></div>
-			<div className={styles.heroThirdCircle}></div>
+			<div className={styles.heroFirstCircle} aria-hidden="true"></div>
+			<div className={styles.heroSecondCircle} aria-hidden="true"></div>
+			<div className={styles.heroThirdCircle} aria-hidden="true"></div>
 			<div className={styles.heroContent}>
-				<h1 className={styles.title}>
+				<h1 id="hero-title" className={styles.title}>
 					Увеличение конверсии
 					<br /> сайта до{' '}
 					<span>
@@ -49,11 +50,11 @@ const HeroSection = ({ ctaHref, onScrollToFaq }: IHeroSectionProps) => {
 						className={styles.buttonArrow}
 						type="button"
 						onClick={onScrollToFaq}
-						aria-label="Scroll to FAQ"
+						aria-label="Прокрутить к вопросам и ответам"
 					/>
 				</div>
 			</div>
-		</div>
+		</section>
 	)
 }
 

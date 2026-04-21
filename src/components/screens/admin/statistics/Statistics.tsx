@@ -7,7 +7,7 @@ import { FC } from 'react'
 
 const Statistics: FC = () => {
 	return (
-		<div className={styles.wrapper}>
+		<section className={styles.wrapper}>
 			<section className={styles.section}>
 				<div className={styles['section-head']}>
 					<h3 className={styles['section-title']}>Ключевые показатели</h3>
@@ -60,7 +60,7 @@ const Statistics: FC = () => {
 					</div>
 				</div>
 			</section>
-		</div>
+		</section>
 	)
 }
 

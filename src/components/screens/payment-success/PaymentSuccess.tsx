@@ -49,10 +49,15 @@ const PaymentSuccess = () => {
 
 	if (isActivated) {
 		return (
-			<div className={styles.page}>
-				<div className={styles.card}>
+			<section
+				className={styles.page}
+				aria-labelledby="payment-success-title"
+			>
+				<article className={styles.card}>
 					<div className={`${styles.icon} ${styles.iconSuccess}`}>✓</div>
-					<h1 className={styles.title}>Подписка активирована!</h1>
+					<h1 id="payment-success-title" className={styles.title}>
+						Подписка активирована!
+					</h1>
 					<p className={styles.description}>
 						Тариф{' '}
 						<span className={styles.planName}>
@@ -65,18 +70,21 @@ const PaymentSuccess = () => {
 							Перейти в кабинет
 						</Link>
 					</div>
-				</div>
-			</div>
+				</article>
+			</section>
 		)
 	}
 
 	return (
-		<div className={styles.page}>
-			<div className={styles.card}>
+		<section
+			className={styles.page}
+			aria-labelledby="payment-status-title"
+		>
+			<article className={styles.card}>
 				<div className={`${styles.icon} ${styles.iconLoading}`}>
 					<div className={styles.spinner} />
 				</div>
-				<h1 className={styles.title}>
+				<h1 id="payment-status-title" className={styles.title}>
 					Ожидаем ответа от платёжной системы...
 				</h1>
 				<p className={styles.description}>
@@ -85,6 +93,7 @@ const PaymentSuccess = () => {
 				</p>
 				<div className={styles.actions}>
 					<button
+						type="button"
 						className={styles.button}
 						onClick={handleVerify}
 						disabled={isVerifying}
@@ -98,8 +107,8 @@ const PaymentSuccess = () => {
 						В кабинет
 					</Link>
 				</div>
-			</div>
-		</div>
+			</article>
+		</section>
 	)
 }
 

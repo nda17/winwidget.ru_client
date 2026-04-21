@@ -3,8 +3,12 @@
 	-webkit-backdrop-filter: blur(4px);
 }
 
+.backdrop {
+	@apply absolute inset-0 border-none bg-transparent p-0;
+}
+
 .modal {
-	@apply relative bg-white rounded-[1.25rem] border border-[#e0d6f0] pt-10 px-8 pb-8 max-w-[540px] w-full;
+	@apply relative z-[1] bg-white rounded-[1.25rem] border border-[#e0d6f0] pt-10 px-8 pb-8 max-w-[540px] w-full;
 	box-shadow: 0 20px 60px rgba(100, 60, 180, 0.15);
 }
 

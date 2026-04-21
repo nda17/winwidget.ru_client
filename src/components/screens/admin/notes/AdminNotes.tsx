@@ -88,7 +88,7 @@ const AdminNotes: NextPage = () => {
 	const done = notes.filter(n => n.done)
 
 	return (
-		<div className={styles.wrapper}>
+		<section className={styles.wrapper}>
 			{deleteTarget && (
 				<ConfirmDialog
 					title="Удалить заметку?"
@@ -155,7 +155,7 @@ const AdminNotes: NextPage = () => {
 					</>
 				)}
 			</div>
-		</div>
+		</section>
 	)
 }
 

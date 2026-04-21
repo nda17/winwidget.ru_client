@@ -21,14 +21,23 @@ const Hamburger: NextPage = () => {
 		changeVisibleHamburger()
 	}
 
+	const isOpen = visibleVeilBackground && visibleHamburger
+
 	return (
-		<div className={styles.hamburger} onClick={changeStateMenu}>
-			{visibleVeilBackground && visibleHamburger ? (
+		<button
+			type="button"
+			className={styles.hamburger}
+			onClick={changeStateMenu}
+			aria-label={isOpen ? 'Закрыть меню' : 'Открыть меню'}
+			aria-expanded={isOpen}
+			aria-controls="mobile-navigation-menu"
+		>
+			{isOpen ? (
 				<AppIcon name="close" fill="currentColor" />
 			) : (
 				<AppIcon name="menu" fill="currentColor" />
 			)}
-		</div>
+		</button>
 	)
 }
 

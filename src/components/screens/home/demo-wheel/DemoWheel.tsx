@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import styles from './DemoWheel.module.scss'
 
 const CONFETTI_COLORS_EXP = [
@@ -236,6 +236,7 @@ const DemoWheel = () => {
 	const [open, setOpen] = useState(false)
 	const [rotation, setRotation] = useState(0)
 	const [spinning, setSpinning] = useState(false)
+	const dialogTitleId = useId()
 	const [salesText, setSalesText] = useState<string | null>(null)
 	const [phone, setPhone] = useState('')
 	const [email, setEmail] = useState('')
@@ -419,11 +420,19 @@ const DemoWheel = () => {
 			</div>
 
 			{open && (
-				<div className={styles.overlay} onClick={close}>
+				<div className={styles.overlay}>
+					<button
+						type="button"
+						className={styles.backdrop}
+						onClick={close}
+						aria-label="Закрыть демо-виджет"
+					/>
 					<div
 						ref={cardRef}
 						className={styles.card}
-						onClick={e => e.stopPropagation()}
+						role="dialog"
+						aria-modal="true"
+						aria-labelledby={dialogTitleId}
 					>
 						<button
 							className={styles.closeBtn}
@@ -455,7 +464,9 @@ const DemoWheel = () => {
 
 						<div className={styles.content}>
 							<div className={styles.controls}>
-								<h2 className={styles.title}>Крути и выигрывай!</h2>
+								<h2 id={dialogTitleId} className={styles.title}>
+									Крути и выигрывай!
+								</h2>
 								<p className={styles.subtitle}>
 									Испытай удачу и получи один из наших призов прямо сейчас
 								</p>

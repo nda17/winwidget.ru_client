@@ -7,7 +7,7 @@ import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import clsx from 'clsx'
 import { NextPage } from 'next'
 import Image from 'next/image'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import toast from 'react-hot-toast'
 
 const DEFAULT_AVATAR = '/avatar-default.png'
@@ -33,6 +33,7 @@ const FieldUploadFile: NextPage<IUploadField> = ({
 	})
 	const currentImageSrc = currentFile ? encodeURI(currentFile) : ''
 	const valueImageSrc = value ? encodeURI(value) : ''
+	const inputId = useId()
 	const busy = isLoading || isDeleting
 	const hasCustomAvatar =
 		value || (currentFile && currentFile !== DEFAULT_AVATAR)
@@ -122,13 +123,18 @@ const FieldUploadFile: NextPage<IUploadField> = ({
 			) : (
 				<>
 					<label className={clsx(styles['label-input'])}>
-						<div className={clsx(styles['custom-input'])}>
-							<span className={styles.button}>Загрузить файл</span>
-						</div>
+						<span className="srOnly">Загрузить файл</span>
+						<span className={clsx(styles['custom-input'])}>
+							<span className={styles.button} aria-hidden="true">
+								Загрузить файл
+							</span>
+						</span>
 						<input
+							id={inputId}
 							type="file"
 							onChange={uploadFile}
 							className={clsx(styles['input-field'])}
+							aria-label={placeholder}
 						/>
 					</label>
 					{avatarPreview}

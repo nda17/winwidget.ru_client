@@ -103,7 +103,7 @@ const UserList: NextPage = () => {
 	}
 
 	return (
-		<div className={styles.wrapper}>
+		<section className={styles.wrapper}>
 			{deleteTargetId && (
 				<ConfirmDialog
 					title="Удалить пользователя?"
@@ -186,16 +186,19 @@ const UserList: NextPage = () => {
 					</div>
 					<div className={styles['table-scroll']}>
 						<table className={styles.table}>
+							<caption className="srOnly">
+								Заглушка списка пользователей в состоянии загрузки
+							</caption>
 							<thead>
 								<tr>
-									<th>ID</th>
-									<th>Имя</th>
-									<th>Email</th>
-									<th>Телефон</th>
-									<th>Способы входа</th>
-									<th>Роли</th>
-									<th>Дата регистрации</th>
-									<th>Действия</th>
+									<th scope="col">ID</th>
+									<th scope="col">Имя</th>
+									<th scope="col">Email</th>
+									<th scope="col">Телефон</th>
+									<th scope="col">Способы входа</th>
+									<th scope="col">Роли</th>
+									<th scope="col">Дата регистрации</th>
+									<th scope="col">Действия</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -378,16 +381,17 @@ const UserList: NextPage = () => {
 					</div>
 					<div className={styles['table-scroll']}>
 						<table className={styles.table}>
+							<caption className="srOnly">Таблица пользователей</caption>
 							<thead>
 								<tr>
-									<th>ID</th>
-									<th>Имя</th>
-									<th>Email</th>
-									<th>Телефон</th>
-									<th>Способы входа</th>
-									<th>Роли</th>
-									<th>Дата регистрации</th>
-									<th>Действия</th>
+									<th scope="col">ID</th>
+									<th scope="col">Имя</th>
+									<th scope="col">Email</th>
+									<th scope="col">Телефон</th>
+									<th scope="col">Способы входа</th>
+									<th scope="col">Роли</th>
+									<th scope="col">Дата регистрации</th>
+									<th scope="col">Действия</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -490,7 +494,7 @@ const UserList: NextPage = () => {
 					</p>
 				</div>
 			)}
-		</div>
+		</section>
 	)
 }
 

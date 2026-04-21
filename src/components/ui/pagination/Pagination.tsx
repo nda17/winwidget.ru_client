@@ -19,15 +19,15 @@ const Pagination: NextPage<IPagination> = ({
 			<ul>
 				{listPage.map(page => (
 					<li key={page}>
-						<span
+						<button
+							type="button"
 							className={clsx({
 								[styles.active]: page === currentPage
 							})}
-							key={page}
 							onClick={() => changeActivePage(page)}
 						>
 							{page}
-						</span>
+						</button>
 					</li>
 				))}
 			</ul>

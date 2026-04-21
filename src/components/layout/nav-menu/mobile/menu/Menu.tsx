@@ -18,7 +18,11 @@ const Menu: NextPage = () => {
 	}
 
 	return (
-		<div className={styles.wrapper}>
+		<aside
+			id="mobile-navigation-menu"
+			className={styles.wrapper}
+			aria-label="Мобильное меню"
+		>
 			<div className={styles.header}>
 				<LogoImage />
 				<button
@@ -42,7 +46,7 @@ const Menu: NextPage = () => {
 			</div>
 			<MobileStaticMenu />
 			<MobileDynamicMenu />
-		</div>
+		</aside>
 	)
 }
 

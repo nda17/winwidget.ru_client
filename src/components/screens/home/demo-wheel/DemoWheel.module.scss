@@ -59,6 +59,10 @@
 	}
 }
 
+.backdrop {
+	@apply absolute inset-0 border-none bg-transparent p-0;
+}
+
 /* ── Card ── */
 .card {
 	@apply relative flex flex-col items-center rounded-[20px] overflow-hidden gap-7 min-h-[calc(100dvh-24px)] justify-center w-full;
@@ -121,7 +125,7 @@
 	@apply flex flex-col items-center gap-[14px] w-full;
 
 	@media (min-width: 768px) {
-		@apply max-w-[290px] items-start gap-3;
+		@apply max-w-[290px] gap-3;
 	}
 }
 

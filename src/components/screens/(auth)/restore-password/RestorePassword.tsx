@@ -6,9 +6,14 @@ import { NextPage } from 'next'
 
 const RestorePassword: NextPage = () => {
 	return (
-		<div className={styles.wrapper}>
+		<section
+			className={styles.wrapper}
+			aria-labelledby="restore-password-title"
+		>
 			<div className={styles.form}>
-				<h2 className={styles.title}>Восстановление пароля</h2>
+				<h1 id="restore-password-title" className={styles.title}>
+					Восстановление пароля
+				</h1>
 				<p className={styles.subtitle}>
 					Укажите email или телефон, и мы отправим дальнейшие инструкции.
 				</p>
@@ -19,7 +24,7 @@ const RestorePassword: NextPage = () => {
 					</Link>
 				</div>
 			</div>
-		</div>
+		</section>
 	)
 }
 

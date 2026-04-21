@@ -18,9 +18,13 @@ export const SearchField: NextPage<ISearchField> = ({
 				onChange={handleSearch}
 			/>
 			{!searchTerm ? null : (
-				<span onClick={handleClear}>
+				<button
+					type="button"
+					onClick={handleClear}
+					aria-label="Очистить поиск"
+				>
 					<AppIcon name="close" />
-				</span>
+				</button>
 			)}
 		</div>
 	)
