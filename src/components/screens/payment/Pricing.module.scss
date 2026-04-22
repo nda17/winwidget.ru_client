@@ -7,6 +7,10 @@
 .currentPlan {
 	@apply flex items-center gap-4 mb-6 px-5 py-3 rounded-xl text-sm bg-white border border-[#e0d6f0] text-[#555];
 }
+.currentPlanSkeletonLine,
+.currentPlanSkeletonBadge {
+	@apply block leading-none;
+}
 .statusActive {
 	@apply px-2 py-[2px] rounded text-xs font-semibold bg-[#d1fae5] text-[#065f46];
 }
@@ -126,6 +130,10 @@
 	}
 	.currentPlan {
 		@apply flex-wrap gap-2 px-4 py-[0.625rem] text-[0.82rem];
+	}
+	.currentPlanSkeletonLine,
+	.currentPlanSkeletonBadge {
+		@apply w-full;
 	}
 	.periodToggle {
 		@apply w-full;

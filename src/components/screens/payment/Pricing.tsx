@@ -1,5 +1,6 @@
 'use client'
 
+import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import subscriptionService from '@/services/subscription/subscription.service'
 import { BillingPeriod, Plan } from '@/services/widget/widget.types'
 import { useAuthStore } from '@/store/auth-store/auth-store'
@@ -33,9 +34,9 @@ const PLANS = [
 
 const Pricing = () => {
 	const auth = useAuthStore(state => state.auth)
-	const [period, setPeriod] = useState<BillingPeriod>('MONTHLY')
+	const [period, setPeriod] = useState<BillingPeriod>('YEARLY')
 
-	const { data: subscription } = useQuery({
+	const { data: subscription, isLoading: subLoading } = useQuery({
 		queryKey: ['subscription'],
 		queryFn: subscriptionService.getMySubscription,
 		enabled: auth
@@ -80,7 +81,26 @@ const Pricing = () => {
 				Оплата
 			</h1>
 
-			{subscription && (
+			{auth && subLoading ? (
+				<div className={styles.currentPlan} aria-hidden="true">
+					<SkeletonLoader
+						height={18}
+						width={220}
+						containerClassName={styles.currentPlanSkeletonLine}
+					/>
+					<SkeletonLoader
+						height={18}
+						width={90}
+						containerClassName={styles.currentPlanSkeletonLine}
+					/>
+					<SkeletonLoader
+						height={24}
+						width={74}
+						borderRadius={999}
+						containerClassName={styles.currentPlanSkeletonBadge}
+					/>
+				</div>
+			) : subscription ? (
 				<div className={styles.currentPlan}>
 					<span>
 						Текущий тариф: <strong>{planLabel[subscription.plan]}</strong>
@@ -101,7 +121,7 @@ const Pricing = () => {
 						{isActive ? 'Активна' : 'Истекла'}
 					</span>
 				</div>
-			)}
+			) : null}
 
 			{/* Period toggle */}
 			<fieldset className={styles.periodGroup}>
