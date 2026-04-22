@@ -1,3 +1,5 @@
+'use client'
+
 import styles from '@/components/screens/admin/statistics/Statistics.module.scss'
 import OverviewDistributionChart from '@/components/screens/admin/statistics/charts/OverviewDistributionChart/OverviewDistributionChart'
 import RegistrationByMonthBarChart from '@/components/screens/admin/statistics/charts/RegistrationByMonthBarChart/RegistrationByMonthBarChart'

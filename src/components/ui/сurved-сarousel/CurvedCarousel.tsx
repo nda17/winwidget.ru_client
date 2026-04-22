@@ -1,12 +1,6 @@
 'use client'
 
-import {
-	type CSSProperties,
-	type ReactNode,
-	useEffect,
-	useRef,
-	useState
-} from 'react'
+import { type CSSProperties, type ReactNode } from 'react'
 import styles from './CurvedCarousel.module.scss'
 
 interface Slide {
@@ -290,35 +284,6 @@ const renderCards = (isDuplicate = false) =>
 	))
 
 export default function CurvedCarousel() {
-	const resumeTimerRef = useRef<number | null>(null)
-	const [isMobileInteracting, setIsMobileInteracting] = useState(false)
-
-	const clearResumeTimer = () => {
-		if (resumeTimerRef.current) {
-			window.clearTimeout(resumeTimerRef.current)
-			resumeTimerRef.current = null
-		}
-	}
-
-	const pauseAutoplay = () => {
-		clearResumeTimer()
-		setIsMobileInteracting(true)
-	}
-
-	const resumeAutoplay = (delay = 1400) => {
-		clearResumeTimer()
-		resumeTimerRef.current = window.setTimeout(() => {
-			setIsMobileInteracting(false)
-			resumeTimerRef.current = null
-		}, delay)
-	}
-
-	useEffect(() => {
-		return () => {
-			clearResumeTimer()
-		}
-	}, [])
-
 	return (
 		<section
 			className={styles.section}
@@ -330,18 +295,7 @@ export default function CurvedCarousel() {
 				</h2>
 			</div>
 
-			<div
-				className={`${styles.viewport} ${
-					isMobileInteracting ? styles.viewportInteracting : ''
-				}`}
-				onTouchStart={pauseAutoplay}
-				onTouchEnd={() => resumeAutoplay()}
-				onTouchCancel={() => resumeAutoplay(900)}
-				onScroll={() => {
-					pauseAutoplay()
-					resumeAutoplay(1100)
-				}}
-			>
+			<div className={styles.viewport}>
 				<div className={styles.track}>
 					<div className={styles.group}>{renderCards()}</div>
 					<div

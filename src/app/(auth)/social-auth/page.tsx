@@ -1,4 +1,3 @@
-'use client'
 import SocialAuth from '@/components/screens/(auth)/social-auth/SocialAuth'
 import { Suspense } from 'react'
 

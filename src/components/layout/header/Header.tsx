@@ -1,4 +1,3 @@
-'use client'
 import styles from '@/components/layout/header/Header.module.scss'
 import DesktopNavBar from '@/components/layout/nav-menu/desktop/DesktopNavBar'
 import MobileNavBar from '@/components/layout/nav-menu/mobile/MobileNavBar'

@@ -1,4 +1,3 @@
-'use client'
 import styles from '@/components/screens/admin/Admin.module.scss'
 import Statistics from '@/components/screens/admin/statistics/Statistics'
 import AdminNavigation from '@/components/ui/admin/admin-navigation/AdminNavigation'

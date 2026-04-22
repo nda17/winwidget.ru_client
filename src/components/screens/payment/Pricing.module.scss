@@ -13,15 +13,6 @@
 .statusExpired {
 	@apply px-2 py-[2px] rounded text-xs font-semibold bg-[#fde8e8] text-[#c0392b];
 }
-.trialCard {
-	@apply w-full max-w-[20rem] px-6 py-5 rounded-[1rem] mb-8 text-center bg-white border border-[#e0d6f0];
-}
-.trialTitle {
-	@apply text-xl font-bold mb-1 text-[#7b3fa0];
-}
-.trialDesc {
-	@apply text-sm mb-3 text-[#aaa];
-}
 .periodGroup {
 	@apply border-none p-0 m-0 mb-8;
 }
@@ -135,9 +126,6 @@
 	}
 	.currentPlan {
 		@apply flex-wrap gap-2 px-4 py-[0.625rem] text-[0.82rem];
-	}
-	.trialCard {
-		@apply max-w-none px-5 py-4 mb-6;
 	}
 	.periodToggle {
 		@apply w-full;

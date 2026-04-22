@@ -35,7 +35,7 @@ const Pricing = () => {
 	const auth = useAuthStore(state => state.auth)
 	const [period, setPeriod] = useState<BillingPeriod>('MONTHLY')
 
-	const { data: subscription, isLoading: subLoading } = useQuery({
+	const { data: subscription } = useQuery({
 		queryKey: ['subscription'],
 		queryFn: subscriptionService.getMySubscription,
 		enabled: auth
@@ -85,7 +85,7 @@ const Pricing = () => {
 					<span>
 						Текущий тариф: <strong>{planLabel[subscription.plan]}</strong>
 					</span>
-					{subscription.plan !== 'TRIAL' && subscription.expiresAt && (
+					{subscription.expiresAt && (
 						<span>
 							до{' '}
 							{new Date(subscription.expiresAt).toLocaleDateString(
@@ -102,22 +102,6 @@ const Pricing = () => {
 					</span>
 				</div>
 			)}
-
-			{/* Trial info */}
-			<section
-				className={styles.trialCard}
-				aria-labelledby="pricing-trial-title"
-			>
-				<h2 id="pricing-trial-title" className={styles.trialTitle}>
-					Тест-драйв
-				</h2>
-				<p className={styles.trialDesc}>Бесплатно при регистрации</p>
-				<ul className={styles.features}>
-					<li>1 виджет</li>
-					<li>До 10 заявок</li>
-					<li>7 дней</li>
-				</ul>
-			</section>
 
 			{/* Period toggle */}
 			<fieldset className={styles.periodGroup}>

@@ -1,3 +1,5 @@
+'use client'
+
 import AdminNavItem from '@/components/ui/admin/admin-navigation/AdminNavItem'
 import styles from '@/components/ui/admin/admin-navigation/AdminNavigation.module.scss'
 import { navItems } from '@/components/ui/admin/admin-navigation/data/admin-navigation.data'

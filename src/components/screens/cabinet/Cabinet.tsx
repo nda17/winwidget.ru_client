@@ -81,15 +81,14 @@ const Cabinet: FC = () => {
 							{planName && (
 								<span className={styles.planBadge}>{planName}</span>
 							)}
-							{subscription?.expiresAt &&
-								subscription.plan !== 'TRIAL' && (
-									<p className={styles.planExpires}>
-										до{' '}
-										{new Date(subscription.expiresAt).toLocaleDateString(
-											'ru-RU'
-										)}
-									</p>
-								)}
+							{subscription?.expiresAt && (
+								<p className={styles.planExpires}>
+									до{' '}
+									{new Date(subscription.expiresAt).toLocaleDateString(
+										'ru-RU'
+									)}
+								</p>
+							)}
 						</>
 					)}
 				</div>

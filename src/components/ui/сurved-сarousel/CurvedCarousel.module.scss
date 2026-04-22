@@ -62,11 +62,6 @@
 	animation-play-state: paused;
 }
 
-.viewportInteracting .track,
-.viewportInteracting .card {
-	animation-play-state: paused;
-}
-
 .group {
 	@apply flex shrink-0 items-center bg-transparent;
 	gap: var(--carousel-gap);
@@ -262,13 +257,14 @@
 	}
 
 	.viewport {
-		@apply overflow-x-auto bg-transparent px-[4vw] pb-5 pt-3;
-		scroll-snap-type: x mandatory;
-		scroll-padding-inline: 4vw;
-		-webkit-overflow-scrolling: touch;
+		@apply overflow-hidden bg-transparent px-[4vw] pb-5 pt-3;
+		scroll-snap-type: none;
+		scroll-padding-inline: 0;
 		scrollbar-width: none;
-		overscroll-behavior-x: contain;
-		touch-action: pan-x;
+		overscroll-behavior-x: none;
+		touch-action: none;
+		pointer-events: none;
+		user-select: none;
 		mask-image: linear-gradient(
 			90deg,
 			transparent 0%,
