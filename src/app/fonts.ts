@@ -21,7 +21,8 @@ export const criticalUnbounded = localFont({
 		}
 	],
 	variable: '--font-unbounded',
-	display: 'swap'
+	display: 'optional',
+	fallback: ['Arial', 'Helvetica', 'sans-serif']
 })
 
 export const fullRoboto = localFont({
