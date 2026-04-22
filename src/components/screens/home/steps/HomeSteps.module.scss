@@ -68,7 +68,7 @@
 }
 
 .cardTop {
-	@apply flex items-start justify-between gap-4 mb-6;
+	@apply flex items-start justify-between gap-4 mb-[0.6rem];
 }
 
 .iconShell {
@@ -120,7 +120,7 @@
 }
 
 .text {
-	@apply flex-1 text-[20px] leading-[1.28] text-[#231f2f] max-w-[15ch];
+	@apply flex-1 text-[20px] leading-[1.28] text-[#231f2f] max-w-[15ch] z-1;
 	font-family: var(--second-family);
 	font-weight: 500;
 	letter-spacing: -0.015em;
@@ -131,7 +131,7 @@
 }
 
 .num {
-	@apply absolute bottom-[1rem] right-[1.2rem] font-bold leading-none text-[58px];
+	@apply absolute bottom-[0.2rem] right-[0.7rem] font-bold leading-none text-[58px];
 	font-family: var(--font-family);
 	color: color-mix(in srgb, var(--card-accent) 16%, white);
 	text-shadow: 0 1px 0 rgb(255 255 255 / 0.8);
