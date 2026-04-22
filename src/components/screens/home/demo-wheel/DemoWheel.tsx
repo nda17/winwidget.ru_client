@@ -412,7 +412,7 @@ const DemoWheel = () => {
 					type="button"
 					className={styles.floatBtn}
 					onClick={() => setOpen(true)}
-					aria-label="Открыть демо виджет"
+					aria-label="Приз! Открыть демо-виджет"
 				>
 					<span className={styles.floatIcon}>🎁</span>
 					<span className={styles.floatLabel}>Приз!</span>

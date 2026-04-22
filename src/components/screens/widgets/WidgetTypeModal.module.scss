@@ -32,8 +32,7 @@
 }
 
 .card {
-	@apply relative flex flex-col items-center gap-3 rounded-[1rem] border-2 border-[#e0d6f0] bg-[#f8f5ff] cursor-pointer transition-[border-color,box-shadow,transform] duration-200 text-center;
-	@apply pt-7 px-5 pb-6;
+	@apply relative flex flex-col items-center gap-3 rounded-[1rem] border-2 border-[#e0d6f0] bg-[#f8f5ff] cursor-pointer transition-[border-color,box-shadow,transform] duration-200 text-center pt-7 px-5 pb-6;
 }
 .card:hover:not(:disabled) {
 	@apply border-[#c4a8e8] -translate-y-[2px];
@@ -75,7 +74,6 @@
 		@apply text-xl;
 	}
 	.card {
-		@apply gap-2;
-		@apply pt-5 px-[0.875rem] pb-[1.125rem];
+		@apply gap-2 pt-5 px-[0.875rem] pb-[1.125rem];
 	}
 }

@@ -18,13 +18,11 @@
 /* Billing toggle */
 
 .toggle {
-	@apply flex items-center justify-center gap-1 mb-10 bg-[#f0eaf9] rounded-full mx-auto w-fit;
-	@apply p-1;
+	@apply flex items-center justify-center gap-1 mb-10 bg-[#f0eaf9] rounded-full mx-auto w-fit p-1;
 }
 
 .toggleBtn {
-	@apply flex items-center gap-2 rounded-full text-sm font-medium text-[#7b5fa0] bg-transparent border-none cursor-pointer whitespace-nowrap;
-	@apply py-2 px-[22px];
+	@apply flex items-center gap-2 rounded-full text-sm font-medium text-[#65438a] bg-transparent border-none cursor-pointer whitespace-nowrap py-2 px-[22px];
 	font-family: var(--second-family);
 	transition:
 		background 0.25s ease,
@@ -42,8 +40,7 @@
 }
 
 .toggleDiscount {
-	@apply inline-block rounded-full text-[11px] font-bold text-white leading-[1.4];
-	@apply py-[2px] px-2;
+	@apply inline-block rounded-full text-[11px] font-bold text-white leading-[1.4] py-[2px] px-2;
 	font-family: var(--second-family);
 	background: linear-gradient(
 		87.12deg,
@@ -58,16 +55,14 @@
 	@apply grid grid-cols-3 gap-5;
 
 	@media (max-width: 768px) {
-		@apply grid-cols-1 max-w-[420px] mx-auto;
-		@apply gap-10;
+		@apply grid-cols-1 max-w-[420px] mx-auto gap-10;
 	}
 }
 
 /* Card */
 
 .card {
-	@apply relative rounded-[24px] bg-white border-[1.5px] border-transparent overflow-visible;
-	@apply bg-clip-padding;
+	@apply relative rounded-[24px] bg-white border-[1.5px] border-transparent overflow-visible bg-clip-padding;
 	transition:
 		transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
 		box-shadow 0.35s ease,
@@ -76,8 +71,7 @@
 	/* Gradient border default */
 	&::before {
 		content: '';
-		@apply absolute inset-0 rounded-[inherit] pointer-events-none;
-		@apply p-[1.5px];
+		@apply absolute inset-0 rounded-[inherit] pointer-events-none p-[1.5px];
 		background: linear-gradient(135deg, #e0d4f7, #f7a8c4);
 		-webkit-mask:
 			linear-gradient(#fff 0 0) content-box,
@@ -179,8 +173,7 @@
 /* Badge */
 
 .badge {
-	@apply absolute left-1/2 -translate-x-1/2 z-[3] whitespace-nowrap rounded-full text-xs font-semibold text-white;
-	@apply -bottom-[14px] py-[5px] px-[18px];
+	@apply absolute left-1/2 -translate-x-1/2 z-[3] whitespace-nowrap rounded-full text-xs font-semibold text-white -bottom-[14px] py-[5px] px-[18px];
 	font-family: var(--second-family);
 	background: linear-gradient(
 		87.12deg,
@@ -195,12 +188,10 @@
 /* Card inner */
 
 .cardInner {
-	@apply relative z-[1] flex flex-col justify-between h-full min-h-[320px];
-	@apply pt-[1.8rem] px-[1.6rem] pb-[1.6rem];
+	@apply relative z-[1] flex flex-col justify-between h-full min-h-[320px] pt-[1.8rem] px-[1.6rem] pb-[1.6rem];
 
 	@media (max-width: 640px) {
-		@apply min-h-0;
-		@apply pt-[1.4rem] px-[1.2rem] pb-[1.2rem];
+		@apply min-h-0 pt-[1.4rem] px-[1.2rem] pb-[1.2rem];
 	}
 }
 
@@ -262,8 +253,7 @@
 /* Button */
 
 .btn {
-	@apply block w-full text-center rounded-xl text-[15px] font-semibold text-[#7b3fa0] bg-[#f3eeff] border-none;
-	@apply py-3 px-4;
+	@apply block w-full text-center rounded-xl text-[15px] font-semibold text-[#7b3fa0] bg-[#f3eeff] border-none py-3 px-4;
 	font-family: var(--font-family);
 	transition:
 		background 0.35s ease,

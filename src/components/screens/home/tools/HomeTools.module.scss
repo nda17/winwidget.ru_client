@@ -100,8 +100,7 @@
 /* Wheel preview */
 
 .wheelPreview {
-	@apply relative shrink-0;
-	@apply w-[min(220px,85%)] aspect-square mt-4;
+	@apply relative shrink-0 w-[min(220px,85%)] aspect-square mt-4;
 }
 
 .wheelSvg {
@@ -122,8 +121,7 @@
 }
 
 .cardFooter {
-	@apply bg-white;
-	@apply pt-[1.1rem] px-[1.4rem] pb-[1.4rem] border-t border-black/[0.06];
+	@apply bg-white pt-[1.1rem] px-[1.4rem] pb-[1.4rem] border-t border-black/[0.06];
 }
 
 .cardTitle {
@@ -160,10 +158,17 @@
 }
 
 .dot {
-	@apply w-2 h-2 rounded-full bg-[#d8c8eb] border-none cursor-pointer p-0 transition-[background,transform] duration-200;
+	@apply relative flex items-center justify-center w-6 h-6 rounded-full bg-transparent border-none cursor-pointer p-0 transition-transform duration-200;
+
+	&::before {
+		content: '';
+		@apply block w-2 h-2 rounded-full bg-[#d8c8eb] transition-[background,transform] duration-200;
+	}
 
 	&Active {
-		@apply bg-[#a855f7] scale-[1.3];
+		&::before {
+			@apply bg-[#a855f7] scale-[1.3];
+		}
 	}
 }
 
@@ -192,8 +197,7 @@
 }
 
 .ctaButton {
-	@apply inline-flex items-center gap-3 text-[16px] font-semibold text-white rounded-full;
-	@apply py-[0.85rem] pr-[1.2rem] pl-[2.4rem];
+	@apply inline-flex items-center gap-3 text-[16px] font-semibold text-white rounded-full py-[0.85rem] pr-[1.2rem] pl-[2.4rem];
 	font-family: var(--font-family);
 	background: linear-gradient(
 		90deg,

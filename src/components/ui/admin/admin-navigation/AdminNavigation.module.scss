@@ -12,8 +12,7 @@
 	}
 
 	@media (max-width: 640px) {
-		@apply justify-start pb-2;
-		@apply px-[4px];
+		@apply justify-start pb-2 px-[4px];
 		scrollbar-width: thin;
 		scrollbar-color: #470b58 #ede8f7;
 

@@ -1,6 +1,5 @@
 .wrapper {
-	@apply flex items-center justify-center py-14 md:py-20;
-	@apply min-h-[calc(100dvh-8rem)];
+	@apply flex items-center justify-center py-14 md:py-20 min-h-[calc(100dvh-8rem)];
 
 	.form {
 		@apply w-full max-w-[30rem] rounded-[1.75rem] border border-[#e0d6f0] p-6 md:p-8 bg-white;

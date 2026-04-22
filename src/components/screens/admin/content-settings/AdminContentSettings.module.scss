@@ -76,8 +76,7 @@
 }
 
 .resetBtn {
-	@apply rounded-lg border border-[#c4a8e8] bg-transparent text-[#7b3fa0] text-sm font-semibold cursor-pointer transition-[background] duration-150;
-	@apply py-[9px] px-[22px];
+	@apply rounded-lg border border-[#c4a8e8] bg-transparent text-[#7b3fa0] text-sm font-semibold cursor-pointer transition-[background] duration-150 py-[9px] px-[22px];
 
 	&:hover {
 		@apply bg-[#f3eeff];

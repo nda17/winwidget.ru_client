@@ -64,8 +64,7 @@
 	@apply bg-white;
 }
 .codeArea {
-	@apply resize-none text-xs min-h-[80px];
-	@apply font-mono;
+	@apply resize-none text-xs min-h-[80px] font-mono;
 }
 .colorRow {
 	@apply flex items-end gap-3;

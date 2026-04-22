@@ -1,4 +1,32 @@
+import clsx from 'clsx'
 import styles from './HomeSteps.module.scss'
+
+const STEPS = [
+	{
+		num: 1,
+		text: 'Настройте дизайн и логику виджета в личном кабинете',
+		accent: '#e05a8a',
+		border: 'linear-gradient(135deg, #f7a8c4, #e05a8a)',
+		glow: 'radial-gradient(circle at top left, rgb(224 90 138 / 0.22), transparent 58%)',
+		iconClass: 'cardFirst'
+	},
+	{
+		num: 2,
+		text: 'Скопируйте одну строчку кода',
+		accent: '#7b5ce5',
+		border: 'linear-gradient(135deg, #c4b0f7, #7b5ce5)',
+		glow: 'radial-gradient(circle at top left, rgb(123 92 229 / 0.22), transparent 58%)',
+		iconClass: 'cardSecond'
+	},
+	{
+		num: 3,
+		text: 'Вставьте в код своего сайта',
+		accent: '#3a8fd4',
+		border: 'linear-gradient(135deg, #a8d4f7, #3a8fd4)',
+		glow: 'radial-gradient(circle at top left, rgb(58 143 212 / 0.2), transparent 58%)',
+		iconClass: 'cardThird'
+	}
+]
 
 const HomeSteps = () => {
 	return (
@@ -6,65 +34,56 @@ const HomeSteps = () => {
 			<h2 className={styles.title}>Установка проще, чем сварить кофе..</h2>
 
 			<div className={styles.gridLayout}>
-				<div
-					className={styles.card}
-					style={
-						{
-							'--border-gradient':
-								'linear-gradient(135deg, #f7a8c4, #e05a8a)'
-						} as React.CSSProperties
-					}
-				>
-					<span className={styles.cardFirst}></span>
-					<p className={styles.text}>
-						Настройте дизайн и логику виджета в личном кабинете
-					</p>
-					<span className={styles.num} style={{ color: '#e05a8a' }}>
-						{String(1).padStart(2, '0')}
-					</span>
-				</div>
+				{STEPS.map(step => (
+					<div
+						key={step.num}
+						className={styles.card}
+						style={
+							{
+								'--border-gradient': step.border,
+								'--card-accent': step.accent,
+								'--card-glow': step.glow
+							} as React.CSSProperties
+						}
+					>
+						<div className={styles.cardSurface}>
+							<div className={styles.cardTop}>
+								<div className={styles.iconShell}>
+									<span
+										className={clsx(
+											styles.cardIcon,
+											styles[step.iconClass as keyof typeof styles]
+										)}
+									></span>
+								</div>
+								<span className={styles.cardBadge}>
+									Шаг {String(step.num).padStart(2, '0')}
+								</span>
+							</div>
 
-				<div
-					className={styles.card}
-					style={
-						{
-							'--border-gradient':
-								'linear-gradient(135deg, #c4b0f7, #7b5ce5)'
-						} as React.CSSProperties
-					}
-				>
-					<span className={styles.cardSecond}></span>
-					<p className={styles.text}>Скопируйте одну строчку кода</p>
-					<span className={styles.num} style={{ color: '#7b5ce5' }}>
-						{String(2).padStart(2, '0')}
-					</span>
-				</div>
+							<p className={styles.text}>{step.text}</p>
 
-				<div
-					className={styles.card}
-					style={
-						{
-							'--border-gradient':
-								'linear-gradient(135deg, #a8d4f7, #3a8fd4)'
-						} as React.CSSProperties
-					}
-				>
-					<span className={styles.cardThird}></span>
-					<p className={styles.text}>Вставьте в код своего сайта</p>
-					<span className={styles.num} style={{ color: '#3a8fd4' }}>
-						{String(3).padStart(2, '0')}
-					</span>
-				</div>
+							<span className={styles.num}>
+								{String(step.num).padStart(2, '0')}
+							</span>
+						</div>
+					</div>
+				))}
 
 				<div className={styles.cardResult}>
-					<span className={styles.iconHeart}></span>
-					<p className={styles.resultText}>
-						Ловите
-						<br />
-						горячие
-						<br />
-						лиды!
-					</p>
+					<div className={styles.resultInner}>
+						<div className={styles.resultTop}>
+							<span className={styles.resultBadge}>Результат</span>
+							<span className={styles.iconHeart}></span>
+						</div>
+						<p className={styles.resultText}>
+							Ловите
+							<br />
+							горячие
+							<br />
+							лиды!
+						</p>
+					</div>
 				</div>
 			</div>
 		</section>

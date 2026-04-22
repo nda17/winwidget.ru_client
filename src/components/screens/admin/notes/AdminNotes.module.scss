@@ -19,8 +19,7 @@
 }
 
 .input {
-	@apply flex-1 rounded-lg border border-[#e0d6f0] bg-[#f8f5ff] text-[#1a1a1a] outline-none transition-[border-color] duration-150 text-[0.9rem];
-	@apply py-[9px] px-[14px];
+	@apply flex-1 rounded-lg border border-[#e0d6f0] bg-[#f8f5ff] text-[#1a1a1a] outline-none transition-[border-color] duration-150 text-[0.9rem] py-[9px] px-[14px];
 
 	&::placeholder {
 		@apply text-[#bbb];

@@ -14,7 +14,7 @@ const Footer: NextPage = () => {
 			<div className={clsx(styles['layout-container'])}>
 				<div className={clsx(styles['information-wrapper'])}>
 					<div className={clsx(styles['contacts-wrapper'])}>
-						<h4 className={clsx(styles['title-block'])}>О нас:</h4>
+						<p className={clsx(styles['title-block'])}>О нас:</p>
 						<p className={clsx(styles['info-llc'])}>ООО «ЮБС»</p>
 						<p className={clsx(styles['info-llc'])}>ИНН: 2700019628</p>
 						<p className={clsx(styles['info-llc'])}>ОГРН: 1232700016460</p>
@@ -34,12 +34,16 @@ const Footer: NextPage = () => {
 								<Link
 									href={PUBLIC_PAGES.SOCIALS_LINK_VK}
 									className={clsx(styles['link-icon'])}
+									aria-label="Winwidget во ВКонтакте"
+									title="Winwidget во ВКонтакте"
 								>
 									<AppIcon name="vk" fill="#000000" />
 								</Link>
 								<Link
 									href={PUBLIC_PAGES.SOCIALS_LINK_TG}
 									className={clsx(styles['link-icon'])}
+									aria-label="Winwidget в Telegram"
+									title="Winwidget в Telegram"
 								>
 									<AppIcon name="telegram" fill="#000000" />
 								</Link>
@@ -51,9 +55,9 @@ const Footer: NextPage = () => {
 						className={clsx(styles['legal-wrapper'])}
 						aria-label="Правовая информация"
 					>
-						<h4 className={clsx(styles['title-block'])}>
+						<p className={clsx(styles['title-block'])}>
 							Правовая информация:
-						</h4>
+						</p>
 						<Link
 							href={PUBLIC_PAGES.CONSENT_PROCESSING}
 							className={clsx(styles['link-legal'])}

@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import styles from './Analysis.module.scss'
 
 const CARDS = [
@@ -5,25 +6,33 @@ const CARDS = [
 		num: 1,
 		text: 'Собираются уйти',
 		accent: '#e05a8a',
-		border: 'linear-gradient(135deg, #f7a8c4, #e05a8a)'
+		border: 'linear-gradient(135deg, #f7a8c4, #e05a8a)',
+		glow: 'radial-gradient(circle at top left, rgb(224 90 138 / 0.22), transparent 58%)',
+		iconClass: 'cardFirst'
 	},
 	{
 		num: 2,
 		text: 'Долго листают страницу',
 		accent: '#3a8fd4',
-		border: 'linear-gradient(135deg, #a8d4f7, #3a8fd4)'
+		border: 'linear-gradient(135deg, #a8d4f7, #3a8fd4)',
+		glow: 'radial-gradient(circle at top left, rgb(58 143 212 / 0.2), transparent 58%)',
+		iconClass: 'cardSecond'
 	},
 	{
 		num: 3,
 		text: 'Сравнивают с конкурентами',
 		accent: '#2aab7a',
-		border: 'linear-gradient(135deg, #a8f0d4, #2aab7a)'
+		border: 'linear-gradient(135deg, #a8f0d4, #2aab7a)',
+		glow: 'radial-gradient(circle at top left, rgb(42 171 122 / 0.2), transparent 58%)',
+		iconClass: 'cardThird'
 	},
 	{
 		num: 4,
 		text: 'Хотят быстрой связи',
 		accent: '#7b5ce5',
-		border: 'linear-gradient(135deg, #c4b0f7, #7b5ce5)'
+		border: 'linear-gradient(135deg, #c4b0f7, #7b5ce5)',
+		glow: 'radial-gradient(circle at top left, rgb(123 92 229 / 0.2), transparent 58%)',
+		iconClass: 'cardFour'
 	}
 ]
 
@@ -42,69 +51,41 @@ const Analysis = () => {
 			</span>
 
 			<div className={styles.gridLayout}>
-				<div
-					className={styles.card}
-					style={
-						{
-							'--border-gradient':
-								'linear-gradient(135deg, #f7a8c4, #e05a8a)'
-						} as React.CSSProperties
-					}
-				>
-					<span className={styles.cardFirst}></span>
-					<p className={styles.text}>Собираются уйти</p>
-					<span className={styles.num} style={{ color: '#e05a8a' }}>
-						{String(1).padStart(2, '0')}
-					</span>
-				</div>
+				{CARDS.map(card => (
+					<div
+						key={card.num}
+						className={styles.card}
+						style={
+							{
+								'--border-gradient': card.border,
+								'--card-accent': card.accent,
+								'--card-glow': card.glow
+							} as React.CSSProperties
+						}
+					>
+						<div className={styles.cardSurface}>
+							<div className={styles.cardTop}>
+								<div className={styles.iconShell}>
+									<span
+										className={clsx(
+											styles.cardIcon,
+											styles[card.iconClass as keyof typeof styles]
+										)}
+									></span>
+								</div>
+								<span className={styles.cardBadge}>
+									Сценарий {String(card.num).padStart(2, '0')}
+								</span>
+							</div>
 
-				<div
-					className={styles.card}
-					style={
-						{
-							'--border-gradient':
-								'linear-gradient(135deg, #a8d4f7, #3a8fd4)'
-						} as React.CSSProperties
-					}
-				>
-					<span className={styles.cardSecond}></span>
-					<p className={styles.text}>Долго листают страницу</p>
-					<span className={styles.num} style={{ color: '#3a8fd4' }}>
-						{String(2).padStart(2, '0')}
-					</span>
-				</div>
+							<p className={styles.text}>{card.text}</p>
 
-				<div
-					className={styles.card}
-					style={
-						{
-							'--border-gradient':
-								'linear-gradient(135deg, #a8f0d4, #2aab7a)'
-						} as React.CSSProperties
-					}
-				>
-					<span className={styles.cardThird}></span>
-					<p className={styles.text}>Сравнивают с конкурентами</p>
-					<span className={styles.num} style={{ color: '#2aab7a' }}>
-						{String(3).padStart(2, '0')}
-					</span>
-				</div>
-
-				<div
-					className={styles.card}
-					style={
-						{
-							'--border-gradient':
-								'linear-gradient(135deg, #c4b0f7, #7b5ce5)'
-						} as React.CSSProperties
-					}
-				>
-					<span className={styles.cardFour}></span>
-					<p className={styles.text}>Хотят быстрой связи</p>
-					<span className={styles.num} style={{ color: '#7b5ce5' }}>
-						{String(4).padStart(2, '0')}
-					</span>
-				</div>
+							<span className={styles.num}>
+								{String(card.num).padStart(2, '0')}
+							</span>
+						</div>
+					</div>
+				))}
 			</div>
 		</section>
 	)

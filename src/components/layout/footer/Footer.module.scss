@@ -5,33 +5,42 @@
 		@apply flex flex-col max-w-[88rem] w-full;
 
 		.information-wrapper {
-			@apply flex flex-col gap-[.6rem] sm:flex-row sm:justify-end mb-4 z-10;
+			@apply flex flex-col gap-[.6rem] mb-4 z-10 sm:flex-row sm:justify-end;
 
 			.socials-wrapper {
-				@apply flex flex-col mr-2 items-center sm:items-baseline gap-3 sm:gap-[.7rem];
-
-				.title-block {
-					@apply text-black font-500 text-[.8rem] select-none;
-				}
+				@apply flex flex-col items-center sm:items-baseline gap-3 sm:gap-[.7rem];
 
 				.link-icon-wrapper {
-					@apply flex flex-wrap;
+					@apply flex flex-wrap gap-2;
 
 					.link-icon {
-						@apply mr-1 mb-1;
+						@apply inline-flex items-center justify-center w-9 h-9 rounded-full transition-[transform,box-shadow];
+						background: linear-gradient(
+							135deg,
+							rgb(255 247 239 / 0.96) 0%,
+							rgb(255 238 227 / 0.94) 48%,
+							rgb(246 234 255 / 0.92) 100%
+						);
+						border: 1px solid rgb(255 255 255 / 0.72);
+						box-shadow:
+							inset 0 1px 0 rgb(255 255 255 / 0.85),
+							0 8px 18px rgb(248 189 49 / 0.14),
+							0 4px 12px rgb(194 27 132 / 0.08);
 
 						> svg {
-							@apply transition-all;
+							@apply w-4 h-4 transition-all;
 						}
 
 						&:hover {
+							@apply -translate-y-px;
+							box-shadow:
+								inset 0 1px 0 rgb(255 255 255 / 0.9),
+								0 12px 22px rgb(248 189 49 / 0.18),
+								0 6px 16px rgb(194 27 132 / 0.1);
+
 							> svg {
 								@apply fill-secondary;
 							}
-						}
-
-						&:last-child {
-							@apply mr-0;
 						}
 					}
 				}
@@ -41,15 +50,15 @@
 				@apply flex flex-col mr-2 items-center sm:items-baseline gap-3 sm:gap-[.7rem];
 
 				.title-block {
-					@apply text-black font-500 text-[.8rem] select-none;
+					@apply text-black font-semibold text-[0.95rem] leading-[1.2rem] select-none;
 				}
 
 				.info-llc {
-					@apply text-black text-[.7rem] leading-[.8rem] select-none;
+					@apply text-black text-[0.8rem] leading-[1.05rem] select-none;
 				}
 
 				.link-contact {
-					@apply text-black text-[.7rem] leading-[.8rem] transition-all;
+					@apply inline-flex min-h-6 items-center text-black text-[0.8rem] leading-[1.05rem] transition-all py-[0.2rem];
 
 					&:hover {
 						@apply text-secondary;
@@ -61,11 +70,11 @@
 				@apply flex flex-col items-center sm:items-baseline gap-3 sm:gap-[.7rem];
 
 				.title-block {
-					@apply text-black font-500 text-[.8rem] select-none;
+					@apply text-black font-semibold text-[0.95rem] leading-[1.2rem] select-none;
 				}
 
 				.link-legal {
-					@apply text-black text-[.7rem] leading-[.7rem] transition-all;
+					@apply inline-flex min-h-6 items-center text-black text-[0.8rem] leading-[1.05rem] transition-all py-[0.2rem] text-center sm:text-left;
 
 					&:hover {
 						@apply text-secondary;
