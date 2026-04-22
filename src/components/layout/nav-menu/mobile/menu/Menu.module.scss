@@ -1,5 +1,5 @@
 .wrapper {
-	@apply fixed right-0 top-0 z-30 w-[min(22rem,100vw)] h-[100dvh] pb-8 bg-white rounded-bl-[24px] border-l border-[#c21b84]/10 overflow-y-auto flex flex-col;
+	@apply fixed right-0 top-0 z-[35] w-[min(22rem,100vw)] h-[100dvh] pb-8 bg-white rounded-bl-[24px] border-l border-[#c21b84]/10 overflow-y-auto flex flex-col;
 	box-shadow:
 		-12px 0 60px rgba(71, 11, 88, 0.12),
 		0 24px 48px rgba(0, 0, 0, 0.08);

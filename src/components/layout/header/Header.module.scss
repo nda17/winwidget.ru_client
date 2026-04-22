@@ -1,5 +1,5 @@
 .header {
-	@apply w-full lg:min-h-32 lg:flex lg:items-center flex min-h-[8rem] items-center relative;
+	@apply w-full relative min-h-[8rem] lg:min-h-32;
 }
 
 .headerAbsolute {
@@ -7,5 +7,13 @@
 }
 
 .header-shell {
-	@apply w-full relative;
+	@apply w-full relative pt-7 lg:pt-10;
+}
+
+.brand {
+	@apply absolute top-3 left-1/2 -translate-x-1/2 z-[35] flex justify-center w-full px-4 pointer-events-none;
+
+	:global(a) {
+		@apply pointer-events-auto;
+	}
 }

@@ -3,22 +3,17 @@
 
 	.heroBackground {
 		@apply absolute z-1 top-[-12px] left-[-187px] w-[1877px] h-[1173px] opacity-[0.3] m-0;
-		background-image: var(--hero-bg-desktop-webp);
-		background-image: image-set(
-			var(--hero-bg-desktop-avif) type('image/avif'),
-			var(--hero-bg-desktop-webp) type('image/webp')
-		);
-		background-position: center;
-		background-repeat: no-repeat;
-		background-size: cover;
 		transform: rotate(548deg);
+		will-change: transform;
 
-		@media (max-width: 767px) {
-			background-image: var(--hero-bg-mobile-webp);
-			background-image: image-set(
-				var(--hero-bg-mobile-avif) type('image/avif'),
-				var(--hero-bg-mobile-webp) type('image/webp')
-			);
+		.heroBackgroundPicture {
+			@apply block w-full h-full;
+		}
+
+		.heroBackgroundImage {
+			@apply block w-full h-full;
+			object-fit: cover;
+			object-position: center;
 		}
 	}
 
@@ -28,6 +23,10 @@
 		@apply pointer-events-none;
 		filter: blur(150px);
 		mix-blend-mode: multiply;
+
+		@media (max-width: 767px) {
+			filter: blur(110px);
+		}
 	}
 
 	.heroFirstCircle {
@@ -53,8 +52,12 @@
 				0 1px 4px rgb(0 0 0 / 0.2);
 		}
 
+		.percentWrapper {
+			@apply relative;
+		}
+
 		.titleSide {
-			@apply w-[98px] lg:w-[166px] h-[42px] lg:h-[66px] rounded-[20px] absolute top-[83px] lg:top-[70px] right-[1.1rem] lg:right-[13.4rem] z-[-1];
+			@apply w-[98px] md:w-[8.5rem] lg:w-[10.3rem] h-[42px] md:h-[3.2rem] lg:h-[3.7rem] rounded-[20px] absolute top-[-4px] md:top-[-1px] lg:top-0 right-[-5px] md:right-[-8px] lg:right-[-9px] z-[-1];
 			transform: rotate(-5deg);
 			background: linear-gradient(
 				87.12deg,

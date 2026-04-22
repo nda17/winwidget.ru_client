@@ -2,10 +2,6 @@
 	@apply hidden lg:flex w-full;
 
 	.layout-container {
-		@apply container w-full flex justify-center items-center gap-4 px-4 py-[0.65rem] relative;
-	}
-
-	.logo {
-		@apply absolute left-[2rem];
+		@apply container w-full flex justify-center items-center gap-4 px-4 py-[1.05rem] relative;
 	}
 }
