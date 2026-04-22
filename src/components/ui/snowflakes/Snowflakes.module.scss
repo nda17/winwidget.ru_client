@@ -11,6 +11,12 @@
 	will-change: transform;
 }
 
+@media (max-width: 767px) {
+	.flake:nth-child(n + 31) {
+		display: none;
+	}
+}
+
 @keyframes snowfall {
 	0% {
 		transform: translateY(-40px) translateX(0) rotate(0deg);

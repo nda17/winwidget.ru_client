@@ -1,6 +1,7 @@
 import '@/assets/styles/globals.scss'
 import Layout from '@/components/layout/Layout'
 import MainProvider from '@/providers/Main-provider/MainProvider'
+import { getSiteSettings } from '@/services/site-settings/site-settings.server'
 import type { Metadata } from 'next'
 import localFont from 'next/font/local'
 import type { PropsWithChildren } from 'react'
@@ -65,12 +66,14 @@ const unbounded = localFont({
 	display: 'swap'
 })
 
-const RootLayout = ({ children }: PropsWithChildren<unknown>) => {
+const RootLayout = async ({ children }: PropsWithChildren<unknown>) => {
+	const siteSettings = await getSiteSettings()
+
 	return (
 		<html lang="ru" className={`${roboto.variable} ${unbounded.variable}`}>
 			<body>
 				<MainProvider>
-					<Layout>{children}</Layout>
+					<Layout siteSettings={siteSettings}>{children}</Layout>
 				</MainProvider>
 			</body>
 		</html>

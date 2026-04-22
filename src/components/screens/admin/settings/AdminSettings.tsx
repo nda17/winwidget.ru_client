@@ -4,6 +4,7 @@ import AdminNavigation from '@/components/ui/admin/admin-navigation/AdminNavigat
 import Heading from '@/components/ui/heading/Heading'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import SubHeading from '@/components/ui/sub-heading/SubHeading'
+import { revalidateSiteSettings } from '@/services/site-settings/site-settings.actions'
 import siteSettingsService from '@/services/site-settings/site-settings.service'
 import {
 	useMutation,
@@ -11,12 +12,14 @@ import {
 	useQueryClient
 } from '@tanstack/react-query'
 import { NextPage } from 'next'
+import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import styles from './AdminSettings.module.scss'
 
 const AdminSettings: NextPage = () => {
 	const queryClient = useQueryClient()
+	const router = useRouter()
 
 	const { data: settings, isLoading } = useQuery({
 		queryKey: ['site-settings'],
@@ -31,19 +34,18 @@ const AdminSettings: NextPage = () => {
 
 	const mutation = useMutation({
 		mutationFn: siteSettingsService.update,
-		onSuccess: () =>
-			queryClient.invalidateQueries({ queryKey: ['site-settings'] })
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ['site-settings'] })
+			await revalidateSiteSettings()
+			router.refresh()
+		}
 	})
 
 	const saveWithToast = (
 		patch: Parameters<typeof siteSettingsService.update>[0],
 		label?: string
 	) => {
-		const promise = siteSettingsService
-			.update(patch)
-			.then(() =>
-				queryClient.invalidateQueries({ queryKey: ['site-settings'] })
-			)
+		const promise = mutation.mutateAsync(patch)
 		toast.promise(promise, {
 			loading: label ?? 'Сохранение...',
 			success: 'Сохранено',

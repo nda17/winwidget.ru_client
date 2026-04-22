@@ -2,16 +2,11 @@ import heroBgDesktopAvif from '@/assets/images/hero/hero-bg-desktop.avif'
 import heroBgDesktopWebp from '@/assets/images/hero/hero-bg-desktop.webp'
 import heroBgMobileAvif from '@/assets/images/hero/hero-bg-mobile.avif'
 import heroBgMobileWebp from '@/assets/images/hero/hero-bg-mobile.webp'
-import Link from 'next/link'
+import HeroActions from './HeroActions'
 import type { CSSProperties } from 'react'
 import styles from './HeroSection.module.scss'
 
-interface IHeroSectionProps {
-	ctaHref: string
-	onScrollToFaq: () => void
-}
-
-const HeroSection = ({ ctaHref, onScrollToFaq }: IHeroSectionProps) => {
+const HeroSection = () => {
 	const heroBackgroundStyle = {
 		'--hero-bg-desktop-webp': `url(${heroBgDesktopWebp.src})`,
 		'--hero-bg-desktop-avif': `url(${heroBgDesktopAvif.src})`,
@@ -41,18 +36,7 @@ const HeroSection = ({ ctaHref, onScrollToFaq }: IHeroSectionProps) => {
 				<p className={styles.subtitle}>
 					Простая интеграция, заметный результат.
 				</p>
-				<div className={styles.buttons}>
-					<Link href={ctaHref} className={styles.buttonLink}>
-						Попробовать бесплатно 7 дней
-						<span className={styles.arrowBtn}></span>
-					</Link>
-					<button
-						className={styles.buttonArrow}
-						type="button"
-						onClick={onScrollToFaq}
-						aria-label="Прокрутить к вопросам и ответам"
-					/>
-				</div>
+				<HeroActions />
 			</div>
 		</section>
 	)

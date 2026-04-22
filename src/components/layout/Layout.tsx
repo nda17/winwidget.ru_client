@@ -6,25 +6,17 @@ import Footer from '@/components/layout/footer/Footer'
 import Header from '@/components/layout/header/Header'
 import { ILayout } from '@/components/layout/layout.interface'
 import { PUBLIC_PAGES } from '@/config/pages/public.config'
-import siteSettingsService from '@/services/site-settings/site-settings.service'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import { useVeilBackgroundStore } from '@/store/veil-background-store/veil-background-store'
-import { useQuery } from '@tanstack/react-query'
 import { NextPage } from 'next'
 import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
 
-const Layout: NextPage<ILayout> = ({ children }) => {
+const Layout: NextPage<ILayout> = ({ children, siteSettings }) => {
 	const visibleVeilBackground = useVeilBackgroundStore(
 		state => state.visible
 	)
 	const auth = useAuthStore(state => state.auth)
-
-	const { data: siteSettings } = useQuery({
-		queryKey: ['site-settings'],
-		queryFn: siteSettingsService.get,
-		staleTime: 60_000
-	})
 	const pathname = usePathname()
 	const isRecaptchaPage =
 		pathname === PUBLIC_PAGES.LOGIN ||

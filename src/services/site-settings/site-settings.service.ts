@@ -1,12 +1,5 @@
 import { axiosInterceptorsRequest } from '@/api/interceptors'
-
-export interface SiteSettings {
-	id: string
-	bannerEnabled: boolean
-	bannerText: string
-	snowflakeEnabled: boolean
-	updatedAt: string
-}
+import type { SiteSettings } from '@/services/site-settings/site-settings.types'
 
 const siteSettingsService = {
 	async get(): Promise<SiteSettings> {

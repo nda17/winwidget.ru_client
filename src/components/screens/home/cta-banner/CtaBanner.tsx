@@ -1,14 +1,7 @@
-'use client'
-
-import { PUBLIC_PAGES } from '@/config/pages/public.config'
-import { useAuthStore } from '@/store/auth-store/auth-store'
-import Link from 'next/link'
+import HomeStartTrialLink from '@/components/screens/home/_components/HomeStartTrialLink'
 import styles from './CtaBanner.module.scss'
 
 const CtaBanner = () => {
-	const auth = useAuthStore(state => state.auth)
-	const href = auth ? PUBLIC_PAGES.CABINET : PUBLIC_PAGES.REGISTER
-
 	return (
 		<section className={styles.section}>
 			<div className={styles.inner}>
@@ -16,7 +9,7 @@ const CtaBanner = () => {
 					Попробуйте сейчас
 					<br />и начните получать больше заявок уже через 10 минут
 				</p>
-				<Link href={href} className={styles.button}>
+				<HomeStartTrialLink className={styles.button}>
 					Начать бесплатный период
 					<span className={styles.arrow}>
 						<svg
@@ -35,7 +28,7 @@ const CtaBanner = () => {
 							/>
 						</svg>
 					</span>
-				</Link>
+				</HomeStartTrialLink>
 			</div>
 		</section>
 	)
