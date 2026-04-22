@@ -2,8 +2,10 @@ import '@/assets/styles/globals.scss'
 import { criticalRoboto, criticalUnbounded } from '@/app/fonts'
 import Layout from '@/components/layout/Layout'
 import MainProvider from '@/providers/Main-provider/MainProvider'
+import { EnumTokens } from '@/services/auth/auth.service'
 import { getSiteSettings } from '@/services/site-settings/site-settings.server'
 import type { Metadata } from 'next'
+import { cookies } from 'next/headers'
 import type { PropsWithChildren } from 'react'
 
 export const metadata: Metadata = {
@@ -24,6 +26,11 @@ export const metadata: Metadata = {
 
 const RootLayout = async ({ children }: PropsWithChildren<unknown>) => {
 	const siteSettings = await getSiteSettings()
+	const cookieStore = await cookies()
+	const hasSessionHint = Boolean(
+		cookieStore.get(EnumTokens.ACCESS_TOKEN)?.value ||
+		cookieStore.get(EnumTokens.REFRESH_TOKEN)?.value
+	)
 
 	return (
 		<html
@@ -31,7 +38,7 @@ const RootLayout = async ({ children }: PropsWithChildren<unknown>) => {
 			className={`${criticalRoboto.variable} ${criticalUnbounded.variable}`}
 		>
 			<body>
-				<MainProvider>
+				<MainProvider hasSessionHint={hasSessionHint}>
 					<Layout siteSettings={siteSettings}>{children}</Layout>
 				</MainProvider>
 			</body>

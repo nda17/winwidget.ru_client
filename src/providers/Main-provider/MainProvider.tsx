@@ -16,13 +16,16 @@ const queryClient = new QueryClient({
 	}
 })
 
-const MainProvider: NextPage<IMainProvider> = ({ children }) => {
+const MainProvider: NextPage<IMainProvider> = ({
+	children,
+	hasSessionHint
+}) => {
 	return (
 		<QueryClientProvider client={queryClient}>
 			<Toaster />
 			<NetworkStatusProvider />
 			<CookieConsentProvider />
-			<AuthProvider>
+			<AuthProvider hasSessionHint={hasSessionHint}>
 				<NavigationProvider>{children}</NavigationProvider>
 			</AuthProvider>
 		</QueryClientProvider>

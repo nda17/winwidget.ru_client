@@ -13,12 +13,21 @@ import { useCallback, useEffect, useRef } from 'react'
 
 const ACCESS_TOKEN_REFRESH_THRESHOLD_MS = 60 * 1000
 
-const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+interface IAuthProviderProps {
+	children: React.ReactNode
+	hasSessionHint: boolean
+}
+
+const AuthProvider = ({
+	children,
+	hasSessionHint
+}: IAuthProviderProps) => {
 	const setAuth = useAuthStore(state => state.setAuth)
 	const setAuthResolved = useAuthStore(state => state.setAuthResolved)
 	const queryClient = useQueryClient()
 	const pathname = usePathname()
 	const isMountedRef = useRef(true)
+	const hasSessionHintRef = useRef(hasSessionHint)
 	const isProtectedPath =
 		pathname === PUBLIC_PAGES.USER_PROFILE ||
 		pathname.startsWith(`${PUBLIC_PAGES.USER_PROFILE}/`) ||
@@ -26,6 +35,10 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
 	const syncSession = useCallback(async () => {
 		const accessToken = getAccessToken()
+
+		if (accessToken) {
+			hasSessionHintRef.current = true
+		}
 
 		if (
 			isAccessTokenValid(accessToken, ACCESS_TOKEN_REFRESH_THRESHOLD_MS)
@@ -38,12 +51,23 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 			return
 		}
 
+		if (!isProtectedPath && !hasSessionHintRef.current) {
+			if (isMountedRef.current) {
+				setAuth(false)
+				setAuthResolved(true)
+				queryClient.removeQueries({ queryKey: ['get-profile'] })
+			}
+
+			return
+		}
+
 		if (isMountedRef.current) {
 			setAuthResolved(false)
 		}
 
 		try {
 			await authService.getNewTokens()
+			hasSessionHintRef.current = true
 
 			if (isMountedRef.current) {
 				setAuth(true)
@@ -60,12 +84,17 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 			setAuth(false)
 			setAuthResolved(true)
 			queryClient.removeQueries({ queryKey: ['get-profile'] })
+			hasSessionHintRef.current = false
 
 			if (isProtectedPath) {
 				window.location.href = PUBLIC_PAGES.LOGIN
 			}
 		}
 	}, [isProtectedPath, queryClient, setAuth, setAuthResolved])
+
+	useEffect(() => {
+		hasSessionHintRef.current = hasSessionHint
+	}, [hasSessionHint])
 
 	useEffect(() => {
 		isMountedRef.current = true
