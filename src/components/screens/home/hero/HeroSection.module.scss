@@ -42,7 +42,7 @@
 	}
 
 	.heroContent {
-		@apply w-[95%] max-w-[886px] flex gap-4 relative z-5 flex-col items-center;
+		@apply w-[95%] top-[-7rem] lg:top-0 max-w-[886px] flex gap-4 relative z-5 flex-col items-center;
 
 		.title {
 			@apply leading-[1.45] text-[1.8rem] md:text-[2.5rem] lg:text-[48px] text-center text-[#fdfdfd] relative font-semibold;

@@ -1,9 +1,9 @@
 .section {
-	@apply relative z-10 mt-[-9rem] overflow-hidden bg-transparent pb-10 md:mt-[-1rem] md:pb-14 lg:mt-0;
+	@apply relative z-10 mt-[-16rem] overflow-hidden bg-transparent pb-10 md:pb-14 lg:mt-[-2rem];
 }
 
 .heading {
-	@apply mx-auto mb-6 flex w-[92%] max-w-[900px] flex-col items-center text-center md:mb-8;
+	@apply flex mx-auto mb-6 w-[92%] max-w-[900px] flex-col items-center text-center md:mb-8;
 }
 
 .headingTitle {
@@ -249,7 +249,7 @@
 
 @media (max-width: 767px) {
 	.heading {
-		@apply mb-5 items-start text-left;
+		@apply mb-5;
 	}
 
 	.headingTitle {
