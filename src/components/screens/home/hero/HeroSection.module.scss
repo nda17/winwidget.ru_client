@@ -2,7 +2,7 @@
 	@apply relative h-[1173px] overflow-hidden flex items-center justify-center;
 
 	.heroBackground {
-		@apply absolute z-1 top-[-12px] left-[-187px] w-[1877px] h-[1173px] opacity-[0.3] m-0;
+		@apply absolute z-1 top-[-6rem] left-[-187px] w-[1877px] h-[1173px] opacity-[0.3] m-0;
 		transform: rotate(548deg);
 		will-change: transform;
 
