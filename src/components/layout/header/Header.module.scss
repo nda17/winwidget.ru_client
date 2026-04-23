@@ -11,7 +11,7 @@
 }
 
 .brand {
-	@apply absolute top-3 left-1/2 -translate-x-1/2 z-[35] flex justify-center w-full px-4 pointer-events-none;
+	@apply absolute top-[1.2rem] left-1/2 -translate-x-1/2 z-[35] flex justify-center w-full px-4 pointer-events-none;
 
 	:global(a) {
 		@apply pointer-events-auto;
