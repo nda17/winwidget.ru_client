@@ -18,6 +18,16 @@ export interface IAdminActivateInput {
 	extendIfActive?: boolean
 }
 
+export interface IPendingPayment {
+	id: string
+	yookassaId: string
+	amount: string
+	plan: Plan | null
+	billingPeriod: BillingPeriod | null
+	confirmationUrl: string | null
+	createdAt: string
+}
+
 const subscriptionService = {
 	async getMySubscription(): Promise<Subscription> {
 		const { data } = await axiosInterceptorsRequest.get(
@@ -43,6 +53,24 @@ const subscriptionService = {
 	async verifyPayment(): Promise<{ activated: boolean }> {
 		const { data } =
 			await axiosInterceptorsRequest.post('/payments/verify')
+		return data
+	},
+
+	async getPendingPayment(): Promise<IPendingPayment | null> {
+		const { data } = await axiosInterceptorsRequest.get(
+			'/payments/pending'
+		)
+		return data
+	},
+
+	async cancelPendingPayment(): Promise<{
+		cancelled: boolean
+		message: string
+		cancelledAt: string
+	}> {
+		const { data } = await axiosInterceptorsRequest.post(
+			'/payments/pending/cancel'
+		)
 		return data
 	},
 

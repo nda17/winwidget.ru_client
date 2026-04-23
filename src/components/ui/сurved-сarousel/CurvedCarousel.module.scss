@@ -80,26 +80,29 @@
 	height: var(--card-height);
 	background:
 		linear-gradient(
-				180deg,
-				rgb(255 255 255 / 0.62) 0%,
-				rgb(255 250 252 / 0.32) 100%
+				160deg,
+				rgb(255 255 255 / 0.98) 0%,
+				rgb(255 244 250 / 0.94) 42%,
+				rgb(255 237 246 / 0.88) 100%
 			)
 			padding-box,
 		linear-gradient(
-				135deg,
-				rgb(248 189 49 / 0.28) 0%,
-				rgb(250 89 94 / 0.18) 34%,
-				rgb(194 27 132 / 0.16) 68%,
-				rgb(255 255 255 / 0.28) 100%
+				140deg,
+				rgb(255 255 255 / 0.92) 0%,
+				var(--card-accent-border) 24%,
+				rgb(250 89 94 / 0.34) 62%,
+				rgb(248 189 49 / 0.56) 100%
 			)
 			border-box;
 	box-shadow:
-		inset 0 1px 0 rgb(255 255 255 / 0.68),
-		0 16px 36px rgb(194 27 132 / 0.06),
-		0 3px 12px rgb(0 0 0 / 0.035);
+		inset 0 1px 0 rgb(255 255 255 / 0.94),
+		inset 0 -22px 42px var(--card-accent-sheen),
+		0 22px 48px var(--card-accent-glow),
+		0 10px 24px rgb(30 18 58 / 0.1);
 	transition:
 		box-shadow 0.24s ease,
-		border-color 0.24s ease;
+		border-color 0.24s ease,
+		filter 0.24s ease;
 	animation: card-drift var(--float-duration) ease-in-out infinite;
 	animation-delay: var(--float-delay);
 	will-change: transform;
@@ -143,32 +146,52 @@
 
 .card:hover {
 	box-shadow:
-		inset 0 1px 0 rgb(255 255 255 / 0.82),
-		0 20px 44px rgb(194 27 132 / 0.09),
-		0 8px 18px rgb(248 189 49 / 0.1);
+		inset 0 1px 0 rgb(255 255 255 / 0.96),
+		inset 0 -22px 42px var(--card-accent-highlight),
+		0 28px 60px var(--card-accent-glow),
+		0 12px 28px rgb(248 189 49 / 0.16);
+	filter: saturate(1.12);
 }
 
 .card::before {
-	@apply absolute inset-x-0 top-0 h-[3px];
+	@apply absolute inset-x-0 top-0 h-[4px];
 	content: '';
 	background: linear-gradient(
 		90deg,
 		var(--card-accent) 0%,
-		rgb(250 89 94 / 0.68) 54%,
-		rgb(248 189 49 / 0.68) 100%
+		rgb(250 89 94 / 0.92) 54%,
+		rgb(248 189 49 / 0.96) 100%
 	);
+	box-shadow: 0 0 26px var(--card-accent-glow);
 }
 
 .card::after {
-	@apply pointer-events-none absolute right-[-18px] top-[-28px] h-32 w-32 rounded-full;
+	@apply pointer-events-none absolute right-[-26px] top-[-34px] h-36 w-36 rounded-full;
+	content: '';
+	background:
+		radial-gradient(
+			circle at 30% 32%,
+			rgb(255 255 255 / 0.92) 0%,
+			var(--card-accent-soft) 38%,
+			rgb(255 255 255 / 0) 76%
+		),
+		radial-gradient(
+			circle at 70% 72%,
+			var(--card-accent-highlight) 0%,
+			rgb(255 255 255 / 0) 58%
+		);
+	opacity: 0.96;
+}
+
+.card .copy::after {
+	@apply pointer-events-none absolute bottom-[-2.75rem] left-[-2rem] h-24 w-24 rounded-full;
 	content: '';
 	background: radial-gradient(
 		circle,
-		rgb(255 255 255 / 0.64) 0%,
-		var(--card-accent-soft) 28%,
+		var(--card-accent-highlight) 0%,
 		rgb(255 255 255 / 0) 72%
 	);
-	opacity: 0.82;
+	opacity: 0.9;
 }
 
 .cardHeader {
@@ -176,57 +199,90 @@
 }
 
 .iconWrap {
-	@apply flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] border;
+	@apply relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[12px] border;
 	color: var(--card-accent);
 	background: linear-gradient(
 		135deg,
-		rgb(255 255 255 / 0.88) 0%,
-		rgb(255 255 255 / 0.52) 100%
+		rgb(255 255 255 / 0.94) 0%,
+		var(--card-accent-soft) 100%
+	);
+	border-color: var(--card-accent-border);
+	box-shadow:
+		inset 0 1px 0 rgb(255 255 255 / 0.98),
+		0 12px 24px var(--card-accent-glow);
+}
+
+.iconWrap::after {
+	@apply absolute inset-[4px] rounded-[10px];
+	content: '';
+	background: radial-gradient(
+		circle at 30% 28%,
+		rgb(255 255 255 / 0.78) 0%,
+		rgb(255 255 255 / 0) 66%
+	);
+	opacity: 0.72;
+}
+
+.copy {
+	@apply relative flex min-w-0 flex-1 flex-col;
+}
+
+.tag {
+	@apply inline-flex max-w-[160px] items-center justify-center rounded-[999px] border px-[0.58rem] py-[0.34rem] text-[0.6rem] font-semibold leading-none;
+	color: var(--card-accent);
+	background: linear-gradient(
+		135deg,
+		rgb(255 255 255 / 0.9) 0%,
+		var(--card-accent-highlight) 100%
 	);
 	border-color: var(--card-accent-border);
 	box-shadow:
 		inset 0 1px 0 rgb(255 255 255 / 0.96),
-		0 6px 16px rgb(194 27 132 / 0.06);
-}
-
-.copy {
-	@apply flex min-w-0 flex-1 flex-col;
-}
-
-.tag {
-	@apply inline-flex max-w-[142px] items-center rounded-[6px] border px-2 py-1 text-[0.68rem] font-semibold leading-none;
-	color: var(--card-accent);
-	background: linear-gradient(
-		135deg,
-		rgb(255 255 255 / 0.82) 0%,
-		rgb(255 255 255 / 0.58) 100%
-	);
-	border-color: var(--card-accent-border);
+		0 10px 20px var(--card-accent-sheen);
 	font-family: var(--second-family);
-	letter-spacing: 0;
+	letter-spacing: 0.01em;
+	text-align: center;
+	white-space: nowrap;
 }
 
 .title {
-	@apply mb-2 text-[1.08rem] font-bold leading-[1.18] text-[#1a1a1a];
+	@apply mb-2 text-[1.08rem] font-bold leading-[1.14] text-[#120f1f];
 	font-family: var(--font-family);
 	letter-spacing: 0;
+	text-shadow: 0 1px 0 rgb(255 255 255 / 0.7);
 }
 
 .description {
-	@apply text-[0.8rem] leading-[1.46] text-[#5f586f];
+	@apply text-[0.82rem] leading-[1.5] text-[#4b4361];
 	font-family: var(--second-family);
 	letter-spacing: 0;
 }
 
 .cardFooter {
-	@apply mt-3 flex items-center gap-2 text-[0.68rem] font-medium text-[#80778f];
+	@apply mt-4 flex items-center text-[0.68rem] font-medium text-[#6c637d];
 	font-family: var(--second-family);
 	letter-spacing: 0;
 }
 
+.status {
+	@apply inline-flex items-center gap-2 rounded-[999px] border px-[0.72rem] py-[0.45rem];
+	background: linear-gradient(
+		135deg,
+		rgb(255 255 255 / 0.9) 0%,
+		var(--card-accent-highlight) 100%
+	);
+	border-color: var(--card-accent-border);
+	box-shadow:
+		inset 0 1px 0 rgb(255 255 255 / 0.94),
+		0 10px 20px var(--card-accent-sheen);
+}
+
 .statusDot {
-	@apply h-[6px] w-[6px] shrink-0 rounded-full;
+	@apply h-[8px] w-[8px] shrink-0 rounded-full;
 	background: var(--card-accent);
+	box-shadow:
+		0 0 0 4px var(--card-accent-soft),
+		0 0 12px var(--card-accent-glow);
 }
 
 @keyframes integrations-marquee {
@@ -303,9 +359,9 @@
 		--card-height: 208px;
 		@apply w-[266px] p-[0.95rem];
 		box-shadow:
-			inset 0 1px 0 rgb(255 255 255 / 0.7),
-			0 10px 22px rgb(194 27 132 / 0.07),
-			0 3px 10px rgb(0 0 0 / 0.04);
+			inset 0 1px 0 rgb(255 255 255 / 0.82),
+			0 14px 28px var(--card-accent-glow),
+			0 4px 12px rgb(0 0 0 / 0.06);
 	}
 
 	.group .card:nth-child(4n + 1) {
@@ -397,7 +453,7 @@
 	}
 
 	.tag {
-		@apply max-w-[124px] px-[0.4rem] py-[0.28rem] text-[0.62rem];
+		@apply max-w-[142px] px-[0.46rem] py-[0.28rem] text-[0.54rem];
 	}
 
 	.title {
@@ -406,6 +462,10 @@
 
 	.description {
 		@apply text-[0.72rem] leading-[1.38];
+	}
+
+	.status {
+		@apply px-[0.58rem] py-[0.38rem] text-[0.62rem];
 	}
 }
 

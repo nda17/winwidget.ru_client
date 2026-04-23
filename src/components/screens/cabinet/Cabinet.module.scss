@@ -2,22 +2,43 @@
 	@apply pt-[5rem] px-4 pb-[8rem] w-full min-h-screen flex flex-col items-center text-[#1a1a1a];
 }
 .userHeader {
-	@apply w-full max-w-[1100px] flex items-center gap-4 mb-7;
+	@apply w-full max-w-[1100px] min-w-0 flex items-center gap-4 mb-7;
 }
 .avatarImg {
 	@apply w-[52px] h-[52px] rounded-full object-cover shrink-0;
+}
+.avatarSkeleton {
+	@apply w-[52px] h-[52px] shrink-0;
 }
 .avatarPlaceholder {
 	@apply w-[52px] h-[52px] rounded-full bg-[#ede8fc] flex items-center justify-center text-[1.4rem] text-[#7b3fa0] shrink-0;
 }
 .headerInfo {
-	@apply flex-1;
+	@apply flex-1 min-w-0;
+}
+.headerInfoSkeleton {
+	@apply flex flex-col gap-2;
+}
+.headerNameSkeleton {
+	@apply h-5 w-[11rem] max-w-full;
+}
+.headerSubSkeleton {
+	@apply h-4 w-[15rem] max-w-full;
+}
+.headerBadgeSkeleton {
+	@apply h-5 w-[4.5rem] max-w-full;
+}
+.headerExpiresSkeleton {
+	@apply h-4 w-[8.5rem] max-w-full;
 }
 .headerName {
 	@apply text-[1.1rem] font-bold text-[#1a1a1a];
 }
 .headerSub {
 	@apply text-[0.85rem] text-[#888] mt-[2px];
+}
+.headerPlanRow {
+	@apply flex flex-wrap items-center gap-2 mt-[6px];
 }
 .planBadge {
 	@apply inline-block rounded-[20px] text-xs font-semibold text-white mt-[6px] py-[2px] px-[10px];
@@ -32,8 +53,12 @@
 .planExpires {
 	@apply text-xs mt-1 text-[#aaa];
 }
+.headerPlanRow .planBadge,
+.headerPlanRow .planExpires {
+	@apply mt-0;
+}
 .tabs {
-	@apply flex gap-1 bg-white border border-[#e0d6f0] rounded-xl p-1 w-full max-w-[1100px] mb-8;
+	@apply flex gap-1 bg-white border border-[#e0d6f0] rounded-xl p-1 w-full max-w-[1100px] min-w-0 mb-8;
 }
 .tab {
 	@apply flex-1 rounded-lg border-none bg-transparent text-[#888] text-[0.95rem] font-medium cursor-pointer transition-all duration-200 py-[10px] px-6;
@@ -52,7 +77,7 @@
 	@apply text-[#7b3fa0] bg-[#f3eeff];
 }
 .content {
-	@apply w-full max-w-[1100px];
+	@apply w-full max-w-[1100px] min-w-0;
 }
 .section {
 	@apply bg-white border border-[#e0d6f0] rounded-[16px] mb-4 p-6;
@@ -139,7 +164,14 @@
 	@apply text-[0.85rem] text-[#888] min-h-[2.4rem];
 }
 .subInfo {
-	@apply flex items-center gap-4 mb-5;
+	@apply flex items-center gap-4 mb-5 min-w-0;
+}
+.subInfoSkeleton {
+	@apply flex-wrap min-h-[1.75rem];
+}
+.subInfoSkeletonChip,
+.subInfoSkeletonMeta {
+	@apply block leading-none;
 }
 .leadsCount {
 	@apply text-sm text-[#888];
@@ -182,14 +214,40 @@
 	}
 }
 .widgetList {
-	@apply flex flex-col gap-[10px] mb-6;
+	@apply w-full min-w-0 flex flex-col gap-[10px] mb-6;
 }
 .widgetRow {
-	@apply flex items-center gap-[14px] bg-white border border-[#e0d6f0] rounded-xl transition-[border-color,box-shadow] duration-200 py-[14px] px-[18px];
+	@apply w-full max-w-full min-w-0 items-center bg-white border border-[#e0d6f0] rounded-xl transition-[border-color,box-shadow] duration-200 py-[14px] px-[18px];
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto;
+	column-gap: 14px;
 }
 .widgetRow:hover {
 	@apply border-[#c4a8e8];
 	box-shadow: 0 4px 16px rgb(100 60 180 / 0.07);
+}
+.widgetRowSkeleton {
+	@apply w-full max-w-full min-w-0 min-h-[3.625rem];
+}
+.widgetToggleSkeleton {
+	@apply block shrink-0 leading-none;
+}
+.widgetNameSkeleton {
+	@apply flex-1 min-w-0 max-w-full overflow-hidden;
+}
+.actionsSkeleton {
+	@apply flex flex-wrap items-center justify-end gap-[14px] min-w-0 max-w-full;
+	justify-self: end;
+}
+.emptyWidgetRow {
+	@apply w-full min-w-0 flex flex-col items-center justify-center text-center bg-white border border-[#e0d6f0] rounded-xl py-10 px-6;
+	min-height: 7rem;
+}
+.emptyWidgetTitle {
+	@apply text-[1.05rem] font-semibold text-[#1a1a1a];
+}
+.emptyWidgetText {
+	@apply mt-2 text-[0.92rem] leading-[1.55] text-[#8b829d] max-w-[28rem];
 }
 .toggle {
 	@apply relative shrink-0 rounded-full transition-[background] duration-200 cursor-pointer border-none w-12 h-[26px] bg-[#e0d6f0];
@@ -204,10 +262,11 @@
 	@apply translate-x-[22px];
 }
 .widgetName {
-	@apply flex-1 font-medium text-[#1a1a1a];
+	@apply flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-medium text-[#1a1a1a];
 }
 .actions {
-	@apply flex flex-wrap items-center gap-[14px];
+	@apply flex flex-wrap items-center justify-end gap-[14px] min-w-0 max-w-full;
+	justify-self: end;
 }
 .actionBtn {
 	@apply flex items-center gap-1 text-sm cursor-pointer border-none bg-transparent text-[#aaa] no-underline transition-colors duration-150;
@@ -264,7 +323,11 @@
 		@apply p-[18px];
 	}
 	.widgetRow {
-		@apply gap-[10px] py-3 px-[14px];
+		@apply py-3 px-[14px];
+		column-gap: 10px;
+	}
+	.emptyWidgetRow {
+		@apply px-5 py-9;
 	}
 	.actions {
 		@apply gap-[10px];
@@ -282,8 +345,18 @@
 		@apply gap-[10px] mb-4;
 	}
 	.avatarImg,
+	.avatarSkeleton,
 	.avatarPlaceholder {
 		@apply w-[42px] h-[42px] text-[1.2rem];
+	}
+	.headerNameSkeleton {
+		@apply w-[8.5rem];
+	}
+	.headerSubSkeleton {
+		@apply w-[11rem];
+	}
+	.headerExpiresSkeleton {
+		@apply w-[7rem];
 	}
 	.headerName {
 		@apply text-base;
@@ -302,12 +375,31 @@
 	}
 	.widgetRow {
 		@apply flex-wrap gap-2 py-[10px] px-3;
+		display: flex;
+	}
+	.widgetRowSkeleton {
+		@apply min-h-[4.75rem];
+	}
+	.actionsSkeleton {
+		@apply w-full justify-end pt-[6px] gap-3 border-t border-[#f0eaf8];
+		justify-self: auto;
+	}
+	.emptyWidgetRow {
+		@apply rounded-[18px] px-4 py-8;
+		min-height: 6.5rem;
+	}
+	.emptyWidgetTitle {
+		@apply text-base;
+	}
+	.emptyWidgetText {
+		@apply text-[0.85rem];
 	}
 	.widgetName {
 		@apply min-w-0 overflow-hidden text-ellipsis whitespace-nowrap;
 	}
 	.actions {
 		@apply w-full justify-end pt-[6px] gap-3 border-t border-[#f0eaf8];
+		justify-self: auto;
 	}
 	.actionBtn {
 		@apply text-[0.8rem] gap-[3px];

@@ -1,5 +1,9 @@
 'use client'
 
+import adminTasksService, {
+	type ManualAdminTaskId,
+	type ManualAdminTaskRunResult
+} from '@/services/admin-tasks/admin-tasks.service'
 import AdminNavigation from '@/components/ui/admin/admin-navigation/AdminNavigation'
 import Heading from '@/components/ui/heading/Heading'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
@@ -17,9 +21,51 @@ import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import styles from './AdminSettings.module.scss'
 
+const MANUAL_TASKS: Array<{
+	id: ManualAdminTaskId
+	title: string
+	description: string
+	buttonLabel: string
+	loadingLabel: string
+}> = [
+	{
+		id: 'paymentCleanup',
+		title: 'Очистка зависших платежей',
+		description:
+			'Запускает внеплановую очистку старых платежей со статусом ожидания.',
+		buttonLabel: 'Запустить',
+		loadingLabel: 'Запускаем очистку платежей...'
+	},
+	{
+		id: 'subscriptionExpiryCheck',
+		title: 'Проверка истёкших подписок',
+		description:
+			'Внепланово деактивирует подписки, срок действия которых уже истёк.',
+		buttonLabel: 'Запустить',
+		loadingLabel: 'Проверяем подписки...'
+	},
+	{
+		id: 'verificationChallengeCleanup',
+		title: 'Очистка verification challenges',
+		description:
+			'Удаляет просроченные challenge-записи для подтверждения email и телефона.',
+		buttonLabel: 'Запустить',
+		loadingLabel: 'Очищаем verification challenges...'
+	}
+]
+
+const formatExecutedAt = (value: string) =>
+	new Intl.DateTimeFormat('ru-RU', {
+		dateStyle: 'short',
+		timeStyle: 'medium'
+	}).format(new Date(value))
+
 const AdminSettings: NextPage = () => {
 	const queryClient = useQueryClient()
 	const router = useRouter()
+	const [manualTaskResults, setManualTaskResults] = useState<
+		Partial<Record<ManualAdminTaskId, ManualAdminTaskRunResult>>
+	>({})
 
 	const { data: settings, isLoading } = useQuery({
 		queryKey: ['site-settings'],
@@ -50,6 +96,33 @@ const AdminSettings: NextPage = () => {
 			loading: label ?? 'Сохранение...',
 			success: 'Сохранено',
 			error: 'Ошибка сохранения'
+		})
+	}
+
+	const manualTaskMutation = useMutation({
+		mutationFn: adminTasksService.runTask,
+		onSuccess: result => {
+			setManualTaskResults(prev => ({
+				...prev,
+				[result.taskId]: result
+			}))
+		}
+	})
+
+	const activeManualTaskId = manualTaskMutation.isPending
+		? manualTaskMutation.variables
+		: null
+
+	const runManualTaskWithToast = (taskId: ManualAdminTaskId) => {
+		const task = MANUAL_TASKS.find(item => item.id === taskId)
+		if (!task) return
+
+		const promise = manualTaskMutation.mutateAsync(taskId)
+
+		toast.promise(promise, {
+			loading: task.loadingLabel,
+			success: result => result.message,
+			error: 'Ошибка запуска задачи'
 		})
 	}
 
@@ -161,6 +234,46 @@ const AdminSettings: NextPage = () => {
 						</button>
 					</>
 				)}
+			</div>
+
+			<SubHeading text="Ручной запуск задач" />
+
+			<div className={styles.section}>
+				<div className={styles.taskList}>
+					{MANUAL_TASKS.map(task => {
+						const result = manualTaskResults[task.id]
+						const isRunning =
+							manualTaskMutation.isPending &&
+							activeManualTaskId === task.id
+
+						return (
+							<div key={task.id} className={styles.taskRow}>
+								<div className={styles.taskMeta}>
+									<p className={styles.fieldLabel}>{task.title}</p>
+									<p className={styles.fieldHint}>{task.description}</p>
+									{result && (
+										<p className={styles.taskResult}>
+											{result.message}
+											<span className={styles.taskTimestamp}>
+												Последний запуск:{' '}
+												{formatExecutedAt(result.executedAt)}
+											</span>
+										</p>
+									)}
+								</div>
+
+								<button
+									type="button"
+									className={styles.taskBtn}
+									onClick={() => runManualTaskWithToast(task.id)}
+									disabled={manualTaskMutation.isPending}
+								>
+									{isRunning ? 'Запуск...' : task.buttonLabel}
+								</button>
+							</div>
+						)
+					})}
+				</div>
 			</div>
 		</section>
 	)

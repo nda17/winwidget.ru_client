@@ -35,6 +35,7 @@ const WIDGET_TYPE_NAMES: Record<string, string> = {
 
 const CabinetWidgets = () => {
 	const auth = useAuthStore(state => state.auth)
+	const isAuthResolved = useAuthStore(state => state.isAuthResolved)
 	const queryClient = useQueryClient()
 	const [settingsWidget, setSettingsWidget] = useState<Widget | null>(null)
 	const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(
@@ -101,6 +102,7 @@ const CabinetWidgets = () => {
 
 	const widgets = data?.widgets || []
 	const subscription = data?.subscription
+	const isWidgetsLoading = !isAuthResolved || (auth && isLoading)
 
 	const isTrialExpiredByTime =
 		subscription?.plan === 'TRIAL' && subscription.status === 'EXPIRED'
@@ -127,7 +129,7 @@ const CabinetWidgets = () => {
 
 	return (
 		<div>
-			{!isLoading && isTrialExpiredByTime && (
+			{!isWidgetsLoading && isTrialExpiredByTime && (
 				<div className={styles.limitBanner}>
 					<div className={styles.limitBannerContent}>
 						<span className={styles.limitBannerIcon}>⏰</span>
@@ -146,7 +148,7 @@ const CabinetWidgets = () => {
 					</a>
 				</div>
 			)}
-			{!isLoading && isLeadLimitReached && (
+			{!isWidgetsLoading && isLeadLimitReached && (
 				<div className={styles.limitBanner}>
 					<div className={styles.limitBannerContent}>
 						<span className={styles.limitBannerIcon}>⚠️</span>
@@ -165,10 +167,26 @@ const CabinetWidgets = () => {
 					</a>
 				</div>
 			)}
-			{isLoading ? (
-				<div className={styles.subInfo}>
-					<SkeletonLoader width={72} height={22} />
-					<SkeletonLoader width={150} height={18} />
+			{isWidgetsLoading ? (
+				<div
+					className={`${styles.subInfo} ${styles.subInfoSkeleton}`}
+					aria-hidden="true"
+				>
+					<SkeletonLoader
+						width={72}
+						height={22}
+						containerClassName={styles.subInfoSkeletonChip}
+					/>
+					<SkeletonLoader
+						width={148}
+						height={18}
+						containerClassName={styles.subInfoSkeletonMeta}
+					/>
+					<SkeletonLoader
+						width={112}
+						height={18}
+						containerClassName={styles.subInfoSkeletonMeta}
+					/>
 				</div>
 			) : subscription ? (
 				<div className={styles.subInfo}>
@@ -201,109 +219,120 @@ const CabinetWidgets = () => {
 				</div>
 			) : null}
 
-			{isLoading ? (
-				<div className={styles.widgetList}>
-					{[1, 2, 3].map(i => (
-						<div key={i} className={styles.widgetRow}>
-							<SkeletonLoader
-								width={48}
-								height={26}
-								borderRadius={99}
-								style={{ flexShrink: 0 }}
-							/>
-							<div style={{ flex: 1, minWidth: 0 }}>
-								<SkeletonLoader width="60%" height={18} />
-							</div>
-							<div className={styles.actions}>
-								<SkeletonLoader width={58} height={16} />
-								<SkeletonLoader width={68} height={16} />
-								<SkeletonLoader width={80} height={16} />
-								<SkeletonLoader width={64} height={16} />
-							</div>
+			{isWidgetsLoading ? (
+				<div className={styles.widgetList} aria-hidden="true">
+					<div
+						className={`${styles.widgetRow} ${styles.widgetRowSkeleton}`}
+					>
+						<SkeletonLoader
+							width={48}
+							height={26}
+							borderRadius={99}
+							containerClassName={styles.widgetToggleSkeleton}
+						/>
+						<div className={styles.widgetNameSkeleton}>
+							<SkeletonLoader width="100%" height={22} />
 						</div>
-					))}
+						<div className={styles.actionsSkeleton}>
+							<SkeletonLoader width={74} height={18} />
+							<SkeletonLoader width={72} height={18} />
+							<SkeletonLoader width={92} height={18} />
+							<SkeletonLoader width={68} height={18} />
+						</div>
+					</div>
 				</div>
 			) : (
 				<div className={styles.widgetList}>
-					{widgets.map(widget => (
-						<div key={widget.id} className={styles.widgetRow}>
-							<button
-								className={`${styles.toggle} ${widget.isActive ? styles.toggleOn : ''}`}
-								onClick={() =>
-									toggleMutation.mutate({
-										id: widget.id,
-										isActive: !widget.isActive
-									})
-								}
-								aria-label={widget.isActive ? 'Отключить' : 'Включить'}
-							>
-								<span className={styles.toggleThumb} />
-							</button>
-
-							<span className={styles.widgetName}>{widget.name}</span>
-
-							<div className={styles.actions}>
-								<a
-									href={`/page/${widget.publicKey}`}
-									target="_blank"
-									rel="noopener noreferrer"
-									className={styles.actionBtn}
-								>
-									<ExternalLinkIcon size={17} /> открыть
-								</a>
-
-								<a
-									href={`/widgets/${widget.id}/leads`}
-									className={styles.actionBtn}
-								>
-									<FileListIcon size={17} /> заявки
-									{widget._count?.leads ? (
-										<span className={styles.leadsCountBadge}>
-											{widget._count.leads}
-										</span>
-									) : null}
-								</a>
-
+					{widgets.length > 0 ? (
+						widgets.map(widget => (
+							<div key={widget.id} className={styles.widgetRow}>
 								<button
-									className={styles.actionBtn}
-									onClick={() => setSettingsWidget(widget)}
+									className={`${styles.toggle} ${widget.isActive ? styles.toggleOn : ''}`}
+									onClick={() =>
+										toggleMutation.mutate({
+											id: widget.id,
+											isActive: !widget.isActive
+										})
+									}
+									aria-label={widget.isActive ? 'Отключить' : 'Включить'}
 								>
-									<SettingsIcon size={17} /> настройки
+									<span className={styles.toggleThumb} />
 								</button>
 
-								{confirmDeleteId === widget.id ? (
-									<>
-										<button
-											className={styles.actionBtnDanger}
-											onClick={() => deleteMutation.mutate(widget.id)}
-											disabled={deleteMutation.isPending}
-										>
-											{deleteMutation.isPending ? (
-												'...'
-											) : (
-												<>
-													<CheckIcon size={16} /> удалить
-												</>
-											)}
-										</button>
-										<button
-											className={styles.actionBtn}
-											onClick={() => setConfirmDeleteId(null)}
-										>
-											Отмена
-										</button>
-									</>
-								) : (
+								<span className={styles.widgetName}>{widget.name}</span>
+
+								<div className={styles.actions}>
+									<a
+										href={`/page/${widget.publicKey}`}
+										target="_blank"
+										rel="noopener noreferrer"
+										className={styles.actionBtn}
+									>
+										<ExternalLinkIcon size={17} /> открыть
+									</a>
+
+									<a
+										href={`/widgets/${widget.id}/leads`}
+										className={styles.actionBtn}
+									>
+										<FileListIcon size={17} /> заявки
+										{widget._count?.leads ? (
+											<span className={styles.leadsCountBadge}>
+												{widget._count.leads}
+											</span>
+										) : null}
+									</a>
+
 									<button
 										className={styles.actionBtn}
-										onClick={() => setConfirmDeleteId(widget.id)}
+										onClick={() => setSettingsWidget(widget)}
 									>
-										<DeleteIcon size={17} /> удалить
+										<SettingsIcon size={17} /> настройки
 									</button>
-								)}
+
+									{confirmDeleteId === widget.id ? (
+										<>
+											<button
+												className={styles.actionBtnDanger}
+												onClick={() => deleteMutation.mutate(widget.id)}
+												disabled={deleteMutation.isPending}
+											>
+												{deleteMutation.isPending ? (
+													'...'
+												) : (
+													<>
+														<CheckIcon size={16} /> удалить
+													</>
+												)}
+											</button>
+											<button
+												className={styles.actionBtn}
+												onClick={() => setConfirmDeleteId(null)}
+											>
+												Отмена
+											</button>
+										</>
+									) : (
+										<button
+											className={styles.actionBtn}
+											onClick={() => setConfirmDeleteId(widget.id)}
+										>
+											<DeleteIcon size={17} /> удалить
+										</button>
+									)}
+								</div>
 							</div>
+						))
+					) : (
+						<div className={styles.emptyWidgetRow}>
+							<p className={styles.emptyWidgetTitle}>
+								У вас пока нет виджетов
+							</p>
+							<p className={styles.emptyWidgetText}>
+								Создайте первый виджет, чтобы начать сбор заявок.
+							</p>
 						</div>
-					))}
+					)}
 				</div>
 			)}
 

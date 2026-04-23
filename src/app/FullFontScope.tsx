@@ -3,7 +3,9 @@ import type { PropsWithChildren } from 'react'
 
 const FullFontScope = ({ children }: PropsWithChildren<unknown>) => {
 	return (
-		<div className={`${fullRoboto.variable} ${fullUnbounded.variable}`}>
+		<div
+			className={`${fullRoboto.variable} ${fullUnbounded.variable} w-full`}
+		>
 			{children}
 		</div>
 	)

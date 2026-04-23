@@ -47,7 +47,7 @@ const Cabinet: FC = () => {
 			{/* ── User header ─────────────────────────────────────── */}
 			<div className={styles.userHeader}>
 				{isLoading ? (
-					<div className="w-[52px] h-[52px] flex-shrink-0">
+					<div className={styles.avatarSkeleton}>
 						<SkeletonLoader count={1} circle className="w-full h-full" />
 					</div>
 				) : (
@@ -61,15 +61,20 @@ const Cabinet: FC = () => {
 				)}
 				<div className={styles.headerInfo}>
 					{isLoading ? (
-						<div className="flex flex-col gap-2">
-							<div className="h-5 w-[10rem]">
+						<div className={styles.headerInfoSkeleton} aria-hidden="true">
+							<div className={styles.headerNameSkeleton}>
 								<SkeletonLoader count={1} className="w-full h-full" />
 							</div>
-							<div className="h-4 w-[7rem]">
+							<div className={styles.headerSubSkeleton}>
 								<SkeletonLoader count={1} className="w-full h-full" />
 							</div>
-							<div className="h-5 w-[4rem]">
-								<SkeletonLoader count={1} className="w-full h-full" />
+							<div className={styles.headerPlanRow}>
+								<div className={styles.headerBadgeSkeleton}>
+									<SkeletonLoader count={1} className="w-full h-full" />
+								</div>
+								<div className={styles.headerExpiresSkeleton}>
+									<SkeletonLoader count={1} className="w-full h-full" />
+								</div>
 							</div>
 						</div>
 					) : (
@@ -78,16 +83,20 @@ const Cabinet: FC = () => {
 							{displaySub && (
 								<p className={styles.headerSub}>{displaySub}</p>
 							)}
-							{planName && (
-								<span className={styles.planBadge}>{planName}</span>
-							)}
-							{subscription?.expiresAt && (
-								<p className={styles.planExpires}>
-									до{' '}
-									{new Date(subscription.expiresAt).toLocaleDateString(
-										'ru-RU'
+							{(planName || subscription?.expiresAt) && (
+								<div className={styles.headerPlanRow}>
+									{planName && (
+										<span className={styles.planBadge}>{planName}</span>
 									)}
-								</p>
+									{subscription?.expiresAt && (
+										<p className={styles.planExpires}>
+											до{' '}
+											{new Date(subscription.expiresAt).toLocaleDateString(
+												'ru-RU'
+											)}
+										</p>
+									)}
+								</div>
 							)}
 						</>
 					)}

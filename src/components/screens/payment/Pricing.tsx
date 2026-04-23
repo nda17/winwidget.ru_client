@@ -1,7 +1,9 @@
 'use client'
 
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
-import subscriptionService from '@/services/subscription/subscription.service'
+import subscriptionService, {
+	type IPendingPayment
+} from '@/services/subscription/subscription.service'
 import { BillingPeriod, Plan } from '@/services/widget/widget.types'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import { useMutation, useQuery } from '@tanstack/react-query'
@@ -32,6 +34,38 @@ const PLANS = [
 	}
 ]
 
+const billingPeriodLabel: Record<BillingPeriod, string> = {
+	MONTHLY: 'месяц',
+	YEARLY: 'год'
+}
+
+const PLAN_PRIORITY: Record<Plan, number> = {
+	TRIAL: 0,
+	EASY: 1,
+	HARD: 2
+}
+
+const planLabel: Record<Plan, string> = {
+	TRIAL: 'Тест-драйв',
+	EASY: 'Easy',
+	HARD: 'Hard'
+}
+
+const getPendingPaymentLabel = (pendingPayment: IPendingPayment) => {
+	const planLabel =
+		pendingPayment.plan === 'EASY'
+			? 'Easy'
+			: pendingPayment.plan === 'HARD'
+				? 'Hard'
+				: 'выбранный тариф'
+
+	const periodLabel = pendingPayment.billingPeriod
+		? billingPeriodLabel[pendingPayment.billingPeriod]
+		: 'период'
+
+	return `${planLabel} на ${periodLabel}`
+}
+
 const Pricing = () => {
 	const auth = useAuthStore(state => state.auth)
 	const [period, setPeriod] = useState<BillingPeriod>('YEARLY')
@@ -39,6 +73,16 @@ const Pricing = () => {
 	const { data: subscription, isLoading: subLoading } = useQuery({
 		queryKey: ['subscription'],
 		queryFn: subscriptionService.getMySubscription,
+		enabled: auth
+	})
+
+	const {
+		data: pendingPayment,
+		isLoading: pendingLoading,
+		refetch
+	} = useQuery({
+		queryKey: ['pending-payment'],
+		queryFn: subscriptionService.getPendingPayment,
 		enabled: auth
 	})
 
@@ -63,17 +107,48 @@ const Pricing = () => {
 		}
 	})
 
-	const isYearly = period === 'YEARLY'
+	const cancelPendingMutation = useMutation({
+		mutationFn: subscriptionService.cancelPendingPayment,
+		onMutate: () => toast.loading('Отменяем незавершённый платёж...'),
+		onSuccess: async (result, _, toastId) => {
+			await refetch()
+			toast.success(result.message, {
+				id: toastId
+			})
+		},
+		onError: (e: any, _, toastId) => {
+			toast.error(
+				e?.response?.data?.message || 'Не удалось отменить платёж',
+				{
+					id: toastId
+				}
+			)
+		}
+	})
 
-	const planLabel: Record<string, string> = {
-		TRIAL: 'Тест-драйв',
-		EASY: 'Easy',
-		HARD: 'Hard'
-	}
+	const isYearly = period === 'YEARLY'
 
 	const currentPlan = subscription?.plan
 	const currentPeriod = subscription?.billingPeriod
 	const isActive = subscription?.status === 'ACTIVE'
+	const hasPendingPayment = Boolean(
+		pendingPayment && pendingPayment.confirmationUrl
+	)
+	const pendingPaymentLabel = hasPendingPayment
+		? getPendingPaymentLabel(pendingPayment)
+		: null
+	const currentPlanLabel = currentPlan ? planLabel[currentPlan] : null
+	const isPendingDowngradeBlocked = Boolean(
+		hasPendingPayment &&
+		isActive &&
+		currentPlan &&
+		pendingPayment?.plan &&
+		PLAN_PRIORITY[currentPlan] > PLAN_PRIORITY[pendingPayment.plan]
+	)
+	const isActionsDisabled =
+		payMutation.isPending ||
+		cancelPendingMutation.isPending ||
+		pendingLoading
 
 	return (
 		<section className={styles.page} aria-labelledby="pricing-page-title">
@@ -118,8 +193,82 @@ const Pricing = () => {
 							isActive ? styles.statusActive : styles.statusExpired
 						}
 					>
-						{isActive ? 'Активна' : 'Истекла'}
+						{isActive ? 'Активен' : 'Истек'}
 					</span>
+				</div>
+			) : null}
+
+			{auth && pendingLoading ? (
+				<div
+					className={`${styles.pendingNotice} ${styles.pendingNoticeSkeleton}`}
+					aria-hidden="true"
+				>
+					<div className={styles.pendingCopy}>
+						<SkeletonLoader
+							height={16}
+							width={210}
+							containerClassName={styles.pendingSkeletonLine}
+						/>
+						<SkeletonLoader
+							height={14}
+							width={280}
+							containerClassName={styles.pendingSkeletonLine}
+						/>
+					</div>
+					<div className={styles.pendingSkeletonActions}>
+						<SkeletonLoader
+							height={40}
+							width={170}
+							borderRadius={14}
+							containerClassName={styles.pendingSkeletonButton}
+						/>
+					</div>
+				</div>
+			) : hasPendingPayment ? (
+				<div className={styles.pendingNotice}>
+					<div className={styles.pendingCopy}>
+						<p className={styles.pendingTitle}>
+							{isPendingDowngradeBlocked
+								? 'Этот платёж больше недоступен'
+								: 'У вас есть незавершённый платёж'}
+						</p>
+						<p className={styles.pendingText}>
+							{isPendingDowngradeBlocked ? (
+								<>
+									У вас активен тариф <strong>{currentPlanLabel}</strong>.
+									Оплата более низкого тарифа{' '}
+									<strong>{pendingPaymentLabel}</strong> недоступна до
+									окончания текущей подписки. Можно отменить эту попытку.
+								</>
+							) : (
+								<>
+									Можно вернуться к оплате{' '}
+									<strong>{pendingPaymentLabel}</strong> или отменить
+									текущую попытку и создать новый платёж.
+								</>
+							)}
+						</p>
+					</div>
+					<div className={styles.pendingActions}>
+						{!isPendingDowngradeBlocked && (
+							<a
+								href={pendingPayment.confirmationUrl ?? undefined}
+								className={styles.pendingResumeBtn}
+							>
+								Вернуться к оплате
+							</a>
+						)}
+						<button
+							type="button"
+							className={styles.pendingCancelBtn}
+							onClick={() => cancelPendingMutation.mutate()}
+							disabled={cancelPendingMutation.isPending}
+						>
+							{cancelPendingMutation.isPending
+								? 'Отменяем...'
+								: 'Отменить платёж'}
+						</button>
+					</div>
 				</div>
 			) : null}
 
@@ -148,6 +297,11 @@ const Pricing = () => {
 			<div className={styles.plans}>
 				{PLANS.map(plan => {
 					const price = isYearly ? plan.yearly : plan.monthly
+					const isDowngradeBlocked = Boolean(
+						isActive &&
+						currentPlan &&
+						PLAN_PRIORITY[currentPlan] > PLAN_PRIORITY[plan.key]
+					)
 					const isCurrentPlan =
 						currentPlan === plan.key &&
 						(!currentPeriod || currentPeriod === period) &&
@@ -192,7 +346,11 @@ const Pricing = () => {
 								type="button"
 								className={styles.buyBtn}
 								style={{ background: plan.color }}
-								disabled={payMutation.isPending}
+								disabled={
+									isActionsDisabled ||
+									hasPendingPayment ||
+									isDowngradeBlocked
+								}
 								onClick={() =>
 									payMutation.mutate({
 										plan: plan.key,
@@ -200,8 +358,19 @@ const Pricing = () => {
 									})
 								}
 							>
-								{isCurrentPlan ? 'Продлить' : 'Подключить'}
+								{isDowngradeBlocked
+									? 'Недоступно'
+									: isCurrentPlan
+										? 'Продлить'
+										: 'Оплатить'}
 							</button>
+
+							{isDowngradeBlocked && currentPlanLabel && (
+								<p className={styles.planRestriction}>
+									Понижение недоступно, пока активен{' '}
+									<strong>{currentPlanLabel}</strong>
+								</p>
+							)}
 						</article>
 					)
 				})}
@@ -212,10 +381,18 @@ const Pricing = () => {
 				ЮKassa.
 			</p>
 
+			{hasPendingPayment && (
+				<p className={styles.notePending}>
+					Пока есть незавершённый платёж, создание нового платежа
+					недоступно.
+				</p>
+			)}
+
 			{isActive && currentPlan !== 'TRIAL' && (
 				<p className={styles.noteCarryover}>
 					Оплачивать подписку можно сколько угодно раз — срок суммируется.
-					При смене тарифа оставшиеся дни переносятся на новый период.
+					При продлении текущего тарифа и переходе на более высокий
+					оставшиеся дни переносятся на новый период.
 				</p>
 			)}
 		</section>

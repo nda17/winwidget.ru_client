@@ -7,6 +7,71 @@
 .currentPlan {
 	@apply flex items-center gap-4 mb-6 px-5 py-3 rounded-xl text-sm bg-white border border-[#e0d6f0] text-[#555];
 }
+
+.pendingNotice {
+	@apply w-full max-w-[760px] mb-6 px-5 py-4 rounded-2xl bg-white border border-[#eadcf7] flex items-center justify-between gap-5;
+	box-shadow: 0 8px 28px rgb(123 63 160 / 0.08);
+}
+
+.pendingNoticeSkeleton {
+	@apply py-3;
+}
+
+.pendingCopy {
+	@apply flex flex-col gap-2;
+}
+
+.pendingTitle {
+	@apply text-[1rem] font-semibold text-[#1a1a1a];
+}
+
+.pendingText {
+	@apply text-[0.88rem] leading-[1.55] text-[#6f6482];
+}
+
+.pendingActions {
+	@apply flex items-center gap-3 shrink-0;
+}
+
+.pendingResumeBtn,
+.pendingCancelBtn {
+	@apply inline-flex items-center justify-center min-h-[44px] rounded-xl px-4 text-sm font-semibold no-underline cursor-pointer transition-[opacity,transform,border-color] duration-200;
+}
+
+.pendingResumeBtn {
+	@apply border-none text-white;
+	background: linear-gradient(
+		87.12deg,
+		#470b58 1.98%,
+		#c21b84 50.27%,
+		#fa595e 74.42%,
+		#f8bd31 98.56%
+	);
+}
+
+.pendingCancelBtn {
+	@apply bg-transparent text-[#7b3fa0] border border-[#e0d6f0];
+	background-image: none;
+}
+
+.pendingResumeBtn:hover,
+.pendingCancelBtn:hover {
+	@apply opacity-90 -translate-y-px;
+}
+
+.pendingCancelBtn:disabled {
+	@apply opacity-50 cursor-not-allowed translate-y-0;
+}
+
+.pendingSkeletonActions {
+	@apply flex items-center shrink-0;
+}
+
+.pendingSkeletonLine,
+.pendingSkeletonButton {
+	@apply block leading-none;
+}
+
 .currentPlanSkeletonLine,
 .currentPlanSkeletonBadge {
 	@apply block leading-none;
@@ -93,9 +158,17 @@
 .buyBtn:disabled {
 	@apply opacity-50 cursor-not-allowed translate-y-0;
 }
+.planRestriction {
+	@apply mt-3 text-center text-xs leading-[1.5] text-[#9d6d73];
+}
 .note {
 	@apply text-xs text-center text-[#bbb];
 }
+
+.notePending {
+	@apply mt-3 text-xs text-center text-[#a5666c];
+}
+
 .noteCarryover {
 	@apply mt-3 text-xs text-center text-[#a78bc4];
 }
@@ -130,6 +203,26 @@
 	}
 	.currentPlan {
 		@apply flex-wrap gap-2 px-4 py-[0.625rem] text-[0.82rem];
+	}
+	.pendingNotice {
+		@apply flex-col items-stretch px-4 py-4 gap-4 rounded-[18px];
+	}
+	.pendingNoticeSkeleton {
+		@apply py-4;
+	}
+	.pendingActions {
+		@apply flex-col items-stretch;
+	}
+	.pendingSkeletonActions {
+		@apply w-full;
+	}
+	.pendingResumeBtn,
+	.pendingCancelBtn {
+		@apply w-full;
+	}
+	.pendingSkeletonLine,
+	.pendingSkeletonButton {
+		@apply w-full;
 	}
 	.currentPlanSkeletonLine,
 	.currentPlanSkeletonBadge {

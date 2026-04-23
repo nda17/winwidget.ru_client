@@ -15,6 +15,9 @@ type CardStyle = CSSProperties & {
 	'--card-accent': string
 	'--card-accent-soft': string
 	'--card-accent-border': string
+	'--card-accent-glow': string
+	'--card-accent-highlight': string
+	'--card-accent-sheen': string
 }
 
 const slides: Slide[] = [
@@ -72,7 +75,7 @@ const slides: Slide[] = [
 	},
 	{
 		title: 'Webhook',
-		tag: 'Автоматизация',
+		tag: 'Интеграция',
 		description:
 			'POST-запрос с данными лида — подключите Make, Zapier или n8n',
 		accent: '#8f5fe8',
@@ -220,7 +223,7 @@ const slides: Slide[] = [
 	},
 	{
 		title: 'Roistat',
-		tag: 'Сквозная аналитика',
+		tag: 'Аналитика',
 		description:
 			'Видите ROI каждого канала — события передаются без дополнительных настроек',
 		accent: '#4caf7d',
@@ -244,10 +247,15 @@ const slides: Slide[] = [
 	}
 ]
 
+const withAlpha = (hex: string, alpha: string) => `${hex}${alpha}`
+
 const getCardStyle = (slide: Slide): CardStyle => ({
 	'--card-accent': slide.accent,
-	'--card-accent-soft': `${slide.accent}1f`,
-	'--card-accent-border': `${slide.accent}42`
+	'--card-accent-soft': withAlpha(slide.accent, '2e'),
+	'--card-accent-border': withAlpha(slide.accent, '82'),
+	'--card-accent-glow': withAlpha(slide.accent, '36'),
+	'--card-accent-highlight': withAlpha(slide.accent, '1f'),
+	'--card-accent-sheen': withAlpha(slide.accent, '14')
 })
 
 const renderCards = (isDuplicate = false) =>
@@ -277,8 +285,10 @@ const renderCards = (isDuplicate = false) =>
 				<p className={styles.description}>{slide.description}</p>
 			</div>
 			<div className={styles.cardFooter}>
-				<span className={styles.statusDot} />
-				<span>Готово к подключению</span>
+				<span className={styles.status}>
+					<span className={styles.statusDot} />
+					<span>Готово к подключению</span>
+				</span>
 			</div>
 		</article>
 	))

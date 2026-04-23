@@ -73,6 +73,9 @@
 	.title {
 		@apply text-xl;
 	}
+	.gridLayout {
+		@apply grid-cols-1 gap-3;
+	}
 	.card {
 		@apply gap-2 pt-5 px-[0.875rem] pb-[1.125rem];
 	}
