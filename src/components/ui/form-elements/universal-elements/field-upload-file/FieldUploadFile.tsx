@@ -46,8 +46,13 @@ const FieldUploadFile: NextPage<IUploadField> = ({
 				? 'Фото по умолчанию'
 				: 'Файл загружен'
 			: 'Файл не выбран'
+	const shouldShowCurrentPath = Boolean(
+		currentFile && currentFile !== DEFAULT_AVATAR
+	)
 	const displayLabel = showFilePath
-		? value || currentFile || fileLabel
+		? value ||
+			(shouldShowCurrentPath ? currentFile : fileLabel) ||
+			fileLabel
 		: fileLabel
 
 	const handleDelete = async () => {
@@ -116,30 +121,38 @@ const FieldUploadFile: NextPage<IUploadField> = ({
 	)
 
 	return (
-		<div className={styles.wrapper} style={style}>
-			<p className={clsx(styles['field-path'])}>{displayLabel}</p>
-			{disabled ? (
-				avatarPreview
-			) : (
-				<>
-					<label className={clsx(styles['label-input'])}>
-						<span className="srOnly">Загрузить файл</span>
-						<span className={clsx(styles['custom-input'])}>
-							<span className={styles.button} aria-hidden="true">
-								Загрузить файл
-							</span>
-						</span>
-						<input
-							id={inputId}
-							type="file"
-							onChange={uploadFile}
-							className={clsx(styles['input-field'])}
-							aria-label={placeholder}
-						/>
-					</label>
-					{avatarPreview}
-				</>
+		<div
+			className={clsx(
+				styles.wrapper,
+				showFilePath && styles['wrapper-with-path']
 			)}
+			style={style}
+		>
+			<p className={clsx(styles['field-path'])}>{displayLabel}</p>
+			<div className={styles.controls}>
+				{disabled ? (
+					avatarPreview
+				) : (
+					<>
+						<label className={clsx(styles['label-input'])}>
+							<span className="srOnly">Загрузить файл</span>
+							<span className={clsx(styles['custom-input'])}>
+								<span className={styles.button} aria-hidden="true">
+									Загрузить файл
+								</span>
+							</span>
+							<input
+								id={inputId}
+								type="file"
+								onChange={uploadFile}
+								className={clsx(styles['input-field'])}
+								aria-label={placeholder}
+							/>
+						</label>
+						{avatarPreview}
+					</>
+				)}
+			</div>
 		</div>
 	)
 }

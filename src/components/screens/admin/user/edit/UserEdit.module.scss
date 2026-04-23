@@ -1,99 +1,335 @@
 .wrapper {
-	@apply w-full max-w-[56rem] mx-auto px-4 flex flex-col items-center;
+	@apply w-full max-w-[88rem] mx-auto px-4 flex flex-col items-center relative;
+}
 
-	.content {
-		@apply w-full max-w-[42rem] flex flex-col gap-5;
+.layout {
+	@apply w-full grid gap-5 items-start mb-6 xl:grid-cols-[minmax(0,24rem)_minmax(0,1fr)];
+}
+
+.card {
+	@apply w-full rounded-layout border border-gray-300 bg-white shadow-sm overflow-hidden;
+}
+
+.summaryCard {
+	@apply xl:sticky xl:top-4;
+}
+
+.cardHeader {
+	@apply flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between px-5 py-4 border-b border-gray-300 bg-gray-300 bg-opacity-20;
+}
+
+.cardBody {
+	@apply p-5;
+}
+
+.cardEyebrow {
+	@apply text-[0.7rem] uppercase tracking-[0.08em] font-semibold text-gray-500;
+}
+
+.cardTitle {
+	@apply text-[1.05rem] sm:text-[1.1rem] font-semibold text-gray-700 leading-tight;
+}
+
+.cardSubtitle {
+	@apply mt-1 text-sm text-gray-600;
+}
+
+.backLink {
+	@apply inline-flex items-center justify-center rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-colors shrink-0 whitespace-nowrap;
+
+	&:hover {
+		@apply bg-gray-300 bg-opacity-20 text-red-700;
+	}
+}
+
+.summaryContact {
+	@apply -mt-2 text-sm text-gray-600 break-words;
+}
+
+.summaryGroup {
+	@apply mt-5 first:mt-4;
+}
+
+.summaryLabel {
+	@apply text-xs uppercase tracking-[0.08em] font-semibold text-gray-500 mb-2;
+}
+
+.badgeRow {
+	@apply flex flex-wrap gap-2;
+}
+
+.badge {
+	@apply inline-flex items-center rounded-full bg-gray-300 bg-opacity-40 px-3 py-1 text-[0.75rem] font-semibold text-gray-700;
+}
+
+.badgeMuted {
+	@apply bg-red-100 text-red-700;
+}
+
+.badgeSuccess {
+	@apply bg-green-100 text-green-700;
+}
+
+.infoGrid {
+	@apply mt-5 grid gap-3 sm:grid-cols-2;
+}
+
+.infoItem {
+	@apply rounded-xl border border-gray-300 bg-gray-300 bg-opacity-10 px-4 py-3;
+}
+
+.infoItemWide {
+	@apply sm:col-span-2;
+}
+
+.infoLabel {
+	@apply text-xs uppercase tracking-[0.08em] font-semibold text-gray-500;
+}
+
+.infoValue {
+	@apply mt-1 text-sm text-gray-700 leading-snug break-words;
+}
+
+.form {
+	@apply p-5 flex flex-col gap-6;
+}
+
+.formSection {
+	@apply flex flex-col gap-4 pb-6 border-b border-gray-300 last:border-b-0 last:pb-0;
+}
+
+.sectionTitle {
+	@apply text-[0.95rem] font-semibold text-gray-700;
+}
+
+.sectionHint {
+	@apply mt-1 text-sm text-gray-500 leading-snug;
+}
+
+.rightsGrid {
+	@apply grid gap-3 lg:grid-cols-2;
+}
+
+.rightCard {
+	@apply flex items-start justify-between gap-4 rounded-xl border border-gray-300 bg-white px-4 py-4 transition-colors;
+
+	&:hover {
+		@apply bg-gray-300 bg-opacity-10;
+	}
+}
+
+.statusCard {
+	@apply lg:col-span-2;
+}
+
+.rightCardActive {
+	@apply border-red-500 bg-red-50;
+}
+
+.rightCardDisabled {
+	@apply opacity-60;
+
+	&:hover {
+		@apply bg-white;
+	}
+}
+
+.rightCardTitle {
+	@apply text-sm font-semibold text-gray-700;
+}
+
+.rightCardDescription {
+	@apply mt-1 text-xs text-gray-500 leading-snug;
+}
+
+.rightCheckbox {
+	@apply mt-1 h-4 w-4 accent-red-500 cursor-pointer;
+
+	&:disabled {
+		@apply cursor-not-allowed opacity-60;
+	}
+}
+
+.fieldGrid {
+	@apply grid gap-4 md:grid-cols-2;
+}
+
+.fieldBlock {
+	@apply flex flex-col gap-2;
+}
+
+.fieldBlockWide {
+	@apply md:col-span-2;
+}
+
+.fieldLabel {
+	@apply text-sm font-semibold text-gray-700;
+}
+
+.fieldHint {
+	@apply text-xs text-gray-500 leading-snug;
+}
+
+.actions {
+	@apply flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between;
+}
+
+.actionsNote {
+	@apply text-sm text-gray-500;
+}
+
+.saveButton {
+	@apply inline-flex items-center justify-center rounded-md bg-red-500 px-5 py-2 text-sm font-semibold text-white transition-opacity;
+
+	&:hover {
+		@apply opacity-90;
 	}
 
-	.loading-content {
-		@apply w-full max-w-[42rem] flex flex-col gap-5;
+	&:disabled {
+		@apply opacity-50 cursor-not-allowed;
+	}
+}
+
+.emptyState {
+	@apply w-full rounded-layout border border-dashed border-gray-300 bg-white px-5 py-10 text-center mb-6;
+}
+
+.emptyTitle {
+	@apply text-[1.05rem] font-semibold text-gray-700;
+}
+
+.emptyText {
+	@apply mt-2 text-sm text-gray-600;
+}
+
+.emptyAction {
+	@apply inline-flex items-center justify-center mt-4 rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors;
+
+	&:hover {
+		@apply bg-gray-300 bg-opacity-20 text-red-700;
+	}
+}
+
+.loadingEyebrow {
+	@apply h-3 w-16 mb-2;
+}
+
+.loadingTitle {
+	@apply h-6 w-44;
+}
+
+.loadingSubtitle {
+	@apply h-4 w-60 mt-2;
+}
+
+.loadingBackButton {
+	@apply h-10 w-28;
+}
+
+.loadingUserInfo {
+	@apply flex items-center gap-4;
+}
+
+.loadingAvatar {
+	@apply w-20 h-20;
+}
+
+.loadingUserMeta {
+	@apply flex-1;
+}
+
+.loadingUserName {
+	@apply h-5 w-40;
+}
+
+.loadingUserContact {
+	@apply h-4 w-52 mt-2;
+}
+
+.loadingBadgeRow {
+	@apply flex flex-wrap gap-2 mt-5;
+}
+
+.loadingBadge {
+	@apply h-7 w-24;
+}
+
+.loadingInfoGrid {
+	@apply grid gap-3 sm:grid-cols-2 mt-5;
+}
+
+.loadingInfoWide {
+	@apply h-[4.5rem] sm:col-span-2;
+}
+
+.loadingInfoCard {
+	@apply h-[4.5rem];
+}
+
+.loadingSection {
+	@apply flex flex-col gap-3 pb-6 border-b border-gray-300 last:border-b-0 last:pb-0;
+}
+
+.loadingSectionTitle {
+	@apply h-5 w-36;
+}
+
+.loadingSectionHint {
+	@apply h-4 w-64;
+}
+
+.loadingUpload {
+	@apply h-[4.75rem] w-full;
+}
+
+.loadingRightsGrid {
+	@apply grid gap-3 lg:grid-cols-2;
+}
+
+.loadingRightCard {
+	@apply h-24 w-full;
+}
+
+.loadingFieldGrid {
+	@apply grid gap-4 md:grid-cols-2;
+}
+
+.loadingInput {
+	@apply h-14 w-full;
+}
+
+.loadingActions {
+	@apply flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between;
+}
+
+.loadingActionsNote {
+	@apply h-4 w-72;
+}
+
+.loadingSaveButton {
+	@apply h-10 w-44;
+}
+
+@media (max-width: 640px) {
+	.cardHeader,
+	.cardBody,
+	.form,
+	.emptyState {
+		@apply px-4;
 	}
 
-	.loading-section {
-		@apply w-full max-w-[42rem] rounded-layout border border-gray-300 bg-white px-5 py-5 shadow-sm;
+	.cardHeader {
+		@apply py-4;
 	}
 
-	.loading-user-info {
-		@apply flex items-center gap-4 mb-4;
+	.cardBody,
+	.form {
+		@apply py-4;
 	}
 
-	.loading-avatar {
-		@apply w-20 h-20;
-	}
-
-	.loading-user-name {
-		@apply h-6 w-[12rem];
-	}
-
-	.loading-meta {
-		@apply mt-4 border-t border-gray-300 pt-4 flex flex-col gap-3;
-	}
-
-	.loading-meta-line {
-		@apply h-5 w-full;
-	}
-
-	.loading-meta-line-short {
-		@apply h-5 w-[65%];
-	}
-
-	.loading-form {
-		@apply w-full flex flex-col gap-4;
-	}
-
-	.loading-upload {
-		@apply h-[4.75rem] w-full;
-	}
-
-	.loading-checkboxes {
-		@apply grid grid-cols-2 sm:grid-cols-4 gap-3;
-	}
-
-	.loading-checkbox {
-		@apply h-10 w-full;
-	}
-
-	.loading-input {
-		@apply h-10 w-full;
-	}
-
-	.loading-button {
-		@apply h-10 w-[7.5rem];
-	}
-
-	.summary-section {
-		@apply w-full rounded-layout border border-gray-300 bg-white px-5 py-5 shadow-sm;
-	}
-
-	.summary-meta {
-		@apply mt-4 border-t border-gray-300 pt-4 flex flex-col gap-3;
-	}
-
-	.info-field {
-		@apply w-full text-left text-lg leading-snug;
-	}
-
-	.info-label {
-		@apply font-semibold text-gray-700;
-	}
-
-	.edit-section {
-		@apply w-full rounded-layout border border-gray-300 bg-white px-5 py-5 shadow-sm mb-6;
-	}
-
-	.edit-form {
-		@apply w-full flex flex-col gap-1;
-	}
-
-	.wrapper-checkbox {
-		@apply grid grid-cols-2 sm:grid-cols-4 gap-3 text-gray-600 w-full outline-none p-1 border-b border-b-black border-solid mb-[1.85rem];
-
-		.checkbox {
-			@apply flex gap-2 items-center;
-		}
-	}
-
-	.actions {
-		@apply pt-2 flex justify-start;
+	.backLink,
+	.saveButton,
+	.emptyAction {
+		@apply w-full;
 	}
 }

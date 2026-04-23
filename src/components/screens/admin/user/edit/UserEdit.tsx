@@ -3,41 +3,56 @@ import { IUserEditInput } from '@/components/screens/admin/user/edit/user-edit.i
 import styles from '@/components/screens/admin/user/edit/UserEdit.module.scss'
 import { useUserEdit } from '@/components/screens/admin/user/edit/useUserEdit'
 import AdminNavigation from '@/components/ui/admin/admin-navigation/AdminNavigation'
-import CheckboxRights from '@/components/ui/form-elements/admin-page/checkbox-rights/CheckboxRights'
 import FieldEmail from '@/components/ui/form-elements/admin-page/field-email/FieldEmail'
 import FieldId from '@/components/ui/form-elements/admin-page/field-id/FieldId'
 import FieldName from '@/components/ui/form-elements/admin-page/field-name/FieldName'
 import FieldPassword from '@/components/ui/form-elements/admin-page/field-password/FieldPassword'
-import Button from '@/components/ui/form-elements/universal-elements/button/Button'
+import FieldPhone from '@/components/ui/form-elements/admin-page/field-phone/FieldPhone'
 import FieldUploadFile from '@/components/ui/form-elements/universal-elements/field-upload-file/FieldUploadFile'
 import Heading from '@/components/ui/heading/Heading'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import SubHeading from '@/components/ui/sub-heading/SubHeading'
 import UserInfo from '@/components/ui/user-info/UserInfo'
+import { ADMIN_PAGES } from '@/config/pages/admin.config'
 import { UserRole } from '@/services/auth/auth.types'
 import { UserLoginMethod } from '@/shared/types/user.types'
 import {
-	validEmail,
-	validId,
 	validName,
+	validEmail,
 	validPassword,
 	validPhone
 } from '@/shared/regex'
 import { IParamsUrl } from '@/shared/types/params-url.types'
 import clsx from 'clsx'
 import { NextPage } from 'next'
+import Link from 'next/link'
+import { useEffect } from 'react'
 import { Controller, useForm } from 'react-hook-form'
+
+const FIELD_STYLE = { marginBottom: 0 }
+
+const formatOptionalPattern = (
+	value: string | undefined,
+	pattern: RegExp,
+	message: string
+) => !value || pattern.test(value) || message
+
+const formatCreatedAt = (value: string) =>
+	new Intl.DateTimeFormat('ru-RU', {
+		dateStyle: 'medium'
+	}).format(new Date(value))
 
 const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 	const {
 		handleSubmit,
 		register,
 		formState: { errors },
-		setValue,
-		control
+		reset,
+		control,
+		watch
 	} = useForm<IUserEditInput>({ mode: 'onChange' })
 
-	const { isLoading, data, onSubmit } = useUserEdit(setValue, params)
+	const { isLoading, data, onSubmit, isSaving } = useUserEdit(params)
 
 	const loginMethodLabels: Record<UserLoginMethod, string> = {
 		EMAIL: 'Email',
@@ -47,271 +62,604 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 		YANDEX: 'Яндекс'
 	}
 
-	const getLoginMethods = () => {
-		if (!data?.loginMethods?.length) {
-			return 'Не привязаны'
-		}
+	useEffect(() => {
+		if (!data) return
 
-		return data.loginMethods
-			.map(method => loginMethodLabels[method])
-			.join(', ')
-	}
+		reset({
+			avatarPath: '',
+			email: data.email ?? '',
+			isAdmin: data.rights.includes(UserRole.ADMIN),
+			isPhoneVerified: Boolean(data.isPhoneVerified),
+			isUser: data.rights.includes(UserRole.USER),
+			name: data.name ?? '',
+			password: '',
+			phone: data.phone ?? ''
+		})
+	}, [data, reset])
+
+	const loginMethods =
+		data?.loginMethods?.map(
+			method => loginMethodLabels[method] ?? method
+		) ?? []
+	const isUserChecked = Boolean(watch('isUser'))
+	const isAdminChecked = Boolean(watch('isAdmin'))
+	const isPhoneVerifiedChecked = Boolean(watch('isPhoneVerified'))
+	const hasPhoneValue = Boolean(
+		(watch('phone') ?? data?.phone ?? '').trim()
+	)
 
 	return (
 		<section className={styles.wrapper}>
 			<Heading text="Панель администратора" />
 			<AdminNavigation />
+			<SubHeading text="Редактирование пользователя" />
+
 			{isLoading ? (
-				<div className={styles['loading-content']}>
-					<div className={styles['loading-section']}>
-						<SubHeading text="Редактирование данных пользователя" />
-						<div className={styles['loading-user-info']}>
-							<SkeletonLoader
-								count={1}
-								circle
-								className={styles['loading-avatar']}
-							/>
-							<SkeletonLoader
-								count={1}
-								className={styles['loading-user-name']}
-							/>
-						</div>
-						<div className={styles['loading-meta']}>
-							<SkeletonLoader
-								count={1}
-								className={styles['loading-meta-line']}
-							/>
-							<SkeletonLoader
-								count={1}
-								className={styles['loading-meta-line']}
-							/>
-							<SkeletonLoader
-								count={1}
-								className={styles['loading-meta-line']}
-							/>
-							<SkeletonLoader
-								count={1}
-								className={styles['loading-meta-line']}
-							/>
-							<SkeletonLoader
-								count={1}
-								className={styles['loading-meta-line-short']}
-							/>
-						</div>
-					</div>
-					<div className={styles['loading-section']}>
-						<SubHeading text="Поля редактирования" />
-						<div className={styles['loading-form']}>
-							<SkeletonLoader
-								count={1}
-								className={styles['loading-upload']}
-							/>
-							<div className={styles['loading-checkboxes']}>
+				<div className={styles.layout}>
+					<div className={clsx(styles.card, styles.summaryCard)}>
+						<div className={styles.cardHeader}>
+							<div>
 								<SkeletonLoader
 									count={1}
-									className={styles['loading-checkbox']}
+									className={styles.loadingEyebrow}
 								/>
 								<SkeletonLoader
 									count={1}
-									className={styles['loading-checkbox']}
+									className={styles.loadingTitle}
 								/>
 								<SkeletonLoader
 									count={1}
-									className={styles['loading-checkbox']}
-								/>
-								<SkeletonLoader
-									count={1}
-									className={styles['loading-checkbox']}
+									className={styles.loadingSubtitle}
 								/>
 							</div>
 							<SkeletonLoader
 								count={1}
-								className={styles['loading-input']}
+								className={styles.loadingBackButton}
 							/>
-							<SkeletonLoader
-								count={1}
-								className={styles['loading-input']}
-							/>
-							<SkeletonLoader
-								count={1}
-								className={styles['loading-input']}
-							/>
-							<SkeletonLoader
-								count={1}
-								className={styles['loading-input']}
-							/>
-							<SkeletonLoader
-								count={1}
-								className={styles['loading-input']}
-							/>
-							<SkeletonLoader
-								count={1}
-								className={styles['loading-button']}
-							/>
+						</div>
+						<div className={styles.cardBody}>
+							<div className={styles.loadingUserInfo}>
+								<SkeletonLoader
+									count={1}
+									circle
+									className={styles.loadingAvatar}
+								/>
+								<div className={styles.loadingUserMeta}>
+									<SkeletonLoader
+										count={1}
+										className={styles.loadingUserName}
+									/>
+									<SkeletonLoader
+										count={1}
+										className={styles.loadingUserContact}
+									/>
+								</div>
+							</div>
+							<div className={styles.loadingBadgeRow}>
+								<SkeletonLoader
+									count={1}
+									className={styles.loadingBadge}
+								/>
+								<SkeletonLoader
+									count={1}
+									className={styles.loadingBadge}
+								/>
+								<SkeletonLoader
+									count={1}
+									className={styles.loadingBadge}
+								/>
+							</div>
+							<div className={styles.loadingInfoGrid}>
+								<SkeletonLoader
+									count={1}
+									className={styles.loadingInfoWide}
+								/>
+								<SkeletonLoader
+									count={1}
+									className={styles.loadingInfoCard}
+								/>
+								<SkeletonLoader
+									count={1}
+									className={styles.loadingInfoCard}
+								/>
+								<SkeletonLoader
+									count={1}
+									className={styles.loadingInfoCard}
+								/>
+							</div>
+						</div>
+					</div>
+
+					<div className={styles.card}>
+						<div className={styles.cardHeader}>
+							<div>
+								<SkeletonLoader
+									count={1}
+									className={styles.loadingEyebrow}
+								/>
+								<SkeletonLoader
+									count={1}
+									className={styles.loadingTitle}
+								/>
+								<SkeletonLoader
+									count={1}
+									className={styles.loadingSubtitle}
+								/>
+							</div>
+						</div>
+						<div className={styles.form}>
+							<div className={styles.loadingSection}>
+								<SkeletonLoader
+									count={1}
+									className={styles.loadingSectionTitle}
+								/>
+								<SkeletonLoader
+									count={1}
+									className={styles.loadingSectionHint}
+								/>
+								<SkeletonLoader
+									count={1}
+									className={styles.loadingUpload}
+								/>
+								<div className={styles.loadingRightsGrid}>
+									<SkeletonLoader
+										count={1}
+										className={styles.loadingRightCard}
+									/>
+									<SkeletonLoader
+										count={1}
+										className={styles.loadingRightCard}
+									/>
+									<SkeletonLoader
+										count={1}
+										className={styles.loadingRightCard}
+									/>
+								</div>
+							</div>
+							<div className={styles.loadingSection}>
+								<SkeletonLoader
+									count={1}
+									className={styles.loadingSectionTitle}
+								/>
+								<SkeletonLoader
+									count={1}
+									className={styles.loadingSectionHint}
+								/>
+								<div className={styles.loadingFieldGrid}>
+									<SkeletonLoader
+										count={1}
+										className={styles.loadingInput}
+									/>
+									<SkeletonLoader
+										count={1}
+										className={styles.loadingInput}
+									/>
+									<SkeletonLoader
+										count={1}
+										className={styles.loadingInput}
+									/>
+									<SkeletonLoader
+										count={1}
+										className={styles.loadingInput}
+									/>
+								</div>
+							</div>
+							<div className={styles.loadingActions}>
+								<SkeletonLoader
+									count={1}
+									className={styles.loadingActionsNote}
+								/>
+								<SkeletonLoader
+									count={1}
+									className={styles.loadingSaveButton}
+								/>
+							</div>
 						</div>
 					</div>
 				</div>
-			) : (
-				<div className={styles.content}>
-					<div className={styles['summary-section']}>
-						<SubHeading text="Редактирование данных пользователя" />
-						<UserInfo
-							avatarPath={data?.avatarPath}
-							name={data?.name}
-							isLoading={isLoading}
-						/>
-						<div className={styles['summary-meta']}>
-							<p className={styles['info-field']}>
-								<span className={styles['info-label']}>ID:</span> {data.id}
-							</p>
-							<p className={styles['info-field']}>
-								<span className={styles['info-label']}>Email:</span>{' '}
-								{data.email || 'Нет данных'}
-							</p>
-							<p className={styles['info-field']}>
-								<span className={styles['info-label']}>Телефон:</span>{' '}
-								{data.phone || 'Нет данных'}
-							</p>
-							<p className={styles['info-field']}>
-								<span className={styles['info-label']}>
-									Способы входа:
-								</span>{' '}
-								{getLoginMethods()}
-							</p>
-							<p className={styles['info-field']}>
-								<span className={styles['info-label']}>Роли:</span>{' '}
-								{data.rights.join(', ')}
-							</p>
-							<p className={styles['info-field']}>
-								<span className={styles['info-label']}>
-									Дата регистрации:
-								</span>{' '}
-								{data.createdAt.replace(/\T.*/, '')}
-							</p>
+			) : data ? (
+				<div className={styles.layout}>
+					<aside className={clsx(styles.card, styles.summaryCard)}>
+						<div className={styles.cardHeader}>
+							<div>
+								<p className={styles.cardEyebrow}>Профиль</p>
+								<h3 className={styles.cardTitle}>
+									{data.name || 'Пользователь без имени'}
+								</h3>
+								<p className={styles.cardSubtitle}>
+									Редактирование карточки пользователя и прав доступа.
+								</p>
+							</div>
+							<Link
+								href={ADMIN_PAGES.USER_LIST}
+								className={styles.backLink}
+							>
+								К списку
+							</Link>
 						</div>
-					</div>
-					<div className={styles['edit-section']}>
-						<SubHeading text="Поля редактирования" />
-						<form
-							onSubmit={handleSubmit(onSubmit)}
-							className={styles['edit-form']}
-						>
-							<Controller
-								control={control}
-								name="avatarPath"
-								render={({ field: { value, onChange } }) => (
-									<FieldUploadFile
-										onChange={onChange}
-										value={value}
-										currentFile={data?.avatarPath || '/avatar-default.png'}
-										folder="user-avatar"
-										placeholder="Фото профиля"
-										showFilePath
-									/>
-								)}
+
+						<div className={styles.cardBody}>
+							<UserInfo
+								avatarPath={data.avatarPath}
+								name={data.name}
+								isLoading={false}
 							/>
-							<div className={clsx(styles['wrapper-checkbox'])}>
-								<div className={styles.checkbox}>
-									<p>USER</p>
-									<Controller
-										control={control}
-										name="isUser"
-										render={({ field }) => (
-											<CheckboxRights
-												required
-												type="checkbox"
-												defaultChecked={data.rights.includes(
-													UserRole.USER
-												)}
-												{...register('isUser', { value: field.value })}
-											/>
-										)}
-									/>
-								</div>
-								<div className={styles.checkbox}>
-									<p>ADMIN</p>
-									<Controller
-										control={control}
-										name="isAdmin"
-										render={({ field }) => (
-											<CheckboxRights
-												type="checkbox"
-												defaultChecked={data.rights.includes(
-													UserRole.ADMIN
-												)}
-												{...register('isAdmin', { value: field.value })}
-											/>
-										)}
-									/>
+
+							<p className={styles.summaryContact}>
+								{data.email ||
+									data.phone ||
+									'Контактные данные не указаны'}
+							</p>
+
+							<div className={styles.summaryGroup}>
+								<p className={styles.summaryLabel}>Способы входа</p>
+								<div className={styles.badgeRow}>
+									{loginMethods.length ? (
+										loginMethods.map(method => (
+											<span key={method} className={styles.badge}>
+												{method}
+											</span>
+										))
+									) : (
+										<span
+											className={clsx(styles.badge, styles.badgeMuted)}
+										>
+											Не привязаны
+										</span>
+									)}
 								</div>
 							</div>
-							<FieldId
-								type="text"
-								error={errors.id}
-								defaultValue={data.id}
-								placeholder="ID"
-								{...register('id', {
-									pattern: {
-										value: validId,
-										message:
-											'Минимальная и максимальная длина - 25 символов. Первые 2 символа - буквы. Далее идут буквы и цифры.'
-									}
-								})}
-							/>
-							<FieldName
-								type="text"
-								error={errors.name}
-								defaultValue={data.name}
-								placeholder="Имя"
-								{...register('name', {
-									pattern: {
-										value: validName,
-										message:
-											'Минимальная длина должна быть более 2 символов. Можно использовать цифры, начиная со второго символа, и специальный символ «-».'
-									}
-								})}
-							/>
-							<FieldEmail
-								type="email"
-								error={errors.email}
-								defaultValue={data?.email}
-								placeholder="Email"
-								{...register('email', {
-									pattern: {
-										value: validEmail,
-										message: 'Проверьте правильность ввода email'
-									}
-								})}
-							/>
-							<FieldEmail
-								type="tel"
-								error={errors.phone}
-								defaultValue={data?.phone || ''}
-								placeholder="Телефон"
-								{...register('phone', {
-									pattern: {
-										value: validPhone,
-										message: 'Проверьте правильность ввода номера телефона'
-									}
-								})}
-							/>
-							<FieldPassword
-								type="password"
-								error={errors.password}
-								placeholder="Пароль"
-								{...register('password', {
-									pattern: {
-										value: validPassword,
-										message:
-											'Мин. длина 6 символов. Должен содержать 1 цифру 0-9, 1 строчную букву a-z и 1 заглавную букву A-Z.'
-									}
-								})}
-							/>
+
+							<div className={styles.summaryGroup}>
+								<p className={styles.summaryLabel}>Права и статусы</p>
+								<div className={styles.badgeRow}>
+									{data.rights.length ? (
+										data.rights.map(role => (
+											<span key={role} className={styles.badge}>
+												{role}
+											</span>
+										))
+									) : (
+										<span
+											className={clsx(styles.badge, styles.badgeMuted)}
+										>
+											Роли не назначены
+										</span>
+									)}
+									{data.isPhoneVerified && (
+										<span
+											className={clsx(styles.badge, styles.badgeSuccess)}
+										>
+											Телефон подтверждён
+										</span>
+									)}
+								</div>
+							</div>
+
+							<div className={styles.infoGrid}>
+								<div
+									className={clsx(styles.infoItem, styles.infoItemWide)}
+								>
+									<p className={styles.infoLabel}>ID пользователя</p>
+									<p className={styles.infoValue}>{data.id}</p>
+								</div>
+								<div className={styles.infoItem}>
+									<p className={styles.infoLabel}>Email</p>
+									<p className={styles.infoValue}>
+										{data.email || 'Нет данных'}
+									</p>
+								</div>
+								<div className={styles.infoItem}>
+									<p className={styles.infoLabel}>Телефон</p>
+									<p className={styles.infoValue}>
+										{data.phone || 'Нет данных'}
+									</p>
+								</div>
+								<div className={styles.infoItem}>
+									<p className={styles.infoLabel}>Дата регистрации</p>
+									<p className={styles.infoValue}>
+										{formatCreatedAt(data.createdAt)}
+									</p>
+								</div>
+							</div>
+						</div>
+					</aside>
+
+					<div className={styles.card}>
+						<div className={styles.cardHeader}>
+							<div>
+								<p className={styles.cardEyebrow}>Изменения</p>
+								<h3 className={styles.cardTitle}>Редактируемые поля</h3>
+								<p className={styles.cardSubtitle}>
+									Обновите фото, контакты, роли и пароль в одном месте.
+								</p>
+							</div>
+						</div>
+
+						<form
+							onSubmit={handleSubmit(onSubmit)}
+							className={styles.form}
+						>
+							<div className={styles.formSection}>
+								<div>
+									<p className={styles.sectionTitle}>Фото и доступ</p>
+									<p className={styles.sectionHint}>
+										Аватар меняется отдельно, а права и статусы применяются
+										после сохранения формы.
+									</p>
+								</div>
+
+								<Controller
+									control={control}
+									name="avatarPath"
+									defaultValue=""
+									render={({ field: { value, onChange } }) => (
+										<FieldUploadFile
+											onChange={onChange}
+											value={value}
+											currentFile={
+												data.avatarPath || '/avatar-default.png'
+											}
+											folder="user-avatar"
+											placeholder="Фото профиля"
+											showFilePath
+										/>
+									)}
+								/>
+
+								<div className={styles.rightsGrid}>
+									<label
+										className={clsx(
+											styles.rightCard,
+											isUserChecked && styles.rightCardActive
+										)}
+									>
+										<div>
+											<p className={styles.rightCardTitle}>USER</p>
+											<p className={styles.rightCardDescription}>
+												Базовый доступ к личному кабинету и функциям
+												сервиса.
+											</p>
+										</div>
+										<input
+											required
+											type="checkbox"
+											className={styles.rightCheckbox}
+											{...register('isUser', { required: true })}
+										/>
+									</label>
+
+									<label
+										className={clsx(
+											styles.rightCard,
+											isAdminChecked && styles.rightCardActive
+										)}
+									>
+										<div>
+											<p className={styles.rightCardTitle}>ADMIN</p>
+											<p className={styles.rightCardDescription}>
+												Доступ к панели администратора, пользователям и
+												настройкам сайта.
+											</p>
+										</div>
+										<input
+											type="checkbox"
+											className={styles.rightCheckbox}
+											{...register('isAdmin')}
+										/>
+									</label>
+
+									<label
+										className={clsx(
+											styles.rightCard,
+											styles.statusCard,
+											!hasPhoneValue && styles.rightCardDisabled,
+											hasPhoneValue &&
+												isPhoneVerifiedChecked &&
+												styles.rightCardActive
+										)}
+									>
+										<div>
+											<p className={styles.rightCardTitle}>
+												Телефон подтверждён
+											</p>
+											<p className={styles.rightCardDescription}>
+												{hasPhoneValue
+													? 'Используйте переключатель, чтобы отметить номер как подтверждённый.'
+													: 'Статус станет доступен после добавления номера телефона.'}
+											</p>
+										</div>
+										<input
+											type="checkbox"
+											className={styles.rightCheckbox}
+											disabled={!hasPhoneValue}
+											{...register('isPhoneVerified')}
+										/>
+									</label>
+								</div>
+							</div>
+
+							<div className={styles.formSection}>
+								<div>
+									<p className={styles.sectionTitle}>Основные данные</p>
+									<p className={styles.sectionHint}>
+										ID доступен только для просмотра. Имя, email и телефон
+										можно обновить здесь же.
+									</p>
+								</div>
+
+								<div className={styles.fieldGrid}>
+									<div className={styles.fieldBlock}>
+										<label htmlFor="user-id" className={styles.fieldLabel}>
+											ID пользователя
+										</label>
+										<p className={styles.fieldHint}>
+											Идентификатор создаётся системой и не редактируется.
+										</p>
+										<FieldId
+											id="user-id"
+											type="text"
+											defaultValue={data.id}
+											placeholder="ID"
+											style={FIELD_STYLE}
+										/>
+									</div>
+
+									<div className={styles.fieldBlock}>
+										<label
+											htmlFor="user-name"
+											className={styles.fieldLabel}
+										>
+											Имя
+										</label>
+										<p className={styles.fieldHint}>
+											Оставьте пустым, если имя не нужно отображать.
+										</p>
+										<FieldName
+											id="user-name"
+											type="text"
+											error={errors.name}
+											placeholder="Имя"
+											style={FIELD_STYLE}
+											{...register('name', {
+												validate: value =>
+													formatOptionalPattern(
+														value,
+														validName,
+														'Минимальная длина должна быть более 2 символов. Можно использовать цифры, начиная со второго символа, и специальный символ «-».'
+													)
+											})}
+										/>
+									</div>
+
+									<div className={styles.fieldBlock}>
+										<label
+											htmlFor="user-email"
+											className={styles.fieldLabel}
+										>
+											Email
+										</label>
+										<p className={styles.fieldHint}>
+											Можно заменить текущий адрес или очистить поле.
+										</p>
+										<FieldEmail
+											id="user-email"
+											type="email"
+											error={errors.email}
+											placeholder="Email"
+											style={FIELD_STYLE}
+											{...register('email', {
+												validate: value =>
+													formatOptionalPattern(
+														value,
+														validEmail,
+														'Проверьте правильность ввода email'
+													)
+											})}
+										/>
+									</div>
+
+									<div className={styles.fieldBlock}>
+										<label
+											htmlFor="user-phone"
+											className={styles.fieldLabel}
+										>
+											Телефон
+										</label>
+										<p className={styles.fieldHint}>
+											Используется для входа и статуса подтверждения
+											номера.
+										</p>
+										<FieldPhone
+											id="user-phone"
+											error={errors.phone}
+											placeholder="Телефон"
+											style={FIELD_STYLE}
+											{...register('phone', {
+												validate: value =>
+													formatOptionalPattern(
+														value,
+														validPhone,
+														'Проверьте правильность ввода номера телефона'
+													)
+											})}
+										/>
+									</div>
+								</div>
+							</div>
+
+							<div className={styles.formSection}>
+								<div>
+									<p className={styles.sectionTitle}>Безопасность</p>
+									<p className={styles.sectionHint}>
+										Оставьте поле пустым, если пароль менять не нужно.
+									</p>
+								</div>
+
+								<div className={styles.fieldGrid}>
+									<div
+										className={clsx(
+											styles.fieldBlock,
+											styles.fieldBlockWide
+										)}
+									>
+										<label
+											htmlFor="user-password"
+											className={styles.fieldLabel}
+										>
+											Новый пароль
+										</label>
+										<p className={styles.fieldHint}>
+											Минимум 6 символов, одна цифра, строчная и заглавная
+											буква.
+										</p>
+										<FieldPassword
+											id="user-password"
+											type="password"
+											error={errors.password}
+											placeholder="Пароль"
+											style={FIELD_STYLE}
+											{...register('password', {
+												validate: value =>
+													formatOptionalPattern(
+														value,
+														validPassword,
+														'Мин. длина 6 символов. Должен содержать 1 цифру 0-9, 1 строчную букву a-z и 1 заглавную букву A-Z.'
+													)
+											})}
+										/>
+									</div>
+								</div>
+							</div>
+
 							<div className={styles.actions}>
-								<Button>Сохранить</Button>
+								<p className={styles.actionsNote}>
+									После сохранения страница вернёт вас к общему списку
+									пользователей.
+								</p>
+								<button
+									type="submit"
+									className={styles.saveButton}
+									disabled={isSaving}
+								>
+									{isSaving ? 'Сохраняем...' : 'Сохранить изменения'}
+								</button>
 							</div>
 						</form>
 					</div>
+				</div>
+			) : (
+				<div className={styles.emptyState}>
+					<p className={styles.emptyTitle}>Пользователь не найден</p>
+					<p className={styles.emptyText}>
+						Проверьте ссылку или вернитесь к списку пользователей.
+					</p>
+					<Link
+						href={ADMIN_PAGES.USER_LIST}
+						className={styles.emptyAction}
+					>
+						К списку пользователей
+					</Link>
 				</div>
 			)}
 		</section>

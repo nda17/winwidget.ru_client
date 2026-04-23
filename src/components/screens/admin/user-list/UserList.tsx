@@ -107,7 +107,7 @@ const UserList: NextPage = () => {
 			{deleteTargetId && (
 				<ConfirmDialog
 					title="Удалить пользователя?"
-					message={`Пользователь ${deleteTargetLabel} будет удалён без возможности восстановления.`}
+					message={`Данное действие необратимо. Пользователь ${deleteTargetLabel} будет удалён без возможности восстановления. Этим действием вы можете остановить работу всей системы. Продолжайте только если уверены в своих действиях.`}
 					confirmLabel="Удалить"
 					cancelLabel="Отмена"
 					onConfirm={confirmDelete}

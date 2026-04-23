@@ -2,7 +2,11 @@
 	@apply flex gap-2 items-end border-b border-b-black p-1 border-solid mb-[1.85rem];
 
 	.field-path {
-		@apply w-full truncate text-gray-600;
+		@apply min-w-0 w-full truncate text-gray-600;
+	}
+
+	.controls {
+		@apply flex items-end gap-2 shrink-0;
 	}
 
 	.label-input {
@@ -43,5 +47,17 @@
 				@apply w-2.5 h-2.5;
 			}
 		}
+	}
+}
+
+.wrapper-with-path {
+	@apply flex-col items-stretch gap-3;
+
+	.field-path {
+		@apply truncate;
+	}
+
+	.controls {
+		@apply w-full justify-between;
 	}
 }
