@@ -34,6 +34,8 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 		buttonSide: 'right',
 		buttonPulse: true,
 		buttonBottom: 3,
+		buttonOffset: 3,
+		buttonSize: 64,
 		alreadyPlayedTitle: '🎉 Вы уже участвовали!',
 		alreadyPlayedSubtitle:
 			'Каждый посетитель может крутить колесо только один раз',
@@ -425,25 +427,79 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 
 							<div className={styles.field}>
 								<p className={styles.label}>
-									Высота расположения кнопки для открытия виджета на вашем
-									сайте:
+									Высота кнопки от низа экрана:{' '}
+									<strong>{config.buttonBottom ?? 3}%</strong>
 								</p>
 								<input
+									type="range"
+									min={1}
+									max={50}
+									value={config.buttonBottom ?? 3}
+									onChange={e =>
+										setField('buttonBottom', Number(e.target.value))
+									}
 									className={styles.input}
-									type="number"
-									value={config.buttonBottom ?? ''}
-									onChange={e => {
-										const val = parseInt(e.target.value)
-										setField(
-											'buttonBottom',
-											isNaN(val) ? ('' as any) : val
-										)
+									style={{
+										padding: '8px 0',
+										background: 'transparent',
+										border: 'none'
 									}}
-									placeholder="3"
 								/>
 								<p className={styles.hint}>
-									Отступ от нижнего края экрана в процентах %. 3 — почти
+									Отступ от нижнего края экрана в процентах. 3 — почти
 									внизу, 50 — по центру.
+								</p>
+							</div>
+
+							<div className={styles.field}>
+								<p className={styles.label}>
+									Отступ кнопки от края экрана:{' '}
+									<strong>{config.buttonOffset ?? 3}%</strong>
+								</p>
+								<input
+									type="range"
+									min={1}
+									max={50}
+									value={config.buttonOffset ?? 3}
+									onChange={e =>
+										setField('buttonOffset', Number(e.target.value))
+									}
+									className={styles.input}
+									style={{
+										padding: '8px 0',
+										background: 'transparent',
+										border: 'none'
+									}}
+								/>
+								<p className={styles.hint}>
+									Отступ кнопки от левого или правого края экрана в
+									процентах. 3 — почти у края, 50 — по центру.
+								</p>
+							</div>
+
+							<div className={styles.field}>
+								<p className={styles.label}>
+									Размер кнопки открытия:{' '}
+									<strong>{config.buttonSize ?? 64}px</strong>
+								</p>
+								<input
+									type="range"
+									min={40}
+									max={100}
+									value={config.buttonSize ?? 64}
+									onChange={e =>
+										setField('buttonSize', Number(e.target.value))
+									}
+									className={styles.input}
+									style={{
+										padding: '8px 0',
+										background: 'transparent',
+										border: 'none'
+									}}
+								/>
+								<p className={styles.hint}>
+									Размер иконки плавающей кнопки в пикселях. По умолчанию
+									64px.
 								</p>
 							</div>
 

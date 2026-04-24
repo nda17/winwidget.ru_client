@@ -59,6 +59,74 @@ const WheelIcon = () => (
 	</svg>
 )
 
+const QuizIcon = () => (
+	<svg
+		width="72"
+		height="72"
+		viewBox="0 0 72 72"
+		fill="none"
+		xmlns="http://www.w3.org/2000/svg"
+	>
+		<rect
+			x="8"
+			y="10"
+			width="56"
+			height="52"
+			rx="8"
+			stroke="#e0d6f0"
+			strokeWidth="2"
+			fill="none"
+		/>
+		<rect
+			x="16"
+			y="20"
+			width="28"
+			height="5"
+			rx="2.5"
+			fill="#7b3fa0"
+			opacity="0.7"
+		/>
+		<rect
+			x="16"
+			y="30"
+			width="40"
+			height="4"
+			rx="2"
+			fill="#C21B84"
+			opacity="0.5"
+		/>
+		<rect
+			x="16"
+			y="38"
+			width="36"
+			height="4"
+			rx="2"
+			fill="#C21B84"
+			opacity="0.5"
+		/>
+		<rect
+			x="16"
+			y="46"
+			width="32"
+			height="4"
+			rx="2"
+			fill="#C21B84"
+			opacity="0.5"
+		/>
+		<circle cx="55" cy="55" r="10" fill="#4705fb" />
+		<text
+			x="55"
+			y="59"
+			textAnchor="middle"
+			fill="white"
+			fontSize="12"
+			fontWeight="bold"
+		>
+			?
+		</text>
+	</svg>
+)
+
 const DrumIcon = () => (
 	<svg
 		width="72"
@@ -101,6 +169,14 @@ const WIDGET_TYPES: WidgetType[] = [
 		description:
 			'Вращающееся колесо с призами. Пользователь вводит контакт и крутит колесо.',
 		icon: <WheelIcon />,
+		available: true
+	},
+	{
+		id: 'quiz',
+		name: 'Квиз',
+		description:
+			'Серия вопросов с персональным результатом. Собирает контакт и даёт рекомендацию.',
+		icon: <QuizIcon />,
 		available: true
 	},
 	{
