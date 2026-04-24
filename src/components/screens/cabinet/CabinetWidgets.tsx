@@ -8,9 +8,12 @@ import {
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 import widgetService from '@/services/widget/widget.service'
+import quizService from '@/services/quiz/quiz.service'
 import { Widget } from '@/services/widget/widget.types'
+import { Quiz } from '@/services/quiz/quiz.types'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import WidgetSettingsModal from '@/components/screens/widgets/WidgetSettingsModal'
+import QuizSettingsModal from '@/components/screens/widgets/QuizSettingsModal'
 import WidgetTypeModal from '@/components/screens/widgets/WidgetTypeModal'
 import {
 	CheckIcon,
@@ -28,38 +31,73 @@ const planLabel: Record<string, string> = {
 	HARD: 'Hard'
 }
 
-const WIDGET_TYPE_NAMES: Record<string, string> = {
-	wheel: 'Колесо фортуны',
-	drum: 'Барабан'
-}
+type ListItem =
+	| { kind: 'wheel'; item: Widget }
+	| { kind: 'quiz'; item: Quiz }
 
 const CabinetWidgets = () => {
 	const auth = useAuthStore(state => state.auth)
 	const isAuthResolved = useAuthStore(state => state.isAuthResolved)
 	const queryClient = useQueryClient()
+
 	const [settingsWidget, setSettingsWidget] = useState<Widget | null>(null)
+	const [settingsQuiz, setSettingsQuiz] = useState<Quiz | null>(null)
 	const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(
 		null
 	)
 	const [showTypeModal, setShowTypeModal] = useState(false)
 
-	const { data, isLoading } = useQuery({
+	const { data: widgetsData, isLoading: widgetsLoading } = useQuery({
 		queryKey: ['widgets'],
 		queryFn: widgetService.getMyWidgets,
-		enabled: auth
+		enabled: !!auth
 	})
 
+	const { data: quizzesData, isLoading: quizzesLoading } = useQuery({
+		queryKey: ['quizzes'],
+		queryFn: quizService.getMyQuizzes,
+		enabled: !!auth
+	})
+
+	const subscription = widgetsData?.subscription
+
+	const allItems: ListItem[] = [
+		...(widgetsData?.widgets || []).map(w => ({
+			kind: 'wheel' as const,
+			item: w
+		})),
+		...(quizzesData?.quizzes || []).map(q => ({
+			kind: 'quiz' as const,
+			item: q
+		}))
+	].sort(
+		(a, b) =>
+			new Date(b.item.createdAt).getTime() -
+			new Date(a.item.createdAt).getTime()
+	)
+
+	const isLoading =
+		!isAuthResolved || (!!auth && (widgetsLoading || quizzesLoading))
+
 	const createMutation = useMutation({
-		mutationFn: (typeId: string) =>
-			widgetService.createWidget(WIDGET_TYPE_NAMES[typeId] || 'Виджет'),
+		mutationFn: (typeId: string) => {
+			if (typeId === 'quiz') return quizService.createQuiz('Квиз')
+			const names: Record<string, string> = {
+				wheel: 'Колесо фортуны',
+				drum: 'Барабан'
+			}
+			return widgetService.createWidget(names[typeId] || 'Виджет')
+		},
 		onMutate: () =>
 			toast.loading('Создаём виджет, пожалуйста подождите...'),
-		onSuccess: (_, __, toastId) => {
-			queryClient.invalidateQueries({ queryKey: ['widgets'] })
+		onSuccess: (_, typeId, toastId) => {
+			queryClient.invalidateQueries({
+				queryKey: typeId === 'quiz' ? ['quizzes'] : ['widgets']
+			})
 			setShowTypeModal(false)
 			toast.success('Виджет создан', { id: toastId })
 		},
-		onError: (e: any, __, toastId) => {
+		onError: (e: any, _, toastId) => {
 			toast.error(
 				e?.response?.data?.message || 'Ошибка создания виджета',
 				{ id: toastId }
@@ -67,7 +105,7 @@ const CabinetWidgets = () => {
 		}
 	})
 
-	const deleteMutation = useMutation({
+	const deleteWidgetMutation = useMutation({
 		mutationFn: (id: string) => widgetService.deleteWidget(id),
 		onMutate: () =>
 			toast.loading('Удаляем виджет, пожалуйста подождите...'),
@@ -84,7 +122,22 @@ const CabinetWidgets = () => {
 		}
 	})
 
-	const toggleMutation = useMutation({
+	const deleteQuizMutation = useMutation({
+		mutationFn: (id: string) => quizService.deleteQuiz(id),
+		onMutate: () => toast.loading('Удаляем квиз, пожалуйста подождите...'),
+		onSuccess: (_, __, toastId) => {
+			queryClient.invalidateQueries({ queryKey: ['quizzes'] })
+			setConfirmDeleteId(null)
+			toast.success('Квиз удалён', { id: toastId })
+		},
+		onError: (e: any, __, toastId) => {
+			toast.error(e?.response?.data?.message || 'Ошибка удаления квиза', {
+				id: toastId
+			})
+		}
+	})
+
+	const toggleWidgetMutation = useMutation({
 		mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
 			widgetService.updateWidget(id, { isActive }),
 		onMutate: ({ isActive }) =>
@@ -100,9 +153,19 @@ const CabinetWidgets = () => {
 		}
 	})
 
-	const widgets = data?.widgets || []
-	const subscription = data?.subscription
-	const isWidgetsLoading = !isAuthResolved || (auth && isLoading)
+	const toggleQuizMutation = useMutation({
+		mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+			quizService.updateQuiz(id, { isActive }),
+		onMutate: ({ isActive }) =>
+			toast.loading(isActive ? 'Включаем квиз...' : 'Отключаем квиз...'),
+		onSuccess: (_, __, toastId) => {
+			queryClient.invalidateQueries({ queryKey: ['quizzes'] })
+			toast.dismiss(toastId)
+		},
+		onError: (e: any, __, toastId) => {
+			toast.error(e?.response?.data?.message || 'Ошибка', { id: toastId })
+		}
+	})
 
 	const isTrialExpiredByTime =
 		subscription?.plan === 'TRIAL' && subscription.status === 'EXPIRED'
@@ -127,9 +190,16 @@ const CabinetWidgets = () => {
 		return Math.max(0, diff)
 	})()
 
+	const publicSiteUrl = (
+		process.env.NEXT_PUBLIC_SITE_URL ||
+		(process.env.NEXT_PUBLIC_MODE === 'production'
+			? 'https://winwidget.ru'
+			: '')
+	).replace(/\/$/, '')
+
 	return (
 		<div>
-			{!isWidgetsLoading && isTrialExpiredByTime && (
+			{!isLoading && isTrialExpiredByTime && (
 				<div className={styles.limitBanner}>
 					<div className={styles.limitBannerContent}>
 						<span className={styles.limitBannerIcon}>⏰</span>
@@ -148,7 +218,7 @@ const CabinetWidgets = () => {
 					</a>
 				</div>
 			)}
-			{!isWidgetsLoading && isLeadLimitReached && (
+			{!isLoading && isLeadLimitReached && (
 				<div className={styles.limitBanner}>
 					<div className={styles.limitBannerContent}>
 						<span className={styles.limitBannerIcon}>⚠️</span>
@@ -167,7 +237,8 @@ const CabinetWidgets = () => {
 					</a>
 				</div>
 			)}
-			{isWidgetsLoading ? (
+
+			{isLoading ? (
 				<div
 					className={`${styles.subInfo} ${styles.subInfoSkeleton}`}
 					aria-hidden="true"
@@ -219,7 +290,7 @@ const CabinetWidgets = () => {
 				</div>
 			) : null}
 
-			{isWidgetsLoading ? (
+			{isLoading ? (
 				<div className={styles.widgetList} aria-hidden="true">
 					<div
 						className={`${styles.widgetRow} ${styles.widgetRowSkeleton}`}
@@ -243,86 +314,138 @@ const CabinetWidgets = () => {
 				</div>
 			) : (
 				<div className={styles.widgetList}>
-					{widgets.length > 0 ? (
-						widgets.map(widget => (
-							<div key={widget.id} className={styles.widgetRow}>
-								<button
-									className={`${styles.toggle} ${widget.isActive ? styles.toggleOn : ''}`}
-									onClick={() =>
-										toggleMutation.mutate({
-											id: widget.id,
-											isActive: !widget.isActive
-										})
-									}
-									aria-label={widget.isActive ? 'Отключить' : 'Включить'}
+					{allItems.length > 0 ? (
+						allItems.map(entry => {
+							const { kind, item } = entry
+							const isDeleting =
+								(kind === 'wheel'
+									? deleteWidgetMutation.isPending
+									: deleteQuizMutation.isPending) &&
+								confirmDeleteId === item.id
+
+							const pageUrl =
+								kind === 'wheel'
+									? `${publicSiteUrl}/page/${item.publicKey}`
+									: `${publicSiteUrl}/page-quiz/${item.publicKey}`
+
+							const leadsUrl =
+								kind === 'wheel'
+									? `/wheels/${item.id}/leads`
+									: `/quizzes/${item.id}/leads`
+
+							return (
+								<div
+									key={`${kind}-${item.id}`}
+									className={styles.widgetRow}
 								>
-									<span className={styles.toggleThumb} />
-								</button>
-
-								<span className={styles.widgetName}>{widget.name}</span>
-
-								<div className={styles.actions}>
-									<a
-										href={`/page/${widget.publicKey}`}
-										target="_blank"
-										rel="noopener noreferrer"
-										className={styles.actionBtn}
-									>
-										<ExternalLinkIcon size={17} /> открыть
-									</a>
-
-									<a
-										href={`/widgets/${widget.id}/leads`}
-										className={styles.actionBtn}
-									>
-										<FileListIcon size={17} /> заявки
-										{widget._count?.leads ? (
-											<span className={styles.leadsCountBadge}>
-												{widget._count.leads}
-											</span>
-										) : null}
-									</a>
-
 									<button
-										className={styles.actionBtn}
-										onClick={() => setSettingsWidget(widget)}
+										className={`${styles.toggle} ${item.isActive ? styles.toggleOn : ''}`}
+										onClick={() => {
+											if (kind === 'wheel') {
+												toggleWidgetMutation.mutate({
+													id: item.id,
+													isActive: !item.isActive
+												})
+											} else {
+												toggleQuizMutation.mutate({
+													id: item.id,
+													isActive: !item.isActive
+												})
+											}
+										}}
+										aria-label={item.isActive ? 'Отключить' : 'Включить'}
 									>
-										<SettingsIcon size={17} /> настройки
+										<span className={styles.toggleThumb} />
 									</button>
 
-									{confirmDeleteId === widget.id ? (
-										<>
-											<button
-												className={styles.actionBtnDanger}
-												onClick={() => deleteMutation.mutate(widget.id)}
-												disabled={deleteMutation.isPending}
-											>
-												{deleteMutation.isPending ? (
-													'...'
-												) : (
-													<>
-														<CheckIcon size={16} /> удалить
-													</>
-												)}
-											</button>
-											<button
-												className={styles.actionBtn}
-												onClick={() => setConfirmDeleteId(null)}
-											>
-												Отмена
-											</button>
-										</>
-									) : (
+									<span className={styles.widgetName}>
+										{item.name}
+										<span
+											style={{
+												marginLeft: 8,
+												fontSize: 11,
+												color: '#7b3fa0',
+												background: '#f3eeff',
+												borderRadius: 4,
+												padding: '1px 6px'
+											}}
+										>
+											{kind === 'wheel' ? 'Колесо' : 'Квиз'}
+										</span>
+									</span>
+
+									<div className={styles.actions}>
+										<a
+											href={pageUrl}
+											target="_blank"
+											rel="noopener noreferrer"
+											className={styles.actionBtn}
+										>
+											<ExternalLinkIcon size={17} /> открыть
+										</a>
+
+										<a href={leadsUrl} className={styles.actionBtn}>
+											<FileListIcon size={17} /> заявки
+											{item._count?.leads ? (
+												<span className={styles.leadsCountBadge}>
+													{item._count.leads}
+												</span>
+											) : null}
+										</a>
+
 										<button
 											className={styles.actionBtn}
-											onClick={() => setConfirmDeleteId(widget.id)}
+											onClick={() => {
+												if (kind === 'wheel') {
+													setSettingsWidget(item as Widget)
+												} else {
+													setSettingsQuiz(item as Quiz)
+												}
+											}}
 										>
-											<DeleteIcon size={17} /> удалить
+											<SettingsIcon size={17} /> настройки
 										</button>
-									)}
+
+										{confirmDeleteId === item.id ? (
+											<>
+												<button
+													className={styles.actionBtnDanger}
+													onClick={() => {
+														if (kind === 'wheel') {
+															deleteWidgetMutation.mutate(item.id)
+														} else {
+															deleteQuizMutation.mutate(item.id)
+														}
+													}}
+													disabled={isDeleting}
+												>
+													{isDeleting ? (
+														'...'
+													) : (
+														<>
+															<CheckIcon size={16} /> удалить
+														</>
+													)}
+												</button>
+												<button
+													className={styles.actionBtn}
+													onClick={() => setConfirmDeleteId(null)}
+												>
+													Отмена
+												</button>
+											</>
+										) : (
+											<button
+												className={styles.actionBtn}
+												onClick={() => setConfirmDeleteId(item.id)}
+											>
+												<DeleteIcon size={17} /> удалить
+											</button>
+										)}
+									</div>
 								</div>
-							</div>
-						))
+							)
+						})
 					) : (
 						<div className={styles.emptyWidgetRow}>
 							<p className={styles.emptyWidgetTitle}>
@@ -359,6 +482,17 @@ const CabinetWidgets = () => {
 					onSaved={updated => {
 						setSettingsWidget(updated)
 						queryClient.invalidateQueries({ queryKey: ['widgets'] })
+					}}
+				/>
+			)}
+
+			{settingsQuiz && (
+				<QuizSettingsModal
+					quiz={settingsQuiz}
+					onClose={() => setSettingsQuiz(null)}
+					onSaved={updated => {
+						setSettingsQuiz(updated)
+						queryClient.invalidateQueries({ queryKey: ['quizzes'] })
 					}}
 				/>
 			)}
