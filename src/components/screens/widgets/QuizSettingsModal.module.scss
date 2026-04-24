@@ -245,15 +245,17 @@
 }
 
 .scoreItem {
-	@apply flex items-center gap-1;
+	@apply grid items-center gap-2 min-w-[12rem] flex-1;
+	grid-template-columns: minmax(0, 1fr) 3rem;
 }
 
 .scoreLabel {
-	@apply text-[11px] text-[#7b3fa0] font-medium truncate max-w-[80px];
+	@apply min-w-0 text-[11px] text-[#7b3fa0] font-medium leading-snug;
+	overflow-wrap: anywhere;
 }
 
 .scoreInput {
-	@apply w-12 rounded-md px-2 py-1 text-xs border border-[#e0d6f0] bg-white text-center outline-none;
+	@apply w-12 rounded-md px-2 py-1 text-xs border border-[#e0d6f0] bg-white text-center outline-none justify-self-end;
 }
 
 .scoreInput:focus {
@@ -352,5 +354,9 @@
 
 	.scoresRow {
 		@apply gap-1;
+	}
+
+	.scoreItem {
+		@apply min-w-full;
 	}
 }

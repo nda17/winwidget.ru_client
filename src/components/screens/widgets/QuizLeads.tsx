@@ -21,6 +21,7 @@ interface Props {
 
 const QuizLeads = ({ quizId }: Props) => {
 	const auth = useAuthStore(state => state.auth)
+	const isAuthResolved = useAuthStore(state => state.isAuthResolved)
 
 	const [exporting, setExporting] = useState<
 		'csv' | 'xlsx' | 'pdf' | null
@@ -46,6 +47,8 @@ const QuizLeads = ({ quizId }: Props) => {
 		queryFn: () => quizService.getLeadsStats(quizId),
 		enabled: !!auth && canAccess
 	})
+
+	const isPending = !isAuthResolved || (!!auth && isLoading)
 
 	const formatPhone = (raw: string) => {
 		const digits = raw.replace(/\D/g, '')
@@ -216,7 +219,7 @@ const QuizLeads = ({ quizId }: Props) => {
 				</div>
 			)}
 
-			{isLoading ? (
+			{isPending ? (
 				<div className={styles.skeletonWrapper}>
 					<div className={styles.skeletonExportBar}>
 						<SkeletonLoader width={60} height={16} />
@@ -321,20 +324,26 @@ const QuizLeads = ({ quizId }: Props) => {
 						<tbody>
 							{data.leads.map((lead, i) => (
 								<tr key={lead.id} className={styles.tr}>
-									<td className={styles.td}>{i + 1}</td>
-									<td className={styles.td}>
+									<td className={styles.td} data-label="#">
+										{i + 1}
+									</td>
+									<td className={styles.td} data-label="Дата">
 										{formatDate(lead.createdAt)}
 									</td>
-									<td className={styles.td}>
+									<td className={styles.td} data-label="Телефон">
 										{lead.phone
 											? formatPhone(lead.phone)
 											: lead.contact
 												? formatPhone(lead.contact)
 												: '—'}
 									</td>
-									<td className={styles.td}>{lead.email || '—'}</td>
-									<td className={styles.td}>{lead.result || '—'}</td>
-									<td className={styles.td}>
+									<td className={styles.td} data-label="Email">
+										{lead.email || '—'}
+									</td>
+									<td className={styles.td} data-label="Результат">
+										{lead.result || '—'}
+									</td>
+									<td className={styles.td} data-label="Страница">
 										{lead.url ? (
 											<a
 												href={lead.url}

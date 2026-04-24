@@ -30,10 +30,15 @@
 	@apply flex flex-col gap-[10px];
 }
 .statRow {
-	@apply flex items-center gap-[10px];
+	@apply grid items-center gap-[10px];
+	grid-template-columns: minmax(12rem, 28rem) minmax(
+			8rem,
+			1fr
+		) 2.25rem 2.375rem;
 }
 .statName {
-	@apply w-40 shrink-0 text-sm text-[#333] whitespace-nowrap overflow-hidden text-ellipsis;
+	@apply min-w-0 text-sm text-[#333] leading-snug;
+	overflow-wrap: anywhere;
 }
 .statBarWrap {
 	@apply flex-1 h-2 bg-[#f0eaf8] rounded-full overflow-hidden;
@@ -117,8 +122,12 @@
 .td {
 	@apply text-sm text-[#333] py-3 px-4;
 }
+.td::before {
+	content: none;
+}
 .urlLink {
 	@apply no-underline text-[#9b72c8] transition-colors duration-200;
+	overflow-wrap: anywhere;
 }
 .urlLink:hover {
 	@apply text-[#7b3fa0];
@@ -140,6 +149,75 @@
 	.td {
 		@apply py-[10px] px-3;
 	}
+	.statRow {
+		grid-template-columns: minmax(0, 1fr) 2.25rem 2.375rem;
+	}
+	.statName {
+		grid-column: 1 / -1;
+	}
+	.statBarWrap {
+		@apply min-w-0;
+	}
+	.tableWrapper {
+		@apply overflow-visible;
+	}
+	.statsBlock {
+		@apply rounded-xl px-4 py-4 mb-5;
+	}
+	.statsTitle {
+		@apply text-[0.72rem] mb-3;
+	}
+	.statsTotal {
+		@apply text-left;
+	}
+	.statsLocked {
+		@apply text-[0.82rem] px-4;
+	}
+	.exportBar {
+		@apply gap-[7px] mb-3;
+	}
+	.exportLabel {
+		@apply w-full;
+	}
+	.exportBtn {
+		@apply flex-1 justify-center min-w-[4.5rem] py-[0.55rem] px-3;
+	}
+	.exportHint {
+		@apply w-full ml-0 leading-snug;
+	}
+	.table {
+		@apply block;
+	}
+	.table thead {
+		@apply hidden;
+	}
+	.table tbody {
+		@apply flex flex-col gap-3;
+	}
+	.tr {
+		@apply block rounded-xl border border-[#e0d6f0] bg-white px-4 py-2;
+		box-shadow: 0 4px 14px rgb(100 60 180 / 0.06);
+	}
+	.tr:hover {
+		@apply bg-white;
+	}
+	.tr:last-child {
+		@apply border border-[#e0d6f0];
+	}
+	.td {
+		@apply grid grid-cols-[5.75rem_minmax(0,1fr)] gap-3 border-b border-[#f0eaf8] px-0 py-[10px] text-[0.86rem] leading-snug;
+		overflow-wrap: anywhere;
+	}
+	.td:last-child {
+		@apply border-b-0;
+	}
+	.td::before {
+		@apply text-[0.75rem] font-semibold uppercase text-[#9b72c8];
+		content: attr(data-label);
+	}
+	.tableWrapper {
+		@apply w-full;
+	}
 }
 
 @media (max-width: 480px) {
@@ -151,14 +229,5 @@
 	}
 	.header {
 		@apply mb-3;
-	}
-	.th {
-		@apply py-2 px-[10px] text-[0.8rem];
-	}
-	.td {
-		@apply py-2 px-[10px] text-[0.8rem];
-	}
-	.tableWrapper {
-		@apply -mx-2 w-[calc(100%+1rem)];
 	}
 }
