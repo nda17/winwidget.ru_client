@@ -7,7 +7,7 @@ const robots = (): MetadataRoute.Robots => {
 			disallow: [
 				'/admin/',
 				'/cabinet/',
-				'/widgets/',
+				'/wheels/',
 				'/payment/',
 				'/logout/',
 				'/login/',
