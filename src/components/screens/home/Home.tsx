@@ -1,7 +1,7 @@
 import CurvedCarousel from '@/components/ui/сurved-сarousel/CurvedCarousel'
 import Analysis from '@/components/screens/home/analysis/Analysis'
 import CtaBanner from '@/components/screens/home/cta-banner/CtaBanner'
-import LazyDemoWheel from '@/components/screens/home/demo-wheel/LazyDemoWheel'
+import LazyDemoWidgets from '@/components/screens/home/demo-widgets/LazyDemoWidgets'
 import HomeFaq from '@/components/screens/home/faq/HomeFaq'
 import HeroSection from '@/components/screens/home/hero/HeroSection'
 import HomePricing from '@/components/screens/home/pricing/HomePricing'
@@ -12,7 +12,7 @@ import styles from './Home.module.scss'
 const Home = () => {
 	return (
 		<div className={styles.page}>
-			<LazyDemoWheel />
+			<LazyDemoWidgets />
 			<HeroSection />
 			<CurvedCarousel />
 			<Analysis />

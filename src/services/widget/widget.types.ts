@@ -30,6 +30,8 @@ export interface WidgetConfig {
 	buttonSide: 'left' | 'right'
 	buttonPulse: boolean
 	buttonBottom: number
+	buttonOffset: number
+	buttonSize: number
 	alreadyPlayedTitle: string
 	alreadyPlayedSubtitle: string
 	hideIfPlayed: boolean

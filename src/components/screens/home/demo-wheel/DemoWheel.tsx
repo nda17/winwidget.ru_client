@@ -232,8 +232,20 @@ function shakeElement(el: HTMLElement) {
 	requestAnimationFrame(animate)
 }
 
-const DemoWheel = () => {
-	const [open, setOpen] = useState(false)
+interface DemoWheelProps {
+	hideButton?: boolean
+	open?: boolean
+	onClose?: () => void
+}
+
+const DemoWheel = ({
+	hideButton,
+	open: externalOpen,
+	onClose: externalClose
+}: DemoWheelProps = {}) => {
+	const [internalOpen, setInternalOpen] = useState(false)
+	const isControlled = externalOpen !== undefined
+	const open = isControlled ? externalOpen! : internalOpen
 	const [rotation, setRotation] = useState(0)
 	const [spinning, setSpinning] = useState(false)
 	const dialogTitleId = useId()
@@ -402,22 +414,27 @@ const DemoWheel = () => {
 	}
 
 	const close = () => {
-		if (!spinning) setOpen(false)
+		if (!spinning) {
+			if (isControlled) externalClose?.()
+			else setInternalOpen(false)
+		}
 	}
 
 	return (
 		<>
-			<div ref={floatRef} className={styles.floatOuter}>
-				<button
-					type="button"
-					className={styles.floatBtn}
-					onClick={() => setOpen(true)}
-					aria-label="Приз! Открыть демо-виджет"
-				>
-					<span className={styles.floatIcon}>🎁</span>
-					<span className={styles.floatLabel}>Приз!</span>
-				</button>
-			</div>
+			{!hideButton && (
+				<div ref={floatRef} className={styles.floatOuter}>
+					<button
+						type="button"
+						className={styles.floatBtn}
+						onClick={() => setInternalOpen(true)}
+						aria-label="Приз! Открыть демо-виджет"
+					>
+						<span className={styles.floatIcon}>🎁</span>
+						<span className={styles.floatLabel}>Приз!</span>
+					</button>
+				</div>
+			)}
 
 			{open && (
 				<div className={styles.overlay}>
