@@ -6,8 +6,7 @@ import quizService from '@/services/quiz/quiz.service'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import {
 	QuizLead,
-	QuizLeadsStatsResponse,
-	Subscription
+	QuizLeadsStatsResponse
 } from '@/services/quiz/quiz.types'
 import { Subscription as WidgetSubscription } from '@/services/widget/widget.types'
 import widgetService from '@/services/widget/widget.service'

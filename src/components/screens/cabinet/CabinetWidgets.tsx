@@ -25,12 +25,6 @@ import {
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import styles from './Cabinet.module.scss'
 
-const planLabel: Record<string, string> = {
-	TRIAL: 'Тест-драйв',
-	EASY: 'Easy',
-	HARD: 'Hard'
-}
-
 type ListItem =
 	| { kind: 'wheel'; item: Widget }
 	| { kind: 'quiz'; item: Quiz }
@@ -189,6 +183,11 @@ const CabinetWidgets = () => {
 		)
 		return Math.max(0, diff)
 	})()
+	const hasSubscriptionMeta =
+		!!subscription &&
+		(subscription.plan !== 'HARD' ||
+			trialDaysLeft !== null ||
+			subscription.status === 'EXPIRED')
 
 	const publicSiteUrl = (
 		process.env.NEXT_PUBLIC_SITE_URL ||
@@ -244,11 +243,6 @@ const CabinetWidgets = () => {
 					aria-hidden="true"
 				>
 					<SkeletonLoader
-						width={72}
-						height={22}
-						containerClassName={styles.subInfoSkeletonChip}
-					/>
-					<SkeletonLoader
 						width={148}
 						height={18}
 						containerClassName={styles.subInfoSkeletonMeta}
@@ -259,11 +253,8 @@ const CabinetWidgets = () => {
 						containerClassName={styles.subInfoSkeletonMeta}
 					/>
 				</div>
-			) : subscription ? (
+			) : hasSubscriptionMeta ? (
 				<div className={styles.subInfo}>
-					<span className={styles.planBadge}>
-						{planLabel[subscription.plan] || subscription.plan}
-					</span>
 					{subscription.plan !== 'HARD' && (
 						<span className={styles.leadsCount}>
 							Заявок в периоде: {subscription.leadsThisPeriod}
