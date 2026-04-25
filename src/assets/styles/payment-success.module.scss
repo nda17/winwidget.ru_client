@@ -32,6 +32,10 @@
 	@apply bg-[linear-gradient(135deg,#f3eeff,#fce0f4)];
 }
 
+.iconWarning {
+	@apply bg-[#fff4dc] text-[#b45f06] font-bold;
+}
+
 .spinner {
 	@apply w-[32px] h-[32px] rounded-[50%] border-[3px] border-[#e0d6f0] border-t-[#7b3fa0];
 	animation: spin 0.8s linear infinite;

@@ -28,6 +28,14 @@ export interface IPendingPayment {
 	createdAt: string
 }
 
+export interface IPaymentVerification {
+	activated: boolean
+	status: 'succeeded' | 'pending' | 'cancelled' | 'not_found'
+	plan: Plan | null
+	billingPeriod: BillingPeriod | null
+	message: string
+}
+
 const subscriptionService = {
 	async getMySubscription(): Promise<Subscription> {
 		const { data } = await axiosInterceptorsRequest.get(
@@ -50,7 +58,7 @@ const subscriptionService = {
 		return data
 	},
 
-	async verifyPayment(): Promise<{ activated: boolean }> {
+	async verifyPayment(): Promise<IPaymentVerification> {
 		const { data } =
 			await axiosInterceptorsRequest.post('/payments/verify')
 		return data

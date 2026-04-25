@@ -1,6 +1,7 @@
 'use client'
 
 import { PUBLIC_PAGES } from '@/config/pages/public.config'
+import { useAuthStore } from '@/store/auth-store/auth-store'
 import Link from 'next/link'
 import { useState } from 'react'
 import styles from './HomePricing.module.scss'
@@ -79,6 +80,8 @@ const PLANS = [
 
 const HomePricing = () => {
 	const [billing, setBilling] = useState<BillingPeriod>('yearly')
+	const auth = useAuthStore(state => state.auth)
+	const ctaHref = auth ? PUBLIC_PAGES.PAYMENT : PUBLIC_PAGES.REGISTER
 
 	return (
 		<section id="pricing" className={styles.section}>
@@ -137,10 +140,7 @@ const HomePricing = () => {
 											{pricing.yearlyTotal}
 										</span>
 									)}
-									<Link
-										href={PUBLIC_PAGES.REGISTER}
-										className={styles.btn}
-									>
+									<Link href={ctaHref} className={styles.btn}>
 										Попробовать
 									</Link>
 								</div>

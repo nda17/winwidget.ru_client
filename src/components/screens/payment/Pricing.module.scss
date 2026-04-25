@@ -111,7 +111,7 @@
 	@apply flex gap-6 flex-wrap justify-center mb-8;
 }
 .planCard {
-	@apply flex flex-col items-center p-8 rounded-[1rem] w-72 bg-white border border-[#e0d6f0] transition-[border-color,box-shadow,transform] duration-200;
+	@apply flex flex-col items-center p-8 rounded-[1rem] w-full max-w-[35rem] sm:w-[28rem] bg-white border border-[#e0d6f0] transition-[border-color,box-shadow,transform] duration-200;
 }
 .planCard:hover {
 	@apply border-[#c4a8e8] -translate-y-1;
@@ -133,17 +133,17 @@
 	@apply text-sm mb-4 text-[#aaa];
 }
 .features {
-	@apply flex flex-col gap-2 mb-6 text-sm text-left w-full text-[#555];
+	@apply flex flex-col gap-3 mb-6 text-sm text-left w-full text-[#555];
 }
 .features li {
-	@apply flex items-center gap-2;
+	@apply flex items-start gap-2 leading-[1.45];
 }
 .features li::before {
 	content: '✓';
-	@apply text-[#7b3fa0] font-bold;
+	@apply text-[#7b3fa0] font-bold leading-[1.45];
 }
 .buyBtn {
-	@apply w-full py-3 rounded-xl font-bold text-sm cursor-pointer border-none text-white transition-[opacity,transform] duration-200;
+	@apply mt-auto w-full py-3 rounded-xl font-bold text-sm cursor-pointer border-none text-white transition-[opacity,transform] duration-200;
 	background: linear-gradient(
 		87.12deg,
 		#470b58 1.98%,
@@ -185,7 +185,7 @@
 		@apply gap-4;
 	}
 	.planCard {
-		@apply w-[calc(50%-0.5rem)] px-5 py-6;
+		@apply w-full max-w-[26rem] px-5 py-6;
 	}
 	.price {
 		@apply text-[2rem];

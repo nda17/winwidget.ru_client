@@ -18,9 +18,15 @@ const PLANS = [
 		monthly: 990,
 		yearly: 390,
 		yearlyTotal: 4680,
-		widgets: 1,
-		leads: '100 заявок / мес',
-		color: '#4705fb'
+		color: '#4705fb',
+		features: [
+			'1 виджет',
+			'100 заявок в месяц',
+			'Хранение всех заявок в личном кабинете',
+			'Email уведомления / Telegram',
+			'Установка виджета на сайт, открытие по прямой ссылке и QR-коду',
+			'Интеграции с amoCRM, Bitrix24, Яндекс Метрика, VK Ретаргетинг, Roistat и Webhook'
+		]
 	},
 	{
 		key: 'HARD' as Plan,
@@ -28,9 +34,17 @@ const PLANS = [
 		monthly: 1690,
 		yearly: 790,
 		yearlyTotal: 9480,
-		widgets: 10,
-		leads: 'Безлимит',
-		color: '#7b2fff'
+		color: '#7b2fff',
+		features: [
+			'10 любых виджетов',
+			'Безлимитные заявки',
+			'Хранение всех заявок в личном кабинете',
+			'Установка виджетов на сайт, открытие по прямой ссылке и QR-коду',
+			'Email уведомления / Telegram',
+			'Аналитика бонусов',
+			'Интеграции с amoCRM, Bitrix24, Яндекс Метрика, VK Ретаргетинг, Roistat и Webhook',
+			'Выгрузка заявок в Excel, PDF, CSV'
+		]
 	}
 ]
 
@@ -345,12 +359,9 @@ const Pricing = ({ paymentEnabled = true }: PricingProps) => {
 							)}
 
 							<ul className={styles.features}>
-								<li>
-									{plan.widgets}{' '}
-									{plan.widgets === 1 ? 'виджет' : 'виджетов'}
-								</li>
-								<li>{plan.leads}</li>
-								<li>Email уведомления</li>
+								{plan.features.map(feature => (
+									<li key={feature}>{feature}</li>
+								))}
 							</ul>
 
 							<button

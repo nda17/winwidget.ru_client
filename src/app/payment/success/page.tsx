@@ -2,8 +2,8 @@ import PaymentSuccess from '@/components/screens/payment-success/PaymentSuccess'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-	title: 'Оплата принята',
-	description: 'Оплата принята, подписка активируется автоматически'
+	title: 'Статус оплаты',
+	description: 'Проверка статуса оплаты и активации подписки'
 }
 
 const PaymentSuccessPage = () => {
