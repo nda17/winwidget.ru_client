@@ -127,6 +127,50 @@ const QuizIcon = () => (
 	</svg>
 )
 
+const CallbackIcon = () => (
+	<svg
+		width="72"
+		height="72"
+		viewBox="0 0 72 72"
+		fill="none"
+		xmlns="http://www.w3.org/2000/svg"
+	>
+		<circle cx="36" cy="36" r="34" stroke="#e0d6f0" strokeWidth="2" />
+		<path
+			d="M24 22h6l3 7-4 2.5a18 18 0 008.5 8.5L40 36l7 3v6c-12.7 0-23-10.3-23-23z"
+			fill="#7b3fa0"
+			opacity="0.85"
+		/>
+		<rect
+			x="38"
+			y="28"
+			width="14"
+			height="3"
+			rx="1.5"
+			fill="#C21B84"
+			opacity="0.6"
+		/>
+		<rect
+			x="38"
+			y="34"
+			width="10"
+			height="3"
+			rx="1.5"
+			fill="#C21B84"
+			opacity="0.4"
+		/>
+		<rect
+			x="38"
+			y="40"
+			width="12"
+			height="3"
+			rx="1.5"
+			fill="#C21B84"
+			opacity="0.4"
+		/>
+	</svg>
+)
+
 const DrumIcon = () => (
 	<svg
 		width="72"
@@ -177,6 +221,14 @@ const WIDGET_TYPES: WidgetType[] = [
 		description:
 			'Серия вопросов с персональным результатом. Собирает контакт и даёт рекомендацию.',
 		icon: <QuizIcon />,
+		available: true
+	},
+	{
+		id: 'callback',
+		name: 'Обратный звонок',
+		description:
+			'Клиент вводит телефон и выбирает удобное время. Вы получаете заявку с часовым поясом.',
+		icon: <CallbackIcon />,
 		available: true
 	},
 	{

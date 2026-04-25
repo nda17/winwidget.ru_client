@@ -9,11 +9,14 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import widgetService from '@/services/widget/widget.service'
 import quizService from '@/services/quiz/quiz.service'
+import callbackService from '@/services/callback/callback.service'
 import { Widget } from '@/services/widget/widget.types'
 import { Quiz } from '@/services/quiz/quiz.types'
+import { Callback } from '@/services/callback/callback.types'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import WidgetSettingsModal from '@/components/screens/widgets/WidgetSettingsModal'
 import QuizSettingsModal from '@/components/screens/widgets/QuizSettingsModal'
+import CallbackSettingsModal from '@/components/screens/widgets/CallbackSettingsModal'
 import WidgetTypeModal from '@/components/screens/widgets/WidgetTypeModal'
 import {
 	CheckIcon,
@@ -28,6 +31,7 @@ import styles from './Cabinet.module.scss'
 type ListItem =
 	| { kind: 'wheel'; item: Widget }
 	| { kind: 'quiz'; item: Quiz }
+	| { kind: 'callback'; item: Callback }
 
 const CabinetWidgets = () => {
 	const auth = useAuthStore(state => state.auth)
@@ -36,6 +40,8 @@ const CabinetWidgets = () => {
 
 	const [settingsWidget, setSettingsWidget] = useState<Widget | null>(null)
 	const [settingsQuiz, setSettingsQuiz] = useState<Quiz | null>(null)
+	const [settingsCallback, setSettingsCallback] =
+		useState<Callback | null>(null)
 	const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(
 		null
 	)
@@ -53,6 +59,12 @@ const CabinetWidgets = () => {
 		enabled: !!auth
 	})
 
+	const { data: callbacksData, isLoading: callbacksLoading } = useQuery({
+		queryKey: ['callbacks'],
+		queryFn: callbackService.getMyCallbacks,
+		enabled: !!auth
+	})
+
 	const subscription = widgetsData?.subscription
 
 	const allItems: ListItem[] = [
@@ -63,6 +75,10 @@ const CabinetWidgets = () => {
 		...(quizzesData?.quizzes || []).map(q => ({
 			kind: 'quiz' as const,
 			item: q
+		})),
+		...(callbacksData?.callbacks || []).map(c => ({
+			kind: 'callback' as const,
+			item: c
 		}))
 	].sort(
 		(a, b) =>
@@ -71,11 +87,14 @@ const CabinetWidgets = () => {
 	)
 
 	const isLoading =
-		!isAuthResolved || (!!auth && (widgetsLoading || quizzesLoading))
+		!isAuthResolved ||
+		(!!auth && (widgetsLoading || quizzesLoading || callbacksLoading))
 
 	const createMutation = useMutation({
 		mutationFn: (typeId: string) => {
 			if (typeId === 'quiz') return quizService.createQuiz('Квиз')
+			if (typeId === 'callback')
+				return callbackService.createCallback('Обратный звонок')
 			const names: Record<string, string> = {
 				wheel: 'Колесо фортуны',
 				drum: 'Барабан'
@@ -86,7 +105,12 @@ const CabinetWidgets = () => {
 			toast.loading('Создаём виджет, пожалуйста подождите...'),
 		onSuccess: (_, typeId, toastId) => {
 			queryClient.invalidateQueries({
-				queryKey: typeId === 'quiz' ? ['quizzes'] : ['widgets']
+				queryKey:
+					typeId === 'quiz'
+						? ['quizzes']
+						: typeId === 'callback'
+							? ['callbacks']
+							: ['widgets']
 			})
 			setShowTypeModal(false)
 			toast.success('Виджет создан', { id: toastId })
@@ -131,6 +155,25 @@ const CabinetWidgets = () => {
 		}
 	})
 
+	const deleteCallbackMutation = useMutation({
+		mutationFn: (id: string) => callbackService.deleteCallback(id),
+		onMutate: () =>
+			toast.loading('Удаляем виджет, пожалуйста подождите...'),
+		onSuccess: (_, __, toastId) => {
+			queryClient.invalidateQueries({ queryKey: ['callbacks'] })
+			setConfirmDeleteId(null)
+			toast.success('Виджет удалён', { id: toastId })
+		},
+		onError: (e: any, __, toastId) => {
+			toast.error(
+				e?.response?.data?.message || 'Ошибка удаления виджета',
+				{
+					id: toastId
+				}
+			)
+		}
+	})
+
 	const toggleWidgetMutation = useMutation({
 		mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
 			widgetService.updateWidget(id, { isActive }),
@@ -154,6 +197,22 @@ const CabinetWidgets = () => {
 			toast.loading(isActive ? 'Включаем квиз...' : 'Отключаем квиз...'),
 		onSuccess: (_, __, toastId) => {
 			queryClient.invalidateQueries({ queryKey: ['quizzes'] })
+			toast.dismiss(toastId)
+		},
+		onError: (e: any, __, toastId) => {
+			toast.error(e?.response?.data?.message || 'Ошибка', { id: toastId })
+		}
+	})
+
+	const toggleCallbackMutation = useMutation({
+		mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+			callbackService.updateCallback(id, { isActive }),
+		onMutate: ({ isActive }) =>
+			toast.loading(
+				isActive ? 'Включаем виджет...' : 'Отключаем виджет...'
+			),
+		onSuccess: (_, __, toastId) => {
+			queryClient.invalidateQueries({ queryKey: ['callbacks'] })
 			toast.dismiss(toastId)
 		},
 		onError: (e: any, __, toastId) => {
@@ -311,18 +370,24 @@ const CabinetWidgets = () => {
 							const isDeleting =
 								(kind === 'wheel'
 									? deleteWidgetMutation.isPending
-									: deleteQuizMutation.isPending) &&
+									: kind === 'quiz'
+										? deleteQuizMutation.isPending
+										: deleteCallbackMutation.isPending) &&
 								confirmDeleteId === item.id
 
 							const pageUrl =
 								kind === 'wheel'
-									? `${publicSiteUrl}/page/${item.publicKey}`
-									: `${publicSiteUrl}/page-quiz/${item.publicKey}`
+									? `${publicSiteUrl}/page-wheel/${item.publicKey}`
+									: kind === 'quiz'
+										? `${publicSiteUrl}/page-quiz/${item.publicKey}`
+										: `${publicSiteUrl}/page-callback/${item.publicKey}`
 
 							const leadsUrl =
 								kind === 'wheel'
 									? `/wheels/${item.id}/leads`
-									: `/quizzes/${item.id}/leads`
+									: kind === 'quiz'
+										? `/quizzes/${item.id}/leads`
+										: `/callbacks/${item.id}/leads`
 
 							return (
 								<div
@@ -337,8 +402,13 @@ const CabinetWidgets = () => {
 													id: item.id,
 													isActive: !item.isActive
 												})
-											} else {
+											} else if (kind === 'quiz') {
 												toggleQuizMutation.mutate({
+													id: item.id,
+													isActive: !item.isActive
+												})
+											} else {
+												toggleCallbackMutation.mutate({
 													id: item.id,
 													isActive: !item.isActive
 												})
@@ -361,7 +431,11 @@ const CabinetWidgets = () => {
 												padding: '1px 6px'
 											}}
 										>
-											{kind === 'wheel' ? 'Колесо' : 'Квиз'}
+											{kind === 'wheel'
+												? 'Колесо'
+												: kind === 'quiz'
+													? 'Квиз'
+													: 'Звонок'}
 										</span>
 									</span>
 
@@ -389,8 +463,10 @@ const CabinetWidgets = () => {
 											onClick={() => {
 												if (kind === 'wheel') {
 													setSettingsWidget(item as Widget)
-												} else {
+												} else if (kind === 'quiz') {
 													setSettingsQuiz(item as Quiz)
+												} else {
+													setSettingsCallback(item as Callback)
 												}
 											}}
 										>
@@ -404,8 +480,10 @@ const CabinetWidgets = () => {
 													onClick={() => {
 														if (kind === 'wheel') {
 															deleteWidgetMutation.mutate(item.id)
-														} else {
+														} else if (kind === 'quiz') {
 															deleteQuizMutation.mutate(item.id)
+														} else {
+															deleteCallbackMutation.mutate(item.id)
 														}
 													}}
 													disabled={isDeleting}
@@ -484,6 +562,17 @@ const CabinetWidgets = () => {
 					onSaved={updated => {
 						setSettingsQuiz(updated)
 						queryClient.invalidateQueries({ queryKey: ['quizzes'] })
+					}}
+				/>
+			)}
+
+			{settingsCallback && (
+				<CallbackSettingsModal
+					callback={settingsCallback}
+					onClose={() => setSettingsCallback(null)}
+					onSaved={updated => {
+						setSettingsCallback(updated)
+						queryClient.invalidateQueries({ queryKey: ['callbacks'] })
 					}}
 				/>
 			)}
