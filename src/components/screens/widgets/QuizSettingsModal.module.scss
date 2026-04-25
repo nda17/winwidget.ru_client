@@ -68,10 +68,6 @@
 	@apply text-sm font-semibold text-[#7b3fa0] uppercase tracking-[0.06em];
 }
 
-.settingsGroupDesc {
-	@apply mt-1 text-xs leading-relaxed text-[#999];
-}
-
 .advancedBlock {
 	@apply rounded-lg border border-dashed border-[#e0d6f0] bg-[#faf8ff] px-3 py-2;
 }

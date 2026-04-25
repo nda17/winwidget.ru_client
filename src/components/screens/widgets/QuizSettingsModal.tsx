@@ -11,6 +11,7 @@ import {
 import { useMutation } from '@tanstack/react-query'
 import { useId, useState } from 'react'
 import toast from 'react-hot-toast'
+import DirectLinkQr from './DirectLinkQr'
 import styles from './QuizSettingsModal.module.scss'
 
 type Tab = 'main' | 'questions' | 'results' | 'integrations' | 'code'
@@ -715,7 +716,7 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 					✕
 				</button>
 				<h2 id={titleId} className={styles.modalTitle}>
-					Настройки квиза
+					Настройки
 				</h2>
 
 				<div className={styles.tabs}>
@@ -737,7 +738,7 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 							{t === 'questions' && `Вопросы (${config.questions.length})`}
 							{t === 'results' && `Результаты (${config.results.length})`}
 							{t === 'integrations' && 'Интеграции'}
-							{t === 'code' && 'Установка на сайт'}
+							{t === 'code' && 'Код'}
 						</button>
 					))}
 				</div>
@@ -751,10 +752,6 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 									<h3 className={styles.settingsGroupTitle}>
 										Внешний вид
 									</h3>
-									<p className={styles.settingsGroupDesc}>
-										Название в кабинете, цвета и плавающая кнопка открытия
-										квиза.
-									</p>
 								</div>
 
 								<div className={styles.field}>
@@ -1042,10 +1039,6 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 							<div className={styles.settingsGroup}>
 								<div className={styles.settingsGroupHeader}>
 									<h3 className={styles.settingsGroupTitle}>Тексты</h3>
-									<p className={styles.settingsGroupDesc}>
-										Стартовый экран и экран сбора контакта, которые видит
-										посетитель.
-									</p>
 								</div>
 
 								<div className={styles.field}>
@@ -1115,10 +1108,6 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 									<h3 className={styles.settingsGroupTitle}>
 										Сбор контактов
 									</h3>
-									<p className={styles.settingsGroupDesc}>
-										Какие данные запросить у посетителя и как обрабатывать
-										повторные контакты.
-									</p>
 								</div>
 
 								<div className={styles.field}>
@@ -1225,10 +1214,6 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 									<h3 className={styles.settingsGroupTitle}>
 										Повторные прохождения
 									</h3>
-									<p className={styles.settingsGroupDesc}>
-										Настройте, что увидит посетитель при повторном открытии
-										квиза и когда можно пройти его снова.
-									</p>
 								</div>
 
 								<div className={styles.field}>
@@ -1319,7 +1304,7 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 											<p className={styles.hint}>
 												0 — проходить можно только единоразово. Любое
 												другое число - посетитель сможет проходить снова
-												через указанное кол-во дней.
+												через указанное количество дней.
 											</p>
 										</div>
 									</div>
@@ -1331,10 +1316,6 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 									<h3 className={styles.settingsGroupTitle}>
 										Опасные действия
 									</h3>
-									<p className={styles.settingsGroupDesc}>
-										Действия, которые массово меняют настройки квиза.
-										Проверьте всё перед сохранением.
-									</p>
 								</div>
 
 								<div className={styles.field}>
@@ -1466,6 +1447,24 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 									<li>
 										Посетитель получает тот результат, у которого набралось
 										больше всего баллов.
+									</li>
+								</ul>
+								<p
+									className={styles.infoBlockTitle}
+									style={{ marginTop: 4 }}
+								>
+									Что значит режим баллов
+								</p>
+								<ul className={styles.infoBlockList}>
+									<li>
+										<b>Простой</b> — у каждого ответа выбирается один
+										результат. Система сама ставит ему 10 баллов, а
+										остальным 0.
+									</li>
+									<li>
+										<b>Продвинутый</b> — можно вручную указать баллы от 0
+										до 10 для каждого результата, если ответ должен влиять
+										сразу на несколько итогов.
 									</li>
 								</ul>
 								<p
@@ -1944,169 +1943,195 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 					{/* ===== ИНТЕГРАЦИИ ===== */}
 					{tab === 'integrations' && (
 						<div className={styles.fields}>
-							<div className={styles.field}>
-								<p className={styles.label}>Отправка заявок на Email:</p>
-								<input
-									className={styles.input}
-									type="email"
-									value={config.integrations?.email || ''}
-									onChange={e => setIntegration('email', e.target.value)}
-									placeholder="admin@example.com"
-								/>
-								<p className={styles.hint}>
-									Уведомление о каждой новой заявке придёт на этот email.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>Отправка заявок в Telegram:</p>
-								<input
-									className={styles.input}
-									value={config.integrations?.telegramChatId || ''}
-									onChange={e =>
-										setIntegration('telegramChatId', e.target.value)
-									}
-									placeholder="-123456789"
-								/>
-								<p className={styles.hint}>
-									Напишите боту <b>@winwidget_bot</b> команду /start, затем
-									укажите сюда ваш Telegram ID. Узнать ID можно через бот{' '}
-									<b>@getmyid_bot</b>
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>Внешний URL (Webhook):</p>
-								<input
-									className={styles.input}
-									value={config.integrations?.webhookUrl || ''}
-									onChange={e =>
-										setIntegration('webhookUrl', e.target.value)
-									}
-									placeholder="https://..."
-								/>
-								<p className={styles.hint}>
-									На указанный URL придёт POST-запрос с данными:{' '}
-									<b>contact</b>, <b>phone</b>, <b>email</b>, <b>result</b>{' '}
-									— результат квиза, <b>answers</b> — ответы, <b>url</b> —
-									страница.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>
-									Отправка заявок в Битрикс24:
-								</p>
-								<input
-									className={styles.input}
-									value={config.integrations?.bitrix24WebhookUrl || ''}
-									onChange={e =>
-										setIntegration('bitrix24WebhookUrl', e.target.value)
-									}
-									placeholder="https://yourcompany.bitrix24.ru/rest/..."
-								/>
-								<p className={styles.hint}>
-									Укажите URL вашего входящего вебхука из Битрикс24.
-									Перейдите в Битрикс24 → Приложения → Вебхуки → Входящий
-									вебхук. Новые заявки будут создаваться как лиды в CRM.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>amoCRM — домен аккаунта:</p>
-								<input
-									className={styles.input}
-									value={config.integrations?.amoCrmDomain || ''}
-									onChange={e =>
-										setIntegration('amoCrmDomain', e.target.value)
-									}
-									placeholder="yourcompany.amocrm.ru"
-								/>
-								<p className={styles.hint}>
-									Домен вашего аккаунта amoCRM, например{' '}
-									<b>mycompany.amocrm.ru</b>
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>amoCRM — токен доступа:</p>
-								<input
-									className={styles.input}
-									type="password"
-									value={config.integrations?.amoCrmToken || ''}
-									onChange={e =>
-										setIntegration('amoCrmToken', e.target.value)
-									}
-									placeholder="Долгосрочный токен из настроек API"
-								/>
-								<p className={styles.hint}>
-									Перейдите в amoCRM → Настройки → Интеграции → API →
-									скопируйте долгосрочный токен. При каждой заявке будут
-									создаваться сделка и контакт.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>
-									Яндекс Метрика — ID счётчика:
-								</p>
-								<input
-									className={styles.input}
-									value={config.integrations?.yandexMetrikaId || ''}
-									onChange={e =>
-										setIntegration('yandexMetrikaId', e.target.value)
-									}
-									placeholder="12345678"
-								/>
-								<p className={styles.hint}>
-									При открытии квиза отправляется цель <b>wq_open</b>, при
-									отправке заявки — <b>wq_send</b>. Счётчик должен быть
-									установлен на странице сайта.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>
-									Ретаргетинг ВКонтакте — ID пикселя:
-								</p>
-								<input
-									className={styles.input}
-									value={config.integrations?.vkPixelId || ''}
-									onChange={e =>
-										setIntegration('vkPixelId', e.target.value)
-									}
-									placeholder="VK-RTRG-..."
-								/>
-								<p className={styles.hint}>
-									При открытии квиза отправляется событие <b>wq_open</b>,
-									при отправке заявки — <b>wq_send</b>. Пиксель VK должен
-									быть установлен на странице сайта.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>Roistat:</p>
-								<div className={styles.checkRow}>
-									<input
-										id="quizRoistat"
-										type="checkbox"
-										checked={config.integrations?.roistatEnabled || false}
-										onChange={e =>
-											setIntegration('roistatEnabled', e.target.checked)
-										}
-									/>
-									<label
-										htmlFor="quizRoistat"
-										className={styles.checkLabel}
-									>
-										Включить отправку целей в Roistat
-									</label>
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Уведомления
+									</h3>
 								</div>
-								<p className={styles.hint}>
-									При открытии квиза отправляется цель <b>wq_open</b>, при
-									отправке заявки — <b>wq_send</b>. Код Roistat должен быть
-									подключён на странице сайта.
-								</p>
+
+								<div className={styles.field}>
+									<p className={styles.label}>Отправка заявок на Email:</p>
+									<input
+										className={styles.input}
+										type="email"
+										value={config.integrations?.email || ''}
+										onChange={e => setIntegration('email', e.target.value)}
+										placeholder="admin@example.com"
+									/>
+									<p className={styles.hint}>
+										Уведомление о каждой новой заявке придёт на этот email.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Отправка заявок в Telegram:
+									</p>
+									<input
+										className={styles.input}
+										value={config.integrations?.telegramChatId || ''}
+										onChange={e =>
+											setIntegration('telegramChatId', e.target.value)
+										}
+										placeholder="-123456789"
+									/>
+									<p className={styles.hint}>
+										Напишите боту <b>@winwidget_bot</b> команду /start,
+										затем укажите сюда ваш Telegram ID. Узнать ID можно
+										через бот <b>@getmyid_bot</b>
+									</p>
+								</div>
+							</div>
+
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Webhooks и CRM
+									</h3>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>Внешний URL (Webhook):</p>
+									<input
+										className={styles.input}
+										value={config.integrations?.webhookUrl || ''}
+										onChange={e =>
+											setIntegration('webhookUrl', e.target.value)
+										}
+										placeholder="https://..."
+									/>
+									<p className={styles.hint}>
+										На указанный URL придёт POST-запрос с данными:{' '}
+										<b>contact</b>, <b>phone</b>, <b>email</b>,{' '}
+										<b>result</b> — результат квиза, <b>answers</b> —
+										ответы, <b>url</b> — страница.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Отправка заявок в Битрикс24:
+									</p>
+									<input
+										className={styles.input}
+										value={config.integrations?.bitrix24WebhookUrl || ''}
+										onChange={e =>
+											setIntegration('bitrix24WebhookUrl', e.target.value)
+										}
+										placeholder="https://yourcompany.bitrix24.ru/rest/..."
+									/>
+									<p className={styles.hint}>
+										Укажите URL вашего входящего вебхука из Битрикс24.
+										Перейдите в Битрикс24 → Приложения → Вебхуки → Входящий
+										вебхук. Новые заявки будут создаваться как лиды в CRM.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>amoCRM — домен аккаунта:</p>
+									<input
+										className={styles.input}
+										value={config.integrations?.amoCrmDomain || ''}
+										onChange={e =>
+											setIntegration('amoCrmDomain', e.target.value)
+										}
+										placeholder="yourcompany.amocrm.ru"
+									/>
+									<p className={styles.hint}>
+										Домен вашего аккаунта amoCRM, например{' '}
+										<b>mycompany.amocrm.ru</b>
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>amoCRM — токен доступа:</p>
+									<input
+										className={styles.input}
+										type="password"
+										value={config.integrations?.amoCrmToken || ''}
+										onChange={e =>
+											setIntegration('amoCrmToken', e.target.value)
+										}
+										placeholder="Долгосрочный токен из настроек API"
+									/>
+									<p className={styles.hint}>
+										Перейдите в amoCRM → Настройки → Интеграции → API →
+										скопируйте долгосрочный токен. При каждой заявке будут
+										создаваться сделка и контакт.
+									</p>
+								</div>
+							</div>
+
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>Аналитика</h3>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Яндекс Метрика — ID счётчика:
+									</p>
+									<input
+										className={styles.input}
+										value={config.integrations?.yandexMetrikaId || ''}
+										onChange={e =>
+											setIntegration('yandexMetrikaId', e.target.value)
+										}
+										placeholder="12345678"
+									/>
+									<p className={styles.hint}>
+										При открытии квиза отправляется цель <b>wq_open</b>,
+										при отправке заявки — <b>wq_send</b>. Счётчик должен
+										быть установлен на странице сайта.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Ретаргетинг ВКонтакте — ID пикселя:
+									</p>
+									<input
+										className={styles.input}
+										value={config.integrations?.vkPixelId || ''}
+										onChange={e =>
+											setIntegration('vkPixelId', e.target.value)
+										}
+										placeholder="VK-RTRG-..."
+									/>
+									<p className={styles.hint}>
+										При открытии квиза отправляется событие <b>wq_open</b>,
+										при отправке заявки — <b>wq_send</b>. Пиксель VK должен
+										быть установлен на странице сайта.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>Roistat:</p>
+									<div className={styles.checkRow}>
+										<input
+											id="quizRoistat"
+											type="checkbox"
+											checked={
+												config.integrations?.roistatEnabled || false
+											}
+											onChange={e =>
+												setIntegration('roistatEnabled', e.target.checked)
+											}
+										/>
+										<label
+											htmlFor="quizRoistat"
+											className={styles.checkLabel}
+										>
+											Включить отправку целей в Roistat
+										</label>
+									</div>
+									<p className={styles.hint}>
+										При открытии квиза отправляется цель <b>wq_open</b>,
+										при отправке заявки — <b>wq_send</b>. Код Roistat
+										должен быть подключён на странице сайта.
+									</p>
+								</div>
 							</div>
 						</div>
 					)}
@@ -2114,62 +2139,88 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 					{/* ===== УСТАНОВКА НА САЙТ ===== */}
 					{tab === 'code' && (
 						<div className={styles.fields}>
-							<div className={styles.field}>
-								<p className={styles.label}>Скрипт для вставки на сайт:</p>
-								<textarea
-									className={`${styles.input} ${styles.codeArea}`}
-									value={scriptCode}
-									readOnly
-									rows={3}
-									onClick={e => (e.target as HTMLTextAreaElement).select()}
-								/>
-								<button
-									type="button"
-									className={styles.copyBtn}
-									onClick={() => {
-										navigator.clipboard.writeText(scriptCode)
-										toast.success('Скопировано!')
-									}}
-								>
-									Копировать код
-								</button>
-								<p className={styles.hint}>
-									Вставьте этот код перед закрывающим тегом &lt;/body&gt;
-								</p>
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Установка на сайт
+									</h3>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Скрипт для вставки на сайт:
+									</p>
+									<textarea
+										className={`${styles.input} ${styles.codeArea}`}
+										value={scriptCode}
+										readOnly
+										rows={3}
+										onClick={e =>
+											(e.target as HTMLTextAreaElement).select()
+										}
+									/>
+									<button
+										type="button"
+										className={styles.copyBtn}
+										onClick={() => {
+											navigator.clipboard.writeText(scriptCode)
+											toast.success('Скопировано!')
+										}}
+									>
+										Копировать код
+									</button>
+									<p className={styles.hint}>
+										Вставьте этот код перед закрывающим тегом &lt;/body&gt;
+									</p>
+								</div>
 							</div>
 
-							<div className={styles.field}>
-								<p className={styles.label}>Прямая ссылка на квиз:</p>
-								<div className={styles.directLink}>
-									<input
-										className={styles.input}
-										value={directLink}
-										readOnly
-										onClick={e => (e.target as HTMLInputElement).select()}
-									/>
-									<a
-										href={directLink}
-										target="_blank"
-										rel="noreferrer"
-										className={styles.openLink}
-									>
-										Открыть
-									</a>
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Прямая ссылка
+									</h3>
 								</div>
-								<button
-									type="button"
-									className={styles.copyBtn}
-									onClick={() => {
-										navigator.clipboard.writeText(directLink)
-										toast.success('Скопировано!')
-									}}
-								>
-									Копировать ссылку
-								</button>
-								<p className={styles.hint}>
-									Используйте, если не нужно подключать квиз к сайту —
-									подходит для рассылок, рекламы и мессенджеров.
-								</p>
+
+								<div className={styles.field}>
+									<p className={styles.label}>Прямая ссылка на квиз:</p>
+									<div className={styles.directLink}>
+										<input
+											className={styles.input}
+											value={directLink}
+											readOnly
+											onClick={e =>
+												(e.target as HTMLInputElement).select()
+											}
+										/>
+										<a
+											href={directLink}
+											target="_blank"
+											rel="noreferrer"
+											className={styles.openLink}
+										>
+											Открыть
+										</a>
+									</div>
+									<button
+										type="button"
+										className={styles.copyBtn}
+										onClick={() => {
+											navigator.clipboard.writeText(directLink)
+											toast.success('Скопировано!')
+										}}
+									>
+										Копировать ссылку
+									</button>
+									<p className={styles.hint}>
+										Используйте, если не нужно подключать квиз к сайту —
+										подходит для рассылок, рекламы и мессенджеров.
+									</p>
+									<DirectLinkQr
+										value={directLink}
+										downloadName={`winwidget-quiz-${quiz.publicKey}.png`}
+									/>
+								</div>
 							</div>
 						</div>
 					)}
