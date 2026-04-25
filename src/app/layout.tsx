@@ -1,5 +1,5 @@
-import '@/assets/styles/globals.scss'
 import { criticalRoboto, criticalUnbounded } from '@/app/fonts'
+import '@/assets/styles/globals.scss'
 import Layout from '@/components/layout/Layout'
 import MainProvider from '@/providers/Main-provider/MainProvider'
 import { EnumTokens } from '@/services/auth/auth.service'
