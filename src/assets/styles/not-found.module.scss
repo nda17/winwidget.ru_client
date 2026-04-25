@@ -2,7 +2,7 @@
 	@apply flex flex-col items-center justify-center text-center flex-1 w-full py-24 px-4 min-h-[80vh];
 
 	.code {
-		@apply text-[9rem] font-bold leading-none mb-4 select-none;
+		@apply text-[5rem] sm:text-[8rem] lg:text-[9rem] font-bold leading-none mb-4 select-none;
 		font-family: var(--font-unbounded);
 		background: linear-gradient(
 			87.12deg,

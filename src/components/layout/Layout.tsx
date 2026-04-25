@@ -37,7 +37,10 @@ const Layout: NextPage<ILayout> = ({ children, siteSettings }) => {
 	}, [auth, isRecaptchaPage])
 
 	const isLandingPage = pathname === PUBLIC_PAGES.HOME
-	const isWidgetPreview = pathname.startsWith('/page/')
+	const isWidgetPreview =
+		pathname.startsWith('/page-wheel/') ||
+		pathname.startsWith('/page-quiz/') ||
+		pathname.startsWith('/page-callback/')
 
 	if (isWidgetPreview) {
 		return <>{children}</>

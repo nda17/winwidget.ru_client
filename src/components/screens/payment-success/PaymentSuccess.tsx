@@ -1,6 +1,5 @@
 'use client'
 
-import styles from '@/assets/styles/payment-success.module.scss'
 import { PUBLIC_PAGES } from '@/config/pages/public.config'
 import subscriptionService, {
 	type IPaymentVerification
@@ -9,6 +8,7 @@ import { useAuthStore } from '@/store/auth-store/auth-store'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
+import styles from './payment-success.module.scss'
 
 const MAX_AUTO_VERIFY_ATTEMPTS = 10
 const AUTO_VERIFY_INTERVAL_MS = 3000
