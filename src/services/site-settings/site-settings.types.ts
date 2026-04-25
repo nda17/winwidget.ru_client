@@ -3,5 +3,6 @@ export interface SiteSettings {
 	bannerEnabled: boolean
 	bannerText: string
 	snowflakeEnabled: boolean
+	paymentEnabled: boolean
 	updatedAt: string
 }

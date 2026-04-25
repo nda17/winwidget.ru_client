@@ -66,7 +66,11 @@ const getPendingPaymentLabel = (pendingPayment: IPendingPayment) => {
 	return `${planLabel} на ${periodLabel}`
 }
 
-const Pricing = () => {
+interface PricingProps {
+	paymentEnabled?: boolean
+}
+
+const Pricing = ({ paymentEnabled = true }: PricingProps) => {
 	const auth = useAuthStore(state => state.auth)
 	const [period, setPeriod] = useState<BillingPeriod>('YEARLY')
 
@@ -146,6 +150,7 @@ const Pricing = () => {
 		PLAN_PRIORITY[currentPlan] > PLAN_PRIORITY[pendingPayment.plan]
 	)
 	const isActionsDisabled =
+		!paymentEnabled ||
 		payMutation.isPending ||
 		cancelPendingMutation.isPending ||
 		pendingLoading
@@ -155,6 +160,12 @@ const Pricing = () => {
 			<h1 id="pricing-page-title" className={styles.title}>
 				Оплата
 			</h1>
+
+			{!paymentEnabled && (
+				<div className={styles.paymentDisabledNotice}>
+					Оплата временно недоступна. Попробуйте позже.
+				</div>
+			)}
 
 			{auth && subLoading ? (
 				<div className={styles.currentPlan} aria-hidden="true">

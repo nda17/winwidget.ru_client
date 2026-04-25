@@ -161,6 +161,10 @@
 .planRestriction {
 	@apply mt-3 text-center text-xs leading-[1.5] text-[#9d6d73];
 }
+.paymentDisabledNotice {
+	@apply w-full max-w-[760px] mb-6 px-5 py-4 rounded-2xl text-sm text-center font-medium text-[#7b3f00] bg-[#fff7e6] border border-[#ffd591];
+}
+
 .note {
 	@apply text-xs text-center text-[#bbb];
 }
@@ -232,7 +236,7 @@
 		@apply w-full;
 	}
 	.periodBtn {
-		@apply flex-1 justify-center px-3 py-2 text-[0.82rem];
+		@apply justify-center px-3 py-2 text-[0.82rem];
 	}
 	.plans {
 		@apply gap-[0.875rem];

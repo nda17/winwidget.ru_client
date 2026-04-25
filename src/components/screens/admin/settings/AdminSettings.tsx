@@ -1,13 +1,13 @@
 'use client'
 
-import adminTasksService, {
-	type ManualAdminTaskId,
-	type ManualAdminTaskRunResult
-} from '@/services/admin-tasks/admin-tasks.service'
 import AdminNavigation from '@/components/ui/admin/admin-navigation/AdminNavigation'
 import Heading from '@/components/ui/heading/Heading'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import SubHeading from '@/components/ui/sub-heading/SubHeading'
+import adminTasksService, {
+	type ManualAdminTaskId,
+	type ManualAdminTaskRunResult
+} from '@/services/admin-tasks/admin-tasks.service'
 import { revalidateSiteSettings } from '@/services/site-settings/site-settings.actions'
 import siteSettingsService from '@/services/site-settings/site-settings.service'
 import {
@@ -131,7 +131,7 @@ const AdminSettings: NextPage = () => {
 			<Heading text="Панель администратора" />
 			<AdminNavigation />
 
-			<SubHeading text="Новогодний режим" />
+			<SubHeading text="Оплата" />
 
 			<div className={styles.section}>
 				{isLoading ? (
@@ -145,16 +145,19 @@ const AdminSettings: NextPage = () => {
 				) : (
 					<div className={styles.toggleRow}>
 						<div>
-							<p className={styles.fieldLabel}>Снежинки на сайте</p>
+							<p className={styles.fieldLabel}>
+								Приём платежей через ЮKassa
+							</p>
 							<p className={styles.fieldHint}>
-								Летящие снежинки отображаются на всех страницах сайта
+								Если выключено, кнопки оплаты тарифов недоступны для
+								пользователей
 							</p>
 						</div>
 						<button
-							className={`${styles.toggle} ${settings?.snowflakeEnabled ? styles.toggleOn : ''}`}
+							className={`${styles.toggle} ${settings?.paymentEnabled ? styles.toggleOn : ''}`}
 							onClick={() =>
 								saveWithToast(
-									{ snowflakeEnabled: !settings?.snowflakeEnabled },
+									{ paymentEnabled: !settings?.paymentEnabled },
 									'Применяем настройку...'
 								)
 							}
@@ -274,6 +277,41 @@ const AdminSettings: NextPage = () => {
 						)
 					})}
 				</div>
+			</div>
+
+			<SubHeading text="Новогодний режим" />
+
+			<div className={styles.section}>
+				{isLoading ? (
+					<div className={styles.toggleRow}>
+						<div style={{ flex: 1 }}>
+							<SkeletonLoader count={1} className="h-[18px] w-48 mb-2" />
+							<SkeletonLoader count={1} className="h-[14px] w-72" />
+						</div>
+						<SkeletonLoader count={1} className="h-[28px] w-[52px]" />
+					</div>
+				) : (
+					<div className={styles.toggleRow}>
+						<div>
+							<p className={styles.fieldLabel}>Снежинки на сайте</p>
+							<p className={styles.fieldHint}>
+								Летящие снежинки отображаются на всех страницах сайта
+							</p>
+						</div>
+						<button
+							className={`${styles.toggle} ${settings?.snowflakeEnabled ? styles.toggleOn : ''}`}
+							onClick={() =>
+								saveWithToast(
+									{ snowflakeEnabled: !settings?.snowflakeEnabled },
+									'Применяем настройку...'
+								)
+							}
+							disabled={mutation.isPending}
+						>
+							<span className={styles.toggleThumb} />
+						</button>
+					</div>
+				)}
 			</div>
 		</section>
 	)

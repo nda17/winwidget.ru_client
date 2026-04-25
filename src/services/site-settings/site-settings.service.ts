@@ -11,7 +11,10 @@ const siteSettingsService = {
 		payload: Partial<
 			Pick<
 				SiteSettings,
-				'bannerEnabled' | 'bannerText' | 'snowflakeEnabled'
+				| 'bannerEnabled'
+				| 'bannerText'
+				| 'snowflakeEnabled'
+				| 'paymentEnabled'
 			>
 		>
 	): Promise<SiteSettings> {
