@@ -1,0 +1,46 @@
+.qrBox {
+	@apply mt-3 flex items-center gap-4 rounded-xl border border-[#e0d6f0] bg-[#faf8ff] p-4;
+}
+
+.qrCanvasWrap {
+	@apply shrink-0 rounded-lg border border-[#e0d6f0] bg-white p-2;
+}
+
+.qrCanvas {
+	@apply block h-[8.75rem] w-[8.75rem];
+	image-rendering: pixelated;
+}
+
+.qrContent {
+	@apply flex min-w-0 flex-1 flex-col gap-2;
+}
+
+.qrTitle {
+	@apply text-sm font-semibold text-[#555];
+}
+
+.qrHint {
+	@apply text-xs leading-relaxed text-[#aaa];
+}
+
+.qrDownloadBtn {
+	@apply mt-1 self-start rounded-lg border-none bg-[#f3eeff] px-4 py-2 text-sm font-medium text-[#7b3fa0] cursor-pointer transition-[background] duration-200;
+}
+
+.qrDownloadBtn:hover {
+	@apply bg-[#e0d6f0];
+}
+
+@media (max-width: 480px) {
+	.qrBox {
+		@apply flex-col items-start;
+	}
+
+	.qrCanvasWrap {
+		@apply self-center;
+	}
+
+	.qrDownloadBtn {
+		@apply self-stretch text-center;
+	}
+}
