@@ -14,6 +14,8 @@ import toast from 'react-hot-toast'
 import styles from './QuizSettingsModal.module.scss'
 
 type Tab = 'main' | 'questions' | 'results' | 'integrations' | 'code'
+type ScoreMode = 'simple' | 'advanced'
+type QuizTemplateKey = 'tariff' | 'service' | 'discount' | 'diagnostic'
 
 interface Props {
 	quiz: Quiz
@@ -22,6 +24,18 @@ interface Props {
 }
 
 const makeId = () => Math.random().toString(36).slice(2, 9)
+
+const makeScoredOption = (
+	text: string,
+	resultIds: string[],
+	winnerId: string
+): QuizOption => ({
+	id: `o${makeId()}`,
+	text,
+	scores: Object.fromEntries(
+		resultIds.map(resultId => [resultId, resultId === winnerId ? 10 : 0])
+	)
+})
 
 const DEFAULT_CONFIG: QuizConfig = {
 	color: '#4705fb',
@@ -54,16 +68,287 @@ const DEFAULT_CONFIG: QuizConfig = {
 	integrations: { ...({} as QuizConfig['integrations']) }
 }
 
+const buildQuizTemplate = (
+	template: QuizTemplateKey
+): Pick<
+	QuizConfig,
+	| 'title'
+	| 'subtitle'
+	| 'buttonText'
+	| 'contactTitle'
+	| 'results'
+	| 'questions'
+> => {
+	const resultIds = [`r${makeId()}`, `r${makeId()}`]
+
+	if (template === 'tariff') {
+		const results: QuizResult[] = [
+			{
+				id: resultIds[0],
+				title: 'Вам подойдёт базовый тариф',
+				description:
+					'Подходит для старта, проверки спроса и небольшого потока заявок.',
+				promoCode: '',
+				buttonText: 'Посмотреть тариф',
+				buttonUrl: ''
+			},
+			{
+				id: resultIds[1],
+				title: 'Вам подойдёт расширенный тариф',
+				description:
+					'Подходит для активного продвижения, аналитики и большего объёма заявок.',
+				promoCode: '',
+				buttonText: 'Обсудить подключение',
+				buttonUrl: ''
+			}
+		]
+
+		return {
+			title: 'Подберите подходящий тариф',
+			subtitle:
+				'Ответьте на пару вопросов, и мы предложим оптимальный вариант',
+			buttonText: 'Подобрать тариф',
+			contactTitle: 'Оставьте контакт, чтобы получить рекомендацию',
+			results,
+			questions: [
+				{
+					id: `q${makeId()}`,
+					text: 'Какой у вас ожидаемый поток заявок?',
+					type: 'radio',
+					options: [
+						makeScoredOption(
+							'До 100 заявок в месяц',
+							resultIds,
+							resultIds[0]
+						),
+						makeScoredOption(
+							'Больше 100 заявок в месяц',
+							resultIds,
+							resultIds[1]
+						)
+					]
+				},
+				{
+					id: `q${makeId()}`,
+					text: 'Нужна ли расширенная аналитика?',
+					type: 'radio',
+					options: [
+						makeScoredOption(
+							'Пока достаточно базовой',
+							resultIds,
+							resultIds[0]
+						),
+						makeScoredOption(
+							'Да, хочу видеть больше данных',
+							resultIds,
+							resultIds[1]
+						)
+					]
+				}
+			]
+		}
+	}
+
+	if (template === 'service') {
+		const results: QuizResult[] = [
+			{
+				id: resultIds[0],
+				title: 'Вам подойдёт консультация',
+				description:
+					'Начнём с диагностики задачи и предложим понятный план дальнейших действий.',
+				promoCode: '',
+				buttonText: 'Записаться',
+				buttonUrl: ''
+			},
+			{
+				id: resultIds[1],
+				title: 'Вам подойдёт комплексная услуга',
+				description:
+					'Возьмём задачу под ключ: от настройки до запуска и сопровождения.',
+				promoCode: '',
+				buttonText: 'Получить расчёт',
+				buttonUrl: ''
+			}
+		]
+
+		return {
+			title: 'Подберите услугу под вашу задачу',
+			subtitle: 'Ответьте на вопросы, чтобы получить точную рекомендацию',
+			buttonText: 'Подобрать услугу',
+			contactTitle: 'Куда отправить рекомендацию?',
+			results,
+			questions: [
+				{
+					id: `q${makeId()}`,
+					text: 'Насколько задача уже понятна?',
+					type: 'radio',
+					options: [
+						makeScoredOption(
+							'Нужна помощь с выбором',
+							resultIds,
+							resultIds[0]
+						),
+						makeScoredOption(
+							'Нужно быстро запустить решение',
+							resultIds,
+							resultIds[1]
+						)
+					]
+				},
+				{
+					id: `q${makeId()}`,
+					text: 'Какой формат вам удобнее?',
+					type: 'radio',
+					options: [
+						makeScoredOption(
+							'Сначала обсудить детали',
+							resultIds,
+							resultIds[0]
+						),
+						makeScoredOption(
+							'Передать задачу специалистам',
+							resultIds,
+							resultIds[1]
+						)
+					]
+				}
+			]
+		}
+	}
+
+	if (template === 'discount') {
+		const results: QuizResult[] = [
+			{
+				id: resultIds[0],
+				title: 'Ваша скидка 10%',
+				description:
+					'Отличный стартовый бонус. Используйте промокод при оформлении заказа.',
+				promoCode: 'SALE10',
+				buttonText: 'Использовать скидку',
+				buttonUrl: ''
+			},
+			{
+				id: resultIds[1],
+				title: 'Ваша скидка 20%',
+				description:
+					'Максимальный бонус за подходящие ответы. Промокод уже ждёт вас.',
+				promoCode: 'SALE20',
+				buttonText: 'Забрать скидку',
+				buttonUrl: ''
+			}
+		]
+
+		return {
+			title: 'Ответьте на вопросы и получите скидку',
+			subtitle: 'Размер скидки зависит от ваших ответов',
+			buttonText: 'Получить скидку',
+			contactTitle: 'Оставьте контакт, чтобы забрать промокод',
+			results,
+			questions: [
+				{
+					id: `q${makeId()}`,
+					text: 'Когда планируете покупку?',
+					type: 'radio',
+					options: [
+						makeScoredOption(
+							'Позже, присматриваюсь',
+							resultIds,
+							resultIds[0]
+						),
+						makeScoredOption('В ближайшие дни', resultIds, resultIds[1])
+					]
+				},
+				{
+					id: `q${makeId()}`,
+					text: 'Хотите получить персональное предложение?',
+					type: 'radio',
+					options: [
+						makeScoredOption('Только промокод', resultIds, resultIds[0]),
+						makeScoredOption(
+							'Да, хочу лучшее предложение',
+							resultIds,
+							resultIds[1]
+						)
+					]
+				}
+			]
+		}
+	}
+
+	const results: QuizResult[] = [
+		{
+			id: resultIds[0],
+			title: 'Сейчас лучше начать с диагностики',
+			description:
+				'Сначала стоит уточнить потребности и ограничения, чтобы не переплачивать за лишнее.',
+			promoCode: '',
+			buttonText: 'Получить консультацию',
+			buttonUrl: ''
+		},
+		{
+			id: resultIds[1],
+			title: 'Вы готовы к внедрению',
+			description:
+				'По ответам видно, что можно переходить к подбору решения и запуску.',
+			promoCode: '',
+			buttonText: 'Обсудить запуск',
+			buttonUrl: ''
+		}
+	]
+
+	return {
+		title: 'Диагностика потребности',
+		subtitle: 'Ответьте на вопросы, чтобы понять лучший следующий шаг',
+		buttonText: 'Пройти диагностику',
+		contactTitle: 'Оставьте контакт, чтобы получить вывод',
+		results,
+		questions: [
+			{
+				id: `q${makeId()}`,
+				text: 'Есть ли уже выбранное решение?',
+				type: 'radio',
+				options: [
+					makeScoredOption('Нет, пока выбираю', resultIds, resultIds[0]),
+					makeScoredOption('Да, нужно внедрить', resultIds, resultIds[1])
+				]
+			},
+			{
+				id: `q${makeId()}`,
+				text: 'Как быстро нужен результат?',
+				type: 'radio',
+				options: [
+					makeScoredOption(
+						'Можно спокойно разобраться',
+						resultIds,
+						resultIds[0]
+					),
+					makeScoredOption(
+						'Нужно как можно быстрее',
+						resultIds,
+						resultIds[1]
+					)
+				]
+			}
+		]
+	}
+}
+
 const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 	const [tab, setTab] = useState<Tab>('main')
 	const [config, setConfig] = useState<QuizConfig>({ ...quiz.config })
 	const [name, setName] = useState(quiz.name)
+	const [scoreMode, setScoreMode] = useState<ScoreMode>('simple')
 	const titleId = useId()
 	const [cooldownInput, setCooldownInput] = useState(
 		String(quiz.config.quizCooldownDays ?? 0)
 	)
 	const [confirmResetAttempts, setConfirmResetAttempts] = useState(false)
 	const [confirmResetDefaults, setConfirmResetDefaults] = useState(false)
+	const [savedSnapshot, setSavedSnapshot] = useState(
+		JSON.stringify({ name: quiz.name, config: quiz.config })
+	)
+	const currentSnapshot = JSON.stringify({ name, config })
+	const hasUnsavedChanges = currentSnapshot !== savedSnapshot
 
 	const saveMutation = useMutation({
 		mutationFn: (data: { name: string; config: QuizConfig }) =>
@@ -72,6 +357,11 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 			toast.loading('Сохраняем настройки, пожалуйста подождите...'),
 		onSuccess: (updated, _, toastId) => {
 			toast.success('Сохранено', { id: toastId })
+			setName(updated.name)
+			setConfig(updated.config)
+			setSavedSnapshot(
+				JSON.stringify({ name: updated.name, config: updated.config })
+			)
 			onSaved(updated)
 		},
 		onError: (e: any, _, toastId) => {
@@ -92,6 +382,9 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 		onSuccess: (updated, _, toastId) => {
 			toast.success('Попытки всех посетителей сброшены', { id: toastId })
 			setConfig(updated.config)
+			setSavedSnapshot(
+				JSON.stringify({ name: updated.name, config: updated.config })
+			)
 			onSaved(updated)
 		},
 		onError: (e: any, _, toastId) => {
@@ -232,6 +525,43 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 		})
 	}
 
+	const getLeadingResultId = (option: QuizOption) => {
+		let winnerId = config.results[0]?.id || ''
+		let maxScore = -Infinity
+
+		for (const result of config.results) {
+			const score = option.scores[result.id] ?? 0
+			if (score > maxScore) {
+				maxScore = score
+				winnerId = result.id
+			}
+		}
+
+		return winnerId
+	}
+
+	const setOptionWinner = (
+		qIdx: number,
+		oIdx: number,
+		winnerId: string
+	) => {
+		setConfig(prev => {
+			const questions = [...prev.questions]
+			const options = [...questions[qIdx].options]
+			options[oIdx] = {
+				...options[oIdx],
+				scores: Object.fromEntries(
+					prev.results.map(result => [
+						result.id,
+						result.id === winnerId ? 10 : 0
+					])
+				)
+			}
+			questions[qIdx] = { ...questions[qIdx], options }
+			return { ...prev, questions }
+		})
+	}
+
 	// --- Results helpers ---
 
 	const addResult = () => {
@@ -285,6 +615,16 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 			results[rIdx] = { ...results[rIdx], [field]: value }
 			return { ...prev, results }
 		})
+	}
+
+	const applyTemplate = (template: QuizTemplateKey) => {
+		const templateConfig = buildQuizTemplate(template)
+		setConfig(prev => ({
+			...prev,
+			...templateConfig
+		}))
+		setTab('questions')
+		toast.success('Шаблон применён')
 	}
 
 	// ---
@@ -397,7 +737,7 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 							{t === 'questions' && `Вопросы (${config.questions.length})`}
 							{t === 'results' && `Результаты (${config.results.length})`}
 							{t === 'integrations' && 'Интеграции'}
-							{t === 'code' && 'Код'}
+							{t === 'code' && 'Установка на сайт'}
 						</button>
 					))}
 				</div>
@@ -406,590 +746,703 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 					{/* ===== ГЛАВНЫЕ ===== */}
 					{tab === 'main' && (
 						<div className={styles.fields}>
-							<div className={styles.field}>
-								<p className={styles.label}>Название квиза:</p>
-								<input
-									className={styles.input}
-									value={name}
-									onChange={e => setName(e.target.value)}
-									placeholder="Квиз"
-									maxLength={15}
-								/>
-								<p className={styles.hint}>
-									Отображается только в вашем кабинете. Посетители это
-									название не видят.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>Основной цвет:</p>
-								<div className={styles.colorRow}>
-									<input
-										type="color"
-										className={styles.colorPicker}
-										value={config.color}
-										onChange={e => setField('color', e.target.value)}
-									/>
-									<input
-										className={styles.input}
-										value={config.color}
-										onChange={e => setField('color', e.target.value)}
-										placeholder="#4705fb"
-										maxLength={7}
-									/>
-									{config.color && config.color !== '#4705fb' && (
-										<button
-											type="button"
-											className={styles.clearColorBtn}
-											onClick={() => setField('color', '#4705fb')}
-											title="Сбросить к стандартному"
-										>
-											✕
-										</button>
-									)}
-								</div>
-								<p className={styles.hint}>
-									Основной цвет акцентов: прогресс-бар, кнопки, бейдж
-									результата.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>Цвет фона виджета:</p>
-								<div className={styles.colorRow}>
-									<input
-										type="color"
-										className={styles.colorPicker}
-										value={config.bgColor || '#4705fb'}
-										onChange={e => setField('bgColor', e.target.value)}
-									/>
-									<input
-										className={styles.input}
-										value={config.bgColor || ''}
-										onChange={e => setField('bgColor', e.target.value)}
-										placeholder="#4705fb"
-										maxLength={7}
-									/>
-									{config.bgColor && (
-										<button
-											type="button"
-											className={styles.clearColorBtn}
-											onClick={() => setField('bgColor', '')}
-											title="Сбросить к стандартному"
-										>
-											✕
-										</button>
-									)}
-								</div>
-								<p className={styles.hint}>
-									Цвет фона карточки квиза. Оставьте пустым для
-									стандартного тёмного градиента.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>Цвет кнопки:</p>
-								<div className={styles.colorRow}>
-									<input
-										type="color"
-										className={styles.colorPicker}
-										value={config.buttonColor || config.color}
-										onChange={e => setField('buttonColor', e.target.value)}
-									/>
-									<input
-										className={styles.input}
-										value={config.buttonColor || ''}
-										onChange={e => setField('buttonColor', e.target.value)}
-										placeholder="По умолчанию — основной цвет"
-										maxLength={7}
-									/>
-									{config.buttonColor && (
-										<button
-											type="button"
-											className={styles.clearColorBtn}
-											onClick={() => setField('buttonColor', '')}
-											title="Сбросить"
-										>
-											✕
-										</button>
-									)}
-								</div>
-								<p className={styles.hint}>
-									Цвет кнопок «Далее» и «Получить результат». Оставьте
-									пустым, чтобы использовать основной цвет.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>Расположение кнопки:</p>
-								<select
-									className={styles.input}
-									value={config.buttonSide}
-									onChange={e =>
-										setField(
-											'buttonSide',
-											e.target.value as 'left' | 'right'
-										)
-									}
-								>
-									<option value="right">Справа</option>
-									<option value="left">Слева</option>
-								</select>
-								<p className={styles.hint}>
-									С какой стороны экрана будет показана плавающая кнопка
-									открытия квиза.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>
-									Высота кнопки от низа экрана:{' '}
-									<strong>{config.buttonBottom}%</strong>
-								</p>
-								<input
-									type="range"
-									min={1}
-									max={50}
-									value={config.buttonBottom}
-									onChange={e =>
-										setField('buttonBottom', Number(e.target.value))
-									}
-									className={styles.input}
-									style={{
-										padding: '8px 0',
-										background: 'transparent',
-										border: 'none'
-									}}
-								/>
-								<p className={styles.hint}>
-									Отступ от нижнего края экрана в процентах. 3 — почти
-									внизу, 50 — по центру.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>
-									Отступ кнопки от края экрана:{' '}
-									<strong>{config.buttonOffset ?? 3}%</strong>
-								</p>
-								<input
-									type="range"
-									min={1}
-									max={50}
-									value={config.buttonOffset ?? 3}
-									onChange={e =>
-										setField('buttonOffset', Number(e.target.value))
-									}
-									className={styles.input}
-									style={{
-										padding: '8px 0',
-										background: 'transparent',
-										border: 'none'
-									}}
-								/>
-								<p className={styles.hint}>
-									Отступ кнопки от левого или правого края экрана в
-									процентах. 3 — почти у края, 50 — по центру.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>
-									Размер кнопки:{' '}
-									<strong>{config.buttonSize ?? 60}px</strong>
-								</p>
-								<input
-									type="range"
-									min={40}
-									max={100}
-									value={config.buttonSize ?? 60}
-									onChange={e =>
-										setField('buttonSize', Number(e.target.value))
-									}
-									className={styles.input}
-									style={{
-										padding: '8px 0',
-										background: 'transparent',
-										border: 'none'
-									}}
-								/>
-								<p className={styles.hint}>
-									Размер плавающей кнопки открытия квиза в пикселях. По
-									умолчанию 60px.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<div className={styles.checkRow}>
-									<input
-										id="quizPulse"
-										type="checkbox"
-										checked={config.buttonPulse}
-										onChange={e =>
-											setField('buttonPulse', e.target.checked)
-										}
-									/>
-									<label htmlFor="quizPulse" className={styles.checkLabel}>
-										Пульсация кнопки
-									</label>
-								</div>
-								<p className={styles.hint}>
-									Дополнительный эффект свечения на плавающей кнопке
-									открытия квиза.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>Авто-открытие через (сек):</p>
-								<input
-									type="number"
-									className={styles.input}
-									value={config.autoOpenDelay ?? ''}
-									onChange={e =>
-										setField(
-											'autoOpenDelay',
-											e.target.value === '' ? null : Number(e.target.value)
-										)
-									}
-									placeholder="Не открывать автоматически"
-									min={0}
-								/>
-								<p className={styles.hint}>
-									Через сколько секунд квиз откроется автоматически.
-									Оставьте пустым для отключения.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>Заголовок квиза:</p>
-								<input
-									className={styles.input}
-									value={config.title}
-									onChange={e => setField('title', e.target.value)}
-									placeholder="Пройдите наш квиз!"
-									maxLength={60}
-								/>
-								<p className={styles.hint}>
-									Крупный заголовок на стартовом экране квиза.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>Подзаголовок:</p>
-								<input
-									className={styles.input}
-									value={config.subtitle}
-									onChange={e => setField('subtitle', e.target.value)}
-									placeholder="Ответьте на вопросы и получите результат"
-									maxLength={120}
-								/>
-								<p className={styles.hint}>
-									Описание под заголовком на стартовом экране.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>Текст кнопки запуска:</p>
-								<input
-									className={styles.input}
-									value={config.buttonText}
-									onChange={e => setField('buttonText', e.target.value)}
-									placeholder="Начать квиз"
-									maxLength={30}
-								/>
-								<p className={styles.hint}>
-									Текст кнопки, с которой начинается прохождение квиза.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>Заголовок экрана контакта:</p>
-								<input
-									className={styles.input}
-									value={config.contactTitle}
-									onChange={e => setField('contactTitle', e.target.value)}
-									placeholder="Оставьте контакт для получения результата"
-									maxLength={80}
-								/>
-								<p className={styles.hint}>
-									Заголовок экрана, на котором посетитель оставляет свои
-									данные перед показом результата.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>Сбор данных:</p>
-								<select
-									className={styles.input}
-									value={config.dataType}
-									onChange={e =>
-										setField(
-											'dataType',
-											e.target.value as QuizConfig['dataType']
-										)
-									}
-								>
-									<option value="PHONE">Телефон</option>
-									<option value="EMAIL">Email</option>
-									<option value="PHONE_AND_EMAIL">Телефон и Email</option>
-									<option value="NONE">Не собирать</option>
-								</select>
-								<p className={styles.hint}>
-									Какие данные собирать у посетителя в обмен на
-									персональный результат.
-								</p>
-							</div>
-
-							{(config.dataType === 'PHONE' ||
-								config.dataType === 'PHONE_AND_EMAIL') && (
-								<div className={styles.field}>
-									<p className={styles.label}>Регион телефона:</p>
-									<select
-										className={styles.input}
-										value={config.phoneRegion}
-										onChange={e => setField('phoneRegion', e.target.value)}
-									>
-										<option value="RU">Россия (+7)</option>
-										<option value="BY">Беларусь (+375)</option>
-										<option value="KZ">Казахстан (+7)</option>
-										<option value="UA">Украина (+380)</option>
-										<option value="international">Международный</option>
-									</select>
-									<p className={styles.hint}>
-										Определяет формат и маску номера телефона в поле ввода.
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Внешний вид
+									</h3>
+									<p className={styles.settingsGroupDesc}>
+										Название в кабинете, цвета и плавающая кнопка открытия
+										квиза.
 									</p>
 								</div>
-							)}
 
-							<div className={styles.field}>
-								<p className={styles.label}>
-									Ссылка на политику конфиденциальности:
-								</p>
-								<input
-									className={styles.input}
-									value={config.privacyUrl}
-									onChange={e => setField('privacyUrl', e.target.value)}
-									placeholder="https://..."
-									maxLength={500}
-								/>
-								<p className={styles.hint}>
-									По умолчанию ведёт на нашу политику. Замените на ссылку
-									своей политики конфиденциальности.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>Заголовок «Уже проходили»:</p>
-								<input
-									className={styles.input}
-									value={config.alreadyPlayedTitle}
-									onChange={e =>
-										setField('alreadyPlayedTitle', e.target.value)
-									}
-									placeholder="🎉 Вы уже проходили этот квиз!"
-									maxLength={80}
-								/>
-								<p className={styles.hint}>
-									Показывается посетителю, который открывает квиз повторно.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>
-									Подзаголовок «Уже проходили»:
-								</p>
-								<input
-									className={styles.input}
-									value={config.alreadyPlayedSubtitle}
-									onChange={e =>
-										setField('alreadyPlayedSubtitle', e.target.value)
-									}
-									placeholder="Каждый посетитель может пройти квиз только один раз"
-									maxLength={160}
-								/>
-								<p className={styles.hint}>
-									Подпись под заголовком антифрод-экрана.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<div className={styles.checkRow}>
+								<div className={styles.field}>
+									<p className={styles.label}>Название квиза:</p>
 									<input
-										id="quizHideIfPlayed"
-										type="checkbox"
-										checked={config.hideIfPlayed}
-										onChange={e =>
-											setField('hideIfPlayed', e.target.checked)
-										}
+										className={styles.input}
+										value={name}
+										onChange={e => setName(e.target.value)}
+										placeholder="Квиз"
+										maxLength={15}
 									/>
-									<label
-										htmlFor="quizHideIfPlayed"
-										className={styles.checkLabel}
-									>
-										Скрывать кнопку, если уже проходили
-									</label>
+									<p className={styles.hint}>
+										Отображается только в вашем кабинете. Посетители это
+										название не видят.
+									</p>
 								</div>
-								<p className={styles.hint}>
-									Плавающая кнопка и квиз полностью скроются для тех, кто
-									уже проходил.
-								</p>
-							</div>
 
-							<div className={styles.field}>
-								<p className={styles.label}>
-									Повторное прохождение раз в N дней:
-								</p>
-								<input
-									type="number"
-									className={styles.input}
-									value={cooldownInput}
-									onChange={e => {
-										setCooldownInput(e.target.value)
-										const n = parseInt(e.target.value)
-										if (!isNaN(n) && n >= 0 && n <= 365) {
-											setField('quizCooldownDays', n)
-										}
-									}}
-									min={0}
-									max={365}
-									placeholder="0"
-								/>
-								<p className={styles.hint}>
-									0 — проходить можно только единоразово. Любое другое
-									число - посетитель сможет проходить снова через указанное
-									кол-во дней.
-								</p>
-							</div>
-
-							<div className={styles.field}>
-								<p className={styles.label}>
-									Сброс попыток всех посетителей:
-								</p>
-								{!confirmResetAttempts ? (
-									<button
-										type="button"
-										className={styles.resetAttemptsBtn}
-										onClick={() => setConfirmResetAttempts(true)}
-										disabled={resetAttemptsMutation.isPending}
-									>
-										Сбросить попытки всех посетителей
-									</button>
-								) : (
-									<div
-										style={{
-											display: 'flex',
-											flexDirection: 'column',
-											gap: 8
-										}}
-									>
-										<p
-											className={styles.hint}
-											style={{ color: '#e05a5a' }}
-										>
-											Все посетители смогут пройти квиз заново. Действие
-											необратимо.
-										</p>
-										<div style={{ display: 'flex', gap: 8 }}>
+								<div className={styles.field}>
+									<p className={styles.label}>Основной цвет:</p>
+									<div className={styles.colorRow}>
+										<input
+											type="color"
+											className={styles.colorPicker}
+											value={config.color}
+											onChange={e => setField('color', e.target.value)}
+										/>
+										<input
+											className={styles.input}
+											value={config.color}
+											onChange={e => setField('color', e.target.value)}
+											placeholder="#4705fb"
+											maxLength={7}
+										/>
+										{config.color && config.color !== '#4705fb' && (
 											<button
 												type="button"
-												className={styles.resetAttemptsBtn}
-												onClick={handleResetAttempts}
-												disabled={resetAttemptsMutation.isPending}
+												className={styles.clearColorBtn}
+												onClick={() => setField('color', '#4705fb')}
+												title="Сбросить к стандартному"
 											>
-												{resetAttemptsMutation.isPending
-													? 'Сброс...'
-													: 'Да, сбросить'}
+												✕
 											</button>
+										)}
+									</div>
+									<p className={styles.hint}>
+										Основной цвет акцентов: прогресс-бар, кнопки, бейдж
+										результата.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>Цвет фона виджета:</p>
+									<div className={styles.colorRow}>
+										<input
+											type="color"
+											className={styles.colorPicker}
+											value={config.bgColor || '#4705fb'}
+											onChange={e => setField('bgColor', e.target.value)}
+										/>
+										<input
+											className={styles.input}
+											value={config.bgColor || ''}
+											onChange={e => setField('bgColor', e.target.value)}
+											placeholder="#4705fb"
+											maxLength={7}
+										/>
+										{config.bgColor && (
 											<button
 												type="button"
-												className={styles.copyBtn}
-												onClick={() => setConfirmResetAttempts(false)}
+												className={styles.clearColorBtn}
+												onClick={() => setField('bgColor', '')}
+												title="Сбросить к стандартному"
 											>
-												Отмена
+												✕
 											</button>
+										)}
+									</div>
+									<p className={styles.hint}>
+										Цвет фона карточки квиза. Оставьте пустым для
+										стандартного тёмного градиента.
+									</p>
+								</div>
+
+								<details className={styles.advancedBlock}>
+									<summary className={styles.advancedSummary}>
+										Дополнительно
+									</summary>
+
+									<div className={styles.advancedContent}>
+										<div className={styles.field}>
+											<p className={styles.label}>Цвет кнопки:</p>
+											<div className={styles.colorRow}>
+												<input
+													type="color"
+													className={styles.colorPicker}
+													value={config.buttonColor || config.color}
+													onChange={e =>
+														setField('buttonColor', e.target.value)
+													}
+												/>
+												<input
+													className={styles.input}
+													value={config.buttonColor || ''}
+													onChange={e =>
+														setField('buttonColor', e.target.value)
+													}
+													placeholder="По умолчанию — основной цвет"
+													maxLength={7}
+												/>
+												{config.buttonColor && (
+													<button
+														type="button"
+														className={styles.clearColorBtn}
+														onClick={() => setField('buttonColor', '')}
+														title="Сбросить"
+													>
+														✕
+													</button>
+												)}
+											</div>
+											<p className={styles.hint}>
+												Цвет кнопок «Далее» и «Получить результат».
+												Оставьте пустым, чтобы использовать основной цвет.
+											</p>
 										</div>
 									</div>
-								)}
-								<p className={styles.hint}>
-									Позволяет сбросить счётчик прохождений квиза сразу всем
-									посетителям. Они снова смогут пройти квиз.
-								</p>
-							</div>
+								</details>
 
-							<div className={styles.field}>
-								<div className={styles.checkRow}>
-									<input
-										id="quizFilterDuplicates"
-										type="checkbox"
-										checked={config.filterDuplicates}
+								<div className={styles.field}>
+									<p className={styles.label}>Расположение кнопки:</p>
+									<select
+										className={styles.input}
+										value={config.buttonSide}
 										onChange={e =>
-											setField('filterDuplicates', e.target.checked)
+											setField(
+												'buttonSide',
+												e.target.value as 'left' | 'right'
+											)
 										}
-									/>
-									<label
-										htmlFor="quizFilterDuplicates"
-										className={styles.checkLabel}
 									>
-										Не сохранять повторные контакты
-									</label>
+										<option value="right">Справа</option>
+										<option value="left">Слева</option>
+									</select>
+									<p className={styles.hint}>
+										С какой стороны экрана будет показана плавающая кнопка
+										открытия квиза.
+									</p>
 								</div>
-								<p className={styles.hint}>
-									Если посетитель оставит контакт, который уже есть в базе
-									этого квиза — повторная заявка не будет сохранена и
-									уведомления не придут.
-								</p>
-							</div>
 
-							<div className={styles.field}>
-								{!confirmResetDefaults ? (
-									<button
-										type="button"
-										className={styles.resetAttemptsBtn}
-										onClick={() => setConfirmResetDefaults(true)}
-									>
-										Сбросить все настройки до значений по умолчанию
-									</button>
-								) : (
-									<div
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Высота кнопки от низа экрана:{' '}
+										<strong>{config.buttonBottom}%</strong>
+									</p>
+									<input
+										type="range"
+										min={1}
+										max={50}
+										value={config.buttonBottom}
+										onChange={e =>
+											setField('buttonBottom', Number(e.target.value))
+										}
+										className={styles.input}
 										style={{
-											display: 'flex',
-											flexDirection: 'column',
-											gap: 8
+											padding: '8px 0',
+											background: 'transparent',
+											border: 'none'
 										}}
-									>
-										<p
-											className={styles.hint}
-											style={{ color: '#e05a5a' }}
-										>
-											Все настройки квиза будут заменены на стандартные.
-											Действие необратимо после сохранения.
-										</p>
-										<div style={{ display: 'flex', gap: 8 }}>
-											<button
-												type="button"
-												className={styles.resetAttemptsBtn}
-												onClick={() => {
-													setConfig({
-														...DEFAULT_CONFIG,
-														questions: config.questions,
-														results: config.results
-													})
-													setCooldownInput('0')
-													setConfirmResetDefaults(false)
+									/>
+									<p className={styles.hint}>
+										Отступ от нижнего края экрана в процентах. 3 — почти
+										внизу, 50 — по центру.
+									</p>
+								</div>
+
+								<details className={styles.advancedBlock}>
+									<summary className={styles.advancedSummary}>
+										Дополнительное поведение кнопки
+									</summary>
+
+									<div className={styles.advancedContent}>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Отступ кнопки от края экрана:{' '}
+												<strong>{config.buttonOffset ?? 3}%</strong>
+											</p>
+											<input
+												type="range"
+												min={1}
+												max={50}
+												value={config.buttonOffset ?? 3}
+												onChange={e =>
+													setField('buttonOffset', Number(e.target.value))
+												}
+												className={styles.input}
+												style={{
+													padding: '8px 0',
+													background: 'transparent',
+													border: 'none'
 												}}
-											>
-												Да, сбросить
-											</button>
-											<button
-												type="button"
-												className={styles.copyBtn}
-												onClick={() => setConfirmResetDefaults(false)}
-											>
-												Отмена
-											</button>
+											/>
+											<p className={styles.hint}>
+												Отступ кнопки от левого или правого края экрана в
+												процентах. 3 — почти у края, 50 — по центру.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Размер кнопки:{' '}
+												<strong>{config.buttonSize ?? 60}px</strong>
+											</p>
+											<input
+												type="range"
+												min={40}
+												max={100}
+												value={config.buttonSize ?? 60}
+												onChange={e =>
+													setField('buttonSize', Number(e.target.value))
+												}
+												className={styles.input}
+												style={{
+													padding: '8px 0',
+													background: 'transparent',
+													border: 'none'
+												}}
+											/>
+											<p className={styles.hint}>
+												Размер плавающей кнопки открытия квиза в пикселях.
+												По умолчанию 60px.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<div className={styles.checkRow}>
+												<input
+													id="quizPulse"
+													type="checkbox"
+													checked={config.buttonPulse}
+													onChange={e =>
+														setField('buttonPulse', e.target.checked)
+													}
+												/>
+												<label
+													htmlFor="quizPulse"
+													className={styles.checkLabel}
+												>
+													Пульсация кнопки
+												</label>
+											</div>
+											<p className={styles.hint}>
+												Дополнительный эффект свечения на плавающей кнопке
+												открытия квиза.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Авто-открытие через (сек):
+											</p>
+											<input
+												type="number"
+												className={styles.input}
+												value={config.autoOpenDelay ?? ''}
+												onChange={e =>
+													setField(
+														'autoOpenDelay',
+														e.target.value === ''
+															? null
+															: Number(e.target.value)
+													)
+												}
+												placeholder="Не открывать автоматически"
+												min={0}
+											/>
+											<p className={styles.hint}>
+												Через сколько секунд квиз откроется автоматически.
+												Оставьте пустым для отключения.
+											</p>
 										</div>
 									</div>
+								</details>
+							</div>
+
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>Тексты</h3>
+									<p className={styles.settingsGroupDesc}>
+										Стартовый экран и экран сбора контакта, которые видит
+										посетитель.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>Заголовок квиза:</p>
+									<input
+										className={styles.input}
+										value={config.title}
+										onChange={e => setField('title', e.target.value)}
+										placeholder="Пройдите наш квиз!"
+										maxLength={60}
+									/>
+									<p className={styles.hint}>
+										Крупный заголовок на стартовом экране квиза.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>Подзаголовок:</p>
+									<input
+										className={styles.input}
+										value={config.subtitle}
+										onChange={e => setField('subtitle', e.target.value)}
+										placeholder="Ответьте на вопросы и получите результат"
+										maxLength={120}
+									/>
+									<p className={styles.hint}>
+										Описание под заголовком на стартовом экране.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>Текст кнопки запуска:</p>
+									<input
+										className={styles.input}
+										value={config.buttonText}
+										onChange={e => setField('buttonText', e.target.value)}
+										placeholder="Начать квиз"
+										maxLength={30}
+									/>
+									<p className={styles.hint}>
+										Текст кнопки, с которой начинается прохождение квиза.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Заголовок экрана контакта:
+									</p>
+									<input
+										className={styles.input}
+										value={config.contactTitle}
+										onChange={e =>
+											setField('contactTitle', e.target.value)
+										}
+										placeholder="Оставьте контакт для получения результата"
+										maxLength={80}
+									/>
+									<p className={styles.hint}>
+										Заголовок экрана, на котором посетитель оставляет свои
+										данные перед показом результата.
+									</p>
+								</div>
+							</div>
+
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Сбор контактов
+									</h3>
+									<p className={styles.settingsGroupDesc}>
+										Какие данные запросить у посетителя и как обрабатывать
+										повторные контакты.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>Сбор данных:</p>
+									<select
+										className={styles.input}
+										value={config.dataType}
+										onChange={e =>
+											setField(
+												'dataType',
+												e.target.value as QuizConfig['dataType']
+											)
+										}
+									>
+										<option value="PHONE">Телефон</option>
+										<option value="EMAIL">Email</option>
+										<option value="PHONE_AND_EMAIL">
+											Телефон и Email
+										</option>
+										<option value="NONE">Не собирать</option>
+									</select>
+									<p className={styles.hint}>
+										Какие данные собирать у посетителя в обмен на
+										персональный результат.
+									</p>
+								</div>
+
+								{(config.dataType === 'PHONE' ||
+									config.dataType === 'PHONE_AND_EMAIL') && (
+									<div className={styles.field}>
+										<p className={styles.label}>Регион телефона:</p>
+										<select
+											className={styles.input}
+											value={config.phoneRegion}
+											onChange={e =>
+												setField('phoneRegion', e.target.value)
+											}
+										>
+											<option value="RU">Россия (+7)</option>
+											<option value="BY">Беларусь (+375)</option>
+											<option value="KZ">Казахстан (+7)</option>
+											<option value="UA">Украина (+380)</option>
+											<option value="international">Международный</option>
+										</select>
+										<p className={styles.hint}>
+											Определяет формат и маску номера телефона в поле
+											ввода.
+										</p>
+									</div>
 								)}
+
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Ссылка на политику конфиденциальности:
+									</p>
+									<input
+										className={styles.input}
+										value={config.privacyUrl}
+										onChange={e => setField('privacyUrl', e.target.value)}
+										placeholder="https://..."
+										maxLength={500}
+									/>
+									<p className={styles.hint}>
+										По умолчанию ведёт на нашу политику. Замените на ссылку
+										своей политики конфиденциальности.
+									</p>
+								</div>
+
+								<details className={styles.advancedBlock}>
+									<summary className={styles.advancedSummary}>
+										Дополнительно
+									</summary>
+
+									<div className={styles.advancedContent}>
+										<div className={styles.field}>
+											<div className={styles.checkRow}>
+												<input
+													id="quizFilterDuplicates"
+													type="checkbox"
+													checked={config.filterDuplicates}
+													onChange={e =>
+														setField('filterDuplicates', e.target.checked)
+													}
+												/>
+												<label
+													htmlFor="quizFilterDuplicates"
+													className={styles.checkLabel}
+												>
+													Не сохранять повторные контакты
+												</label>
+											</div>
+											<p className={styles.hint}>
+												Если посетитель оставит контакт, который уже есть в
+												базе этого квиза — повторная заявка не будет
+												сохранена и уведомления не придут.
+											</p>
+										</div>
+									</div>
+								</details>
+							</div>
+
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Повторные прохождения
+									</h3>
+									<p className={styles.settingsGroupDesc}>
+										Настройте, что увидит посетитель при повторном открытии
+										квиза и когда можно пройти его снова.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Заголовок «Уже проходили»:
+									</p>
+									<input
+										className={styles.input}
+										value={config.alreadyPlayedTitle}
+										onChange={e =>
+											setField('alreadyPlayedTitle', e.target.value)
+										}
+										placeholder="🎉 Вы уже проходили этот квиз!"
+										maxLength={80}
+									/>
+									<p className={styles.hint}>
+										Показывается посетителю, который открывает квиз
+										повторно.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Подзаголовок «Уже проходили»:
+									</p>
+									<input
+										className={styles.input}
+										value={config.alreadyPlayedSubtitle}
+										onChange={e =>
+											setField('alreadyPlayedSubtitle', e.target.value)
+										}
+										placeholder="Каждый посетитель может пройти квиз только один раз"
+										maxLength={160}
+									/>
+									<p className={styles.hint}>
+										Подпись под заголовком антифрод-экрана.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<div className={styles.checkRow}>
+										<input
+											id="quizHideIfPlayed"
+											type="checkbox"
+											checked={config.hideIfPlayed}
+											onChange={e =>
+												setField('hideIfPlayed', e.target.checked)
+											}
+										/>
+										<label
+											htmlFor="quizHideIfPlayed"
+											className={styles.checkLabel}
+										>
+											Скрывать кнопку, если уже проходили
+										</label>
+									</div>
+									<p className={styles.hint}>
+										Плавающая кнопка и квиз полностью скроются для тех, кто
+										уже проходил.
+									</p>
+								</div>
+
+								<details className={styles.advancedBlock}>
+									<summary className={styles.advancedSummary}>
+										Дополнительно
+									</summary>
+
+									<div className={styles.advancedContent}>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Когда можно пройти повторно:
+											</p>
+											<input
+												type="number"
+												className={styles.input}
+												value={cooldownInput}
+												onChange={e => {
+													setCooldownInput(e.target.value)
+													const n = parseInt(e.target.value)
+													if (!isNaN(n) && n >= 0 && n <= 365) {
+														setField('quizCooldownDays', n)
+													}
+												}}
+												min={0}
+												max={365}
+												placeholder="0"
+											/>
+											<p className={styles.hint}>
+												0 — проходить можно только единоразово. Любое
+												другое число - посетитель сможет проходить снова
+												через указанное кол-во дней.
+											</p>
+										</div>
+									</div>
+								</details>
+							</div>
+
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Опасные действия
+									</h3>
+									<p className={styles.settingsGroupDesc}>
+										Действия, которые массово меняют настройки квиза.
+										Проверьте всё перед сохранением.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Сброс попыток всех посетителей:
+									</p>
+									{!confirmResetAttempts ? (
+										<button
+											type="button"
+											className={styles.resetAttemptsBtn}
+											onClick={() => setConfirmResetAttempts(true)}
+											disabled={resetAttemptsMutation.isPending}
+										>
+											Сбросить попытки всех посетителей
+										</button>
+									) : (
+										<div
+											style={{
+												display: 'flex',
+												flexDirection: 'column',
+												gap: 8
+											}}
+										>
+											<p
+												className={styles.hint}
+												style={{ color: '#e05a5a' }}
+											>
+												Все посетители смогут пройти квиз заново. Действие
+												необратимо.
+											</p>
+											<div style={{ display: 'flex', gap: 8 }}>
+												<button
+													type="button"
+													className={styles.resetAttemptsBtn}
+													onClick={handleResetAttempts}
+													disabled={resetAttemptsMutation.isPending}
+												>
+													{resetAttemptsMutation.isPending
+														? 'Сброс...'
+														: 'Да, сбросить'}
+												</button>
+												<button
+													type="button"
+													className={styles.copyBtn}
+													onClick={() => setConfirmResetAttempts(false)}
+												>
+													Отмена
+												</button>
+											</div>
+										</div>
+									)}
+									<p className={styles.hint}>
+										Позволяет сбросить счётчик прохождений квиза сразу всем
+										посетителям. Они снова смогут пройти квиз.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									{!confirmResetDefaults ? (
+										<button
+											type="button"
+											className={styles.resetAttemptsBtn}
+											onClick={() => setConfirmResetDefaults(true)}
+										>
+											Сбросить все настройки до значений по умолчанию
+										</button>
+									) : (
+										<div
+											style={{
+												display: 'flex',
+												flexDirection: 'column',
+												gap: 8
+											}}
+										>
+											<p
+												className={styles.hint}
+												style={{ color: '#e05a5a' }}
+											>
+												Все настройки квиза будут заменены на стандартные.
+												Действие необратимо после сохранения.
+											</p>
+											<div style={{ display: 'flex', gap: 8 }}>
+												<button
+													type="button"
+													className={styles.resetAttemptsBtn}
+													onClick={() => {
+														setConfig({
+															...DEFAULT_CONFIG,
+															questions: config.questions,
+															results: config.results
+														})
+														setCooldownInput('0')
+														setConfirmResetDefaults(false)
+													}}
+												>
+													Да, сбросить
+												</button>
+												<button
+													type="button"
+													className={styles.copyBtn}
+													onClick={() => setConfirmResetDefaults(false)}
+												>
+													Отмена
+												</button>
+											</div>
+										</div>
+									)}
+								</div>
 							</div>
 						</div>
 					)}
@@ -1046,6 +1499,34 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 									«Результаты»
 								</p>
 							)}
+
+							<div className={styles.scoreModeBar}>
+								<span className={styles.scoreModeLabel}>Режим баллов</span>
+								<div className={styles.scoreModeSwitch}>
+									<button
+										type="button"
+										className={`${styles.scoreModeBtn} ${
+											scoreMode === 'simple'
+												? styles.scoreModeBtnActive
+												: ''
+										}`}
+										onClick={() => setScoreMode('simple')}
+									>
+										Простой
+									</button>
+									<button
+										type="button"
+										className={`${styles.scoreModeBtn} ${
+											scoreMode === 'advanced'
+												? styles.scoreModeBtnActive
+												: ''
+										}`}
+										onClick={() => setScoreMode('advanced')}
+									>
+										Продвинутый
+									</button>
+								</div>
+							</div>
 
 							{config.questions.map((q, qIdx) => (
 								<div key={q.id} className={styles.questionBlock}>
@@ -1150,40 +1631,92 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 
 												{config.results.length > 0 && (
 													<div className={styles.scoresRow}>
-														{config.results.map(r => (
-															<div key={r.id} className={styles.scoreItem}>
-																<span
-																	className={styles.scoreLabel}
-																	title={r.title}
-																>
-																	{r.title ||
-																		`Рез.${config.results.indexOf(r) + 1}`}
-																	:
+														{scoreMode === 'simple' ? (
+															<div className={styles.simpleScoreItem}>
+																<span className={styles.scoreLabel}>
+																	Ведёт к результату:
 																</span>
-																<input
-																	type="number"
-																	className={styles.scoreInput}
-																	min={0}
-																	max={10}
-																	value={opt.scores[r.id] ?? 0}
+																<select
+																	className={styles.input}
+																	value={getLeadingResultId(opt)}
 																	onChange={e =>
-																		updateScore(
+																		setOptionWinner(
 																			qIdx,
 																			oIdx,
-																			r.id,
-																			Math.max(
-																				0,
-																				Math.min(
-																					10,
-																					Number(e.target.value)
-																				)
-																			)
+																			e.target.value
 																		)
 																	}
-																	title={`Баллы для результата "${r.title}"`}
-																/>
+																>
+																	{config.results.map((r, rIdx) => (
+																		<option key={r.id} value={r.id}>
+																			{r.title || `Результат ${rIdx + 1}`}
+																		</option>
+																	))}
+																</select>
 															</div>
-														))}
+														) : (
+															config.results.map(r => (
+																<div
+																	key={r.id}
+																	className={`${styles.scoreItem} ${
+																		getLeadingResultId(opt) === r.id
+																			? styles.scoreItemWinner
+																			: ''
+																	}`}
+																>
+																	<span
+																		className={styles.scoreLabel}
+																		title={r.title}
+																	>
+																		{r.title ||
+																			`Рез.${config.results.indexOf(r) + 1}`}
+																		:
+																	</span>
+																	<input
+																		type="number"
+																		className={styles.scoreInput}
+																		min={0}
+																		max={10}
+																		value={opt.scores[r.id] ?? 0}
+																		onChange={e =>
+																			updateScore(
+																				qIdx,
+																				oIdx,
+																				r.id,
+																				Math.max(
+																					0,
+																					Math.min(
+																						10,
+																						Number(e.target.value)
+																					)
+																				)
+																			)
+																		}
+																		title={`Баллы для результата "${r.title}"`}
+																	/>
+																	<div className={styles.scoreQuickBtns}>
+																		<button
+																			type="button"
+																			className={styles.scoreQuickBtn}
+																			onClick={() =>
+																				setOptionWinner(qIdx, oIdx, r.id)
+																			}
+																		>
+																			+10 этому
+																		</button>
+																		<button
+																			type="button"
+																			className={styles.scoreQuickBtn}
+																			onClick={() =>
+																				updateScore(qIdx, oIdx, r.id, 0)
+																			}
+																		>
+																			0
+																		</button>
+																	</div>
+																</div>
+															))
+														)}
 													</div>
 												)}
 											</div>
@@ -1225,6 +1758,46 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 					{/* ===== РЕЗУЛЬТАТЫ ===== */}
 					{tab === 'results' && (
 						<div className={styles.fields}>
+							<div className={styles.templateBlock}>
+								<div>
+									<p className={styles.templateTitle}>Шаблоны квиза</p>
+									<p className={styles.hint}>
+										Быстрый старт: шаблон заменит текущие результаты и
+										вопросы, остальные настройки останутся.
+									</p>
+								</div>
+								<div className={styles.templateGrid}>
+									<button
+										type="button"
+										className={styles.templateBtn}
+										onClick={() => applyTemplate('tariff')}
+									>
+										Подбор тарифа
+									</button>
+									<button
+										type="button"
+										className={styles.templateBtn}
+										onClick={() => applyTemplate('service')}
+									>
+										Подбор услуги
+									</button>
+									<button
+										type="button"
+										className={styles.templateBtn}
+										onClick={() => applyTemplate('discount')}
+									>
+										Квиз для скидки
+									</button>
+									<button
+										type="button"
+										className={styles.templateBtn}
+										onClick={() => applyTemplate('diagnostic')}
+									>
+										Диагностика потребности
+									</button>
+								</div>
+							</div>
+
 							{config.results.map((r, rIdx) => (
 								<div key={r.id} className={styles.resultBlock}>
 									<div className={styles.resultHeader}>
@@ -1538,7 +2111,7 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 						</div>
 					)}
 
-					{/* ===== КОД ===== */}
+					{/* ===== УСТАНОВКА НА САЙТ ===== */}
 					{tab === 'code' && (
 						<div className={styles.fields}>
 							<div className={styles.field}>
@@ -1561,7 +2134,7 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 									Копировать код
 								</button>
 								<p className={styles.hint}>
-									Вставьте этот код в &lt;head&gt; или перед &lt;/body&gt;
+									Вставьте этот код перед закрывающим тегом &lt;/body&gt;
 								</p>
 							</div>
 
@@ -1602,14 +2175,35 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 					)}
 				</div>
 
-				<button
-					type="button"
-					className={styles.saveBtn}
-					onClick={handleSave}
-					disabled={saveMutation.isPending}
-				>
-					{saveMutation.isPending ? 'Сохранение...' : 'Сохранить'}
-				</button>
+				<div className={styles.stickyFooter}>
+					<p
+						className={`${styles.saveStatus} ${
+							hasUnsavedChanges ? styles.saveStatusDirty : ''
+						}`}
+					>
+						{hasUnsavedChanges
+							? 'Есть несохранённые изменения'
+							: 'Изменений нет'}
+					</p>
+					<div className={styles.footerActions}>
+						<button
+							type="button"
+							className={styles.cancelBtn}
+							onClick={onClose}
+							disabled={saveMutation.isPending}
+						>
+							Отмена
+						</button>
+						<button
+							type="button"
+							className={styles.saveBtn}
+							onClick={handleSave}
+							disabled={saveMutation.isPending || !hasUnsavedChanges}
+						>
+							{saveMutation.isPending ? 'Сохранение...' : 'Сохранить'}
+						</button>
+					</div>
+				</div>
 			</div>
 		</div>
 	)

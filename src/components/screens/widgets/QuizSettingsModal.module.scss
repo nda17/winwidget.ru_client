@@ -9,6 +9,7 @@
 .modal {
 	@apply relative z-[1] flex flex-col rounded-[1rem] p-8 w-full max-w-[40rem] bg-white border border-[#e0d6f0] max-h-[90vh] overflow-y-auto;
 	box-shadow: 0 20px 60px rgb(100 60 180 / 0.12);
+	padding-bottom: 0;
 }
 
 .modal::-webkit-scrollbar {
@@ -53,6 +54,54 @@
 
 .fields {
 	@apply flex flex-col gap-5;
+}
+
+.settingsGroup {
+	@apply flex flex-col gap-4 rounded-xl border border-[#e0d6f0] bg-white px-4 py-4;
+}
+
+.settingsGroupHeader {
+	@apply border-b border-[#f0eaf8] pb-3;
+}
+
+.settingsGroupTitle {
+	@apply text-sm font-semibold text-[#7b3fa0] uppercase tracking-[0.06em];
+}
+
+.settingsGroupDesc {
+	@apply mt-1 text-xs leading-relaxed text-[#999];
+}
+
+.advancedBlock {
+	@apply rounded-lg border border-dashed border-[#e0d6f0] bg-[#faf8ff] px-3 py-2;
+}
+
+.advancedSummary {
+	@apply cursor-pointer text-xs font-semibold text-[#7b3fa0] outline-none;
+}
+
+.advancedContent {
+	@apply mt-3 flex flex-col gap-4;
+}
+
+.templateBlock {
+	@apply flex flex-col gap-3 rounded-xl border border-[#e0d6f0] bg-[#faf8ff] px-4 py-4;
+}
+
+.templateTitle {
+	@apply text-sm font-semibold text-[#7b3fa0];
+}
+
+.templateGrid {
+	@apply grid grid-cols-2 gap-2;
+}
+
+.templateBtn {
+	@apply rounded-lg border border-[#c4a8e8] bg-white px-3 py-2 text-xs font-semibold text-[#7b3fa0] cursor-pointer transition-[background,border-color] duration-150;
+}
+
+.templateBtn:hover {
+	@apply bg-[#f3eeff] border-[#7b3fa0];
 }
 
 .field {
@@ -180,7 +229,7 @@
 }
 
 .saveBtn {
-	@apply mt-6 w-full py-4 rounded-xl font-bold text-sm tracking-[0.05em] cursor-pointer border-none text-white transition-[opacity,transform] duration-200;
+	@apply rounded-xl font-bold text-sm tracking-[0.05em] cursor-pointer border-none text-white transition-[opacity,transform] duration-200 py-3 px-5;
 	background: linear-gradient(
 		87.12deg,
 		#470b58 1.98%,
@@ -196,6 +245,34 @@
 
 .saveBtn:disabled {
 	@apply opacity-60 cursor-not-allowed translate-y-0;
+}
+
+.cancelBtn {
+	@apply rounded-xl border border-[#e0d6f0] bg-white px-5 py-3 text-sm font-semibold text-[#7b3fa0] cursor-pointer transition-[background] duration-200;
+}
+
+.cancelBtn:hover {
+	@apply bg-[#f3eeff];
+}
+
+.cancelBtn:disabled {
+	@apply opacity-60 cursor-not-allowed;
+}
+
+.stickyFooter {
+	@apply sticky bottom-0 z-[2] mt-6 -mx-8 flex items-center justify-between gap-3 border-t border-[#e0d6f0] bg-white/95 px-8 py-4 backdrop-blur;
+}
+
+.saveStatus {
+	@apply text-xs font-medium text-[#aaa];
+}
+
+.saveStatusDirty {
+	@apply text-[#7b3fa0];
+}
+
+.footerActions {
+	@apply flex items-center gap-2;
 }
 
 /* Questions tab */
@@ -244,9 +321,39 @@
 	@apply flex gap-2 flex-wrap;
 }
 
+.scoreModeBar {
+	@apply flex items-center justify-between gap-3 rounded-xl border border-[#e0d6f0] bg-white px-4 py-3;
+}
+
+.scoreModeLabel {
+	@apply text-sm font-semibold text-[#555];
+}
+
+.scoreModeSwitch {
+	@apply flex rounded-lg border border-[#e0d6f0] bg-[#f8f5ff] p-1;
+}
+
+.scoreModeBtn {
+	@apply rounded-md border-none bg-transparent px-3 py-1.5 text-xs font-semibold text-[#9b72c8] cursor-pointer transition-[background,color] duration-150;
+}
+
+.scoreModeBtnActive {
+	@apply bg-white text-[#7b3fa0];
+	box-shadow: 0 2px 8px rgb(100 60 180 / 0.08);
+}
+
 .scoreItem {
 	@apply grid items-center gap-2 min-w-[12rem] flex-1;
 	grid-template-columns: minmax(0, 1fr) 3rem;
+}
+
+.scoreItemWinner {
+	@apply rounded-lg bg-[#f3eeff] px-2 py-2;
+}
+
+.simpleScoreItem {
+	@apply grid w-full items-center gap-2;
+	grid-template-columns: minmax(7rem, 0.45fr) minmax(0, 1fr);
 }
 
 .scoreLabel {
@@ -260,6 +367,18 @@
 
 .scoreInput:focus {
 	@apply border-[#c4a8e8];
+}
+
+.scoreQuickBtns {
+	@apply col-span-2 flex gap-1 justify-end;
+}
+
+.scoreQuickBtn {
+	@apply rounded-md border border-[#e0d6f0] bg-white px-2 py-1 text-[10px] font-semibold text-[#7b3fa0] cursor-pointer transition-[background] duration-150;
+}
+
+.scoreQuickBtn:hover {
+	@apply bg-[#f3eeff];
 }
 
 .addOptionBtn {
@@ -307,17 +426,24 @@
 
 	.modal {
 		@apply rounded-t-[1.25rem] rounded-b-none px-5 py-6 max-h-[92vh] max-w-none;
+		padding-bottom: 0;
 	}
 
 	.tabs {
 		@apply gap-3 pb-2;
 		-webkit-overflow-scrolling: touch;
 	}
+
+	.stickyFooter {
+		@apply -mx-5 px-5 py-3;
+		padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+	}
 }
 
 @media (max-width: 480px) {
 	.modal {
-		@apply px-4 pt-5 pb-6;
+		@apply px-4 pt-5;
+		padding-bottom: 0;
 	}
 
 	.modalTitle {
@@ -350,6 +476,40 @@
 
 	.saveBtn {
 		@apply py-[0.875rem];
+	}
+
+	.stickyFooter {
+		@apply -mx-4 flex-col items-stretch px-4 py-3;
+		padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+	}
+
+	.footerActions {
+		@apply w-full;
+	}
+
+	.cancelBtn,
+	.saveBtn {
+		@apply flex-1 text-center;
+	}
+
+	.templateGrid {
+		@apply grid-cols-1;
+	}
+
+	.scoreModeBar {
+		@apply flex-col items-stretch;
+	}
+
+	.scoreModeSwitch {
+		@apply w-full;
+	}
+
+	.scoreModeBtn {
+		@apply flex-1;
+	}
+
+	.simpleScoreItem {
+		@apply grid-cols-1;
 	}
 
 	.scoresRow {

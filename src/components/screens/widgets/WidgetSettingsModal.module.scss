@@ -8,6 +8,7 @@
 .modal {
 	@apply relative z-[1] flex flex-col rounded-[1rem] p-8 w-full max-w-[36rem] bg-white border border-[#e0d6f0] max-h-[90vh] overflow-y-auto;
 	box-shadow: 0 20px 60px rgb(100 60 180 / 0.12);
+	padding-bottom: 0;
 }
 .modal::-webkit-scrollbar {
 	@apply hidden;
@@ -23,9 +24,13 @@
 }
 .tabs {
 	@apply flex gap-6 justify-center mb-6 border-b border-[#e0d6f0] pb-2;
+	-webkit-overflow-scrolling: touch;
+}
+.tabs::-webkit-scrollbar {
+	@apply hidden;
 }
 .tab {
-	@apply text-sm cursor-pointer border-none bg-transparent pb-2 text-[#aaa] transition-colors duration-200;
+	@apply text-sm cursor-pointer border-none bg-transparent pb-2 text-[#aaa] transition-colors duration-200 whitespace-nowrap shrink-0;
 }
 .tab:hover {
 	@apply text-[#7b3fa0];
@@ -124,7 +129,7 @@
 	@apply opacity-50 cursor-not-allowed;
 }
 .saveBtn {
-	@apply mt-6 w-full py-4 rounded-xl font-bold text-sm tracking-[0.05em] cursor-pointer border-none text-white transition-[opacity,transform] duration-200;
+	@apply rounded-xl font-bold text-sm tracking-[0.05em] cursor-pointer border-none text-white transition-[opacity,transform] duration-200 py-3 px-5;
 	background: linear-gradient(
 		87.12deg,
 		#470b58 1.98%,
@@ -139,6 +144,27 @@
 .saveBtn:disabled {
 	@apply opacity-60 cursor-not-allowed translate-y-0;
 }
+.cancelBtn {
+	@apply rounded-xl border border-[#e0d6f0] bg-white px-5 py-3 text-sm font-semibold text-[#7b3fa0] cursor-pointer transition-[background] duration-200;
+}
+.cancelBtn:hover {
+	@apply bg-[#f3eeff];
+}
+.cancelBtn:disabled {
+	@apply opacity-60 cursor-not-allowed;
+}
+.stickyFooter {
+	@apply sticky bottom-0 z-[2] mt-6 -mx-8 flex items-center justify-between gap-3 border-t border-[#e0d6f0] bg-white/95 px-8 py-4 backdrop-blur;
+}
+.saveStatus {
+	@apply text-xs font-medium text-[#aaa];
+}
+.saveStatusDirty {
+	@apply text-[#7b3fa0];
+}
+.footerActions {
+	@apply flex items-center gap-2;
+}
 
 @media (max-width: 600px) {
 	.overlay {
@@ -146,22 +172,24 @@
 	}
 	.modal {
 		@apply rounded-t-[1.25rem] rounded-b-none px-5 py-6 max-h-[92vh] max-w-none;
+		padding-bottom: 0;
 	}
 	.tabs {
-		@apply gap-[0.875rem] pb-2;
-		-webkit-overflow-scrolling: touch;
+		@apply justify-start gap-3 pb-2;
 	}
-	.tabs::-webkit-scrollbar {
-		@apply hidden;
+	.stickyFooter {
+		@apply -mx-5 px-5 py-3;
+		padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
 	}
 	.tab {
-		@apply whitespace-nowrap shrink-0 text-[0.85rem];
+		@apply text-[0.85rem];
 	}
 }
 
 @media (max-width: 480px) {
 	.modal {
-		@apply px-4 pt-5 pb-6;
+		@apply px-4 pt-5;
+		padding-bottom: 0;
 	}
 	.modalTitle {
 		@apply text-xl mb-5 pr-8;
@@ -192,5 +220,16 @@
 	}
 	.saveBtn {
 		@apply py-[0.875rem];
+	}
+	.stickyFooter {
+		@apply -mx-4 flex-col items-stretch px-4 py-3;
+		padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+	}
+	.footerActions {
+		@apply w-full;
+	}
+	.cancelBtn,
+	.saveBtn {
+		@apply flex-1 text-center;
 	}
 }

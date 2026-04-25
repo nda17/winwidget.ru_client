@@ -25,6 +25,11 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 	)
 	const [confirmReset, setConfirmReset] = useState(false)
 	const [confirmResetAttempts, setConfirmResetAttempts] = useState(false)
+	const [savedSnapshot, setSavedSnapshot] = useState(() =>
+		JSON.stringify({ name: widget.name, config: widget.config })
+	)
+	const currentSnapshot = JSON.stringify({ name, config })
+	const hasUnsavedChanges = currentSnapshot !== savedSnapshot
 
 	const DEFAULT_CONFIG: WidgetConfig = {
 		color: '#4705fb',
@@ -75,6 +80,12 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 			toast.loading('Сохраняем настройки, пожалуйста подождите...'),
 		onSuccess: (updated, _, toastId) => {
 			toast.success('Сохранено', { id: toastId })
+			setName(updated.name)
+			setConfig(updated.config)
+			setCooldownInput(String(updated.config.spinCooldownDays ?? 0))
+			setSavedSnapshot(
+				JSON.stringify({ name: updated.name, config: updated.config })
+			)
 			onSaved(updated)
 		},
 		onError: (e: any, _, toastId) => {
@@ -94,7 +105,12 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 			toast.loading('Сбрасываем попытки, пожалуйста подождите...'),
 		onSuccess: (updated, _, toastId) => {
 			toast.success('Попытки всех посетителей сброшены', { id: toastId })
+			setName(updated.name)
 			setConfig(updated.config)
+			setCooldownInput(String(updated.config.spinCooldownDays ?? 0))
+			setSavedSnapshot(
+				JSON.stringify({ name: updated.name, config: updated.config })
+			)
 			onSaved(updated)
 		},
 		onError: (e: any, _, toastId) => {
@@ -136,6 +152,65 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 	const scriptCode = `<script src="${apiUrl}/widgets/wheel.js" data-key="${widget.publicKey}" async></script>`
 	const directLink = `${publicSiteUrl}/page/${widget.publicKey}`
 
+	const handleSave = () => {
+		const activeCount = config.bonuses.filter(b => b.active).length
+		const canWinCount = config.bonuses.filter(
+			b => b.active && !b.neverWin
+		).length
+		if (canWinCount === 0) {
+			toast.error('Хотя бы один сектор должен иметь возможность выиграть')
+			return
+		}
+		if (activeCount < 2) {
+			toast.error('Минимум 2 бонуса должны участвовать в розыгрыше')
+			return
+		}
+		if (activeCount > 8) {
+			toast.error('Максимум 8 бонусов могут участвовать в розыгрыше')
+			return
+		}
+		const spin = config.spinDuration ?? 5
+		if (spin < 3 || spin > 10) {
+			toast.error('Длительность анимации должна быть от 3 до 10 секунд')
+			return
+		}
+		const bottom = config.buttonBottom
+		if (!bottom || bottom < 1 || bottom > 50) {
+			toast.error('Высота кнопки: введите число от 1 до 50')
+			return
+		}
+		const cooldown = config.spinCooldownDays ?? 0
+		if (cooldown > 365) {
+			toast.error('Повторное участие: введите число от 0 до 365')
+			return
+		}
+		const invalidBonus = config.bonuses.findIndex(b => {
+			const p = b.probability ?? 1
+			return p < 1 || p > 100
+		})
+		if (invalidBonus !== -1) {
+			toast.error(
+				`Бонус #${invalidBonus + 1}: вес должен быть от 1 до 100`
+			)
+			return
+		}
+		const sanitizedConfig: WidgetConfig = {
+			...config,
+			bonuses: config.bonuses.map((b, i) => ({
+				...b,
+				name: b.name.trim() || `Бонус #${i + 1}`,
+				probability: b.probability ?? 1
+			}))
+		}
+		const sanitizedName = name.trim() || 'Виджет'
+		setName(sanitizedName)
+		setConfig(sanitizedConfig)
+		saveMutation.mutate({
+			name: sanitizedName,
+			config: sanitizedConfig
+		})
+	}
+
 	return (
 		<div className={styles.overlay}>
 			<button
@@ -172,7 +247,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 								{t === 'main' && 'Главные'}
 								{t === 'bonuses' && 'Бонусы'}
 								{t === 'integrations' && 'Интеграции'}
-								{t === 'code' && 'Код'}
+								{t === 'code' && 'Установка на сайт'}
 							</button>
 						)
 					)}
@@ -1187,7 +1262,7 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 							<div className={styles.field}>
 								<p className={styles.label}>Код виджета</p>
 								<p className={styles.hint}>
-									Добавьте этот код на сайт перед тегом &lt;/body&gt;
+									Вставьте этот код перед закрывающим тегом &lt;/body&gt;
 								</p>
 								<textarea
 									className={`${styles.input} ${styles.codeArea}`}
@@ -1243,78 +1318,35 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 					)}
 				</div>
 
-				<button
-					className={styles.saveBtn}
-					onClick={() => {
-						const activeCount = config.bonuses.filter(b => b.active).length
-						const canWinCount = config.bonuses.filter(
-							b => b.active && !b.neverWin
-						).length
-						if (canWinCount === 0) {
-							toast.error(
-								'Хотя бы один сектор должен иметь возможность выиграть'
-							)
-							return
-						}
-						if (activeCount < 2) {
-							toast.error(
-								'Минимум 2 бонуса должны участвовать в розыгрыше'
-							)
-							return
-						}
-						if (activeCount > 8) {
-							toast.error(
-								'Максимум 8 бонусов могут участвовать в розыгрыше'
-							)
-							return
-						}
-						const spin = config.spinDuration ?? 5
-						if (spin < 3 || spin > 10) {
-							toast.error(
-								'Длительность анимации должна быть от 3 до 10 секунд'
-							)
-							return
-						}
-						const bottom = config.buttonBottom
-						if (!bottom || bottom < 1 || bottom > 50) {
-							toast.error('Высота кнопки: введите число от 1 до 50')
-							return
-						}
-						const cooldown = config.spinCooldownDays ?? 0
-						if (cooldown > 365) {
-							toast.error('Повторное участие: введите число от 0 до 365')
-							return
-						}
-						const invalidBonus = config.bonuses.findIndex(b => {
-							const p = b.probability ?? 1
-							return p < 1 || p > 100
-						})
-						if (invalidBonus !== -1) {
-							toast.error(
-								`Бонус #${invalidBonus + 1}: вес должен быть от 1 до 100`
-							)
-							return
-						}
-						const sanitizedConfig: WidgetConfig = {
-							...config,
-							bonuses: config.bonuses.map((b, i) => ({
-								...b,
-								name: b.name.trim() || `Бонус #${i + 1}`,
-								probability: b.probability ?? 1
-							}))
-						}
-						const sanitizedName = name.trim() || 'Виджет'
-						setName(sanitizedName)
-						setConfig(sanitizedConfig)
-						saveMutation.mutate({
-							name: sanitizedName,
-							config: sanitizedConfig
-						})
-					}}
-					disabled={saveMutation.isPending}
-				>
-					{saveMutation.isPending ? 'Сохранение...' : 'СОХРАНИТЬ'}
-				</button>
+				<div className={styles.stickyFooter}>
+					<p
+						className={`${styles.saveStatus} ${
+							hasUnsavedChanges ? styles.saveStatusDirty : ''
+						}`}
+					>
+						{hasUnsavedChanges
+							? 'Есть несохранённые изменения'
+							: 'Изменений нет'}
+					</p>
+					<div className={styles.footerActions}>
+						<button
+							type="button"
+							className={styles.cancelBtn}
+							onClick={onClose}
+							disabled={saveMutation.isPending}
+						>
+							Отмена
+						</button>
+						<button
+							type="button"
+							className={styles.saveBtn}
+							onClick={handleSave}
+							disabled={saveMutation.isPending || !hasUnsavedChanges}
+						>
+							{saveMutation.isPending ? 'Сохранение...' : 'Сохранить'}
+						</button>
+					</div>
+				</div>
 			</div>
 		</div>
 	)
