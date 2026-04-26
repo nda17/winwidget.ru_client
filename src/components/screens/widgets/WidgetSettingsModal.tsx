@@ -984,10 +984,15 @@ const WidgetSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 												<button
 													type="button"
 													className={styles.resetAttemptsBtn}
+													disabled={saveMutation.isPending}
 													onClick={() => {
 														setConfig(DEFAULT_CONFIG)
 														setCooldownInput('0')
 														setConfirmReset(false)
+														saveMutation.mutate({
+															name: name.trim() || 'Колесо',
+															config: DEFAULT_CONFIG
+														})
 													}}
 												>
 													Да, сбросить
