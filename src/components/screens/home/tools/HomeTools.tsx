@@ -25,9 +25,22 @@ const QuizPreview = () => (
 		<Image
 			src="/images/tools/quiz-widget-preview.png"
 			alt="Превью квиза Winwidget"
-			width={942}
-			height={1042}
+			width={940}
+			height={956}
 			className={styles.quizImage}
+			sizes="(max-width: 560px) 78vw, 240px"
+		/>
+	</div>
+)
+
+const CallbackPreview = () => (
+	<div className={styles.callbackPreview}>
+		<Image
+			src="/images/tools/callback-widget-preview.png"
+			alt="Превью виджета заказа звонка Winwidget"
+			width={653}
+			height={673}
+			className={styles.callbackImage}
 			sizes="(max-width: 560px) 78vw, 240px"
 		/>
 	</div>
@@ -59,7 +72,8 @@ const TOOLS: {
 		title: 'Заказ звонка',
 		description: 'Связывайтесь с клиентом\nпо его просьбе перезвонить',
 		gradient:
-			'linear-gradient(160deg, #f43f5e 0%, #ec4899 50%, #f97316 100%)'
+			'linear-gradient(160deg, #f43f5e 0%, #ec4899 50%, #f97316 100%)',
+		preview: <CallbackPreview />
 	},
 	{
 		title: 'Обратный отсчёт',

@@ -132,6 +132,23 @@
 	box-shadow: 0 16px 34px rgba(8, 1, 16, 0.34);
 }
 
+.callbackPreview {
+	@apply relative z-[1] flex h-[220px] w-full items-center justify-center overflow-hidden rounded-[12px];
+
+	@media (max-width: 900px) {
+		@apply h-[210px];
+	}
+
+	@media (max-width: 560px) {
+		@apply h-[238px];
+	}
+}
+
+.callbackImage {
+	@apply block h-full w-auto max-w-full object-contain;
+	filter: drop-shadow(0 16px 28px rgba(8, 1, 16, 0.24));
+}
+
 .cardFooter {
 	@apply bg-white pt-[1.1rem] px-[1.4rem] pb-[1.4rem] border-t border-black/[0.06];
 }
