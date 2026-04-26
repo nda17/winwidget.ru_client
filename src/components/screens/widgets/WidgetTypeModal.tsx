@@ -230,13 +230,6 @@ const WIDGET_TYPES: WidgetType[] = [
 			'Клиент вводит телефон и выбирает удобное время. Вы получаете заявку с часовым поясом.',
 		icon: <CallbackIcon />,
 		available: true
-	},
-	{
-		id: 'drum',
-		name: 'Барабан',
-		description: 'Слот-машина с полосами призов. Скоро будет доступна.',
-		icon: <DrumIcon />,
-		available: false
 	}
 ]
 
