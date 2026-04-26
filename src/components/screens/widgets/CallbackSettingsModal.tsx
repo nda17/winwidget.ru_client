@@ -94,8 +94,11 @@ const CallbackSettingsModal = ({ callback, onClose, onSaved }: Props) => {
 	const hasUnsavedChanges = currentSnapshot !== savedSnapshot
 
 	const mutation = useMutation({
-		mutationFn: () =>
-			callbackService.updateCallback(callback.id, { name, config: cfg }),
+		mutationFn: (data?: { name: string; config: CallbackConfig }) =>
+			callbackService.updateCallback(callback.id, {
+				name: data?.name ?? name,
+				config: data?.config ?? cfg
+			}),
 		onMutate: () =>
 			toast.loading('Сохраняем настройки, пожалуйста подождите...'),
 		onSuccess: (updated, _, toastId) => {
@@ -154,8 +157,10 @@ const CallbackSettingsModal = ({ callback, onClose, onSaved }: Props) => {
 	}
 
 	const handleResetDefaults = () => {
-		setCfg(getDefaultConfig())
+		const resetConfig = getDefaultConfig()
+		setCfg(resetConfig)
 		setConfirmResetDefaults(false)
+		mutation.mutate({ name, config: resetConfig })
 	}
 
 	return (
@@ -521,6 +526,7 @@ const CallbackSettingsModal = ({ callback, onClose, onSaved }: Props) => {
 												<button
 													type="button"
 													className={styles.resetAttemptsBtn}
+													disabled={mutation.isPending}
 													onClick={handleResetDefaults}
 												>
 													Да, сбросить
@@ -1056,7 +1062,7 @@ const CallbackSettingsModal = ({ callback, onClose, onSaved }: Props) => {
 							type="button"
 							className={styles.saveBtn}
 							disabled={mutation.isPending || !hasUnsavedChanges}
-							onClick={() => mutation.mutate()}
+							onClick={() => mutation.mutate(undefined)}
 						>
 							{mutation.isPending ? 'Сохранение...' : 'Сохранить'}
 						</button>
