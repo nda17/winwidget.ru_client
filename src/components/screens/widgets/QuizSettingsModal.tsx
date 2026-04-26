@@ -1401,14 +1401,20 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 												<button
 													type="button"
 													className={styles.resetAttemptsBtn}
+													disabled={saveMutation.isPending}
 													onClick={() => {
-														setConfig({
+														const resetConfig = {
 															...DEFAULT_CONFIG,
 															questions: config.questions,
 															results: config.results
-														})
+														}
+														setConfig(resetConfig)
 														setCooldownInput('0')
 														setConfirmResetDefaults(false)
+														saveMutation.mutate({
+															name: name.trim() || 'Квиз',
+															config: resetConfig
+														})
 													}}
 												>
 													Да, сбросить

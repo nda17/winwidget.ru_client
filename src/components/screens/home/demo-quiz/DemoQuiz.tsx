@@ -1,12 +1,21 @@
 'use client'
 
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import styles from './DemoQuiz.module.scss'
 
 interface Props {
 	open: boolean
 	onClose: () => void
 }
+
+const SALES_TEXTS = [
+	'Хочешь такой же виджет на свой сайт? Подключи за 5 минут — и твои посетители начнут оставлять заявки прямо сейчас.',
+	'Каждый посетитель сайта — потенциальный клиент. Квиз превращает любопытных в покупателей. Попробуй бесплатно.',
+	'98% посетителей уходят без заявки. Виджет удерживает их — весело, ненавязчиво и эффективно. Хочешь так же?',
+	'Твои конкуренты уже используют виджеты для захвата лидов. Не отставай — первые 7 дней бесплатно.',
+	'Этот виджет настраивается под любой сайт: свои вопросы, цвета, интеграция с CRM. Запусти за 5 минут.',
+	'Заявки из виджета летят прямо в Telegram, CRM или на почту — ни один лид не потеряется.'
+]
 
 const QUESTIONS = [
 	{
@@ -71,6 +80,8 @@ const DemoQuiz = ({ open, onClose }: Props) => {
 	const [answers, setAnswers] = useState<number[]>([])
 	const [selected, setSelected] = useState<number | null>(null)
 	const [resultIdx, setResultIdx] = useState<number>(0)
+	const [salesText, setSalesText] = useState<string | null>(null)
+	const salesIndexRef = useRef(-1)
 
 	useEffect(() => {
 		document.body.style.overflow = open ? 'hidden' : ''
@@ -85,9 +96,32 @@ const DemoQuiz = ({ open, onClose }: Props) => {
 				setStep(0)
 				setAnswers([])
 				setSelected(null)
+				setSalesText(null)
+				salesIndexRef.current = -1
 			}, 300)
 		}
 	}, [open])
+
+	useEffect(() => {
+		if (step !== QUESTIONS.length) {
+			setSalesText(null)
+			return
+		}
+		let intervalId: ReturnType<typeof setInterval>
+		const timerId = setTimeout(() => {
+			const next = () => {
+				salesIndexRef.current =
+					(salesIndexRef.current + 1) % SALES_TEXTS.length
+				setSalesText(SALES_TEXTS[salesIndexRef.current])
+			}
+			next()
+			intervalId = setInterval(next, 6000)
+		}, 1500)
+		return () => {
+			clearTimeout(timerId)
+			clearInterval(intervalId)
+		}
+	}, [step])
 
 	const handleNext = () => {
 		if (selected === null) return
@@ -158,13 +192,6 @@ const DemoQuiz = ({ open, onClose }: Props) => {
 						/>
 					</svg>
 				</button>
-
-				<div className={styles.brand}>
-					Сделано в&nbsp;
-					<a href="https://winwidget.ru" target="_blank" rel="noopener">
-						winwidget.ru
-					</a>
-				</div>
 
 				{!isResult ? (
 					<>
