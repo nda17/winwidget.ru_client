@@ -39,6 +39,7 @@ const DEFAULT_CONFIG: CallbackConfig = {
 	color: '#4705fb',
 	bgColor: '',
 	buttonColor: '',
+	openButtonColor: '',
 	buttonSide: 'right',
 	buttonPulse: true,
 	buttonBottom: 3,
@@ -291,6 +292,43 @@ const CallbackSettingsModal = ({ callback, onClose, onSaved }: Props) => {
 								</div>
 
 								<div className={styles.field}>
+									<p className={styles.label}>Цвет кнопки открытия:</p>
+									<div className={styles.colorRow}>
+										<input
+											type="color"
+											className={styles.colorPicker}
+											value={cfg.openButtonColor || cfg.color || '#4705fb'}
+											onChange={e =>
+												set({ openButtonColor: e.target.value })
+											}
+										/>
+										<input
+											className={styles.input}
+											value={cfg.openButtonColor || ''}
+											onChange={e =>
+												set({ openButtonColor: e.target.value })
+											}
+											placeholder="По умолчанию — основной цвет"
+											maxLength={7}
+										/>
+										{cfg.openButtonColor && (
+											<button
+												type="button"
+												className={styles.clearColorBtn}
+												onClick={() => set({ openButtonColor: '' })}
+												title="Сбросить"
+											>
+												✕
+											</button>
+										)}
+									</div>
+									<p className={styles.hint}>
+										Цвет плавающей кнопки, которая открывает виджет.
+										Оставьте пустым, чтобы использовать основной цвет.
+									</p>
+								</div>
+
+								<div className={styles.field}>
 									<p className={styles.label}>Сторона экрана:</p>
 									<select
 										className={styles.input}
@@ -381,7 +419,7 @@ const CallbackSettingsModal = ({ callback, onClose, onSaved }: Props) => {
 										<div className={styles.field}>
 											<p className={styles.label}>
 												Отступ от низа:{' '}
-												<strong>{cfg.buttonBottom ?? 3}rem</strong>
+												<strong>{cfg.buttonBottom ?? 3}%</strong>
 											</p>
 											<input
 												type="range"
@@ -402,14 +440,14 @@ const CallbackSettingsModal = ({ callback, onClose, onSaved }: Props) => {
 												}}
 											/>
 											<p className={styles.hint}>
-												Отступ кнопки от нижнего края экрана в rem.
+												Отступ кнопки от нижнего края экрана в процентах.
 											</p>
 										</div>
 
 										<div className={styles.field}>
 											<p className={styles.label}>
 												Отступ от края:{' '}
-												<strong>{cfg.buttonOffset ?? 3}rem</strong>
+												<strong>{cfg.buttonOffset ?? 3}%</strong>
 											</p>
 											<input
 												type="range"
@@ -431,7 +469,7 @@ const CallbackSettingsModal = ({ callback, onClose, onSaved }: Props) => {
 											/>
 											<p className={styles.hint}>
 												Отступ кнопки от левого или правого края экрана в
-												rem.
+												процентах.
 											</p>
 										</div>
 

@@ -16,6 +16,7 @@ export interface CallbackConfig {
 	color: string
 	bgColor: string
 	buttonColor: string
+	openButtonColor: string
 	buttonSide: 'left' | 'right'
 	buttonPulse: boolean
 	buttonBottom: number

@@ -42,6 +42,7 @@ const DEFAULT_CONFIG: QuizConfig = {
 	color: '#4705fb',
 	bgColor: '',
 	buttonColor: '',
+	openButtonColor: '',
 	buttonSide: 'right',
 	buttonPulse: true,
 	buttonBottom: 3,
@@ -879,6 +880,45 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 										</div>
 									</div>
 								</details>
+
+								<div className={styles.field}>
+									<p className={styles.label}>Цвет кнопки открытия:</p>
+									<div className={styles.colorRow}>
+										<input
+											type="color"
+											className={styles.colorPicker}
+											value={
+												config.openButtonColor || config.color || '#4705fb'
+											}
+											onChange={e =>
+												setField('openButtonColor', e.target.value)
+											}
+										/>
+										<input
+											className={styles.input}
+											value={config.openButtonColor || ''}
+											onChange={e =>
+												setField('openButtonColor', e.target.value)
+											}
+											placeholder="По умолчанию — основной цвет"
+											maxLength={7}
+										/>
+										{config.openButtonColor && (
+											<button
+												type="button"
+												className={styles.clearColorBtn}
+												onClick={() => setField('openButtonColor', '')}
+												title="Сбросить"
+											>
+												✕
+											</button>
+										)}
+									</div>
+									<p className={styles.hint}>
+										Цвет плавающей кнопки, которая открывает квиз. Оставьте
+										пустым, чтобы использовать основной цвет.
+									</p>
+								</div>
 
 								<div className={styles.field}>
 									<p className={styles.label}>Расположение кнопки:</p>
