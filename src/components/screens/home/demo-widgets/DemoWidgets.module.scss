@@ -40,6 +40,40 @@
 	box-shadow: 0 3px 10px rgba(124, 58, 237, 0.5);
 }
 
+.floatLabelCallback {
+	@apply text-white;
+	background: linear-gradient(135deg, #9333ea, #4705fb);
+	box-shadow: 0 3px 10px rgba(147, 51, 234, 0.5);
+}
+
+.floatIconCallback {
+	@apply block leading-none relative;
+	filter: drop-shadow(0 6px 24px rgba(71, 5, 251, 0.6))
+		drop-shadow(0 2px 8px rgba(0, 0, 0, 0.25));
+
+	svg {
+		@apply block relative;
+		z-index: 1;
+	}
+}
+
+.floatCallbackRing {
+	@apply absolute inset-0 rounded-full pointer-events-none;
+	border: 3px solid #4705fb;
+	box-sizing: border-box;
+	animation: cbPulseRing 2s cubic-bezier(0.66, 0, 0, 1) infinite;
+}
+
+@keyframes cbPulseRing {
+	0%,
+	100% {
+		box-shadow: 0 0 0 0 rgba(71, 5, 251, 0.4);
+	}
+	70% {
+		box-shadow: 0 0 0 14px rgba(71, 5, 251, 0);
+	}
+}
+
 .floatIconQuiz {
 	@apply block leading-none;
 	filter: drop-shadow(0 6px 20px rgba(71, 5, 251, 0.55))
