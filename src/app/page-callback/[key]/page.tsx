@@ -27,6 +27,9 @@ const CallbackPreviewPage = () => {
 		document.head.appendChild(script)
 
 		return () => {
+			const widget = (window as any).winwidgetCallback
+			if (widget?.destroy) widget.destroy()
+
 			if (document.head.contains(script)) {
 				document.head.removeChild(script)
 			}
@@ -36,6 +39,9 @@ const CallbackPreviewPage = () => {
 
 			const overlay = document.getElementById('callback-widget-overlay')
 			if (overlay) overlay.remove()
+
+			const host = document.getElementById('callback-widget-host')
+			if (host) host.remove()
 
 			delete (window as any).wincallbackAutoOpen
 			delete (window as any).winwidgetCallbackAutoOpen
