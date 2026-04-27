@@ -23,13 +23,13 @@ export interface CallbackConfig {
 	buttonOffset: number
 	buttonSize: number
 	autoOpenDelay: number | null
+	bubbleEnabled?: boolean
 	bubbleText?: string
 	title: string
 	subtitle: string
 	submitButtonText: string
 	successTitle: string
 	successSubtitle: string
-	phoneRegion: string
 	privacyUrl: string
 	filterDuplicates: boolean
 	timeSlots: string[]

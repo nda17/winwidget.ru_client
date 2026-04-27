@@ -46,13 +46,14 @@ export interface QuizConfig {
 	buttonBottom: number
 	buttonOffset: number
 	buttonSize: number
+	bubbleEnabled: boolean
+	bubbleText: string
 	autoOpenDelay: number | null
 	title: string
 	subtitle: string
 	buttonText: string
 	contactTitle: string
 	dataType: 'PHONE' | 'EMAIL' | 'PHONE_AND_EMAIL' | 'NONE'
-	phoneRegion: string
 	privacyUrl: string
 	filterDuplicates: boolean
 	alreadyPlayedTitle: string

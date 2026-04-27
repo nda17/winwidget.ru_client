@@ -32,6 +32,8 @@ export interface WidgetConfig {
 	buttonBottom: number
 	buttonOffset: number
 	buttonSize: number
+	bubbleEnabled: boolean
+	bubbleText: string
 	alreadyPlayedTitle: string
 	alreadyPlayedSubtitle: string
 	hideIfPlayed: boolean
@@ -40,7 +42,6 @@ export interface WidgetConfig {
 	subtitle: string
 	winMessage: string
 	privacyUrl: string
-	phoneRegion: string
 	buttonText: string
 	filterDuplicates: boolean
 	buttonColor: string
