@@ -40,7 +40,8 @@ const Layout: NextPage<ILayout> = ({ children, siteSettings }) => {
 	const isWidgetPreview =
 		pathname.startsWith('/page-wheel/') ||
 		pathname.startsWith('/page-quiz/') ||
-		pathname.startsWith('/page-callback/')
+		pathname.startsWith('/page-callback/') ||
+		pathname.startsWith('/page-timer/')
 
 	if (isWidgetPreview) {
 		return <>{children}</>
