@@ -30,6 +30,8 @@
 
 .tabs {
 	@apply flex gap-4 justify-center mb-6 border-b border-[#e0d6f0] pb-2;
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
 }
 
 .tabs::-webkit-scrollbar {
@@ -435,7 +437,8 @@ select.input {
 	}
 
 	.tabs {
-		@apply gap-3 pb-2;
+		@apply justify-start gap-3 pb-2;
+		overflow-x: auto;
 		-webkit-overflow-scrolling: touch;
 	}
 

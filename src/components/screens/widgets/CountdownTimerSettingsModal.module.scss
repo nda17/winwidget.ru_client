@@ -182,52 +182,6 @@ select.input {
 	@apply bg-[#e0d6f0];
 }
 
-/* Time slots */
-
-.slotList {
-	@apply flex flex-col gap-2;
-}
-
-.slotRow {
-	@apply flex items-center gap-2;
-}
-
-.slotInput {
-	@apply flex-1 rounded-lg px-3 py-2 text-sm border border-[#e0d6f0] bg-white text-[#1a1a1a] outline-none transition-[border-color] duration-200;
-}
-
-.slotInput:focus {
-	@apply border-[#c4a8e8];
-}
-
-.removeBtn {
-	@apply w-7 h-7 flex items-center justify-center rounded-full border border-[#e0d6f0] bg-transparent text-[#bbb] text-sm cursor-pointer transition-all duration-150 shrink-0;
-}
-
-.removeBtn:hover {
-	@apply border-[#e05a5a] text-[#e05a5a];
-}
-
-.addBtn {
-	@apply flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-medium cursor-pointer border border-dashed border-[#c4a8e8] bg-transparent text-[#7b3fa0] transition-all duration-150;
-}
-
-.addBtn:hover {
-	@apply bg-[#f3eeff];
-}
-
-.resetAttemptsBtn {
-	@apply mt-1 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer bg-transparent border border-[#e0d6f0] text-[#e05a5a] transition-[background] duration-200 self-start;
-}
-
-.resetAttemptsBtn:hover {
-	@apply bg-[#fde8e8];
-}
-
-.resetAttemptsBtn:disabled {
-	@apply opacity-50 cursor-not-allowed;
-}
-
 /* Footer */
 
 .saveBtn {

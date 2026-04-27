@@ -9,7 +9,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useId, useState } from 'react'
 import toast from 'react-hot-toast'
 import DirectLinkQr from './DirectLinkQr'
-import styles from './CallbackSettingsModal.module.scss'
+import styles from './CountdownTimerSettingsModal.module.scss'
 
 type Tab = 'main' | 'timer' | 'form' | 'integrations' | 'code'
 

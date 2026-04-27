@@ -2,16 +2,105 @@
 	@apply fixed right-6 bottom-6 z-[29];
 }
 
-.floatBtn {
-	@apply flex flex-col items-center gap-[5px] bg-transparent border-none cursor-pointer p-0 select-none;
-	animation: giftBounce 3s ease-in-out infinite 4s;
+/* ── Bubble cloud ─────────────────────────────────────────── */
+
+.bubble {
+	@apply absolute;
+	top: 50%;
+	right: calc(100% + 14px);
+	transform: translateY(-50%);
+	background: #fff;
+	border-radius: 18px;
+	padding: 12px 34px 12px 16px;
+	width: 172px;
+	box-sizing: border-box;
+	border: 1px solid rgba(71, 5, 251, 0.12);
+	box-shadow:
+		0 16px 40px rgba(71, 5, 251, 0.18),
+		0 8px 18px rgba(15, 23, 42, 0.08);
+	font-family:
+		system-ui,
+		-apple-system,
+		sans-serif;
+	animation: bubbleIn 350ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes bubbleIn {
+	from {
+		opacity: 0;
+		transform: translateY(-50%) scale(0.85);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(-50%) scale(1);
+	}
+}
+
+.bubbleClose {
+	@apply absolute flex items-center justify-center border-none bg-transparent cursor-pointer;
+	top: 7px;
+	right: 8px;
+	font-size: 11px;
+	color: #ccc;
+	line-height: 1;
+	padding: 2px;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
 
 	&:hover {
-		animation: none;
+		color: #888;
+	}
+}
+
+.bubbleText {
+	margin: 0;
+	font-size: 13px;
+	font-weight: 600;
+	color: #1a1a1a;
+	line-height: 1.4;
+}
+
+.bubbleDot {
+	@apply absolute;
+	left: 12px;
+	top: -6px;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background: #22c55e;
+	border: 2px solid #fff;
+	box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.14);
+}
+
+.bubbleTail {
+	@apply absolute;
+	top: 50%;
+	right: -8px;
+	transform: translateY(-50%);
+	width: 0;
+	height: 0;
+	border-top: 7px solid transparent;
+	border-bottom: 7px solid transparent;
+	border-left: 8px solid #fff;
+}
+
+/* ── Float button ─────────────────────────────────────────── */
+
+.floatBtn {
+	@apply flex flex-col items-center gap-[5px] bg-transparent border-none cursor-pointer p-0 select-none;
+	animation:
+		giftBounce 3s ease-in-out infinite 4s,
+		demoGlow 2.5s ease-in-out infinite 4s;
+
+	&:hover {
+		animation: demoGlow 2.5s ease-in-out infinite;
 		transform: scale(1.08) !important;
 		opacity: 1 !important;
 	}
 }
+
+/* Wheel */
 
 .floatIcon {
 	@apply text-[58px] leading-none;
@@ -34,21 +123,29 @@
 	box-shadow: 0 3px 10px rgba(255, 140, 0, 0.5);
 }
 
+/* Quiz */
+
 .floatLabelQuiz {
 	@apply text-white;
 	background: linear-gradient(135deg, #7c3aed, #c21b84);
 	box-shadow: 0 3px 10px rgba(124, 58, 237, 0.5);
 }
 
-.floatLabelCallback {
-	@apply text-white;
-	background: linear-gradient(135deg, #9333ea, #4705fb);
-	box-shadow: 0 3px 10px rgba(147, 51, 234, 0.5);
+.floatIconQuiz {
+	@apply block leading-none;
+	filter: drop-shadow(0 6px 20px rgba(71, 5, 251, 0.55))
+		drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
+
+	svg {
+		@apply block;
+	}
 }
+
+/* Callback — green */
 
 .floatIconCallback {
 	@apply block leading-none relative;
-	filter: drop-shadow(0 6px 24px rgba(71, 5, 251, 0.6))
+	filter: drop-shadow(0 6px 24px rgba(22, 163, 74, 0.6))
 		drop-shadow(0 2px 8px rgba(0, 0, 0, 0.25));
 
 	svg {
@@ -57,44 +154,94 @@
 	}
 }
 
-.floatCallbackRing {
+.floatCallbackRing1 {
 	@apply absolute inset-0 rounded-full pointer-events-none;
-	border: 3px solid #4705fb;
-	box-sizing: border-box;
-	animation: cbPulseRing 2s cubic-bezier(0.66, 0, 0, 1) infinite;
+	background: rgba(34, 197, 94, 0.35);
+	animation: cbRingPulse 2.5s ease-in-out infinite;
 }
 
-@keyframes cbPulseRing {
+.floatCallbackRing2 {
+	@apply absolute inset-0 rounded-full pointer-events-none;
+	background: rgba(34, 197, 94, 0.25);
+	animation: cbRingPulse 2.5s ease-in-out infinite 0.35s;
+}
+
+.floatCallbackRing3 {
+	@apply absolute inset-0 rounded-full pointer-events-none;
+	background: rgba(34, 197, 94, 0.15);
+	animation: cbRingPulse 2.5s ease-in-out infinite 0.7s;
+}
+
+@keyframes cbRingPulse {
 	0%,
-	100% {
-		box-shadow: 0 0 0 0 rgba(71, 5, 251, 0.4);
+	30% {
+		transform: scale(1);
+		opacity: 1;
 	}
-	70% {
-		box-shadow: 0 0 0 14px rgba(71, 5, 251, 0);
+	100% {
+		transform: scale(1.55);
+		opacity: 0;
 	}
 }
 
-.floatIconQuiz {
-	@apply block leading-none;
-	filter: drop-shadow(0 6px 20px rgba(71, 5, 251, 0.55))
-		drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
-	animation: wqGlow 2.5s ease-in-out infinite;
+/* Timer — orange */
+
+.floatLabelTimer {
+	background: #fff;
+	color: #1a1a1a;
+	border: 1px solid rgba(2, 132, 199, 0.2);
+	box-shadow: 0 8px 24px rgba(2, 132, 199, 0.2);
+	text-transform: none;
+	letter-spacing: 0;
+	padding: 5px 10px;
+}
+
+.floatIconTimer {
+	@apply block leading-none relative;
+	filter: drop-shadow(0 6px 24px rgba(2, 132, 199, 0.55))
+		drop-shadow(0 2px 8px rgba(0, 0, 0, 0.22));
 
 	svg {
-		@apply block;
+		@apply block relative;
+		z-index: 1;
 	}
 }
 
-@keyframes wqGlow {
+.floatTimerRing1 {
+	@apply absolute inset-0 rounded-full pointer-events-none;
+	background: rgba(34, 211, 238, 0.35);
+	animation: timerRingPulse 2.5s ease-in-out infinite;
+}
+
+.floatTimerRing2 {
+	@apply absolute inset-0 rounded-full pointer-events-none;
+	background: rgba(34, 211, 238, 0.2);
+	animation: timerRingPulse 2.5s ease-in-out infinite 0.5s;
+}
+
+@keyframes timerRingPulse {
+	0%,
+	30% {
+		transform: scale(1);
+		opacity: 1;
+	}
+	100% {
+		transform: scale(1.5);
+		opacity: 0;
+	}
+}
+
+/* ── Shared animations ────────────────────────────────────── */
+
+@keyframes demoGlow {
 	0%,
 	100% {
-		filter: drop-shadow(0 6px 20px rgba(71, 5, 251, 0.55))
-			drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
+		filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35))
+			drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 	}
 	50% {
-		filter: drop-shadow(0 8px 32px rgba(124, 58, 237, 0.9))
-			drop-shadow(0 4px 16px rgba(71, 5, 251, 0.6))
-			drop-shadow(0 0 24px rgba(167, 139, 250, 0.4));
+		filter: drop-shadow(0 8px 28px rgba(101, 16, 255, 0.7))
+			drop-shadow(0 2px 12px rgba(37, 117, 252, 0.5));
 	}
 }
 

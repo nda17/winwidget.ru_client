@@ -4,12 +4,20 @@ import { useEffect, useRef, useState } from 'react'
 import DemoWheel from '@/components/screens/home/demo-wheel/DemoWheel'
 import DemoQuiz from '@/components/screens/home/demo-quiz/DemoQuiz'
 import DemoCallback from '@/components/screens/home/demo-callback/DemoCallback'
+import DemoCountdown from '@/components/screens/home/demo-countdown/DemoCountdown'
 import styles from './DemoWidgets.module.scss'
 
-type ActiveDemo = 'wheel' | 'quiz' | 'callback'
+type ActiveDemo = 'wheel' | 'quiz' | 'callback' | 'countdown'
 
 const SWITCH_INTERVAL = 7000
 const FADE_DURATION = 400
+
+const BUBBLE_TEXTS: Record<ActiveDemo, string> = {
+	wheel: 'Испытайте удачу!',
+	quiz: 'Поможем сделать выбор!',
+	callback: 'Перезвоним вам за 5 минут',
+	countdown: 'Супер-акция!'
+}
 
 const DemoWidgets = () => {
 	const [activeDemo, setActiveDemo] = useState<ActiveDemo>('wheel')
@@ -17,6 +25,8 @@ const DemoWidgets = () => {
 	const [wheelOpen, setWheelOpen] = useState(false)
 	const [quizOpen, setQuizOpen] = useState(false)
 	const [callbackOpen, setCallbackOpen] = useState(false)
+	const [countdownOpen, setCountdownOpen] = useState(false)
+	const [bubbleVisible, setBubbleVisible] = useState(false)
 	const floatRef = useRef<HTMLDivElement>(null)
 
 	useEffect(() => {
@@ -36,10 +46,12 @@ const DemoWidgets = () => {
 	useEffect(() => {
 		const interval = setInterval(() => {
 			setBtnVisible(false)
+			setBubbleVisible(false)
 			setTimeout(() => {
 				setActiveDemo(prev => {
 					if (prev === 'wheel') return 'quiz'
 					if (prev === 'quiz') return 'callback'
+					if (prev === 'callback') return 'countdown'
 					return 'wheel'
 				})
 				setBtnVisible(true)
@@ -48,15 +60,42 @@ const DemoWidgets = () => {
 		return () => clearInterval(interval)
 	}, [])
 
+	useEffect(() => {
+		setBubbleVisible(false)
+		const t = setTimeout(() => setBubbleVisible(true), 3000)
+		return () => clearTimeout(t)
+	}, [activeDemo])
+
 	const handleClick = () => {
+		setBubbleVisible(false)
 		if (activeDemo === 'wheel') setWheelOpen(true)
 		else if (activeDemo === 'quiz') setQuizOpen(true)
-		else setCallbackOpen(true)
+		else if (activeDemo === 'callback') setCallbackOpen(true)
+		else setCountdownOpen(true)
 	}
 
 	return (
 		<>
 			<div ref={floatRef} className={styles.floatOuter}>
+				{bubbleVisible && (
+					<div className={styles.bubble}>
+						<button
+							type="button"
+							className={styles.bubbleClose}
+							onClick={e => {
+								e.stopPropagation()
+								setBubbleVisible(false)
+							}}
+							aria-label="Закрыть облако"
+						>
+							✕
+						</button>
+						<p className={styles.bubbleText}>{BUBBLE_TEXTS[activeDemo]}</p>
+						<span className={styles.bubbleDot} />
+						<div className={styles.bubbleTail} />
+					</div>
+				)}
+
 				<button
 					type="button"
 					className={styles.floatBtn}
@@ -66,7 +105,9 @@ const DemoWidgets = () => {
 							? 'Открыть демо колеса фортуны'
 							: activeDemo === 'quiz'
 								? 'Открыть демо квиза'
-								: 'Открыть демо обратного звонка'
+								: activeDemo === 'callback'
+									? 'Открыть демо обратного звонка'
+									: 'Открыть демо таймера обратного отсчёта'
 					}
 					style={{
 						opacity: btnVisible ? 1 : 0,
@@ -128,10 +169,12 @@ const DemoWidgets = () => {
 								Приз!
 							</span>
 						</>
-					) : (
+					) : activeDemo === 'callback' ? (
 						<>
 							<span className={styles.floatIconCallback}>
-								<span className={styles.floatCallbackRing} />
+								<span className={styles.floatCallbackRing1} />
+								<span className={styles.floatCallbackRing2} />
+								<span className={styles.floatCallbackRing3} />
 								<svg
 									width="60"
 									height="60"
@@ -147,8 +190,8 @@ const DemoWidgets = () => {
 											y2="60"
 											gradientUnits="userSpaceOnUse"
 										>
-											<stop offset="0%" stopColor="#9333ea" />
-											<stop offset="100%" stopColor="#4705fb" />
+											<stop offset="0%" stopColor="#4ade80" />
+											<stop offset="100%" stopColor="#16a34a" />
 										</linearGradient>
 									</defs>
 									<circle cx="30" cy="30" r="30" fill="url(#dwcbGrad)" />
@@ -167,10 +210,54 @@ const DemoWidgets = () => {
 									/>
 								</svg>
 							</span>
+						</>
+					) : (
+						<>
+							<span className={styles.floatIconTimer}>
+								<span className={styles.floatTimerRing1} />
+								<span className={styles.floatTimerRing2} />
+								<svg
+									width="60"
+									height="60"
+									viewBox="0 0 60 60"
+									fill="none"
+								>
+									<defs>
+										<linearGradient
+											id="dwTimerGrad"
+											x1="0"
+											y1="0"
+											x2="60"
+											y2="60"
+											gradientUnits="userSpaceOnUse"
+										>
+											<stop offset="0%" stopColor="#22d3ee" />
+											<stop offset="100%" stopColor="#0284c7" />
+										</linearGradient>
+									</defs>
+									<circle
+										cx="30"
+										cy="30"
+										r="30"
+										fill="url(#dwTimerGrad)"
+									/>
+									<circle
+										cx="30"
+										cy="30"
+										r="26"
+										stroke="rgba(255,255,255,0.22)"
+										strokeWidth="1.5"
+									/>
+									<path
+										d="M30 16a14 14 0 1014 14 14 14 0 00-14-14zm1.2 7v7.4l5 3-.95 1.56-6.05-3.62V23h2z"
+										fill="white"
+									/>
+								</svg>
+							</span>
 							<span
-								className={`${styles.floatLabel} ${styles.floatLabelCallback}`}
+								className={`${styles.floatLabel} ${styles.floatLabelTimer}`}
 							>
-								Звонок!
+								Акция
 							</span>
 						</>
 					)}
@@ -186,6 +273,10 @@ const DemoWidgets = () => {
 			<DemoCallback
 				open={callbackOpen}
 				onClose={() => setCallbackOpen(false)}
+			/>
+			<DemoCountdown
+				open={countdownOpen}
+				onClose={() => setCountdownOpen(false)}
 			/>
 		</>
 	)
