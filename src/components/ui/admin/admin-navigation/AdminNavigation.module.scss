@@ -1,6 +1,5 @@
 .nav-list {
-	@apply w-full flex mb-6 justify-center overflow-x-auto flex-nowrap pb-1;
-	-webkit-overflow-scrolling: touch;
+	@apply w-full flex flex-wrap justify-center gap-x-6 gap-y-3 mb-6 overflow-visible pb-1;
 	scrollbar-width: none;
 
 	&::-webkit-scrollbar {
@@ -8,29 +7,22 @@
 	}
 
 	> li {
-		@apply mr-6 font-700 whitespace-nowrap shrink-0;
+		@apply font-700 whitespace-nowrap shrink-0;
 	}
 
 	@media (max-width: 640px) {
-		@apply justify-start pb-2 px-[4px];
-		scrollbar-width: thin;
-		scrollbar-color: #470b58 #ede8f7;
-
-		&::-webkit-scrollbar {
-			@apply block h-[3px];
-		}
-
-		&::-webkit-scrollbar-track {
-			@apply bg-[#ede8f7] rounded-full;
-		}
-
-		&::-webkit-scrollbar-thumb {
-			@apply rounded-full;
-			background: linear-gradient(90deg, #470b58, #7b3fa0);
-		}
+		@apply gap-x-5 pb-2 px-[4px];
+		scrollbar-width: none;
 	}
 }
 
 .active {
-	@apply italic text-green-600 font-700 border-b border-green-600;
+	@apply inline-flex rounded-md px-3 py-1 text-white font-700 shadow-sm;
+	background: linear-gradient(
+		87.12deg,
+		#470b58 1.98%,
+		#c21b84 50.27%,
+		#fa595e 74.42%,
+		#f8bd31 98.56%
+	);
 }
