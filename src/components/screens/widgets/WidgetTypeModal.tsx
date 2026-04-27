@@ -137,36 +137,76 @@ const CallbackIcon = () => (
 	>
 		<circle cx="36" cy="36" r="34" stroke="#e0d6f0" strokeWidth="2" />
 		<path
-			d="M24 22h6l3 7-4 2.5a18 18 0 008.5 8.5L40 36l7 3v6c-12.7 0-23-10.3-23-23z"
+			d="M19 28c0-6.1 5-11 11.1-11h11.8C48 17 53 21.9 53 28v7.8c0 6.1-5 11-11.1 11H33l-8.1 6.1c-1.3 1-3.1.1-3.1-1.6v-6.6A10.9 10.9 0 0119 35.8V28z"
+			fill="#fff"
+			stroke="#e0d6f0"
+			strokeWidth="2.4"
+			strokeLinejoin="round"
+		/>
+		<path
+			d="M29 27.5h4.5l2.1 5-3 1.9a12.7 12.7 0 006 6l1.9-3 5 2.1V44c-9.1 0-16.5-7.4-16.5-16.5z"
 			fill="#7b3fa0"
-			opacity="0.85"
 		/>
-		<rect
-			x="38"
-			y="28"
-			width="14"
-			height="3"
-			rx="1.5"
-			fill="#C21B84"
-			opacity="0.6"
+		<circle cx="50" cy="48" r="10" fill="#F8BD31" />
+		<path
+			d="M50 43.5v5l3.5 2"
+			stroke="#470B58"
+			strokeWidth="2.4"
+			strokeLinecap="round"
+			strokeLinejoin="round"
 		/>
-		<rect
-			x="38"
-			y="34"
-			width="10"
-			height="3"
-			rx="1.5"
-			fill="#C21B84"
-			opacity="0.4"
+		<path
+			d="M42 27h5M42 33h7"
+			stroke="#C21B84"
+			strokeWidth="3"
+			strokeLinecap="round"
+			opacity="0.55"
 		/>
+	</svg>
+)
+
+const TimerIcon = () => (
+	<svg
+		width="72"
+		height="72"
+		viewBox="0 0 72 72"
+		fill="none"
+		xmlns="http://www.w3.org/2000/svg"
+	>
+		<circle cx="36" cy="36" r="34" stroke="#e0d6f0" strokeWidth="2" />
 		<rect
-			x="38"
-			y="40"
-			width="12"
-			height="3"
-			rx="1.5"
-			fill="#C21B84"
-			opacity="0.4"
+			x="16"
+			y="22"
+			width="40"
+			height="30"
+			rx="7"
+			fill="#fff"
+			stroke="#e0d6f0"
+			strokeWidth="2"
+		/>
+		<rect x="22" y="16" width="8" height="10" rx="3" fill="#7b3fa0" />
+		<rect x="42" y="16" width="8" height="10" rx="3" fill="#C21B84" />
+		<path
+			d="M24 35h24"
+			stroke="#7b3fa0"
+			strokeWidth="3"
+			strokeLinecap="round"
+			opacity="0.75"
+		/>
+		<path
+			d="M30 43h12"
+			stroke="#FA595E"
+			strokeWidth="3"
+			strokeLinecap="round"
+			opacity="0.75"
+		/>
+		<circle cx="52" cy="50" r="9" fill="#F8BD31" />
+		<path
+			d="M52 45v5l3 3"
+			stroke="#470B58"
+			strokeWidth="2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
 		/>
 	</svg>
 )
@@ -229,6 +269,14 @@ const WIDGET_TYPES: WidgetType[] = [
 		description:
 			'Клиент вводит телефон и выбирает удобное время. Вы получаете заявку с часовым поясом.',
 		icon: <CallbackIcon />,
+		available: true
+	},
+	{
+		id: 'timer',
+		name: 'Таймер обратного отсчёта',
+		description:
+			'Показывает дедлайн акции, ведёт на товар или собирает контакт перед переходом.',
+		icon: <TimerIcon />,
 		available: true
 	}
 ]
