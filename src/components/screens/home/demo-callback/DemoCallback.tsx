@@ -1,10 +1,13 @@
 'use client'
 
+import {
+	DEMO_PHONE_PLACEHOLDER,
+	formatDemoPhone,
+	isDemoPhoneValid
+} from '@/utils/demo-phone.util'
 import { useEffect, useId, useRef, useState } from 'react'
 import styles from './DemoCallback.module.scss'
 
-const MASK = '+7 (###) ###-##-##'
-const PLACEHOLDER = '+7 (___) ___-__-__'
 const ACCENT = '#4705fb'
 
 const SALES_TEXTS = [
@@ -24,11 +27,6 @@ const TIME_SLOTS = [
 	'17:00–19:00'
 ]
 
-function renderMask(digits: string): string {
-	let i = 0
-	return MASK.replace(/#/g, () => (i < digits.length ? digits[i++] : '_'))
-}
-
 function shakeElement(el: HTMLElement) {
 	el.classList.remove(styles.shake)
 	void el.offsetWidth
@@ -44,11 +42,10 @@ interface Props {
 const DemoCallback = ({ open, onClose }: Props) => {
 	const dialogTitleId = useId()
 	const [step, setStep] = useState<'form' | 'success'>('form')
-	const [phone, setPhone] = useState(renderMask(''))
+	const [phone, setPhone] = useState('')
 	const [phoneValid, setPhoneValid] = useState(false)
 	const [phoneError, setPhoneError] = useState(false)
 	const [salesText, setSalesText] = useState<string | null>(null)
-	const digitsRef = useRef('')
 	const phoneRef = useRef<HTMLInputElement>(null)
 	const salesIndexRef = useRef(-1)
 
@@ -63,21 +60,12 @@ const DemoCallback = ({ open, onClose }: Props) => {
 		if (!open) {
 			setTimeout(() => {
 				setStep('form')
-				setPhone(renderMask(''))
+				setPhone('')
 				setPhoneValid(false)
 				setPhoneError(false)
-				digitsRef.current = ''
 			}, 300)
 		}
 	}, [open])
-
-	useEffect(() => {
-		const el = phoneRef.current
-		if (!el || !phone) return
-		const pos = phone.indexOf('_')
-		const cursor = pos === -1 ? phone.length : pos
-		el.setSelectionRange(cursor, cursor)
-	}, [phone])
 
 	useEffect(() => {
 		if (!open || step !== 'form') {
@@ -100,53 +88,20 @@ const DemoCallback = ({ open, onClose }: Props) => {
 		}
 	}, [open, step])
 
-	const applyDigits = (digits: string) => {
-		digitsRef.current = digits
-		const masked = renderMask(digits)
-		setPhone(masked)
-		const valid = digits.length >= 10
+	const handlePhoneChange = (value: string) => {
+		const formatted = formatDemoPhone(value)
+		const valid = isDemoPhoneValid(formatted)
+		setPhone(formatted)
 		setPhoneValid(valid)
 		if (valid) setPhoneError(false)
 	}
 
-	const handlePhoneFocus = () => {
-		if (!digitsRef.current) {
-			const masked = renderMask('')
-			setPhone(masked)
-		}
-	}
-
-	const handlePhoneKeyDown = (
-		e: React.KeyboardEvent<HTMLInputElement>
-	) => {
-		if (/\d/.test(e.key)) {
-			if (digitsRef.current.length < 10) {
-				applyDigits(digitsRef.current + e.key)
-			}
-			e.preventDefault()
-			return
-		}
-		if (e.key === 'Backspace') {
-			applyDigits(digitsRef.current.slice(0, -1))
-			e.preventDefault()
-			return
-		}
-		if (!['ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
-			e.preventDefault()
-		}
-	}
-
-	const handlePhonePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-		e.preventDefault()
-		const text = e.clipboardData.getData('text')
-		let digits = text.replace(/\D/g, '')
-		if (digits.startsWith('8')) digits = '7' + digits.slice(1)
-		if (digits.startsWith('7')) digits = digits.slice(1)
-		applyDigits(digits.slice(0, 10))
-	}
-
 	const handlePhoneBlur = () => {
-		if (!digitsRef.current.length) setPhone(renderMask(''))
+		if (!phone.trim()) return
+		const valid = isDemoPhoneValid(phone)
+		setPhoneValid(valid)
+		setPhoneError(!valid)
+		if (valid) setPhone(formatDemoPhone(phone))
 	}
 
 	const handleSubmit = () => {
@@ -196,14 +151,13 @@ const DemoCallback = ({ open, onClose }: Props) => {
 							<input
 								ref={phoneRef}
 								type="tel"
-								placeholder={PLACEHOLDER}
+								placeholder={DEMO_PHONE_PLACEHOLDER}
 								className={`${styles.input} ${phoneError ? styles.inputError : ''}`}
 								value={phone}
-								onChange={() => {}}
-								onFocus={handlePhoneFocus}
-								onKeyDown={handlePhoneKeyDown}
-								onPaste={handlePhonePaste}
+								onChange={e => handlePhoneChange(e.target.value)}
 								onBlur={handlePhoneBlur}
+								inputMode="tel"
+								autoComplete="tel"
 								style={{
 									borderColor: phoneError ? '#ef4444' : undefined
 								}}

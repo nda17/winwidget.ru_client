@@ -1,5 +1,10 @@
 'use client'
 
+import {
+	DEMO_PHONE_PLACEHOLDER,
+	formatDemoPhone,
+	isDemoPhoneValid
+} from '@/utils/demo-phone.util'
 import { useEffect, useId, useRef, useState } from 'react'
 import styles from './DemoWheel.module.scss'
 
@@ -172,16 +177,6 @@ const CENTER = 150
 const RADIUS = 150
 const EMAIL_RE =
 	/^(([^<>()[\].,;:\s@"]+(\.[^<>()[\].,;:\s@"]+)*)|(".+"))@(([^<>()[\].,;:\s@"]+\.)+[^<>()[\].,;:\s@"]{2,})$/i
-const PHONE_MASK = '+7 (9__) ___-__-__'
-
-function renderPhoneMask(digits: string): string {
-	const chars = PHONE_MASK.split('')
-	let d = 0
-	for (let i = 0; i < chars.length; i++) {
-		if (chars[i] === '_' && digits[d]) chars[i] = digits[d++]
-	}
-	return chars.join('')
-}
 
 const SECTORS = [
 	{ label: 'Скидка 10%', color: '#470b58', textColor: '#fff' },
@@ -255,7 +250,6 @@ const DemoWheel = ({
 	const [phoneError, setPhoneError] = useState(false)
 	const [emailError, setEmailError] = useState(false)
 	const salesIndexRef = useRef(-1)
-	const digitsRef = useRef('')
 
 	const phoneRef = useRef<HTMLInputElement>(null)
 	const emailRef = useRef<HTMLInputElement>(null)
@@ -285,18 +279,9 @@ const DemoWheel = ({
 		}
 	}, [open])
 
-	// Перемещаем курсор на первый незаполненный символ '_'
-	useEffect(() => {
-		const el = phoneRef.current
-		if (!el || !phone) return
-		const pos = phone.indexOf('_')
-		const cursor = pos === -1 ? phone.length : pos
-		el.setSelectionRange(cursor, cursor)
-	}, [phone])
-
 	const validate = () => {
 		let valid = true
-		if (digitsRef.current.length !== 9) {
+		if (!isDemoPhoneValid(phone)) {
 			setPhoneError(true)
 			if (phoneRef.current) shakeElement(phoneRef.current)
 			valid = false
@@ -309,49 +294,15 @@ const DemoWheel = ({
 		return valid
 	}
 
-	const handlePhoneFocus = () => {
-		if (!digitsRef.current) setPhone(renderPhoneMask(''))
-	}
-
-	const handlePhoneKeyDown = (
-		e: React.KeyboardEvent<HTMLInputElement>
-	) => {
-		if (/\d/.test(e.key)) {
-			if (digitsRef.current.length < 9) {
-				digitsRef.current += e.key
-				setPhone(renderPhoneMask(digitsRef.current))
-				setPhoneError(false)
-			}
-			e.preventDefault()
-			return
-		}
-		if (e.key === 'Backspace') {
-			digitsRef.current = digitsRef.current.slice(0, -1)
-			setPhone(renderPhoneMask(digitsRef.current))
-			e.preventDefault()
-			return
-		}
-		if (!['ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
-			e.preventDefault()
-		}
-	}
-
-	const handlePhonePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-		e.preventDefault()
-		const text = e.clipboardData.getData('text')
-		const only = text.replace(/\D/g, '')
-		const stripped = only.replace(/^[78]?9?/, '')
-		digitsRef.current = stripped.slice(0, 9)
-		setPhone(renderPhoneMask(digitsRef.current))
+	const handlePhoneChange = (value: string) => {
+		setPhone(formatDemoPhone(value))
 		setPhoneError(false)
 	}
 
 	const handlePhoneBlur = () => {
-		if (!digitsRef.current.length) {
-			setPhone('')
-		} else {
-			validate()
-		}
+		if (!phone.trim()) return
+		if (!isDemoPhoneValid(phone)) setPhoneError(true)
+		else setPhone(formatDemoPhone(phone))
 	}
 
 	const spin = () => {
@@ -490,14 +441,13 @@ const DemoWheel = ({
 								<input
 									ref={phoneRef}
 									type="tel"
-									placeholder="✦  Ваш телефон"
+									placeholder={`✦  ${DEMO_PHONE_PLACEHOLDER}`}
 									className={`${styles.input} ${phoneError ? styles.inputError : ''}`}
 									value={phone}
-									onChange={() => {}}
-									onFocus={handlePhoneFocus}
-									onKeyDown={handlePhoneKeyDown}
-									onPaste={handlePhonePaste}
+									onChange={e => handlePhoneChange(e.target.value)}
 									onBlur={handlePhoneBlur}
+									inputMode="tel"
+									autoComplete="tel"
 								/>
 								<input
 									ref={emailRef}
