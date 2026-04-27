@@ -48,6 +48,8 @@ const DEFAULT_CONFIG: QuizConfig = {
 	buttonBottom: 3,
 	buttonOffset: 3,
 	buttonSize: 60,
+	bubbleEnabled: true,
+	bubbleText: 'Пройдите квиз!',
 	autoOpenDelay: 45,
 	title: 'Пройдите наш квиз!',
 	subtitle:
@@ -55,7 +57,6 @@ const DEFAULT_CONFIG: QuizConfig = {
 	buttonText: 'Начать квиз',
 	contactTitle: 'Оставьте контакт для получения результата',
 	dataType: 'PHONE',
-	phoneRegion: 'RU',
 	privacyUrl:
 		'https://winwidget.ru/legal-documentation/consent-processing',
 	filterDuplicates: false,
@@ -65,9 +66,73 @@ const DEFAULT_CONFIG: QuizConfig = {
 	hideIfPlayed: false,
 	quizCooldownDays: 0,
 	quizResetToken: '',
-	questions: [],
-	results: [],
-	integrations: { ...({} as QuizConfig['integrations']) }
+	questions: [
+		{
+			id: 'q1',
+			text: 'Вопрос 1',
+			type: 'radio',
+			options: [
+				{ id: 'q1o1', text: 'Вариант А', scores: { r1: 1, r2: 0 } },
+				{ id: 'q1o2', text: 'Вариант Б', scores: { r1: 0, r2: 1 } }
+			]
+		},
+		{
+			id: 'q2',
+			text: 'Вопрос 2',
+			type: 'radio',
+			options: [
+				{ id: 'q2o1', text: 'Вариант А', scores: { r1: 1, r2: 0 } },
+				{ id: 'q2o2', text: 'Вариант Б', scores: { r1: 0, r2: 1 } }
+			]
+		},
+		{
+			id: 'q3',
+			text: 'Вопрос 3',
+			type: 'radio',
+			options: [
+				{ id: 'q3o1', text: 'Вариант А', scores: { r1: 1, r2: 0 } },
+				{ id: 'q3o2', text: 'Вариант Б', scores: { r1: 0, r2: 1 } }
+			]
+		},
+		{
+			id: 'q4',
+			text: 'Вопрос 4',
+			type: 'radio',
+			options: [
+				{ id: 'q4o1', text: 'Вариант А', scores: { r1: 1, r2: 0 } },
+				{ id: 'q4o2', text: 'Вариант Б', scores: { r1: 0, r2: 1 } }
+			]
+		}
+	],
+	results: [
+		{
+			id: 'r1',
+			title: 'Результат A',
+			description: 'Опишите здесь что получит клиент с таким профилем.',
+			promoCode: '',
+			buttonText: '',
+			buttonUrl: ''
+		},
+		{
+			id: 'r2',
+			title: 'Результат B',
+			description: 'Опишите здесь что получит клиент с таким профилем.',
+			promoCode: '',
+			buttonText: '',
+			buttonUrl: ''
+		}
+	],
+	integrations: {
+		email: '',
+		webhookUrl: '',
+		telegramChatId: '',
+		yandexMetrikaId: '',
+		vkPixelId: '',
+		bitrix24WebhookUrl: '',
+		roistatEnabled: false,
+		amoCrmDomain: '',
+		amoCrmToken: ''
+	}
 }
 
 const buildQuizTemplate = (
@@ -967,113 +1032,145 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 									</p>
 								</div>
 
-								<details className={styles.advancedBlock}>
-									<summary className={styles.advancedSummary}>
-										Дополнительное поведение кнопки
-									</summary>
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Отступ кнопки от края экрана:{' '}
+										<strong>{config.buttonOffset ?? 3}%</strong>
+									</p>
+									<input
+										type="range"
+										min={1}
+										max={50}
+										value={config.buttonOffset ?? 3}
+										onChange={e =>
+											setField('buttonOffset', Number(e.target.value))
+										}
+										className={styles.input}
+										style={{
+											padding: '8px 0',
+											background: 'transparent',
+											border: 'none'
+										}}
+									/>
+									<p className={styles.hint}>
+										Отступ кнопки от левого или правого края экрана в
+										процентах. 3 — почти у края, 50 — по центру.
+									</p>
+								</div>
 
-									<div className={styles.advancedContent}>
-										<div className={styles.field}>
-											<p className={styles.label}>
-												Отступ кнопки от края экрана:{' '}
-												<strong>{config.buttonOffset ?? 3}%</strong>
-											</p>
-											<input
-												type="range"
-												min={1}
-												max={50}
-												value={config.buttonOffset ?? 3}
-												onChange={e =>
-													setField('buttonOffset', Number(e.target.value))
-												}
-												className={styles.input}
-												style={{
-													padding: '8px 0',
-													background: 'transparent',
-													border: 'none'
-												}}
-											/>
-											<p className={styles.hint}>
-												Отступ кнопки от левого или правого края экрана в
-												процентах. 3 — почти у края, 50 — по центру.
-											</p>
-										</div>
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Размер кнопки открытия:{' '}
+										<strong>{config.buttonSize ?? 60}px</strong>
+									</p>
+									<input
+										type="range"
+										min={40}
+										max={100}
+										value={config.buttonSize ?? 60}
+										onChange={e =>
+											setField('buttonSize', Number(e.target.value))
+										}
+										className={styles.input}
+										style={{
+											padding: '8px 0',
+											background: 'transparent',
+											border: 'none'
+										}}
+									/>
+									<p className={styles.hint}>
+										Размер плавающей кнопки открытия квиза в пикселях. По
+										умолчанию 60px.
+									</p>
+								</div>
 
-										<div className={styles.field}>
-											<p className={styles.label}>
-												Размер кнопки:{' '}
-												<strong>{config.buttonSize ?? 60}px</strong>
-											</p>
-											<input
-												type="range"
-												min={40}
-												max={100}
-												value={config.buttonSize ?? 60}
-												onChange={e =>
-													setField('buttonSize', Number(e.target.value))
-												}
-												className={styles.input}
-												style={{
-													padding: '8px 0',
-													background: 'transparent',
-													border: 'none'
-												}}
-											/>
-											<p className={styles.hint}>
-												Размер плавающей кнопки открытия квиза в пикселях.
-												По умолчанию 60px.
-											</p>
-										</div>
-
-										<div className={styles.field}>
-											<div className={styles.checkRow}>
-												<input
-													id="quizPulse"
-													type="checkbox"
-													checked={config.buttonPulse}
-													onChange={e =>
-														setField('buttonPulse', e.target.checked)
-													}
-												/>
-												<label
-													htmlFor="quizPulse"
-													className={styles.checkLabel}
-												>
-													Пульсация кнопки
-												</label>
-											</div>
-											<p className={styles.hint}>
-												Дополнительный эффект свечения на плавающей кнопке
-												открытия квиза.
-											</p>
-										</div>
-
-										<div className={styles.field}>
-											<p className={styles.label}>
-												Авто-открытие через (сек):
-											</p>
-											<input
-												type="number"
-												className={styles.input}
-												value={config.autoOpenDelay ?? ''}
-												onChange={e =>
-													setField(
-														'autoOpenDelay',
-														e.target.value === ''
-															? null
-															: Number(e.target.value)
-													)
-												}
-												placeholder="Не открывать автоматически"
-												min={0}
-											/>
-											<p className={styles.hint}>
-												Через сколько секунд квиз откроется автоматически.
-												Оставьте пустым для отключения.
-											</p>
-										</div>
+								<div className={styles.field}>
+									<div className={styles.checkRow}>
+										<input
+											id="quizPulse"
+											type="checkbox"
+											checked={config.buttonPulse}
+											onChange={e =>
+												setField('buttonPulse', e.target.checked)
+											}
+										/>
+										<label
+											htmlFor="quizPulse"
+											className={styles.checkLabel}
+										>
+											Пульсация кнопки
+										</label>
 									</div>
-								</details>
+									<p className={styles.hint}>
+										Дополнительный эффект свечения на плавающей кнопке
+										открытия квиза.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>Отображение облачка:</p>
+									<div className={styles.checkRow}>
+										<input
+											id="quizBubbleEnabled"
+											type="checkbox"
+											checked={config.bubbleEnabled ?? true}
+											onChange={e =>
+												setField('bubbleEnabled', e.target.checked)
+											}
+										/>
+										<label
+											htmlFor="quizBubbleEnabled"
+											className={styles.checkLabel}
+										>
+											Показывать облачко рядом с кнопкой
+										</label>
+									</div>
+									<p className={styles.hint}>
+										Если выключить, останется только плавающая кнопка.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>Текст облачка у кнопки:</p>
+									<input
+										className={styles.input}
+										value={config.bubbleText ?? ''}
+										onChange={e => setField('bubbleText', e.target.value)}
+										placeholder="Пройдите квиз!"
+										maxLength={80}
+									/>
+									<p className={styles.hint}>
+										Подсказка рядом с плавающей кнопкой. Если оставить
+										пустым, будет показан стандартный текст.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Авто-открытие через (сек):
+									</p>
+									<input
+										type="number"
+										className={styles.input}
+										value={config.autoOpenDelay ?? ''}
+										onChange={e =>
+											setField(
+												'autoOpenDelay',
+												e.target.value === ''
+													? null
+													: Number(e.target.value)
+											)
+										}
+										placeholder="Не открывать автоматически"
+										min={0}
+									/>
+									<p className={styles.hint}>
+										Через сколько секунд виджет откроется автоматически
+										после открытия страницы вашего сайта. Оставьте пустым
+										для отключения. Если пользователь уже учавствовал,
+										данная настройка игнорируется при любых значениях.
+									</p>
+								</div>
 							</div>
 
 							<div className={styles.settingsGroup}>
@@ -1174,30 +1271,6 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 										персональный результат.
 									</p>
 								</div>
-
-								{(config.dataType === 'PHONE' ||
-									config.dataType === 'PHONE_AND_EMAIL') && (
-									<div className={styles.field}>
-										<p className={styles.label}>Регион телефона:</p>
-										<select
-											className={styles.input}
-											value={config.phoneRegion}
-											onChange={e =>
-												setField('phoneRegion', e.target.value)
-											}
-										>
-											<option value="RU">Россия (+7)</option>
-											<option value="BY">Беларусь (+375)</option>
-											<option value="KZ">Казахстан (+7)</option>
-											<option value="UA">Украина (+380)</option>
-											<option value="international">Международный</option>
-										</select>
-										<p className={styles.hint}>
-											Определяет формат и маску номера телефона в поле
-											ввода.
-										</p>
-									</div>
-								)}
 
 								<div className={styles.field}>
 									<p className={styles.label}>
