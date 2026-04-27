@@ -17,14 +17,18 @@ export const navItems: INavItem[] = [
 	},
 	{
 		title: 'Контент',
-		link: ADMIN_PAGES.LANDING
+		link: ADMIN_PAGES.CONTENT
 	},
 	{
-		title: 'Общие настройки',
+		title: 'Настройки',
 		link: ADMIN_PAGES.SETTINGS
 	},
 	{
-		title: 'Заметки',
-		link: ADMIN_PAGES.NOTES
+		title: 'Система',
+		link: ADMIN_PAGES.SYSTEM
+	},
+	{
+		title: 'Бэклог',
+		link: ADMIN_PAGES.BACKLOG
 	}
 ]
