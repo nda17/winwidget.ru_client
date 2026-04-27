@@ -11,7 +11,7 @@ import toast from 'react-hot-toast'
 import DirectLinkQr from './DirectLinkQr'
 import styles from './CountdownTimerSettingsModal.module.scss'
 
-type Tab = 'main' | 'timer' | 'form' | 'integrations' | 'code'
+type Tab = 'main' | 'timer' | 'form' | 'integrations' | 'code' | 'info'
 
 interface Props {
 	timer: CountdownTimer
@@ -24,7 +24,8 @@ const TABS: { id: Tab; label: string }[] = [
 	{ id: 'timer', label: 'Таймер' },
 	{ id: 'form', label: 'Форма' },
 	{ id: 'integrations', label: 'Интеграции' },
-	{ id: 'code', label: 'Код' }
+	{ id: 'code', label: 'Код' },
+	{ id: 'info', label: 'Инфо' }
 ]
 
 const getDefaultConfig = (): CountdownTimerConfig => ({
@@ -947,6 +948,63 @@ const CountdownTimerSettingsModal = ({
 										downloadName={`winwidget-timer-${timer.publicKey}.png`}
 									/>
 								</div>
+							</div>
+						</div>
+					)}
+
+					{tab === 'info' && (
+						<div className={styles.fields}>
+							<div className={styles.settingsGroup}>
+								<h3 className={styles.settingsGroupTitle}>
+									Как работает таймер
+								</h3>
+								<p className={styles.infoText}>
+									Таймер показывает ограниченное по времени предложение:
+									фиксированную дату окончания или персональный
+									evergreen-отсчёт для каждого посетителя. После заявки
+									данные сохраняются в кабинете и отправляются в
+									интеграции.
+								</p>
+								<ul className={styles.infoList}>
+									<li>
+										В «Главных» настройте внешний вид, кнопку открытия и
+										текст предложения.
+									</li>
+									<li>
+										В «Таймере» выберите режим, длительность и поведение
+										после окончания.
+									</li>
+									<li>
+										В «Форме» включите сбор контактов или оставьте только
+										кнопку перехода.
+									</li>
+									<li>
+										В «Коде» скопируйте скрипт на сайт или откройте прямую
+										ссылку.
+									</li>
+								</ul>
+							</div>
+
+							<div className={styles.settingsGroup}>
+								<h3 className={styles.settingsGroupTitle}>
+									Что проверить перед запуском
+								</h3>
+								<ul className={styles.infoList}>
+									<li>
+										Убедитесь, что срок акции и часовой пояс соответствуют
+										реальному предложению.
+									</li>
+									<li>
+										Проверьте текст состояния после окончания таймера.
+									</li>
+									<li>
+										Если собираете контакты, отправьте тестовую заявку.
+									</li>
+									<li>
+										Откройте виджет на мобильном и проверьте, что кнопка не
+										перекрывает важные элементы сайта.
+									</li>
+								</ul>
 							</div>
 						</div>
 					)}

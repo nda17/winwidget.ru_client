@@ -8,7 +8,7 @@ import toast from 'react-hot-toast'
 import DirectLinkQr from './DirectLinkQr'
 import styles from './WheelSettingsModal.module.scss'
 
-type Tab = 'main' | 'bonuses' | 'integrations' | 'code'
+type Tab = 'main' | 'bonuses' | 'integrations' | 'code' | 'info'
 
 interface Props {
 	widget: Widget
@@ -249,20 +249,21 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 				</h2>
 
 				<div className={styles.tabs}>
-					{(['main', 'bonuses', 'integrations', 'code'] as Tab[]).map(
-						t => (
-							<button
-								key={t}
-								className={`${styles.tab} ${tab === t ? styles.tabActive : ''}`}
-								onClick={() => setTab(t)}
-							>
-								{t === 'main' && 'Главные'}
-								{t === 'bonuses' && 'Бонусы'}
-								{t === 'integrations' && 'Интеграции'}
-								{t === 'code' && 'Код'}
-							</button>
-						)
-					)}
+					{(
+						['main', 'bonuses', 'integrations', 'code', 'info'] as Tab[]
+					).map(t => (
+						<button
+							key={t}
+							className={`${styles.tab} ${tab === t ? styles.tabActive : ''}`}
+							onClick={() => setTab(t)}
+						>
+							{t === 'main' && 'Главные'}
+							{t === 'bonuses' && 'Бонусы'}
+							{t === 'integrations' && 'Интеграции'}
+							{t === 'code' && 'Код'}
+							{t === 'info' && 'Инфо'}
+						</button>
+					))}
 				</div>
 
 				<div className={styles.tabContent}>
@@ -1497,6 +1498,66 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 										Скопировать
 									</button>
 								</div>
+							</div>
+						</div>
+					)}
+
+					{tab === 'info' && (
+						<div className={styles.fields}>
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Как работает колесо
+									</h3>
+								</div>
+								<p className={styles.infoText}>
+									Посетитель открывает колесо, оставляет контакт и крутит
+									барабан. После выигрыша заявка сохраняется в кабинете и
+									отправляется в подключённые интеграции.
+								</p>
+								<ul className={styles.infoList}>
+									<li>
+										В разделе «Главные» настройте внешний вид, кнопку
+										открытия и тексты формы.
+									</li>
+									<li>
+										В «Бонусах» задайте секторы колеса, вероятность и
+										активность призов.
+									</li>
+									<li>
+										В «Интеграциях» подключите email, Telegram, webhook,
+										CRM и аналитику.
+									</li>
+									<li>
+										В «Коде» скопируйте скрипт на сайт или используйте
+										прямую ссылку/QR-код.
+									</li>
+								</ul>
+							</div>
+
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Что проверить перед запуском
+									</h3>
+								</div>
+								<ul className={styles.infoList}>
+									<li>
+										Укажите понятные названия бонусов и отключите лишние
+										сектора.
+									</li>
+									<li>
+										Выберите тип контакта: телефон, email или оба поля.
+									</li>
+									<li>
+										Настройте ограничение повторной игры, если один
+										посетитель не должен крутить колесо несколько раз.
+									</li>
+									<li>
+										После установки откройте сайт в новом окне и отправьте
+										тестовую заявку.
+									</li>
+								</ul>
 							</div>
 						</div>
 					)}

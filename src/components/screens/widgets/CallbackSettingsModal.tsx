@@ -11,7 +11,7 @@ import toast from 'react-hot-toast'
 import DirectLinkQr from './DirectLinkQr'
 import styles from './CallbackSettingsModal.module.scss'
 
-type Tab = 'main' | 'form' | 'integrations' | 'code'
+type Tab = 'main' | 'form' | 'integrations' | 'code' | 'info'
 
 interface Props {
 	callback: Callback
@@ -23,7 +23,8 @@ const TABS: { id: Tab; label: string }[] = [
 	{ id: 'main', label: 'Главные' },
 	{ id: 'form', label: 'Форма' },
 	{ id: 'integrations', label: 'Интеграции' },
-	{ id: 'code', label: 'Код' }
+	{ id: 'code', label: 'Код' },
+	{ id: 'info', label: 'Инфо' }
 ]
 
 const DEFAULT_CONFIG: CallbackConfig = {
@@ -1054,6 +1055,68 @@ const CallbackSettingsModal = ({ callback, onClose, onSaved }: Props) => {
 										downloadName={`winwidget-callback-${callback.publicKey}.png`}
 									/>
 								</div>
+							</div>
+						</div>
+					)}
+
+					{tab === 'info' && (
+						<div className={styles.fields}>
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Как работает обратный звонок
+									</h3>
+								</div>
+								<p className={styles.infoText}>
+									Виджет открывает форму заказа звонка. Посетитель
+									оставляет телефон, при необходимости выбирает удобное
+									время, а заявка сохраняется в кабинете и отправляется в
+									подключённые каналы.
+								</p>
+								<ul className={styles.infoList}>
+									<li>
+										В «Главных» настройте кнопку, положение, цвета и тексты
+										окна.
+									</li>
+									<li>
+										В «Форме» задайте поля, тексты успеха и варианты
+										времени звонка.
+									</li>
+									<li>
+										В «Интеграциях» подключите уведомления, CRM, webhook и
+										аналитику.
+									</li>
+									<li>
+										В «Коде» установите виджет на сайт или используйте
+										прямую ссылку/QR-код.
+									</li>
+								</ul>
+							</div>
+
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Что проверить перед запуском
+									</h3>
+								</div>
+								<ul className={styles.infoList}>
+									<li>
+										Проверьте номер телефона в тестовой заявке и выбранный
+										временной слот.
+									</li>
+									<li>
+										Убедитесь, что заявки приходят в нужный email, Telegram
+										или CRM.
+									</li>
+									<li>
+										Настройте защиту от дублей, если повторные заявки от
+										одного контакта нежелательны.
+									</li>
+									<li>
+										Проверьте мобильную версию: кнопка должна быть заметной
+										и не мешать покупке.
+									</li>
+								</ul>
 							</div>
 						</div>
 					)}

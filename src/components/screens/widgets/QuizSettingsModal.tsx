@@ -14,7 +14,13 @@ import toast from 'react-hot-toast'
 import DirectLinkQr from './DirectLinkQr'
 import styles from './QuizSettingsModal.module.scss'
 
-type Tab = 'main' | 'questions' | 'results' | 'integrations' | 'code'
+type Tab =
+	| 'main'
+	| 'questions'
+	| 'results'
+	| 'integrations'
+	| 'code'
+	| 'info'
 type ScoreMode = 'simple' | 'advanced'
 type QuizTemplateKey = 'tariff' | 'service' | 'discount' | 'diagnostic'
 
@@ -792,7 +798,8 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 							'results',
 							'questions',
 							'integrations',
-							'code'
+							'code',
+							'info'
 						] as Tab[]
 					).map(t => (
 						<button
@@ -805,6 +812,7 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 							{t === 'results' && `Результаты (${config.results.length})`}
 							{t === 'integrations' && 'Интеграции'}
 							{t === 'code' && 'Код'}
+							{t === 'info' && 'Инфо'}
 						</button>
 					))}
 				</div>
@@ -2340,6 +2348,68 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 										downloadName={`winwidget-quiz-${quiz.publicKey}.png`}
 									/>
 								</div>
+							</div>
+						</div>
+					)}
+
+					{tab === 'info' && (
+						<div className={styles.fields}>
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Как работает квиз
+									</h3>
+								</div>
+								<p className={styles.infoText}>
+									Квиз задаёт посетителю вопросы, считает баллы или ведёт
+									по выбранным вариантам, показывает результат и собирает
+									заявку. Заявка сохраняется в кабинете и уходит в
+									подключённые каналы.
+								</p>
+								<ul className={styles.infoList}>
+									<li>
+										В «Главных» настройте внешний вид, тексты, кнопку и
+										форму контактов.
+									</li>
+									<li>
+										В «Результатах» подготовьте финальные экраны и условия
+										показа.
+									</li>
+									<li>
+										В «Вопросах» добавьте шаги квиза, ответы и баллы для
+										логики результата.
+									</li>
+									<li>
+										В «Коде» установите квиз на сайт или используйте прямую
+										ссылку.
+									</li>
+								</ul>
+							</div>
+
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Что проверить перед запуском
+									</h3>
+								</div>
+								<ul className={styles.infoList}>
+									<li>
+										Пройдите квиз целиком и убедитесь, что каждый ответ
+										ведёт к нужному результату.
+									</li>
+									<li>
+										Проверьте обязательность контактных полей и текст
+										согласия.
+									</li>
+									<li>
+										Отправьте тестовую заявку и посмотрите, пришла ли она в
+										интеграции.
+									</li>
+									<li>
+										Если используете рекламу, откройте прямую ссылку
+										отдельно и проверьте мобильный вид.
+									</li>
+								</ul>
 							</div>
 						</div>
 					)}

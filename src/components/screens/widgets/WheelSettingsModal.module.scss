@@ -109,6 +109,15 @@ select.input {
 .hint {
 	@apply text-xs text-[#bbb];
 }
+.infoText {
+	@apply m-0 text-sm leading-6 text-[#555];
+}
+.infoList {
+	@apply m-0 flex flex-col gap-2 pl-5 text-sm leading-6 text-[#555];
+}
+.infoList li::marker {
+	@apply text-[#7b3fa0];
+}
 .bonusBlock {
 	@apply flex flex-col gap-2 pb-3 border-b border-[#e0d6f0];
 }
