@@ -101,7 +101,7 @@ const AdminNotes: NextPage = () => {
 			)}
 			<Heading text="Панель администратора" />
 			<AdminNavigation />
-			<SubHeading text="Заметки" />
+			<SubHeading text="Бэклог" />
 
 			<div className={styles.section}>
 				<div className={styles.inputRow}>
