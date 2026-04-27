@@ -2,7 +2,7 @@ import AdminSettings from '@/components/screens/admin/settings/AdminSettings'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-	title: 'Общие настройки',
+	title: 'Настройки',
 	description: 'Admin panel page'
 }
 
