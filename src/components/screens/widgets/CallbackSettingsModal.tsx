@@ -19,15 +19,6 @@ interface Props {
 	onSaved: (updated: Callback) => void
 }
 
-const PHONE_REGIONS = [
-	{ value: 'RU', label: 'Россия (+7)' },
-	{ value: 'BY', label: 'Беларусь (+375)' },
-	{ value: 'KZ', label: 'Казахстан (+7)' },
-	{ value: 'UA', label: 'Украина (+380)' },
-	{ value: 'UZ', label: 'Узбекистан (+998)' },
-	{ value: 'INT', label: 'Международный' }
-]
-
 const TABS: { id: Tab; label: string }[] = [
 	{ id: 'main', label: 'Главные' },
 	{ id: 'form', label: 'Форма' },
@@ -46,13 +37,13 @@ const DEFAULT_CONFIG: CallbackConfig = {
 	buttonOffset: 3,
 	buttonSize: 60,
 	autoOpenDelay: null,
+	bubbleEnabled: true,
 	bubbleText: 'Перезвоним!',
 	title: 'Заказать звонок',
 	subtitle: 'Оставьте номер телефона — мы перезвоним в удобное время',
 	submitButtonText: 'Заказать звонок',
 	successTitle: 'Спасибо! Мы перезвоним',
 	successSubtitle: 'Ожидайте звонка в выбранное время',
-	phoneRegion: 'RU',
 	privacyUrl:
 		'https://winwidget.ru/legal-documentation/consent-processing',
 	filterDuplicates: false,
@@ -347,155 +338,139 @@ const CallbackSettingsModal = ({ callback, onClose, onSaved }: Props) => {
 									</p>
 								</div>
 
-								<details className={styles.advancedBlock}>
-									<summary className={styles.advancedSummary}>
-										Дополнительно
-									</summary>
-									<div className={styles.advancedContent}>
-										<div className={styles.field}>
-											<p className={styles.label}>Цвет кнопки отправки:</p>
-											<div className={styles.colorRow}>
-												<input
-													type="color"
-													className={styles.colorPicker}
-													value={cfg.buttonColor || cfg.color || '#4705fb'}
-													onChange={e =>
-														set({ buttonColor: e.target.value })
-													}
-												/>
-												<input
-													className={styles.input}
-													value={cfg.buttonColor || ''}
-													onChange={e =>
-														set({ buttonColor: e.target.value })
-													}
-													placeholder="По умолчанию — основной цвет"
-												/>
-												{cfg.buttonColor && (
-													<button
-														type="button"
-														className={styles.clearColorBtn}
-														onClick={() => set({ buttonColor: '' })}
-														title="Сбросить"
-													>
-														✕
-													</button>
-												)}
-											</div>
-											<p className={styles.hint}>
-												Цвет кнопки «Заказать звонок» внутри формы.
-												Оставьте пустым для использования основного цвета.
-											</p>
-										</div>
-
-										<div className={styles.field}>
-											<p className={styles.label}>
-												Размер кнопки:{' '}
-												<strong>{cfg.buttonSize ?? 60}px</strong>
-											</p>
-											<input
-												type="range"
-												min={40}
-												max={100}
-												value={cfg.buttonSize ?? 60}
-												onChange={e =>
-													set({
-														buttonSize: parseInt(e.target.value) || 60
-													})
-												}
-												className={styles.input}
-												style={{
-													padding: '8px 0',
-													background: 'transparent',
-													border: 'none'
-												}}
-											/>
-											<p className={styles.hint}>
-												Размер плавающей кнопки в пикселях. По умолчанию
-												60px.
-											</p>
-										</div>
-
-										<div className={styles.field}>
-											<p className={styles.label}>
-												Отступ от низа:{' '}
-												<strong>{cfg.buttonBottom ?? 3}%</strong>
-											</p>
-											<input
-												type="range"
-												min={0}
-												max={20}
-												step={0.5}
-												value={cfg.buttonBottom ?? 3}
-												onChange={e =>
-													set({
-														buttonBottom: parseFloat(e.target.value) || 3
-													})
-												}
-												className={styles.input}
-												style={{
-													padding: '8px 0',
-													background: 'transparent',
-													border: 'none'
-												}}
-											/>
-											<p className={styles.hint}>
-												Отступ кнопки от нижнего края экрана в процентах.
-											</p>
-										</div>
-
-										<div className={styles.field}>
-											<p className={styles.label}>
-												Отступ от края:{' '}
-												<strong>{cfg.buttonOffset ?? 3}%</strong>
-											</p>
-											<input
-												type="range"
-												min={0}
-												max={20}
-												step={0.5}
-												value={cfg.buttonOffset ?? 3}
-												onChange={e =>
-													set({
-														buttonOffset: parseFloat(e.target.value) || 3
-													})
-												}
-												className={styles.input}
-												style={{
-													padding: '8px 0',
-													background: 'transparent',
-													border: 'none'
-												}}
-											/>
-											<p className={styles.hint}>
-												Отступ кнопки от левого или правого края экрана в
-												процентах.
-											</p>
-										</div>
-
-										<div className={styles.field}>
-											<div className={styles.checkRow}>
-												<input
-													id="cbPulse"
-													type="checkbox"
-													checked={cfg.buttonPulse !== false}
-													onChange={e =>
-														set({ buttonPulse: e.target.checked })
-													}
-												/>
-												<label
-													htmlFor="cbPulse"
-													className={styles.checkLabel}
-												>
-													Пульсация кнопки
-												</label>
-											</div>
-											<p className={styles.hint}>
-												Дополнительный эффект свечения на плавающей кнопке.
-											</p>
-										</div>
+								<div className={styles.field}>
+									<p className={styles.label}>Цвет кнопки отправки:</p>
+									<div className={styles.colorRow}>
+										<input
+											type="color"
+											className={styles.colorPicker}
+											value={cfg.buttonColor || cfg.color || '#4705fb'}
+											onChange={e => set({ buttonColor: e.target.value })}
+										/>
+										<input
+											className={styles.input}
+											value={cfg.buttonColor || ''}
+											onChange={e => set({ buttonColor: e.target.value })}
+											placeholder="По умолчанию — основной цвет"
+										/>
+										{cfg.buttonColor && (
+											<button
+												type="button"
+												className={styles.clearColorBtn}
+												onClick={() => set({ buttonColor: '' })}
+												title="Сбросить"
+											>
+												✕
+											</button>
+										)}
 									</div>
-								</details>
+									<p className={styles.hint}>
+										Цвет кнопки «Заказать звонок» внутри формы. Оставьте
+										пустым для использования основного цвета.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Размер кнопки открытия:{' '}
+										<strong>{cfg.buttonSize ?? 60}px</strong>
+									</p>
+									<input
+										type="range"
+										min={40}
+										max={100}
+										value={cfg.buttonSize ?? 60}
+										onChange={e =>
+											set({
+												buttonSize: parseInt(e.target.value) || 60
+											})
+										}
+										className={styles.input}
+										style={{
+											padding: '8px 0',
+											background: 'transparent',
+											border: 'none'
+										}}
+									/>
+									<p className={styles.hint}>
+										Размер плавающей кнопки в пикселях. По умолчанию 60px.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Высота кнопки от низа экрана:{' '}
+										<strong>{cfg.buttonBottom ?? 3}%</strong>
+									</p>
+									<input
+										type="range"
+										min={1}
+										max={50}
+										value={cfg.buttonBottom ?? 3}
+										onChange={e =>
+											set({
+												buttonBottom: parseFloat(e.target.value) || 3
+											})
+										}
+										className={styles.input}
+										style={{
+											padding: '8px 0',
+											background: 'transparent',
+											border: 'none'
+										}}
+									/>
+									<p className={styles.hint}>
+										Отступ от нижнего края экрана в процентах. 3 — почти
+										внизу, 50 — по центру.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Отступ кнопки от края экрана:{' '}
+										<strong>{cfg.buttonOffset ?? 3}%</strong>
+									</p>
+									<input
+										type="range"
+										min={1}
+										max={50}
+										value={cfg.buttonOffset ?? 3}
+										onChange={e =>
+											set({
+												buttonOffset: parseFloat(e.target.value) || 3
+											})
+										}
+										className={styles.input}
+										style={{
+											padding: '8px 0',
+											background: 'transparent',
+											border: 'none'
+										}}
+									/>
+									<p className={styles.hint}>
+										Отступ кнопки от левого или правого края экрана в
+										процентах. 3 — почти у края, 50 — по центру.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<div className={styles.checkRow}>
+										<input
+											id="cbPulse"
+											type="checkbox"
+											checked={cfg.buttonPulse !== false}
+											onChange={e =>
+												set({ buttonPulse: e.target.checked })
+											}
+										/>
+										<label htmlFor="cbPulse" className={styles.checkLabel}>
+											Пульсация кнопки
+										</label>
+									</div>
+									<p className={styles.hint}>
+										Дополнительный эффект свечения на плавающей кнопке.
+									</p>
+								</div>
 							</div>
 
 							<div className={styles.settingsGroup}>
@@ -597,6 +572,29 @@ const CallbackSettingsModal = ({ callback, onClose, onSaved }: Props) => {
 									<h3 className={styles.settingsGroupTitle}>
 										Тексты кнопки и формы
 									</h3>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>Отображение облачка:</p>
+									<div className={styles.checkRow}>
+										<input
+											type="checkbox"
+											id="callbackBubbleEnabled"
+											checked={cfg.bubbleEnabled ?? true}
+											onChange={e =>
+												set({ bubbleEnabled: e.target.checked })
+											}
+										/>
+										<label
+											htmlFor="callbackBubbleEnabled"
+											className={styles.checkLabel}
+										>
+											Показывать облачко рядом с кнопкой
+										</label>
+									</div>
+									<p className={styles.hint}>
+										Если выключить, останется только плавающая кнопка.
+									</p>
 								</div>
 
 								<div className={styles.field}>
@@ -732,24 +730,6 @@ const CallbackSettingsModal = ({ callback, onClose, onSaved }: Props) => {
 							<div className={styles.settingsGroup}>
 								<div className={styles.settingsGroupHeader}>
 									<h3 className={styles.settingsGroupTitle}>Телефон</h3>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>Регион номера:</p>
-									<select
-										className={styles.input}
-										value={cfg.phoneRegion}
-										onChange={e => set({ phoneRegion: e.target.value })}
-									>
-										{PHONE_REGIONS.map(r => (
-											<option key={r.value} value={r.value}>
-												{r.label}
-											</option>
-										))}
-									</select>
-									<p className={styles.hint}>
-										Определяет формат и маску номера телефона в поле ввода.
-									</p>
 								</div>
 
 								<div className={styles.field}>
