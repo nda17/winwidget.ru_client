@@ -11,7 +11,7 @@ const WheelPreview = () => (
 	<div className={styles.wheelPreview}>
 		<Image
 			src="/images/tools/wheel-widget-preview.png"
-			alt="Превью колеса фортуны Winwidget"
+			alt="Превью виджета колеса фортуны Winwidget"
 			width={304}
 			height={260}
 			className={styles.wheelImage}
@@ -24,7 +24,7 @@ const QuizPreview = () => (
 	<div className={styles.quizPreview}>
 		<Image
 			src="/images/tools/quiz-widget-preview.png"
-			alt="Превью квиза Winwidget"
+			alt="Превью виджета квиза Winwidget"
 			width={940}
 			height={956}
 			className={styles.quizImage}
@@ -41,6 +41,19 @@ const CallbackPreview = () => (
 			width={653}
 			height={673}
 			className={styles.callbackImage}
+			sizes="(max-width: 560px) 78vw, 240px"
+		/>
+	</div>
+)
+
+const TimerPreview = () => (
+	<div className={styles.timerPreview}>
+		<Image
+			src="/images/tools/timer-widget-preview.png"
+			alt="Превью виджета обратного отсчёта Winwidget"
+			width={944}
+			height={690}
+			className={styles.timerImage}
 			sizes="(max-width: 560px) 78vw, 240px"
 		/>
 	</div>
@@ -80,7 +93,7 @@ const TOOLS: {
 		description: 'Создавайте ощущение\nсрочности у покупателя',
 		gradient:
 			'linear-gradient(160deg, #10b981 0%, #0ea5e9 50%, #6366f1 100%)',
-		comingSoon: true
+		preview: <TimerPreview />
 	},
 	{
 		title: 'Чат с оператором',
