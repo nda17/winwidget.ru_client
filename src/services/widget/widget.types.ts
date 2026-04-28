@@ -42,6 +42,7 @@ export interface WidgetConfig {
 	subtitle: string
 	winMessage: string
 	privacyUrl: string
+	developInfoActive: boolean
 	buttonText: string
 	filterDuplicates: boolean
 	buttonColor: string

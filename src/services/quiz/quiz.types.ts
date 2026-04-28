@@ -55,6 +55,7 @@ export interface QuizConfig {
 	contactTitle: string
 	dataType: 'PHONE' | 'EMAIL' | 'PHONE_AND_EMAIL' | 'NONE'
 	privacyUrl: string
+	developInfoActive: boolean
 	filterDuplicates: boolean
 	alreadyPlayedTitle: string
 	alreadyPlayedSubtitle: string

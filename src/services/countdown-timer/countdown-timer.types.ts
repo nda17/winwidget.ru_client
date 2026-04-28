@@ -46,6 +46,7 @@ export interface CountdownTimerConfig {
 	actionButtonText: string
 	actionButtonUrl: string
 	privacyUrl: string
+	developInfoActive: boolean
 	filterDuplicates: boolean
 	submissionCooldownDays: number
 	timerResetToken: string

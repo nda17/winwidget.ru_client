@@ -57,6 +57,7 @@ const getDefaultConfig = (): CountdownTimerConfig => ({
 	actionButtonUrl: '',
 	privacyUrl:
 		'https://winwidget.ru/legal-documentation/consent-processing',
+	developInfoActive: true,
 	filterDuplicates: false,
 	submissionCooldownDays: 0,
 	timerResetToken: '',

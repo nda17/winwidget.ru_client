@@ -47,6 +47,7 @@ const DEFAULT_CONFIG: CallbackConfig = {
 	successSubtitle: 'Ожидайте звонка в выбранное время',
 	privacyUrl:
 		'https://winwidget.ru/legal-documentation/consent-processing',
+	developInfoActive: true,
 	filterDuplicates: false,
 	timeSlots: [
 		'9:00–11:00',

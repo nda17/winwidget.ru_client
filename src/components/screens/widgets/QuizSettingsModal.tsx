@@ -65,6 +65,7 @@ const DEFAULT_CONFIG: QuizConfig = {
 	dataType: 'PHONE',
 	privacyUrl:
 		'https://winwidget.ru/legal-documentation/consent-processing',
+	developInfoActive: true,
 	filterDuplicates: false,
 	alreadyPlayedTitle: '🎉 Вы уже проходили этот квиз!',
 	alreadyPlayedSubtitle:

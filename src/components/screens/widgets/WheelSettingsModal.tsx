@@ -54,6 +54,7 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 		winMessage: 'Поздравляем! Не пропустите звонок, мы скоро свяжемся',
 		privacyUrl:
 			'https://winwidget.ru/legal-documentation/consent-processing',
+		developInfoActive: true,
 		buttonText: 'Крутить!',
 		filterDuplicates: false,
 		buttonColor: '',

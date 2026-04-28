@@ -31,6 +31,7 @@ export interface CallbackConfig {
 	successTitle: string
 	successSubtitle: string
 	privacyUrl: string
+	developInfoActive: boolean
 	filterDuplicates: boolean
 	timeSlots: string[]
 	integrations: CallbackIntegrations
