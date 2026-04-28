@@ -2,6 +2,7 @@
 import AdminNavigation from '@/components/ui/admin/admin-navigation/AdminNavigation'
 import ConfirmDialog from '@/components/ui/confirm-dialog/ConfirmDialog'
 import Heading from '@/components/ui/heading/Heading'
+import Pagination from '@/components/ui/pagination/Pagination'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import SubHeading from '@/components/ui/sub-heading/SubHeading'
 import notesService, { Note } from '@/services/notes/notes.service'
@@ -12,7 +13,7 @@ import {
 	useQueryClient
 } from '@tanstack/react-query'
 import { NextPage } from 'next'
-import { KeyboardEvent, useState } from 'react'
+import { KeyboardEvent, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import styles from './AdminNotes.module.scss'
 
@@ -21,6 +22,8 @@ const AdminNotes: NextPage = () => {
 	const queryClient = useQueryClient()
 	const [inputText, setInputText] = useState('')
 	const [deleteTarget, setDeleteTarget] = useState<Note | null>(null)
+	const [currentPage, setCurrentPage] = useState(1)
+	const itemQuantity = 10
 
 	const { data: notes = [], isLoading } = useQuery({
 		queryKey: ['notes'],
@@ -86,6 +89,31 @@ const AdminNotes: NextPage = () => {
 
 	const pending = notes.filter(n => !n.done)
 	const done = notes.filter(n => n.done)
+	const orderedNotes = [...pending, ...done]
+	const totalItems = orderedNotes.length
+	const totalPages = Math.max(1, Math.ceil(totalItems / itemQuantity))
+	const lastCardIndex = currentPage * itemQuantity
+	const firstCardIndex = lastCardIndex - itemQuantity
+	const activeNotes = orderedNotes.slice(firstCardIndex, lastCardIndex)
+	const activePending = activeNotes.filter(n => !n.done)
+	const activeDone = activeNotes.filter(n => n.done)
+	const listPage = Array.from({ length: totalPages }, (_, i) => i + 1)
+
+	useEffect(() => {
+		if (currentPage > totalPages) {
+			setCurrentPage(totalPages)
+		}
+	}, [currentPage, totalPages])
+
+	const prevPage = () => {
+		if (currentPage !== 1) setCurrentPage(prev => prev - 1)
+	}
+
+	const nextPage = () => {
+		if (currentPage !== totalPages) setCurrentPage(prev => prev + 1)
+	}
+
+	const changeActivePage = (page: number) => setCurrentPage(page)
 
 	return (
 		<section className={styles.wrapper}>
@@ -133,24 +161,33 @@ const AdminNotes: NextPage = () => {
 					<p className={styles.empty}>Задач пока нет</p>
 				) : (
 					<>
-						{pending.length > 0 && (
+						{activePending.length > 0 && (
 							<NoteList
-								notes={pending}
+								notes={activePending}
 								onToggle={handleToggle}
 								onDelete={setDeleteTarget}
 							/>
 						)}
-						{done.length > 0 && (
+						{activeDone.length > 0 && (
 							<>
 								<p className={styles.doneLabel}>
 									Выполнено ({done.length})
 								</p>
 								<NoteList
-									notes={done}
+									notes={activeDone}
 									onToggle={handleToggle}
 									onDelete={setDeleteTarget}
 								/>
 							</>
+						)}
+						{totalItems > itemQuantity && (
+							<Pagination
+								listPage={listPage}
+								currentPage={currentPage}
+								prevPage={prevPage}
+								nextPage={nextPage}
+								changeActivePage={changeActivePage}
+							/>
 						)}
 					</>
 				)}
