@@ -1,25 +1,9 @@
 'use client'
 
-import {
-	useMutation,
-	useQuery,
-	useQueryClient
-} from '@tanstack/react-query'
-import { useState } from 'react'
-import toast from 'react-hot-toast'
-import widgetService from '@/services/widget/widget.service'
-import quizService from '@/services/quiz/quiz.service'
-import callbackService from '@/services/callback/callback.service'
-import countdownTimerService from '@/services/countdown-timer/countdown-timer.service'
-import { Widget } from '@/services/widget/widget.types'
-import { Quiz } from '@/services/quiz/quiz.types'
-import { Callback } from '@/services/callback/callback.types'
-import { CountdownTimer } from '@/services/countdown-timer/countdown-timer.types'
-import { useAuthStore } from '@/store/auth-store/auth-store'
-import WheelSettingsModal from '@/components/screens/widgets/WheelSettingsModal'
-import QuizSettingsModal from '@/components/screens/widgets/QuizSettingsModal'
 import CallbackSettingsModal from '@/components/screens/widgets/CallbackSettingsModal'
 import CountdownTimerSettingsModal from '@/components/screens/widgets/CountdownTimerSettingsModal'
+import QuizSettingsModal from '@/components/screens/widgets/QuizSettingsModal'
+import WheelSettingsModal from '@/components/screens/widgets/WheelSettingsModal'
 import WidgetTypeModal from '@/components/screens/widgets/WidgetTypeModal'
 import {
 	CheckIcon,
@@ -29,6 +13,22 @@ import {
 	SettingsIcon
 } from '@/components/ui/icons/ActionIcons'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
+import callbackService from '@/services/callback/callback.service'
+import { Callback } from '@/services/callback/callback.types'
+import countdownTimerService from '@/services/countdown-timer/countdown-timer.service'
+import { CountdownTimer } from '@/services/countdown-timer/countdown-timer.types'
+import quizService from '@/services/quiz/quiz.service'
+import { Quiz } from '@/services/quiz/quiz.types'
+import widgetService from '@/services/widget/widget.service'
+import { Widget } from '@/services/widget/widget.types'
+import { useAuthStore } from '@/store/auth-store/auth-store'
+import {
+	useMutation,
+	useQuery,
+	useQueryClient
+} from '@tanstack/react-query'
+import { useState } from 'react'
+import toast from 'react-hot-toast'
 import styles from './Cabinet.module.scss'
 
 type ListItem =
@@ -174,7 +174,7 @@ const CabinetWidgets = () => {
 		onSuccess: (_, __, toastId) => {
 			queryClient.invalidateQueries({ queryKey: ['quizzes'] })
 			setConfirmDeleteId(null)
-			toast.success('Квиз удалён', { id: toastId })
+			toast.success('Виджет удалён', { id: toastId })
 		},
 		onError: (e: any, __, toastId) => {
 			toast.error(e?.response?.data?.message || 'Ошибка удаления квиза', {

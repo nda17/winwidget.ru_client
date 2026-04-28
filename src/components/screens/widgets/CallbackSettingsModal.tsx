@@ -512,7 +512,7 @@ const CallbackSettingsModal = ({ callback, onClose, onSaved }: Props) => {
 									</h3>
 								</div>
 
-								<div className={styles.field}>
+								<div className={styles.dangerActions}>
 									{!confirmResetDefaults ? (
 										<button
 											type="button"
@@ -522,21 +522,12 @@ const CallbackSettingsModal = ({ callback, onClose, onSaved }: Props) => {
 											Сбросить все настройки до значений по умолчанию
 										</button>
 									) : (
-										<div
-											style={{
-												display: 'flex',
-												flexDirection: 'column',
-												gap: 8
-											}}
-										>
-											<p
-												className={styles.hint}
-												style={{ color: '#e05a5a' }}
-											>
+										<div className={styles.dangerItem}>
+											<p className={styles.hint}>
 												Все настройки обратного звонка будут заменены на
 												стандартные. Действие необратимо после сохранения.
 											</p>
-											<div style={{ display: 'flex', gap: 8 }}>
+											<div className={styles.footerActions}>
 												<button
 													type="button"
 													className={styles.resetAttemptsBtn}
@@ -547,7 +538,7 @@ const CallbackSettingsModal = ({ callback, onClose, onSaved }: Props) => {
 												</button>
 												<button
 													type="button"
-													className={styles.copyBtn}
+													className={styles.cancelBtn}
 													onClick={() => setConfirmResetDefaults(false)}
 												>
 													Отмена

@@ -1439,10 +1439,7 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 									</h3>
 								</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Сброс попыток всех посетителей:
-									</p>
+								<div className={styles.dangerActions}>
 									{!confirmResetAttempts ? (
 										<button
 											type="button"
@@ -1453,21 +1450,12 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 											Сбросить попытки всех посетителей
 										</button>
 									) : (
-										<div
-											style={{
-												display: 'flex',
-												flexDirection: 'column',
-												gap: 8
-											}}
-										>
-											<p
-												className={styles.hint}
-												style={{ color: '#e05a5a' }}
-											>
+										<div className={styles.dangerItem}>
+											<p className={styles.hint}>
 												Все посетители смогут пройти квиз заново. Действие
 												необратимо.
 											</p>
-											<div style={{ display: 'flex', gap: 8 }}>
+											<div className={styles.footerActions}>
 												<button
 													type="button"
 													className={styles.resetAttemptsBtn}
@@ -1480,7 +1468,7 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 												</button>
 												<button
 													type="button"
-													className={styles.copyBtn}
+													className={styles.cancelBtn}
 													onClick={() => setConfirmResetAttempts(false)}
 												>
 													Отмена
@@ -1488,13 +1476,7 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 											</div>
 										</div>
 									)}
-									<p className={styles.hint}>
-										Позволяет сбросить счётчик прохождений квиза сразу всем
-										посетителям. Они снова смогут пройти квиз.
-									</p>
-								</div>
 
-								<div className={styles.field}>
 									{!confirmResetDefaults ? (
 										<button
 											type="button"
@@ -1504,21 +1486,12 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 											Сбросить все настройки до значений по умолчанию
 										</button>
 									) : (
-										<div
-											style={{
-												display: 'flex',
-												flexDirection: 'column',
-												gap: 8
-											}}
-										>
-											<p
-												className={styles.hint}
-												style={{ color: '#e05a5a' }}
-											>
+										<div className={styles.dangerItem}>
+											<p className={styles.hint}>
 												Все настройки квиза будут заменены на стандартные.
 												Действие необратимо после сохранения.
 											</p>
-											<div style={{ display: 'flex', gap: 8 }}>
+											<div className={styles.footerActions}>
 												<button
 													type="button"
 													className={styles.resetAttemptsBtn}
@@ -1542,7 +1515,7 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 												</button>
 												<button
 													type="button"
-													className={styles.copyBtn}
+													className={styles.cancelBtn}
 													onClick={() => setConfirmResetDefaults(false)}
 												>
 													Отмена

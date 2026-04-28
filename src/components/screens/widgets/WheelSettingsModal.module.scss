@@ -145,6 +145,15 @@ select.input {
 .clearColorBtn:hover {
 	@apply border-[#e05a5a] text-[#e05a5a];
 }
+
+.dangerActions {
+	@apply flex flex-col gap-3;
+}
+
+.dangerItem {
+	@apply flex flex-col gap-3 rounded-lg border border-[#f1c7c7] bg-[#fff7f7] p-3;
+}
+
 .resetAttemptsBtn {
 	@apply mt-1 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer bg-transparent border border-[#e0d6f0] text-[#e05a5a] transition-[background] duration-200 self-start;
 }

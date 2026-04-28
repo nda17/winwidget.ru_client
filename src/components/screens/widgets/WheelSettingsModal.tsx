@@ -41,7 +41,7 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 		buttonPulse: true,
 		buttonBottom: 3,
 		buttonOffset: 3,
-		buttonSize: 64,
+		buttonSize: 60,
 		bubbleEnabled: true,
 		bubbleText: 'Испытайте удачу!',
 		alreadyPlayedTitle: '🎉 Вы уже участвовали!',
@@ -645,13 +645,13 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 								<div className={styles.field}>
 									<p className={styles.label}>
 										Размер кнопки открытия:{' '}
-										<strong>{config.buttonSize ?? 64}px</strong>
+										<strong>{config.buttonSize ?? 60}px</strong>
 									</p>
 									<input
 										type="range"
 										min={40}
 										max={100}
-										value={config.buttonSize ?? 64}
+										value={config.buttonSize ?? 60}
 										onChange={e =>
 											setField('buttonSize', Number(e.target.value))
 										}
@@ -664,7 +664,7 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 									/>
 									<p className={styles.hint}>
 										Размер иконки плавающей кнопки в пикселях. По умолчанию
-										64px.
+										60px.
 									</p>
 								</div>
 
@@ -945,9 +945,7 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 									</h3>
 								</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>Сброс попыток:</p>
-
+								<div className={styles.dangerActions}>
 									{!confirmResetAttempts ? (
 										<button
 											type="button"
@@ -961,21 +959,12 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 											Сбросить попытки всех посетителей
 										</button>
 									) : (
-										<div
-											style={{
-												display: 'flex',
-												flexDirection: 'column',
-												gap: '8px'
-											}}
-										>
-											<p
-												className={styles.hint}
-												style={{ color: '#e05a5a' }}
-											>
+										<div className={styles.dangerItem}>
+											<p className={styles.hint}>
 												Все посетители смогут крутить колесо заново.
 												Действие необратимо.
 											</p>
-											<div style={{ display: 'flex', gap: '8px' }}>
+											<div className={styles.footerActions}>
 												<button
 													type="button"
 													className={styles.resetAttemptsBtn}
@@ -993,7 +982,7 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 												</button>
 												<button
 													type="button"
-													className={styles.copyBtn}
+													className={styles.cancelBtn}
 													onClick={() => setConfirmResetAttempts(false)}
 												>
 													Отмена
@@ -1001,13 +990,7 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 											</div>
 										</div>
 									)}
-									<p className={styles.hint}>
-										Позволяет сбросить счётчик прокруток колеса сразу всем
-										посетителям. Они снова смогут участвовать в розыгрыше.
-									</p>
-								</div>
 
-								<div className={styles.field}>
 									{!confirmReset ? (
 										<button
 											type="button"
@@ -1017,21 +1000,12 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 											Сбросить все настройки до значений по умолчанию
 										</button>
 									) : (
-										<div
-											style={{
-												display: 'flex',
-												flexDirection: 'column',
-												gap: '8px'
-											}}
-										>
-											<p
-												className={styles.hint}
-												style={{ color: '#e05a5a' }}
-											>
+										<div className={styles.dangerItem}>
+											<p className={styles.hint}>
 												Все настройки виджета будут заменены на
 												стандартные. Действие необратимо после сохранения.
 											</p>
-											<div style={{ display: 'flex', gap: '8px' }}>
+											<div className={styles.footerActions}>
 												<button
 													type="button"
 													className={styles.resetAttemptsBtn}
@@ -1050,7 +1024,7 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 												</button>
 												<button
 													type="button"
-													className={styles.copyBtn}
+													className={styles.cancelBtn}
 													onClick={() => setConfirmReset(false)}
 												>
 													Отмена

@@ -483,38 +483,74 @@ const CountdownTimerSettingsModal = ({
 								<h3 className={styles.settingsGroupTitle}>
 									Опасные действия
 								</h3>
-								{confirmResetDefaults ? (
-									<div className={styles.field}>
-										<p className={styles.hint}>
-											Все настройки будут заменены на стандартные.
-										</p>
-										<div className={styles.footerActions}>
-											<button
-												type="button"
-												className={styles.resetAttemptsBtn}
-												onClick={handleResetDefaults}
-												disabled={mutation.isPending}
-											>
-												Да, сбросить
-											</button>
-											<button
-												type="button"
-												className={styles.cancelBtn}
-												onClick={() => setConfirmResetDefaults(false)}
-											>
-												Отмена
-											</button>
+								<div className={styles.dangerActions}>
+									{confirmResetDefaults ? (
+										<div className={styles.dangerItem}>
+											<p className={styles.hint}>
+												Все настройки будут заменены на стандартные.
+											</p>
+											<div className={styles.footerActions}>
+												<button
+													type="button"
+													className={styles.resetAttemptsBtn}
+													onClick={handleResetDefaults}
+													disabled={mutation.isPending}
+												>
+													Да, сбросить
+												</button>
+												<button
+													type="button"
+													className={styles.cancelBtn}
+													onClick={() => setConfirmResetDefaults(false)}
+												>
+													Отмена
+												</button>
+											</div>
 										</div>
-									</div>
-								) : (
-									<button
-										type="button"
-										className={styles.resetAttemptsBtn}
-										onClick={() => setConfirmResetDefaults(true)}
-									>
-										Сбросить все настройки до значений по умолчанию
-									</button>
-								)}
+									) : (
+										<button
+											type="button"
+											className={styles.resetAttemptsBtn}
+											onClick={() => setConfirmResetDefaults(true)}
+										>
+											Сбросить все настройки до значений по умолчанию
+										</button>
+									)}
+
+									{confirmResetTimers ? (
+										<div className={styles.dangerItem}>
+											<p className={styles.hint}>
+												Персональный отсчёт начнётся заново у всех
+												посетителей.
+											</p>
+											<div className={styles.footerActions}>
+												<button
+													type="button"
+													className={styles.resetAttemptsBtn}
+													onClick={handleResetTimers}
+													disabled={mutation.isPending}
+												>
+													Подтвердить сброс
+												</button>
+												<button
+													type="button"
+													className={styles.cancelBtn}
+													onClick={() => setConfirmResetTimers(false)}
+												>
+													Отмена
+												</button>
+											</div>
+										</div>
+									) : (
+										<button
+											type="button"
+											className={styles.resetAttemptsBtn}
+											onClick={() => setConfirmResetTimers(true)}
+										>
+											Сбросить персональные таймеры для всех посетителей
+										</button>
+									)}
+								</div>
 							</div>
 						</div>
 					)}
@@ -633,38 +669,6 @@ const CountdownTimerSettingsModal = ({
 											set({ expiredSubtitle: e.target.value })
 										}
 									/>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Сброс персональных таймеров:
-									</p>
-									{confirmResetTimers ? (
-										<div className={styles.footerActions}>
-											<button
-												type="button"
-												className={styles.resetAttemptsBtn}
-												onClick={handleResetTimers}
-												disabled={mutation.isPending}
-											>
-												Подтвердить сброс
-											</button>
-											<button
-												type="button"
-												className={styles.cancelBtn}
-												onClick={() => setConfirmResetTimers(false)}
-											>
-												Отмена
-											</button>
-										</div>
-									) : (
-										<button
-											type="button"
-											className={styles.resetAttemptsBtn}
-											onClick={() => setConfirmResetTimers(true)}
-										>
-											Сбросить для всех посетителей
-										</button>
-									)}
 								</div>
 							</div>
 						</div>
