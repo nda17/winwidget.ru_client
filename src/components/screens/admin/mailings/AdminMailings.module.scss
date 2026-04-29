@@ -1,0 +1,139 @@
+.wrapper {
+	@apply w-full flex flex-col relative;
+}
+
+.card,
+.resultCard {
+	@apply flex flex-col gap-5 bg-white border border-[#e0d6f0] rounded-xl p-5 max-w-[680px] mx-auto w-full mb-6;
+
+	@media (max-width: 480px) {
+		@apply p-3 rounded-[10px] gap-[14px];
+	}
+}
+
+.field {
+	@apply flex flex-col gap-[6px];
+}
+
+.label {
+	@apply text-[0.9rem] font-semibold text-[#1a1a1a];
+}
+
+.hint {
+	@apply text-[0.8rem] text-[#777] mt-[2px];
+}
+
+.input,
+.textarea {
+	@apply w-full bg-[#f8f5ff] border border-[#e0d6f0] rounded-lg text-[#1a1a1a] text-[0.9rem] outline-none transition-[border-color] duration-200 px-[14px] py-[10px];
+	font-family: inherit;
+}
+
+.input:focus,
+.textarea:focus {
+	@apply border-[#c4a8e8];
+}
+
+.input::placeholder,
+.textarea::placeholder {
+	@apply text-[#bbb];
+}
+
+.textarea {
+	@apply resize-y min-h-[180px] leading-relaxed;
+}
+
+.counter {
+	@apply text-[0.78rem] text-[#999] text-right;
+}
+
+.audienceRow {
+	@apply flex items-center justify-between gap-4 border border-[#efe8fb] rounded-xl p-4 bg-[#fcfaff];
+
+	@media (max-width: 520px) {
+		@apply items-start;
+	}
+}
+
+.toggle {
+	@apply relative shrink-0 rounded-full cursor-pointer border-none w-12 h-[26px] bg-[#e0d6f0] transition-[background] duration-200;
+}
+
+.toggleOn {
+	background: linear-gradient(90deg, #7b3fa0, #c21b84);
+}
+
+.toggleThumb {
+	@apply absolute top-1 left-1 w-[18px] h-[18px] bg-white rounded-full transition-transform duration-200;
+}
+
+.toggleOn .toggleThumb {
+	@apply translate-x-[22px];
+}
+
+.audienceOptions {
+	@apply grid grid-cols-2 gap-3;
+
+	@media (max-width: 520px) {
+		@apply grid-cols-1;
+	}
+}
+
+.optionBtn {
+	@apply rounded-lg border border-[#d7c4ee] bg-white text-[#6b2d8f] text-sm font-semibold cursor-pointer transition-[opacity,border-color,background,color] duration-200 py-[10px] px-4;
+}
+
+.optionBtn:hover {
+	@apply opacity-90 border-[#c21b84];
+}
+
+.optionBtnActive {
+	@apply bg-[#6b2d8f] border-[#6b2d8f] text-white;
+}
+
+.sendBtn {
+	@apply self-start rounded-lg border-none text-white text-sm font-semibold cursor-pointer transition-opacity duration-200 py-[10px] px-[24px];
+	background: linear-gradient(
+		87.12deg,
+		#470b58 1.98%,
+		#c21b84 50.27%,
+		#fa595e 74.42%,
+		#f8bd31 98.56%
+	);
+}
+
+.sendBtn:hover {
+	@apply opacity-90;
+}
+
+.sendBtn:disabled {
+	@apply opacity-50 cursor-not-allowed;
+}
+
+.resultTitle {
+	@apply text-base font-semibold text-[#1a1a1a];
+}
+
+.resultGrid {
+	@apply grid grid-cols-4 gap-3;
+
+	@media (max-width: 640px) {
+		@apply grid-cols-2;
+	}
+}
+
+.resultGrid > div {
+	@apply flex flex-col gap-1 rounded-lg bg-[#f8f5ff] border border-[#efe8fb] p-3;
+}
+
+.resultLabel {
+	@apply text-[0.75rem] text-[#777];
+}
+
+.resultValue {
+	@apply text-[0.95rem] font-semibold text-[#1a1a1a];
+}
+
+.resultTime {
+	@apply text-[0.8rem] text-[#777];
+}

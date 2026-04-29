@@ -24,6 +24,10 @@ export const navItems: INavItem[] = [
 		link: ADMIN_PAGES.SETTINGS
 	},
 	{
+		title: 'Рассылки',
+		link: ADMIN_PAGES.MAILINGS
+	},
+	{
 		title: 'Система',
 		link: ADMIN_PAGES.SYSTEM
 	},
