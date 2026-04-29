@@ -10,6 +10,7 @@ import { NextPage } from 'next'
 import dynamic from 'next/dynamic'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
+import HomeContentEditor from './home-content-editor/HomeContentEditor'
 import styles from './AdminContentSettings.module.scss'
 
 const Editor = dynamic(
@@ -31,9 +32,16 @@ const PAGES = [
 ] as const
 
 type Slug = (typeof PAGES)[number]['slug']
+type ContentArea = 'home' | 'legal'
+
+const AREAS: Array<{ key: ContentArea; label: string }> = [
+	{ key: 'home', label: 'Главная страница' },
+	{ key: 'legal', label: 'Юридические страницы' }
+]
 
 const AdminContentSettings: NextPage = () => {
 	const auth = useAuthStore(state => state.auth)
+	const [activeArea, setActiveArea] = useState<ContentArea>('home')
 	const [activeSlug, setActiveSlug] = useState<Slug>('personal-policy')
 	const [drafts, setDrafts] = useState<Record<string, string>>({})
 	const queryClient = useQueryClient()
@@ -76,67 +84,91 @@ const AdminContentSettings: NextPage = () => {
 			<Heading text="Панель администратора" />
 			<AdminNavigation />
 
-			<SubHeading text="Редактирование юридических страниц" />
-
 			<div className={styles.pageTabs}>
-				{PAGES.map(page => (
+				{AREAS.map(area => (
 					<button
-						key={page.slug}
-						className={`${styles.pageTab} ${activeSlug === page.slug ? styles.pageTabActive : ''}`}
-						onClick={() => setActiveSlug(page.slug)}
+						key={area.key}
+						className={`${styles.pageTab} ${activeArea === area.key ? styles.pageTabActive : ''}`}
+						onClick={() => setActiveArea(area.key)}
 					>
-						{page.label}
+						{area.label}
 					</button>
 				))}
 			</div>
 
-			<div className={styles.section}>
-				<div className={styles.sectionHeader}>
-					<p className={styles.fieldLabel}>
-						{PAGES.find(p => p.slug === activeSlug)?.label}
-					</p>
-					{isDirty && (
-						<span className={styles.dirtyBadge}>
-							Несохранённые изменения
-						</span>
-					)}
-				</div>
+			{activeArea === 'home' ? (
+				<>
+					<SubHeading text="Редактирование главной страницы" />
+					<HomeContentEditor />
+				</>
+			) : (
+				<>
+					<SubHeading text="Редактирование юридических страниц" />
 
-				{isLoading ? (
-					<p className={styles.loading}>Загрузка...</p>
-				) : (
-					<Editor
-						value={activeContent}
-						onChange={html =>
-							setDrafts(prev => ({ ...prev, [activeSlug]: html }))
-						}
-					/>
-				)}
+					<div className={styles.pageTabs}>
+						{PAGES.map(page => (
+							<button
+								key={page.slug}
+								className={`${styles.pageTab} ${activeSlug === page.slug ? styles.pageTabActive : ''}`}
+								onClick={() => setActiveSlug(page.slug)}
+							>
+								{page.label}
+							</button>
+						))}
+					</div>
 
-				<div className={styles.btnRow}>
-					<button
-						className={styles.saveBtn}
-						disabled={!isDirty || isSaving}
-						onClick={() => save(activeSlug)}
-					>
-						Сохранить
-					</button>
-					{isDirty && (
-						<button
-							className={styles.resetBtn}
-							onClick={() =>
-								setDrafts(prev => {
-									const next = { ...prev }
-									delete next[activeSlug]
-									return next
-								})
-							}
-						>
-							Сбросить
-						</button>
-					)}
-				</div>
-			</div>
+					<div className={styles.section}>
+						<div className={styles.sectionHeader}>
+							<p className={styles.fieldLabel}>
+								{PAGES.find(p => p.slug === activeSlug)?.label}
+							</p>
+							{isDirty && (
+								<span className={styles.dirtyBadge}>
+									Несохранённые изменения
+								</span>
+							)}
+						</div>
+
+						{isLoading ? (
+							<p className={styles.loading}>Загрузка...</p>
+						) : (
+							<Editor
+								value={activeContent}
+								onChange={html =>
+									setDrafts(prev => ({
+										...prev,
+										[activeSlug]: html
+									}))
+								}
+							/>
+						)}
+
+						<div className={styles.btnRow}>
+							<button
+								className={styles.saveBtn}
+								disabled={!isDirty || isSaving}
+								onClick={() => save(activeSlug)}
+							>
+								Сохранить
+							</button>
+							{isDirty && (
+								<button
+									className={styles.resetBtn}
+									onClick={() =>
+										setDrafts(prev => {
+											const next = { ...prev }
+											delete next[activeSlug]
+											return next
+										})
+									}
+								>
+									Сбросить
+								</button>
+							)}
+						</div>
+					</div>
+				</>
+			)}
 		</section>
 	)
 }

@@ -1,5 +1,9 @@
 'use client'
 
+import type {
+	HomePageIntegrationItem,
+	HomePageIntegrationsContent
+} from '@/services/home-page-content/home-page-content.types'
 import { type CSSProperties, type ReactNode } from 'react'
 import styles from './CurvedCarousel.module.scss'
 
@@ -258,42 +262,53 @@ const getCardStyle = (slide: Slide): CardStyle => ({
 	'--card-accent-sheen': withAlpha(slide.accent, '14')
 })
 
-const renderCards = (isDuplicate = false) =>
-	slides.map(slide => (
-		<article
-			key={`${isDuplicate ? 'copy' : 'main'}-${slide.title}`}
-			className={styles.card}
-			style={getCardStyle(slide)}
-			aria-hidden={isDuplicate}
-		>
-			<div className={styles.cardHeader}>
-				<div className={styles.iconWrap}>
-					<svg
-						width="28"
-						height="28"
-						viewBox="0 0 48 48"
-						fill="none"
-						color="currentColor"
-					>
-						{slide.icon}
-					</svg>
-				</div>
-				<span className={styles.tag}>{slide.tag}</span>
-			</div>
-			<div className={styles.copy}>
-				<h3 className={styles.title}>{slide.title}</h3>
-				<p className={styles.description}>{slide.description}</p>
-			</div>
-			<div className={styles.cardFooter}>
-				<span className={styles.status}>
-					<span className={styles.statusDot} />
-					<span>Готово к подключению</span>
-				</span>
-			</div>
-		</article>
-	))
+const renderCards = (
+	items: HomePageIntegrationItem[],
+	isDuplicate = false
+) =>
+	items.map((slide, index) => {
+		const visual = slides[index % slides.length]
 
-export default function CurvedCarousel() {
+		return (
+			<article
+				key={`${isDuplicate ? 'copy' : 'main'}-${slide.title}-${index}`}
+				className={styles.card}
+				style={getCardStyle(visual)}
+				aria-hidden={isDuplicate}
+			>
+				<div className={styles.cardHeader}>
+					<div className={styles.iconWrap}>
+						<svg
+							width="28"
+							height="28"
+							viewBox="0 0 48 48"
+							fill="none"
+							color="currentColor"
+						>
+							{visual.icon}
+						</svg>
+					</div>
+					<span className={styles.tag}>{slide.tag}</span>
+				</div>
+				<div className={styles.copy}>
+					<h3 className={styles.title}>{slide.title}</h3>
+					<p className={styles.description}>{slide.description}</p>
+				</div>
+				<div className={styles.cardFooter}>
+					<span className={styles.status}>
+						<span className={styles.statusDot} />
+						<span>Готово к подключению</span>
+					</span>
+				</div>
+			</article>
+		)
+	})
+
+interface Props {
+	content: HomePageIntegrationsContent
+}
+
+export default function CurvedCarousel({ content }: Props) {
 	return (
 		<section
 			className={styles.section}
@@ -301,18 +316,18 @@ export default function CurvedCarousel() {
 		>
 			<div className={styles.heading}>
 				<h2 id="integrations-title" className={styles.headingTitle}>
-					Готовые интеграции для вашего бизнеса
+					{content.title}
 				</h2>
 			</div>
 
 			<div className={styles.viewport}>
 				<div className={styles.track}>
-					<div className={styles.group}>{renderCards()}</div>
+					<div className={styles.group}>{renderCards(content.items)}</div>
 					<div
 						className={`${styles.group} ${styles.groupDuplicate}`}
 						aria-hidden="true"
 					>
-						{renderCards(true)}
+						{renderCards(content.items, true)}
 					</div>
 				</div>
 			</div>

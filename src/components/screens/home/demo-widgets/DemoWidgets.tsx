@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import type { HomePageDemoWidgetsContent } from '@/services/home-page-content/home-page-content.types'
 import DemoWheel from '@/components/screens/home/demo-wheel/DemoWheel'
 import DemoQuiz from '@/components/screens/home/demo-quiz/DemoQuiz'
 import DemoCallback from '@/components/screens/home/demo-callback/DemoCallback'
 import DemoCountdown from '@/components/screens/home/demo-countdown/DemoCountdown'
+import { useEffect, useRef, useState } from 'react'
 import styles from './DemoWidgets.module.scss'
 
 type ActiveDemo = 'wheel' | 'quiz' | 'callback' | 'countdown'
@@ -12,14 +13,11 @@ type ActiveDemo = 'wheel' | 'quiz' | 'callback' | 'countdown'
 const SWITCH_INTERVAL = 7000
 const FADE_DURATION = 400
 
-const BUBBLE_TEXTS: Record<ActiveDemo, string> = {
-	wheel: 'Испытайте удачу!',
-	quiz: 'Поможем сделать выбор!',
-	callback: 'Перезвоним вам за 5 минут',
-	countdown: 'Супер-акция!'
+interface Props {
+	content: HomePageDemoWidgetsContent
 }
 
-const DemoWidgets = () => {
+const DemoWidgets = ({ content }: Props) => {
 	const [activeDemo, setActiveDemo] = useState<ActiveDemo>('wheel')
 	const [btnVisible, setBtnVisible] = useState(true)
 	const [wheelOpen, setWheelOpen] = useState(false)
@@ -90,7 +88,9 @@ const DemoWidgets = () => {
 						>
 							✕
 						</button>
-						<p className={styles.bubbleText}>{BUBBLE_TEXTS[activeDemo]}</p>
+						<p className={styles.bubbleText}>
+							{content.bubbleTexts[activeDemo]}
+						</p>
 						<span className={styles.bubbleDot} />
 						<div className={styles.bubbleTail} />
 					</div>
@@ -121,7 +121,7 @@ const DemoWidgets = () => {
 							<span
 								className={`${styles.floatLabel} ${styles.floatLabelWheel}`}
 							>
-								Приз!
+								{content.labels.wheel}
 							</span>
 						</>
 					) : activeDemo === 'quiz' ? (
@@ -164,9 +164,14 @@ const DemoWidgets = () => {
 							<span
 								className={`${styles.floatLabel} ${styles.floatLabelQuiz}`}
 							>
-								Квиз!
-								<br />
-								Приз!
+								{content.labels.quiz
+									.split('\n')
+									.map((line, index, lines) => (
+										<span key={`${line}-${index}`}>
+											{line}
+											{index < lines.length - 1 && <br />}
+										</span>
+									))}
 							</span>
 						</>
 					) : activeDemo === 'callback' ? (
@@ -257,7 +262,7 @@ const DemoWidgets = () => {
 							<span
 								className={`${styles.floatLabel} ${styles.floatLabelTimer}`}
 							>
-								Акция
+								{content.labels.countdown}
 							</span>
 						</>
 					)}

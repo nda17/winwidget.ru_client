@@ -1,16 +1,25 @@
 import HomeStartTrialLink from '@/components/screens/home/_components/HomeStartTrialLink'
+import type { HomePageCtaContent } from '@/services/home-page-content/home-page-content.types'
 import styles from './CtaBanner.module.scss'
 
-const CtaBanner = () => {
+interface Props {
+	content: HomePageCtaContent
+}
+
+const CtaBanner = ({ content }: Props) => {
 	return (
 		<section className={styles.section}>
 			<div className={styles.inner}>
 				<p className={styles.text}>
-					Попробуйте сейчас
-					<br />и начните получать больше заявок уже через 10 минут
+					{content.text.split('\n').map((line, index, lines) => (
+						<span key={`${line}-${index}`}>
+							{line}
+							{index < lines.length - 1 && <br />}
+						</span>
+					))}
 				</p>
 				<HomeStartTrialLink className={styles.button}>
-					Начать бесплатный период
+					{content.buttonText}
 					<span className={styles.arrow}>
 						<svg
 							width="20"

@@ -7,25 +7,38 @@ import HeroSection from '@/components/screens/home/hero/HeroSection'
 import HomePricing from '@/components/screens/home/pricing/HomePricing'
 import HomeSteps from '@/components/screens/home/steps/HomeSteps'
 import HomeTools from '@/components/screens/home/tools/HomeTools'
+import type { HomePageContent } from '@/services/home-page-content/home-page-content.types'
 import styles from './Home.module.scss'
 
-const Home = () => {
+interface Props {
+	content: HomePageContent
+}
+
+const Home = ({ content }: Props) => {
 	return (
 		<div className={styles.page}>
-			<LazyDemoWidgets />
-			<HeroSection />
-			<CurvedCarousel />
-			<Analysis />
-			<HomeTools />
-			<HomeSteps />
-			<HomePricing />
-			<HomeFaq />
-			<div className={styles.offerWrapper}>
-				<div className={styles.circleOrange}></div>
-				<div className={styles.circleYellow}></div>
-				<div className={styles.circlePink}></div>
-				<CtaBanner />
-			</div>
+			{content.demoWidgets.enabled && (
+				<LazyDemoWidgets content={content.demoWidgets} />
+			)}
+			<HeroSection content={content.hero} />
+			{content.integrations.enabled && (
+				<CurvedCarousel content={content.integrations} />
+			)}
+			{content.analysis.enabled && <Analysis content={content.analysis} />}
+			{content.tools.enabled && <HomeTools content={content.tools} />}
+			{content.steps.enabled && <HomeSteps content={content.steps} />}
+			{content.pricing.enabled && (
+				<HomePricing content={content.pricing} />
+			)}
+			{content.faq.enabled && <HomeFaq content={content.faq} />}
+			{content.cta.enabled && (
+				<div className={styles.offerWrapper}>
+					<div className={styles.circleOrange}></div>
+					<div className={styles.circleYellow}></div>
+					<div className={styles.circlePink}></div>
+					<CtaBanner content={content.cta} />
+				</div>
+			)}
 		</div>
 	)
 }

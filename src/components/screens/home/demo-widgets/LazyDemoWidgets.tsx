@@ -1,5 +1,6 @@
 'use client'
 
+import type { HomePageDemoWidgetsContent } from '@/services/home-page-content/home-page-content.types'
 import dynamic from 'next/dynamic'
 import { startTransition, useEffect, useState } from 'react'
 
@@ -21,7 +22,11 @@ const INTERACTION_EVENTS: Array<keyof WindowEventMap> = [
 	'scroll'
 ]
 
-const LazyDemoWidgets = () => {
+interface Props {
+	content: HomePageDemoWidgetsContent
+}
+
+const LazyDemoWidgets = ({ content }: Props) => {
 	const [shouldLoad, setShouldLoad] = useState(false)
 
 	useEffect(() => {
@@ -60,7 +65,7 @@ const LazyDemoWidgets = () => {
 
 	if (!shouldLoad) return null
 
-	return <DemoWidgets />
+	return <DemoWidgets content={content} />
 }
 
 export default LazyDemoWidgets

@@ -1,10 +1,10 @@
+import type { HomePageStepsContent } from '@/services/home-page-content/home-page-content.types'
 import clsx from 'clsx'
 import styles from './HomeSteps.module.scss'
 
-const STEPS = [
+const STEP_STYLES = [
 	{
 		num: 1,
-		text: 'Настройте дизайн и логику виджета в личном кабинете',
 		accent: '#e05a8a',
 		border: 'linear-gradient(135deg, #f7a8c4, #e05a8a)',
 		glow: 'radial-gradient(circle at top left, rgb(224 90 138 / 0.22), transparent 58%)',
@@ -12,7 +12,6 @@ const STEPS = [
 	},
 	{
 		num: 2,
-		text: 'Скопируйте одну строчку кода',
 		accent: '#7b5ce5',
 		border: 'linear-gradient(135deg, #c4b0f7, #7b5ce5)',
 		glow: 'radial-gradient(circle at top left, rgb(123 92 229 / 0.22), transparent 58%)',
@@ -20,7 +19,6 @@ const STEPS = [
 	},
 	{
 		num: 3,
-		text: 'Вставьте в код своего сайта',
 		accent: '#3a8fd4',
 		border: 'linear-gradient(135deg, #a8d4f7, #3a8fd4)',
 		glow: 'radial-gradient(circle at top left, rgb(58 143 212 / 0.2), transparent 58%)',
@@ -28,47 +26,55 @@ const STEPS = [
 	}
 ]
 
-const HomeSteps = () => {
+interface Props {
+	content: HomePageStepsContent
+}
+
+const HomeSteps = ({ content }: Props) => {
 	return (
 		<section className={styles.section}>
-			<h2 className={styles.title}>Установка проще, чем сварить кофе..</h2>
+			<h2 className={styles.title}>{content.title}</h2>
 
 			<div className={styles.gridLayout}>
-				{STEPS.map(step => (
-					<div
-						key={step.num}
-						className={styles.card}
-						style={
-							{
-								'--border-gradient': step.border,
-								'--card-accent': step.accent,
-								'--card-glow': step.glow
-							} as React.CSSProperties
-						}
-					>
-						<div className={styles.cardSurface}>
-							<div className={styles.cardTop}>
-								<div className={styles.iconShell}>
-									<span
-										className={clsx(
-											styles.cardIcon,
-											styles[step.iconClass as keyof typeof styles]
-										)}
-									></span>
+				{content.items.map((step, index) => {
+					const stepStyle = STEP_STYLES[index % STEP_STYLES.length]
+
+					return (
+						<div
+							key={`${step.text}-${index}`}
+							className={styles.card}
+							style={
+								{
+									'--border-gradient': stepStyle.border,
+									'--card-accent': stepStyle.accent,
+									'--card-glow': stepStyle.glow
+								} as React.CSSProperties
+							}
+						>
+							<div className={styles.cardSurface}>
+								<div className={styles.cardTop}>
+									<div className={styles.iconShell}>
+										<span
+											className={clsx(
+												styles.cardIcon,
+												styles[stepStyle.iconClass as keyof typeof styles]
+											)}
+										></span>
+									</div>
+									<span className={styles.cardBadge}>
+										Шаг {String(index + 1).padStart(2, '0')}
+									</span>
 								</div>
-								<span className={styles.cardBadge}>
-									Шаг {String(step.num).padStart(2, '0')}
+
+								<p className={styles.text}>{step.text}</p>
+
+								<span className={styles.num}>
+									{String(index + 1).padStart(2, '0')}
 								</span>
 							</div>
-
-							<p className={styles.text}>{step.text}</p>
-
-							<span className={styles.num}>
-								{String(step.num).padStart(2, '0')}
-							</span>
 						</div>
-					</div>
-				))}
+					)
+				})}
 
 				<div className={styles.cardResult}>
 					<div className={styles.resultInner}>
@@ -77,11 +83,12 @@ const HomeSteps = () => {
 							<span className={styles.iconHeart}></span>
 						</div>
 						<p className={styles.resultText}>
-							Ловите
-							<br />
-							горячие
-							<br />
-							лиды!
+							{content.resultText.split('\n').map((line, index, lines) => (
+								<span key={`${line}-${index}`}>
+									{line}
+									{index < lines.length - 1 && <br />}
+								</span>
+							))}
 						</p>
 					</div>
 				</div>

@@ -2,11 +2,17 @@ import heroBgDesktopAvif from '@/assets/images/hero/hero-bg-desktop.avif'
 import heroBgDesktopWebp from '@/assets/images/hero/hero-bg-desktop.webp'
 import heroBgMobileAvif from '@/assets/images/hero/hero-bg-mobile.avif'
 import heroBgMobileWebp from '@/assets/images/hero/hero-bg-mobile.webp'
+import type { HomePageHeroContent } from '@/services/home-page-content/home-page-content.types'
 import { getImageProps } from 'next/image'
+import { Fragment } from 'react'
 import HeroActions from './HeroActions'
 import styles from './HeroSection.module.scss'
 
-const HeroSection = () => {
+interface Props {
+	content: HomePageHeroContent
+}
+
+const HeroSection = ({ content }: Props) => {
 	const commonImageProps = {
 		alt: '',
 		sizes: '100vw',
@@ -84,17 +90,23 @@ const HeroSection = () => {
 			<div className={styles.heroThirdCircle} aria-hidden="true"></div>
 			<div className={styles.heroContent}>
 				<h1 id="hero-title" className={styles.title}>
-					Увеличение конверсии
-					<br /> сайта до{' '}
+					{content.titleBeforeAccent
+						.split('\n')
+						.map((line, index, lines) => (
+							<Fragment key={`${line}-${index}`}>
+								{line}
+								{index < lines.length - 1 && <br />}
+							</Fragment>
+						))}{' '}
 					<span className={styles.percentWrapper}>
-						<span className={styles.titleSide}></span>30%
+						<span className={styles.titleSide}></span>
+						{content.accentText}
 					</span>
-					<br /> с помощью умных виджетов
+					<br />
+					{content.titleAfterAccent}
 				</h1>
-				<p className={styles.subtitle}>
-					Простая интеграция, заметный результат.
-				</p>
-				<HeroActions />
+				<p className={styles.subtitle}>{content.subtitle}</p>
+				<HeroActions content={content} />
 			</div>
 		</section>
 	)

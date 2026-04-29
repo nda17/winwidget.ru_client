@@ -1,0 +1,157 @@
+export type HomePageToolPreviewType =
+	| 'wheel'
+	| 'quiz'
+	| 'callback'
+	| 'timer'
+	| 'none'
+
+export type HomePageIntegrationIconKey =
+	| 'email'
+	| 'telegram'
+	| 'webhook'
+	| 'bitrix'
+	| 'amocrm'
+	| 'metrika'
+	| 'vk'
+	| 'roistat'
+
+export interface HomePageContentRecord {
+	id: string
+	content: HomePageContent
+	updatedAt: string
+}
+
+export interface HomePageContent {
+	seo: HomePageSeoContent
+	demoWidgets: HomePageDemoWidgetsContent
+	hero: HomePageHeroContent
+	analysis: HomePageAnalysisContent
+	integrations: HomePageIntegrationsContent
+	tools: HomePageToolsContent
+	steps: HomePageStepsContent
+	pricing: HomePagePricingContent
+	faq: HomePageFaqContent
+	cta: HomePageCtaContent
+}
+
+export interface HomePageSeoContent {
+	title: string
+	description: string
+	keywords: string[]
+	ogTitle: string
+	ogDescription: string
+}
+
+export interface HomePageDemoWidgetsContent {
+	enabled: boolean
+	bubbleTexts: {
+		wheel: string
+		quiz: string
+		callback: string
+		countdown: string
+	}
+	labels: {
+		wheel: string
+		quiz: string
+		countdown: string
+	}
+}
+
+export interface HomePageHeroContent {
+	titleBeforeAccent: string
+	accentText: string
+	titleAfterAccent: string
+	subtitle: string
+	primaryButtonText: string
+	faqButtonLabel: string
+}
+
+export interface HomePageAnalysisContent {
+	enabled: boolean
+	title: string
+	subtitle: string
+	cards: HomePageTextCard[]
+}
+
+export interface HomePageIntegrationsContent {
+	enabled: boolean
+	title: string
+	items: HomePageIntegrationItem[]
+}
+
+export interface HomePageIntegrationItem {
+	title: string
+	tag: string
+	description: string
+	iconKey: HomePageIntegrationIconKey
+}
+
+export interface HomePageToolsContent {
+	enabled: boolean
+	title: string
+	ctaText: string
+	items: HomePageToolItem[]
+}
+
+export interface HomePageToolItem {
+	title: string
+	description: string
+	comingSoon: boolean
+	previewType: HomePageToolPreviewType
+}
+
+export interface HomePageStepsContent {
+	enabled: boolean
+	title: string
+	resultText: string
+	items: HomePageTextCard[]
+}
+
+export interface HomePageTextCard {
+	text: string
+}
+
+export interface HomePagePricingContent {
+	enabled: boolean
+	title: string
+	monthlyToggleText: string
+	yearlyToggleText: string
+	discountText: string
+	buttonText: string
+	plans: HomePagePricingPlan[]
+}
+
+export interface HomePagePricingPlan {
+	key: string
+	badge: string
+	title: string
+	subtitle: string
+	features: string[]
+	monthly: HomePagePlanPrice
+	yearly: HomePagePlanPrice
+	star: boolean
+	popular: boolean
+}
+
+export interface HomePagePlanPrice {
+	price: string
+	priceNote: string
+	yearlyTotal?: string
+}
+
+export interface HomePageFaqContent {
+	enabled: boolean
+	title: string
+	items: HomePageFaqItem[]
+}
+
+export interface HomePageFaqItem {
+	question: string
+	answerHtml: string
+}
+
+export interface HomePageCtaContent {
+	enabled: boolean
+	text: string
+	buttonText: string
+}
