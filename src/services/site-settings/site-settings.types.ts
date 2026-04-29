@@ -4,5 +4,8 @@ export interface SiteSettings {
 	bannerText: string
 	snowflakeEnabled: boolean
 	paymentEnabled: boolean
+	recaptchaEnabled: boolean
+	googleAuthEnabled: boolean
+	yandexAuthEnabled: boolean
 	updatedAt: string
 }

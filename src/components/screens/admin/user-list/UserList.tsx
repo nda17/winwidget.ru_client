@@ -3,11 +3,11 @@ import styles from '@/components/screens/admin/user-list/UserList.module.scss'
 import AdminActions from '@/components/ui/admin/admin-actions/AdminActions'
 import AdminHeader from '@/components/ui/admin/admin-header/AdminHeader'
 import AdminNavigation from '@/components/ui/admin/admin-navigation/AdminNavigation'
+import AdminSectionHeading from '@/components/ui/admin/admin-section-heading/AdminSectionHeading'
 import ConfirmDialog from '@/components/ui/confirm-dialog/ConfirmDialog'
 import Heading from '@/components/ui/heading/Heading'
 import Pagination from '@/components/ui/pagination/Pagination'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
-import SubHeading from '@/components/ui/sub-heading/SubHeading'
 import { ADMIN_PAGES } from '@/config/pages/admin.config'
 import useUserList from '@/hooks/useUserList'
 import { UserLoginMethod } from '@/shared/types/user.types'
@@ -121,7 +121,13 @@ const UserList: NextPage = () => {
 				searchTerm={searchTerm}
 				handleClear={handleClear}
 			/>
-			<SubHeading text="Список пользователей" />
+			<AdminSectionHeading
+				text="Список пользователей"
+				title="Управление пользователями"
+				description="Список аккаунтов с контактами, способами входа, ролями и действиями администратора."
+				risk="high"
+				riskText="Удаление пользователя необратимо и может сломать доступ, подписки или связанные данные. Перед удалением проверяй ID и контакт."
+			/>
 			{isLoading ? (
 				<div className={styles['list-section']}>
 					<div className={styles['list-meta']}>

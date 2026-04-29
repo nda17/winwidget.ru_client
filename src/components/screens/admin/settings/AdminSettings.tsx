@@ -1,9 +1,9 @@
 'use client'
 
 import AdminNavigation from '@/components/ui/admin/admin-navigation/AdminNavigation'
+import AdminSectionHeading from '@/components/ui/admin/admin-section-heading/AdminSectionHeading'
 import Heading from '@/components/ui/heading/Heading'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
-import SubHeading from '@/components/ui/sub-heading/SubHeading'
 import adminTasksService, {
 	type ManualAdminTaskId,
 	type ManualAdminTaskRunResult
@@ -131,7 +131,13 @@ const AdminSettings: NextPage = () => {
 			<Heading text="Панель администратора" />
 			<AdminNavigation />
 
-			<SubHeading text="Оплата" />
+			<AdminSectionHeading
+				title="Приём платежей"
+				description="Управляет доступностью оплаты тарифов через ЮKassa для пользователей сайта."
+				risk="high"
+				riskText="Если выключить по ошибке, пользователи не смогут оплатить или продлить тариф, пока настройку не включат обратно."
+				text="Оплата"
+			/>
 
 			<div className={styles.section}>
 				{isLoading ? (
@@ -169,7 +175,114 @@ const AdminSettings: NextPage = () => {
 				)}
 			</div>
 
-			<SubHeading text="Баннер на сайте" />
+			<AdminSectionHeading
+				title="Авторизация и защита"
+				description="Здесь включаются и выключаются reCAPTCHA и социальный вход через Google или Яндекс."
+				risk="high"
+				riskText="Отключение reCAPTCHA снижает защиту форм от спама. Отключение соцвхода может закрыть пользователям привычный способ входа."
+				text="Авторизация и защита"
+			/>
+
+			<div className={styles.section}>
+				{isLoading ? (
+					<>
+						{Array.from({ length: 3 }).map((_, index) => (
+							<div key={index} className={styles.toggleRow}>
+								<div style={{ flex: 1 }}>
+									<SkeletonLoader
+										count={1}
+										className="h-[18px] w-48 mb-2"
+									/>
+									<SkeletonLoader count={1} className="h-[14px] w-72" />
+								</div>
+								<SkeletonLoader count={1} className="h-[28px] w-[52px]" />
+							</div>
+						))}
+					</>
+				) : (
+					<>
+						<div className={styles.toggleRow}>
+							<div>
+								<p className={styles.fieldLabel}>Проверка reCAPTCHA</p>
+								<p className={styles.fieldHint}>
+									Если выключено, формы входа, регистрации и восстановления
+									пароля не требуют проверку reCAPTCHA
+								</p>
+							</div>
+							<button
+								className={`${styles.toggle} ${settings?.recaptchaEnabled ? styles.toggleOn : ''}`}
+								onClick={() =>
+									saveWithToast(
+										{
+											recaptchaEnabled: !settings?.recaptchaEnabled
+										},
+										'Применяем настройку...'
+									)
+								}
+								disabled={mutation.isPending}
+							>
+								<span className={styles.toggleThumb} />
+							</button>
+						</div>
+
+						<div className={styles.toggleRow}>
+							<div>
+								<p className={styles.fieldLabel}>Вход через Google</p>
+								<p className={styles.fieldHint}>
+									Если выключено, кнопка Google скрывается, а прямой
+									переход на Google-авторизацию блокируется
+								</p>
+							</div>
+							<button
+								className={`${styles.toggle} ${settings?.googleAuthEnabled ? styles.toggleOn : ''}`}
+								onClick={() =>
+									saveWithToast(
+										{
+											googleAuthEnabled: !settings?.googleAuthEnabled
+										},
+										'Применяем настройку...'
+									)
+								}
+								disabled={mutation.isPending}
+							>
+								<span className={styles.toggleThumb} />
+							</button>
+						</div>
+
+						<div className={styles.toggleRow}>
+							<div>
+								<p className={styles.fieldLabel}>Вход через Яндекс</p>
+								<p className={styles.fieldHint}>
+									Если выключено, кнопка Яндекс скрывается, а прямой
+									переход на Яндекс-авторизацию блокируется
+								</p>
+							</div>
+							<button
+								className={`${styles.toggle} ${settings?.yandexAuthEnabled ? styles.toggleOn : ''}`}
+								onClick={() =>
+									saveWithToast(
+										{
+											yandexAuthEnabled: !settings?.yandexAuthEnabled
+										},
+										'Применяем настройку...'
+									)
+								}
+								disabled={mutation.isPending}
+							>
+								<span className={styles.toggleThumb} />
+							</button>
+						</div>
+					</>
+				)}
+			</div>
+
+			<AdminSectionHeading
+				title="Баннер на сайте"
+				description="Показывает общее сообщение на страницах сайта: например, предупреждение о работах или важное объявление."
+				risk="medium"
+				riskText="Неверный текст увидят все пользователи. Перед сохранением проверь смысл, даты и контакты."
+				text="Баннер на сайте"
+			/>
 
 			<div className={styles.section}>
 				{isLoading ? (
@@ -239,7 +352,13 @@ const AdminSettings: NextPage = () => {
 				)}
 			</div>
 
-			<SubHeading text="Ручной запуск задач" />
+			<AdminSectionHeading
+				title="Ручной запуск задач"
+				description="Позволяет вне расписания запустить системные задачи обслуживания: очистку платежей, проверку подписок и удаление устаревших challenge-записей."
+				risk="high"
+				riskText="Запускай только когда понимаешь цель задачи: действие влияет на реальные платежи, подписки или записи подтверждения."
+				text="Ручной запуск задач"
+			/>
 
 			<div className={styles.section}>
 				<div className={styles.taskList}>
@@ -279,7 +398,13 @@ const AdminSettings: NextPage = () => {
 				</div>
 			</div>
 
-			<SubHeading text="Новогодний режим" />
+			<AdminSectionHeading
+				title="Новогодний режим"
+				description="Включает декоративные снежинки на страницах сайта для сезонного оформления."
+				risk="low"
+				riskText="На данные и оплату не влияет. Возможный риск только визуальный: эффект может быть неуместен вне сезона."
+				text="Новогодний режим"
+			/>
 
 			<div className={styles.section}>
 				{isLoading ? (

@@ -15,6 +15,9 @@ const siteSettingsService = {
 				| 'bannerText'
 				| 'snowflakeEnabled'
 				| 'paymentEnabled'
+				| 'recaptchaEnabled'
+				| 'googleAuthEnabled'
+				| 'yandexAuthEnabled'
 			>
 		>
 	): Promise<SiteSettings> {

@@ -1,10 +1,10 @@
 'use client'
 import AdminNavigation from '@/components/ui/admin/admin-navigation/AdminNavigation'
+import AdminSectionHeading from '@/components/ui/admin/admin-section-heading/AdminSectionHeading'
 import ConfirmDialog from '@/components/ui/confirm-dialog/ConfirmDialog'
 import Heading from '@/components/ui/heading/Heading'
 import Pagination from '@/components/ui/pagination/Pagination'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
-import SubHeading from '@/components/ui/sub-heading/SubHeading'
 import notesService, { Note } from '@/services/notes/notes.service'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import {
@@ -129,7 +129,13 @@ const AdminNotes: NextPage = () => {
 			)}
 			<Heading text="Панель администратора" />
 			<AdminNavigation />
-			<SubHeading text="Бэклог" />
+			<AdminSectionHeading
+				text="Бэклог"
+				title="Внутренний бэклог"
+				description="Простой список рабочих заметок и задач для администраторов проекта."
+				risk="low"
+				riskText="На пользователей и сервис не влияет. Риск только организационный: удалённая задача пропадёт из списка."
+			/>
 
 			<div className={styles.section}>
 				<div className={styles.inputRow}>

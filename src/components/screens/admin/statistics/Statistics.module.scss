@@ -9,8 +9,12 @@
 		@apply mb-4;
 	}
 
+	.title-with-help {
+		@apply mb-1 flex items-center gap-2;
+	}
+
 	.section-title {
-		@apply text-[1.05rem] sm:text-[1.15rem] font-semibold text-[#131b22] mb-1;
+		@apply text-[1.05rem] sm:text-[1.15rem] font-semibold text-[#131b22];
 	}
 
 	.section-subtitle {

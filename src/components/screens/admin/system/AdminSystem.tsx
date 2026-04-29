@@ -1,9 +1,9 @@
 'use client'
 
 import AdminNavigation from '@/components/ui/admin/admin-navigation/AdminNavigation'
+import AdminSectionHeading from '@/components/ui/admin/admin-section-heading/AdminSectionHeading'
 import Heading from '@/components/ui/heading/Heading'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
-import SubHeading from '@/components/ui/sub-heading/SubHeading'
 import adminHealthService, {
 	type AdminHealthCheck,
 	type AdminHealthStatus
@@ -52,7 +52,13 @@ const AdminSystem: NextPage = () => {
 		<section className={styles.wrapper}>
 			<Heading text="Панель администратора" />
 			<AdminNavigation />
-			<SubHeading text="Система" />
+			<AdminSectionHeading
+				text="Система"
+				title="Статус системы"
+				description="Проверяет backend, базу данных и внешние сервисы, от которых зависит работа сайта."
+				risk="low"
+				riskText="Экран только читает состояние сервисов. Если видишь ошибку, не меняй настройки вслепую - сначала проверь сообщение и конкретный сервис."
+			/>
 
 			<div className={styles.section}>
 				<div className={styles.header}>

@@ -23,7 +23,8 @@ const useRestorePasswordForm = () => {
 	const router = useRouter()
 
 	const [isPending, startTransition] = useTransition()
-	const { executeRecaptcha, isRecaptchaReady } = useRecaptchaV3()
+	const { executeRecaptcha, isRecaptchaEnabled, isRecaptchaReady } =
+		useRecaptchaV3()
 
 	const { mutate: mutateRestorePassword, isPending: isRestorePending } =
 		useMutation({
@@ -80,7 +81,7 @@ const useRestorePasswordForm = () => {
 			return
 		}
 
-		if (!token) {
+		if (isRecaptchaEnabled && !token) {
 			toast.error('Не удалось пройти проверку капчи')
 			return
 		}

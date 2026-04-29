@@ -1,10 +1,18 @@
 import styles from '@/components/screens/(auth)/auth-form/social-media-buttons/SocialMediaButtons.module.scss'
 import AppIcon from '@/components/ui/icons/AppIcon'
+import siteSettingsService from '@/services/site-settings/site-settings.service'
+import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 
 const SocialMediaButtons = () => {
 	const router = useRouter()
+	const { data: siteSettings } = useQuery({
+		queryKey: ['site-settings'],
+		queryFn: siteSettingsService.get
+	})
+	const googleAuthEnabled = siteSettings?.googleAuthEnabled ?? true
+	const yandexAuthEnabled = siteSettings?.yandexAuthEnabled ?? true
 
 	const handleSocialAuth = (path: string) => {
 		toast.loading('Загрузка...', { id: 'social-auth' })
@@ -13,22 +21,26 @@ const SocialMediaButtons = () => {
 
 	return (
 		<div className={styles.wrapper}>
-			<button
-				onClick={() => handleSocialAuth('/auth/google')}
-				className={styles.button}
-				type="button"
-			>
-				<AppIcon name="google" fill="currentColor" />
-				<span>Google</span>
-			</button>
-			<button
-				onClick={() => handleSocialAuth('/auth/yandex')}
-				className={styles.button}
-				type="button"
-			>
-				<AppIcon name="yandex" fill="currentColor" />
-				<span>Яндекс</span>
-			</button>
+			{googleAuthEnabled && (
+				<button
+					onClick={() => handleSocialAuth('/auth/google')}
+					className={styles.button}
+					type="button"
+				>
+					<AppIcon name="google" fill="currentColor" />
+					<span>Google</span>
+				</button>
+			)}
+			{yandexAuthEnabled && (
+				<button
+					onClick={() => handleSocialAuth('/auth/yandex')}
+					className={styles.button}
+					type="button"
+				>
+					<AppIcon name="yandex" fill="currentColor" />
+					<span>Яндекс</span>
+				</button>
+			)}
 			<button
 				onClick={() => handleSocialAuth('/auth/github')}
 				className={styles.button}

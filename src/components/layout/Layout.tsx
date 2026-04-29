@@ -24,7 +24,8 @@ const Layout: NextPage<ILayout> = ({ children, siteSettings }) => {
 		pathname === PUBLIC_PAGES.RESTORE_PASSWORD
 
 	useEffect(() => {
-		const shouldHideRecaptchaBadge = auth || !isRecaptchaPage
+		const shouldHideRecaptchaBadge =
+			auth || !isRecaptchaPage || siteSettings?.recaptchaEnabled === false
 
 		document.body.classList.toggle(
 			'hide-recaptcha-badge',
@@ -34,7 +35,7 @@ const Layout: NextPage<ILayout> = ({ children, siteSettings }) => {
 		return () => {
 			document.body.classList.remove('hide-recaptcha-badge')
 		}
-	}, [auth, isRecaptchaPage])
+	}, [auth, isRecaptchaPage, siteSettings?.recaptchaEnabled])
 
 	const isLandingPage = pathname === PUBLIC_PAGES.HOME
 	const isWidgetPreview =

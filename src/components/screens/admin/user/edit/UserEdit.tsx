@@ -3,6 +3,8 @@ import { IUserEditInput } from '@/components/screens/admin/user/edit/user-edit.i
 import styles from '@/components/screens/admin/user/edit/UserEdit.module.scss'
 import { useUserEdit } from '@/components/screens/admin/user/edit/useUserEdit'
 import AdminNavigation from '@/components/ui/admin/admin-navigation/AdminNavigation'
+import AdminSectionHeading from '@/components/ui/admin/admin-section-heading/AdminSectionHeading'
+import AdminTooltip from '@/components/ui/admin/admin-tooltip/AdminTooltip'
 import FieldEmail from '@/components/ui/form-elements/admin-page/field-email/FieldEmail'
 import FieldId from '@/components/ui/form-elements/admin-page/field-id/FieldId'
 import FieldName from '@/components/ui/form-elements/admin-page/field-name/FieldName'
@@ -11,7 +13,6 @@ import FieldPhone from '@/components/ui/form-elements/admin-page/field-phone/Fie
 import FieldUploadFile from '@/components/ui/form-elements/universal-elements/field-upload-file/FieldUploadFile'
 import Heading from '@/components/ui/heading/Heading'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
-import SubHeading from '@/components/ui/sub-heading/SubHeading'
 import UserInfo from '@/components/ui/user-info/UserInfo'
 import { ADMIN_PAGES } from '@/config/pages/admin.config'
 import { UserRole } from '@/services/auth/auth.types'
@@ -92,7 +93,13 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 		<section className={styles.wrapper}>
 			<Heading text="Панель администратора" />
 			<AdminNavigation />
-			<SubHeading text="Редактирование пользователя" />
+			<AdminSectionHeading
+				text="Редактирование пользователя"
+				title="Редактирование пользователя"
+				description="Экран меняет профиль, контакты, роли, статус телефона и пароль конкретного аккаунта."
+				risk="high"
+				riskText="Ошибка может выдать лишние права, убрать доступ или изменить данные входа. Перед сохранением сверяй пользователя и поля."
+			/>
 
 			{isLoading ? (
 				<div className={styles.layout}>
@@ -382,7 +389,15 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 						>
 							<div className={styles.formSection}>
 								<div>
-									<p className={styles.sectionTitle}>Фото и доступ</p>
+									<div className={styles.titleWithHelp}>
+										<p className={styles.sectionTitle}>Фото и доступ</p>
+										<AdminTooltip
+											title="Фото и доступ"
+											description="Здесь меняется аватар, базовая роль пользователя, роль администратора и статус подтверждения телефона."
+											risk="high"
+											riskText="Роль ADMIN даёт доступ к панели администратора. Статус телефона лучше менять только после проверки номера."
+										/>
+									</div>
 									<p className={styles.sectionHint}>
 										Аватар меняется отдельно, а права и статусы применяются
 										после сохранения формы.
@@ -481,7 +496,15 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 
 							<div className={styles.formSection}>
 								<div>
-									<p className={styles.sectionTitle}>Основные данные</p>
+									<div className={styles.titleWithHelp}>
+										<p className={styles.sectionTitle}>Основные данные</p>
+										<AdminTooltip
+											title="Основные данные"
+											description="Контактные поля используются для отображения профиля и могут участвовать во входе пользователя."
+											risk="medium"
+											riskText="Неверный email или телефон может помешать пользователю войти или получить важные уведомления."
+										/>
+									</div>
 									<p className={styles.sectionHint}>
 										ID доступен только для просмотра. Имя, email и телефон
 										можно обновить здесь же.
@@ -590,7 +613,15 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 
 							<div className={styles.formSection}>
 								<div>
-									<p className={styles.sectionTitle}>Безопасность</p>
+									<div className={styles.titleWithHelp}>
+										<p className={styles.sectionTitle}>Безопасность</p>
+										<AdminTooltip
+											title="Пароль пользователя"
+											description="Позволяет задать новый пароль для аккаунта. Пустое поле означает, что пароль останется прежним."
+											risk="high"
+											riskText="Новый пароль сразу меняет данные входа. Меняй его только по запросу пользователя или при понятной админской необходимости."
+										/>
+									</div>
 									<p className={styles.sectionHint}>
 										Оставьте поле пустым, если пароль менять не нужно.
 									</p>

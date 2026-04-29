@@ -89,7 +89,7 @@ const useAuthForm = (isLogin: boolean) => {
 	const router = useRouter()
 	const [isPending, startTransition] = useTransition()
 	const queryClient = useQueryClient()
-	const { executeRecaptcha } = useRecaptchaV3()
+	const { executeRecaptcha, isRecaptchaEnabled } = useRecaptchaV3()
 	const emailValue = watch('email')
 	const phoneValue = watch('phone')
 	const phoneMask = usePhoneMask(setValue, phoneInputRef)
@@ -402,7 +402,7 @@ const useAuthForm = (isLogin: boolean) => {
 			return
 		}
 
-		if (!token) {
+		if (isRecaptchaEnabled && !token) {
 			toast.error('Не удалось пройти проверку капчи')
 			return
 		}
@@ -465,7 +465,7 @@ const useAuthForm = (isLogin: boolean) => {
 			return
 		}
 
-		if (!token) {
+		if (isRecaptchaEnabled && !token) {
 			toast.error('Не удалось пройти проверку капчи')
 			return
 		}

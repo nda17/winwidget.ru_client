@@ -1,11 +1,11 @@
 'use client'
 
 import AdminNavigation from '@/components/ui/admin/admin-navigation/AdminNavigation'
+import AdminSectionHeading from '@/components/ui/admin/admin-section-heading/AdminSectionHeading'
 import ConfirmDialog from '@/components/ui/confirm-dialog/ConfirmDialog'
 import Heading from '@/components/ui/heading/Heading'
 import Pagination from '@/components/ui/pagination/Pagination'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
-import SubHeading from '@/components/ui/sub-heading/SubHeading'
 import useAdminSubscriptions from '@/hooks/useAdminSubscriptions'
 import { BillingPeriod, Plan } from '@/services/widget/widget.types'
 import clsx from 'clsx'
@@ -83,7 +83,13 @@ const AdminSubscriptions: NextPage = () => {
 			)}
 			<Heading text="Панель администратора" />
 			<AdminNavigation />
-			<SubHeading text="Ручная активация подписки" />
+			<AdminSectionHeading
+				text="Ручная активация подписки"
+				title="Ручная активация подписки"
+				description="Позволяет администратору выдать или продлить тариф пользователю без прохождения обычной оплаты."
+				risk="high"
+				riskText="Неверный пользователь, тариф или период сразу повлияют на доступ к сервису и лимиты. Перед активацией проверь выбранный аккаунт."
+			/>
 
 			{/* ── Activation form ────────────────────────────────────── */}
 			<div className={styles.card}>
@@ -251,7 +257,13 @@ const AdminSubscriptions: NextPage = () => {
 			</div>
 
 			{/* ── Subscriptions table ────────────────────────────────── */}
-			<SubHeading text="Все подписки" />
+			<AdminSectionHeading
+				text="Все подписки"
+				title="Список подписок"
+				description="Показывает текущие и архивные подписки пользователей, сроки, тарифы, статусы и количество лидов за период."
+				risk="high"
+				riskText="Кнопка отмены снимает активный доступ пользователя к тарифу. Используй её только когда отмена точно нужна."
+			/>
 			{isLoading ? (
 				<div className={styles.card}>
 					{Array.from({ length: 5 }).map((_, i) => (

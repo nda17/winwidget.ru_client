@@ -1,4 +1,6 @@
 'use client'
+import siteSettingsService from '@/services/site-settings/site-settings.service'
+import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 
 declare global {
@@ -83,9 +85,14 @@ const waitForRecaptchaReady = () => {
 export const useRecaptchaV3 = () => {
 	const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
 	const [isReady, setIsReady] = useState(false)
+	const { data: siteSettings } = useQuery({
+		queryKey: ['site-settings'],
+		queryFn: siteSettingsService.get
+	})
+	const isRecaptchaEnabled = siteSettings?.recaptchaEnabled ?? true
 
 	useEffect(() => {
-		if (!siteKey) {
+		if (!siteKey || !isRecaptchaEnabled) {
 			return
 		}
 
@@ -112,9 +119,11 @@ export const useRecaptchaV3 = () => {
 		return () => {
 			ignore = true
 		}
-	}, [siteKey])
+	}, [siteKey, isRecaptchaEnabled])
 
 	const executeRecaptcha = async (action: string) => {
+		if (!isRecaptchaEnabled) return null
+
 		if (!siteKey) {
 			throw new Error('Не задан NEXT_PUBLIC_RECAPTCHA_SITE_KEY')
 		}
@@ -132,6 +141,7 @@ export const useRecaptchaV3 = () => {
 
 	return {
 		executeRecaptcha,
-		isRecaptchaReady: isReady
+		isRecaptchaEnabled,
+		isRecaptchaReady: !isRecaptchaEnabled || isReady
 	}
 }

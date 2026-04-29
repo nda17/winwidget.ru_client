@@ -5,6 +5,7 @@ import OverviewDistributionChart from '@/components/screens/admin/statistics/cha
 import RegistrationByMonthBarChart from '@/components/screens/admin/statistics/charts/RegistrationByMonthBarChart/RegistrationByMonthBarChart'
 import RegistrationByMonthChart from '@/components/screens/admin/statistics/charts/RegistrationByMonthChart/RegistrationByMonthChart'
 import StatisticsInsights from '@/components/screens/admin/statistics/insights/StatisticsInsights'
+import AdminTooltip from '@/components/ui/admin/admin-tooltip/AdminTooltip'
 import { FC } from 'react'
 
 const Statistics: FC = () => {
@@ -12,7 +13,17 @@ const Statistics: FC = () => {
 		<section className={styles.wrapper}>
 			<section className={styles.section}>
 				<div className={styles['section-head']}>
-					<h3 className={styles['section-title']}>Ключевые показатели</h3>
+					<div className={styles['title-with-help']}>
+						<h3 className={styles['section-title']}>
+							Ключевые показатели
+						</h3>
+						<AdminTooltip
+							title="Ключевые показатели"
+							description="Сводные метрики по аудитории, регистрациям, активности и администраторам."
+							risk="low"
+							riskText="Блок ничего не меняет. Используй цифры как ориентир, а не как единственный источник решения."
+						/>
+					</div>
 					<p className={styles['section-subtitle']}>
 						Основные KPI по пользователям, активности и ролям команды.
 					</p>
@@ -22,7 +33,15 @@ const Statistics: FC = () => {
 
 			<section className={styles.section}>
 				<div className={styles['section-head']}>
-					<h3 className={styles['section-title']}>Графики и динамика</h3>
+					<div className={styles['title-with-help']}>
+						<h3 className={styles['section-title']}>Графики и динамика</h3>
+						<AdminTooltip
+							title="Графики и динамика"
+							description="Визуальные отчёты помогают увидеть тренд регистраций и распределение текущих показателей."
+							risk="low"
+							riskText="Экран только показывает аналитику. Проверяй период и источник метрики перед выводами."
+						/>
+					</div>
 					<p className={styles['section-subtitle']}>
 						Визуализация тренда регистраций и структуры текущих
 						показателей.

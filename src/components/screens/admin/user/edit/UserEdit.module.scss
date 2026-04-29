@@ -102,6 +102,10 @@
 	@apply text-[0.95rem] font-semibold text-gray-700;
 }
 
+.titleWithHelp {
+	@apply flex items-center gap-2;
+}
+
 .sectionHint {
 	@apply mt-1 text-sm text-gray-500 leading-snug;
 }

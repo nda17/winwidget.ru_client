@@ -1,8 +1,8 @@
 'use client'
 
 import AdminNavigation from '@/components/ui/admin/admin-navigation/AdminNavigation'
+import AdminSectionHeading from '@/components/ui/admin/admin-section-heading/AdminSectionHeading'
 import Heading from '@/components/ui/heading/Heading'
-import SubHeading from '@/components/ui/sub-heading/SubHeading'
 import legalPagesService from '@/services/legal-pages/legal-pages.service'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -98,12 +98,24 @@ const AdminContentSettings: NextPage = () => {
 
 			{activeArea === 'home' ? (
 				<>
-					<SubHeading text="Редактирование главной страницы" />
+					<AdminSectionHeading
+						text="Редактирование главной страницы"
+						title="Контент главной страницы"
+						description="Редактирует публичные тексты, карточки, тарифы, интеграции и блоки главной страницы."
+						risk="high"
+						riskText="Изменения увидят посетители сайта. Ошибка в тексте, тарифе или порядке блоков может повлиять на продажи и доверие."
+					/>
 					<HomeContentEditor />
 				</>
 			) : (
 				<>
-					<SubHeading text="Редактирование юридических страниц" />
+					<AdminSectionHeading
+						text="Редактирование юридических страниц"
+						title="Юридические страницы"
+						description="Редактирует публичные документы: политику, согласия, cookie notice и оферту."
+						risk="high"
+						riskText="Некорректный текст может создать юридические риски. Перед сохранением проверь документ и согласуй формулировки."
+					/>
 
 					<div className={styles.pageTabs}>
 						{PAGES.map(page => (
