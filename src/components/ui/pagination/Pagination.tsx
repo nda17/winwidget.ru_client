@@ -11,19 +11,30 @@ const Pagination: NextPage<IPagination> = ({
 	nextPage,
 	changeActivePage
 }) => {
+	const isFirstPage = currentPage === 1
+	const isLastPage = currentPage === listPage.length
+
 	return (
 		<div className={styles.pagination}>
-			<button onClick={prevPage} type="button">
-				<AppIcon name="navigate-before" />
+			<button
+				type="button"
+				className={styles.navButton}
+				onClick={prevPage}
+				disabled={isFirstPage}
+				aria-label="Предыдущая страница"
+			>
+				<AppIcon name="navigate-before" size={18} />
 			</button>
-			<ul>
+			<ul className={styles.pageList}>
 				{listPage.map(page => (
 					<li key={page}>
 						<button
 							type="button"
-							className={clsx({
+							className={clsx(styles.pageButton, {
 								[styles.active]: page === currentPage
 							})}
+							aria-current={page === currentPage ? 'page' : undefined}
+							aria-label={`Страница ${page}`}
 							onClick={() => changeActivePage(page)}
 						>
 							{page}
@@ -31,8 +42,14 @@ const Pagination: NextPage<IPagination> = ({
 					</li>
 				))}
 			</ul>
-			<button onClick={nextPage} type="button">
-				<AppIcon name="navigate-next" />
+			<button
+				type="button"
+				className={styles.navButton}
+				onClick={nextPage}
+				disabled={isLastPage}
+				aria-label="Следующая страница"
+			>
+				<AppIcon name="navigate-next" size={18} />
 			</button>
 		</div>
 	)
