@@ -40,6 +40,12 @@ const AdminSubscriptions: NextPage = () => {
 		selectedUserId,
 		selectedUserName,
 		selectUser,
+		bonusUserSearch,
+		setBonusUserSearch,
+		bonusUserSearchResults,
+		bonusSelectedUserId,
+		bonusSelectedUserName,
+		selectBonusUser,
 		plan,
 		setPlan,
 		billingPeriod,
@@ -48,6 +54,10 @@ const AdminSubscriptions: NextPage = () => {
 		setStartsAt,
 		isActivating,
 		handleActivate,
+		bonusDays,
+		setBonusDays,
+		isExtendingDays,
+		handleExtendDays,
 		extendIfActive,
 		setExtendIfActive,
 		cancel,
@@ -86,7 +96,7 @@ const AdminSubscriptions: NextPage = () => {
 			<AdminSectionHeading
 				text="Ручная активация подписки"
 				title="Ручная активация подписки"
-				description="Позволяет администратору выдать или продлить тариф пользователю без прохождения обычной оплаты."
+				description="Позволяет администратору выдать тариф пользователю, заменить срок подписки или суммировать новый период с активной подпиской."
 				risk="high"
 				riskText="Неверный пользователь, тариф или период сразу повлияют на доступ к сервису и лимиты. Перед активацией проверь выбранный аккаунт."
 			/>
@@ -253,6 +263,103 @@ const AdminSubscriptions: NextPage = () => {
 					disabled={isActivating || !selectedUserId}
 				>
 					{isActivating ? 'Активация...' : 'Активировать'}
+				</button>
+			</div>
+
+			<AdminSectionHeading
+				text="Бонусное продление"
+				title="Бонусное продление подписки"
+				description="Добавляет пользователю только дополнительные дни. Тариф, период оплаты и лимиты подписки не меняются."
+				risk="high"
+				riskText="Начисление сразу меняет дату окончания подписки. Проверь пользователя и количество дней перед сохранением."
+			/>
+			<div className={styles.card}>
+				<div className={styles.field}>
+					<label htmlFor="bonus-user-search" className={styles.label}>
+						Пользователь
+					</label>
+					<p className={styles.hint}>
+						Найдите пользователя, которому нужно добавить дни
+					</p>
+					{bonusSelectedUserId ? (
+						<div className={styles.selectedUser}>
+							<span>{bonusSelectedUserName}</span>
+							<button
+								type="button"
+								className={styles.clearBtn}
+								onClick={() => selectBonusUser('', '')}
+							>
+								✕
+							</button>
+						</div>
+					) : (
+						<div className={styles.searchWrap}>
+							<input
+								id="bonus-user-search"
+								name="bonus-user-search"
+								className={styles.input}
+								placeholder="Поиск по имени, email, телефону"
+								value={bonusUserSearch}
+								onChange={setBonusUserSearch}
+							/>
+							{bonusUserSearchResults &&
+								bonusUserSearchResults.length > 0 && (
+									<ul className={styles.dropdown}>
+										{bonusUserSearchResults.map(u => (
+											<li key={u.id}>
+												<button
+													type="button"
+													className={styles.dropdownItem}
+													onClick={() =>
+														selectBonusUser(
+															u.id,
+															`${u.name || 'Без имени'} (${u.email || u.phone || u.id})`
+														)
+													}
+												>
+													<span className={styles.dropdownName}>
+														{u.name || 'Без имени'}
+													</span>
+													<span className={styles.dropdownEmail}>
+														{u.email || u.phone || u.id}
+													</span>
+												</button>
+											</li>
+										))}
+									</ul>
+								)}
+						</div>
+					)}
+				</div>
+
+				<div className={styles.field}>
+					<label htmlFor="bonus-days" className={styles.label}>
+						Количество дней
+					</label>
+					<p className={styles.hint}>
+						Если подписка активна — дни добавятся к текущей дате окончания.
+						Если истекла или отменена — срок начнётся с сегодняшнего дня
+					</p>
+					<input
+						id="bonus-days"
+						name="bonus-days"
+						type="number"
+						min={1}
+						max={3650}
+						step={1}
+						className={styles.input}
+						placeholder="Например: 14"
+						value={bonusDays}
+						onChange={e => setBonusDays(e.target.value)}
+					/>
+				</div>
+
+				<button
+					className={styles.bonusBtn}
+					onClick={handleExtendDays}
+					disabled={isExtendingDays || !bonusSelectedUserId}
+				>
+					{isExtendingDays ? 'Начисление...' : 'Начислить бонусные дни'}
 				</button>
 			</div>
 

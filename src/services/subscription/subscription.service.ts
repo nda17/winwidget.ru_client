@@ -18,6 +18,11 @@ export interface IAdminActivateInput {
 	extendIfActive?: boolean
 }
 
+export interface IAdminExtendDaysInput {
+	userId: string
+	days: number
+}
+
 export interface IPendingPayment {
 	id: string
 	yookassaId: string
@@ -92,6 +97,16 @@ const subscriptionService = {
 	async adminActivate(body: IAdminActivateInput): Promise<Subscription> {
 		const { data } = await axiosInterceptorsRequest.post(
 			'/subscriptions/admin/activate',
+			body
+		)
+		return data
+	},
+
+	async adminExtendDays(
+		body: IAdminExtendDaysInput
+	): Promise<Subscription> {
+		const { data } = await axiosInterceptorsRequest.post(
+			'/subscriptions/admin/extend-days',
 			body
 		)
 		return data

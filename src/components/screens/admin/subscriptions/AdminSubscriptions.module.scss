@@ -74,6 +74,10 @@
 		@apply bg-primary text-white px-6 py-2 rounded-md text-sm font-500 hover:opacity-80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
 	}
 
+	.bonusBtn {
+		@apply bg-aqua text-white px-6 py-2 rounded-md text-sm font-500 hover:opacity-80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
+	}
+
 	.skeletonRow {
 		@apply h-8 w-full mb-3;
 	}

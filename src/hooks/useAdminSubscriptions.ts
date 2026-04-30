@@ -1,5 +1,6 @@
 import subscriptionService, {
-	IAdminActivateInput
+	IAdminActivateInput,
+	IAdminExtendDaysInput
 } from '@/services/subscription/subscription.service'
 import { BillingPeriod, Plan } from '@/services/widget/widget.types'
 import userService from '@/services/user/user.service'
@@ -27,9 +28,11 @@ const useAdminSubscriptions = () => {
 		enabled: auth
 	})
 
-	// ── User search for activation form ──────────────────────────────
+	// ── User search for subscription actions ─────────────────────────
 	const [userSearch, setUserSearch] = useState('')
+	const [bonusUserSearch, setBonusUserSearch] = useState('')
 	const debouncedSearch = useDebounce(userSearch, 400)
+	const debouncedBonusSearch = useDebounce(bonusUserSearch, 400)
 
 	const { data: userSearchResults, isFetching: isSearching } = useQuery({
 		queryKey: ['user-search', debouncedSearch],
@@ -38,11 +41,23 @@ const useAdminSubscriptions = () => {
 		enabled: debouncedSearch.length > 0
 	})
 
+	const { data: bonusUserSearchResults, isFetching: isBonusSearching } =
+		useQuery({
+			queryKey: [
+				'user-search',
+				'subscription-bonus',
+				debouncedBonusSearch
+			],
+			queryFn: () => userService.fetchUserList(debouncedBonusSearch),
+			select: ({ data }) => data,
+			enabled: debouncedBonusSearch.length > 0
+		})
+
 	useEffect(() => {
-		if (!isSearching) return
+		if (!isSearching && !isBonusSearching) return
 		const id = toast.loading('Поиск пользователя...')
 		return () => toast.dismiss(id)
-	}, [isSearching])
+	}, [isBonusSearching, isSearching])
 
 	useEffect(() => {
 		if (userSearchResults && userSearchResults.length === 0) {
@@ -50,14 +65,23 @@ const useAdminSubscriptions = () => {
 		}
 	}, [userSearchResults])
 
+	useEffect(() => {
+		if (bonusUserSearchResults && bonusUserSearchResults.length === 0) {
+			toast('Пользователи не найдены', { icon: '🔍' })
+		}
+	}, [bonusUserSearchResults])
+
 	// ── Activation form state ─────────────────────────────────────────
 	const [selectedUserId, setSelectedUserId] = useState('')
 	const [selectedUserName, setSelectedUserName] = useState('')
+	const [bonusSelectedUserId, setBonusSelectedUserId] = useState('')
+	const [bonusSelectedUserName, setBonusSelectedUserName] = useState('')
 	const [plan, setPlan] = useState<Plan>('EASY')
 	const [billingPeriod, setBillingPeriod] =
 		useState<BillingPeriod>('MONTHLY')
 	const [startsAt, setStartsAt] = useState(today())
 	const [extendIfActive, setExtendIfActive] = useState(true)
+	const [bonusDays, setBonusDays] = useState('')
 
 	const selectUser = (id: string, label: string) => {
 		setSelectedUserId(id)
@@ -65,7 +89,13 @@ const useAdminSubscriptions = () => {
 		setUserSearch('')
 	}
 
-	const resetForm = () => {
+	const selectBonusUser = (id: string, label: string) => {
+		setBonusSelectedUserId(id)
+		setBonusSelectedUserName(label)
+		setBonusUserSearch('')
+	}
+
+	const resetActivationForm = () => {
 		setSelectedUserId('')
 		setSelectedUserName('')
 		setUserSearch('')
@@ -73,6 +103,13 @@ const useAdminSubscriptions = () => {
 		setBillingPeriod('MONTHLY')
 		setStartsAt(today())
 		setExtendIfActive(true)
+	}
+
+	const resetBonusForm = () => {
+		setBonusSelectedUserId('')
+		setBonusSelectedUserName('')
+		setBonusUserSearch('')
+		setBonusDays('')
 	}
 
 	// ── Mutations ─────────────────────────────────────────────────────
@@ -83,7 +120,7 @@ const useAdminSubscriptions = () => {
 		onSuccess() {
 			toast.success('Подписка активирована')
 			queryClient.invalidateQueries({ queryKey: ['admin-subscriptions'] })
-			resetForm()
+			resetActivationForm()
 		},
 		onError(error) {
 			if (axios.isAxiosError(error)) {
@@ -93,6 +130,28 @@ const useAdminSubscriptions = () => {
 			}
 		}
 	})
+
+	const { mutateAsync: extendDays, isPending: isExtendingDays } =
+		useMutation({
+			mutationKey: ['admin-extend-subscription-days'],
+			mutationFn: (body: IAdminExtendDaysInput) =>
+				subscriptionService.adminExtendDays(body),
+			onSuccess() {
+				toast.success('Бонусные дни начислены')
+				queryClient.invalidateQueries({
+					queryKey: ['admin-subscriptions']
+				})
+				resetBonusForm()
+			},
+			onError(error) {
+				if (axios.isAxiosError(error)) {
+					toast.error(
+						error.response?.data?.message ??
+							'Ошибка начисления бонусных дней'
+					)
+				}
+			}
+		})
 
 	const { mutateAsync: cancelMutation } = useMutation({
 		mutationKey: ['admin-cancel-subscription'],
@@ -137,6 +196,31 @@ const useAdminSubscriptions = () => {
 		await activate(body)
 	}
 
+	const handleExtendDays = async () => {
+		if (!bonusSelectedUserId) {
+			toast.error('Выберите пользователя')
+			return
+		}
+
+		const days = Number(bonusDays)
+
+		if (!Number.isInteger(days) || days < 1) {
+			toast.error('Укажите количество дней')
+			return
+		}
+
+		if (days > 3650) {
+			toast.error('Максимум 3650 дней за одно начисление')
+			return
+		}
+
+		const body: IAdminExtendDaysInput = {
+			userId: bonusSelectedUserId,
+			days
+		}
+		await extendDays(body)
+	}
+
 	return {
 		subscriptions,
 		isLoading,
@@ -147,6 +231,13 @@ const useAdminSubscriptions = () => {
 		selectedUserId,
 		selectedUserName,
 		selectUser,
+		bonusUserSearch,
+		setBonusUserSearch: (e: ChangeEvent<HTMLInputElement>) =>
+			setBonusUserSearch(e.target.value),
+		bonusUserSearchResults,
+		bonusSelectedUserId,
+		bonusSelectedUserName,
+		selectBonusUser,
 		plan,
 		setPlan,
 		billingPeriod,
@@ -155,6 +246,10 @@ const useAdminSubscriptions = () => {
 		setStartsAt,
 		isActivating,
 		handleActivate,
+		bonusDays,
+		setBonusDays,
+		isExtendingDays,
+		handleExtendDays,
 		extendIfActive,
 		setExtendIfActive,
 		cancel,
