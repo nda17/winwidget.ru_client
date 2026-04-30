@@ -1914,15 +1914,15 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 							<div>
 								<SectionTitle
 									title="Тарифы на лендинге"
-									description="Маркетинговый блок тарифов на главной: названия, выгоды, подписи и отображаемые цены."
+									description="Маркетинговый блок тарифов на главной: названия, выгоды, подписи и кнопки. Реальные цены берутся из раздела Тарифы."
 									risk="high"
-									riskText="Это не меняет реальные суммы оплаты. Если текстовые цены на главной будут отличаться от платёжной страницы, пользователи могут получить неверное ожидание."
+									riskText="Изменения в этом блоке не меняют сумму оплаты. Реальные цены редактируются только в разделе Тарифы."
 								>
 									Тарифы на главной
 								</SectionTitle>
 								<p className={styles.fieldHint}>
-									Это контент лендинга. Реальные суммы оплаты остаются в
-									платёжной логике.
+									Цены на главной и странице оплаты подтягиваются из
+									раздела Тарифы, чтобы не было рассинхрона.
 								</p>
 							</div>
 							<ToggleField
@@ -2085,68 +2085,9 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 										hint="Каждый пункт с новой строки."
 										rows={5}
 									/>
-									<div className={styles.gridThree}>
-										<TextField
-											id={`plan-monthly-price-${index}`}
-											label="Цена в месяц"
-											value={plan.monthly.price}
-											onChange={value =>
-												updatePricingPlans(
-													draft.pricing.plans.map((item, itemIndex) =>
-														itemIndex === index
-															? {
-																	...item,
-																	monthly: {
-																		...item.monthly,
-																		price: value
-																	}
-																}
-															: item
-													)
-												)
-											}
-										/>
-										<TextField
-											id={`plan-yearly-price-${index}`}
-											label="Цена за год"
-											value={plan.yearly.price}
-											onChange={value =>
-												updatePricingPlans(
-													draft.pricing.plans.map((item, itemIndex) =>
-														itemIndex === index
-															? {
-																	...item,
-																	yearly: {
-																		...item.yearly,
-																		price: value
-																	}
-																}
-															: item
-													)
-												)
-											}
-										/>
-										<TextField
-											id={`plan-yearly-total-${index}`}
-											label="Итого за год"
-											value={plan.yearly.yearlyTotal ?? ''}
-											onChange={value =>
-												updatePricingPlans(
-													draft.pricing.plans.map((item, itemIndex) =>
-														itemIndex === index
-															? {
-																	...item,
-																	yearly: {
-																		...item.yearly,
-																		yearlyTotal: value
-																	}
-																}
-															: item
-													)
-												)
-											}
-										/>
-									</div>
+									<p className={styles.fieldHint}>
+										Цены этой карточки редактируются в разделе Тарифы.
+									</p>
 								</div>
 							))}
 						</div>

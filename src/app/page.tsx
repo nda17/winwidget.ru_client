@@ -1,5 +1,6 @@
 import Home from '@/components/screens/home/Home'
 import { getHomePageContent } from '@/services/home-page-content/home-page-content.server'
+import { getTariffPrices } from '@/services/tariff-prices/tariff-prices.server'
 import { Metadata } from 'next'
 
 export const generateMetadata = async (): Promise<Metadata> => {
@@ -30,9 +31,12 @@ export const generateMetadata = async (): Promise<Metadata> => {
 }
 
 const HomePage = async () => {
-	const content = await getHomePageContent()
+	const [content, tariffPrices] = await Promise.all([
+		getHomePageContent(),
+		getTariffPrices()
+	])
 
-	return <Home content={content} />
+	return <Home content={content} tariffPrices={tariffPrices} />
 }
 
 export default HomePage

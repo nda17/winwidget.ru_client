@@ -5,7 +5,14 @@ import type {
 	HomePagePlanPrice,
 	HomePagePricingContent
 } from '@/services/home-page-content/home-page-content.types'
+import tariffPricesService from '@/services/tariff-prices/tariff-prices.service'
+import {
+	createTariffPriceMap,
+	type PaidPlan,
+	type TariffPrice
+} from '@/services/tariff-prices/tariff-prices.types'
 import { useAuthStore } from '@/store/auth-store/auth-store'
+import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useState } from 'react'
 import styles from './HomePricing.module.scss'
@@ -14,12 +21,49 @@ type BillingPeriod = 'monthly' | 'yearly'
 
 interface Props {
 	content: HomePagePricingContent
+	tariffPrices?: TariffPrice[] | null
 }
 
-const HomePricing = ({ content }: Props) => {
+const isPaidPlan = (plan: string): plan is PaidPlan =>
+	plan === 'EASY' || plan === 'HARD'
+
+const formatRub = (value: number) =>
+	new Intl.NumberFormat('ru-RU').format(value)
+
+const HomePricing = ({ content, tariffPrices = null }: Props) => {
 	const [billing, setBilling] = useState<BillingPeriod>('yearly')
 	const auth = useAuthStore(state => state.auth)
 	const ctaHref = auth ? PUBLIC_PAGES.PAYMENT : PUBLIC_PAGES.REGISTER
+	const { data: actualTariffPrices = tariffPrices } = useQuery({
+		queryKey: ['tariff-prices'],
+		queryFn: tariffPricesService.get,
+		initialData: tariffPrices ?? undefined
+	})
+	const tariffPriceMap = createTariffPriceMap(actualTariffPrices)
+
+	const getPlanPricing = (
+		planKey: string,
+		fallback: HomePagePlanPrice
+	) => {
+		if (!isPaidPlan(planKey)) {
+			return fallback
+		}
+
+		const planPrices = tariffPriceMap[planKey]
+
+		if (billing === 'yearly') {
+			return {
+				price: `${formatRub(Math.round(planPrices.YEARLY / 12))} ₽`,
+				priceNote: fallback.priceNote,
+				yearlyTotal: `${formatRub(planPrices.YEARLY)} ₽/год`
+			}
+		}
+
+		return {
+			price: `${formatRub(planPrices.MONTHLY)} ₽`,
+			priceNote: fallback.priceNote
+		}
+	}
 
 	return (
 		<section id="pricing" className={styles.section}>
@@ -47,8 +91,10 @@ const HomePricing = ({ content }: Props) => {
 
 			<div className={styles.gridLayout}>
 				{content.plans.map(plan => {
-					const pricing: HomePagePlanPrice =
+					const fallbackPricing: HomePagePlanPrice =
 						billing === 'yearly' ? plan.yearly : plan.monthly
+					const pricing = getPlanPricing(plan.key, fallbackPricing)
+
 					return (
 						<div
 							key={plan.key}

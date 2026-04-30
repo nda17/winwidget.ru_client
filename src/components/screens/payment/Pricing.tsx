@@ -4,6 +4,11 @@ import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import subscriptionService, {
 	type IPendingPayment
 } from '@/services/subscription/subscription.service'
+import tariffPricesService from '@/services/tariff-prices/tariff-prices.service'
+import {
+	createTariffPriceMap,
+	type TariffPrice
+} from '@/services/tariff-prices/tariff-prices.types'
 import { BillingPeriod, Plan } from '@/services/widget/widget.types'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import { useMutation, useQuery } from '@tanstack/react-query'
@@ -15,9 +20,6 @@ const PLANS = [
 	{
 		key: 'EASY' as Plan,
 		name: 'Easy',
-		monthly: 990,
-		yearly: 390,
-		yearlyTotal: 4680,
 		color: '#4705fb',
 		features: [
 			'1 виджет',
@@ -31,9 +33,6 @@ const PLANS = [
 	{
 		key: 'HARD' as Plan,
 		name: 'Hard',
-		monthly: 1690,
-		yearly: 790,
-		yearlyTotal: 9480,
 		color: '#7b2fff',
 		features: [
 			'10 любых виджетов',
@@ -65,6 +64,9 @@ const planLabel: Record<Plan, string> = {
 	HARD: 'Hard'
 }
 
+const formatRub = (value: number) =>
+	new Intl.NumberFormat('ru-RU').format(value)
+
 const getPendingPaymentLabel = (pendingPayment: IPendingPayment) => {
 	const planLabel =
 		pendingPayment.plan === 'EASY'
@@ -82,11 +84,22 @@ const getPendingPaymentLabel = (pendingPayment: IPendingPayment) => {
 
 interface PricingProps {
 	paymentEnabled?: boolean
+	tariffPrices?: TariffPrice[] | null
 }
 
-const Pricing = ({ paymentEnabled = true }: PricingProps) => {
+const Pricing = ({
+	paymentEnabled = true,
+	tariffPrices = null
+}: PricingProps) => {
 	const auth = useAuthStore(state => state.auth)
 	const [period, setPeriod] = useState<BillingPeriod>('YEARLY')
+
+	const { data: actualTariffPrices = tariffPrices } = useQuery({
+		queryKey: ['tariff-prices'],
+		queryFn: tariffPricesService.get,
+		initialData: tariffPrices ?? undefined
+	})
+	const tariffPriceMap = createTariffPriceMap(actualTariffPrices)
 
 	const { data: subscription, isLoading: subLoading } = useQuery({
 		queryKey: ['subscription'],
@@ -321,7 +334,10 @@ const Pricing = ({ paymentEnabled = true }: PricingProps) => {
 
 			<div className={styles.plans}>
 				{PLANS.map(plan => {
-					const price = isYearly ? plan.yearly : plan.monthly
+					const planPrices = tariffPriceMap[plan.key]
+					const price = isYearly
+						? Math.round(planPrices.YEARLY / 12)
+						: planPrices.MONTHLY
 					const isDowngradeBlocked = Boolean(
 						isActive &&
 						currentPlan &&
@@ -348,13 +364,13 @@ const Pricing = ({ paymentEnabled = true }: PricingProps) => {
 							</h2>
 
 							<div className={styles.priceBlock}>
-								<span className={styles.price}>{price} ₽</span>
+								<span className={styles.price}>{formatRub(price)} ₽</span>
 								<span className={styles.pricePer}>/мес</span>
 							</div>
 
 							{isYearly && (
 								<p className={styles.yearlyNote}>
-									{plan.yearlyTotal} ₽ / год
+									{formatRub(planPrices.YEARLY)} ₽ / год
 								</p>
 							)}
 

@@ -8,13 +8,15 @@ import HomePricing from '@/components/screens/home/pricing/HomePricing'
 import HomeSteps from '@/components/screens/home/steps/HomeSteps'
 import HomeTools from '@/components/screens/home/tools/HomeTools'
 import type { HomePageContent } from '@/services/home-page-content/home-page-content.types'
+import type { TariffPrice } from '@/services/tariff-prices/tariff-prices.types'
 import styles from './Home.module.scss'
 
 interface Props {
 	content: HomePageContent
+	tariffPrices?: TariffPrice[] | null
 }
 
-const Home = ({ content }: Props) => {
+const Home = ({ content, tariffPrices = null }: Props) => {
 	return (
 		<div className={styles.page}>
 			{content.demoWidgets.enabled && (
@@ -28,7 +30,10 @@ const Home = ({ content }: Props) => {
 			{content.tools.enabled && <HomeTools content={content.tools} />}
 			{content.steps.enabled && <HomeSteps content={content.steps} />}
 			{content.pricing.enabled && (
-				<HomePricing content={content.pricing} />
+				<HomePricing
+					content={content.pricing}
+					tariffPrices={tariffPrices}
+				/>
 			)}
 			{content.faq.enabled && <HomeFaq content={content.faq} />}
 			{content.cta.enabled && (
