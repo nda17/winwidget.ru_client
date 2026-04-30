@@ -1,7 +1,8 @@
 import type {
 	HomePageContent,
 	HomePageIntegrationIconKey,
-	HomePagePricingPlan
+	HomePagePricingPlan,
+	HomePageSitemapChangeFrequency
 } from '@/services/home-page-content/home-page-content.types'
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
@@ -27,6 +28,15 @@ const mergeSimpleArray = <T extends object>(
 		...clone(fallback[index] ?? fallback[fallback.length - 1]),
 		...(isRecord(item) ? item : {})
 	})) as T[]
+}
+
+const mergeStringArray = (
+	value: unknown,
+	fallback: string[]
+): string[] => {
+	if (!Array.isArray(value)) return clone(fallback)
+
+	return value.map(item => String(item))
 }
 
 const mergePricingPlans = (
@@ -77,6 +87,174 @@ const normalizeIconKey = (
 		: fallback
 }
 
+const SITEMAP_CHANGE_FREQUENCIES: HomePageSitemapChangeFrequency[] = [
+	'always',
+	'hourly',
+	'daily',
+	'weekly',
+	'monthly',
+	'yearly',
+	'never'
+]
+
+const normalizeSitemapChangeFrequency = (
+	value: unknown,
+	fallback: HomePageSitemapChangeFrequency
+): HomePageSitemapChangeFrequency =>
+	SITEMAP_CHANGE_FREQUENCIES.includes(
+		value as HomePageSitemapChangeFrequency
+	)
+		? (value as HomePageSitemapChangeFrequency)
+		: fallback
+
+const normalizePath = (value: unknown, fallback: string): string => {
+	const candidate = typeof value === 'string' ? value.trim() : ''
+	if (!candidate) return fallback
+
+	if (
+		candidate.startsWith('http://') ||
+		candidate.startsWith('https://')
+	) {
+		try {
+			return new URL(candidate).pathname || '/'
+		} catch {
+			return fallback
+		}
+	}
+
+	return candidate.startsWith('/') ? candidate : `/${candidate}`
+}
+
+const normalizeBaseUrl = (value: unknown, fallback: string): string => {
+	const candidate = typeof value === 'string' ? value.trim() : ''
+	if (!candidate) return fallback
+
+	try {
+		return new URL(candidate).origin
+	} catch {
+		return fallback
+	}
+}
+
+const normalizePriority = (value: unknown, fallback: number): number => {
+	const numeric = Number(value)
+	if (!Number.isFinite(numeric)) return fallback
+
+	return Math.min(1, Math.max(0, numeric))
+}
+
+const mergeRobotsDisallow = (
+	value: unknown,
+	fallback: string[]
+): string[] => {
+	if (!Array.isArray(value)) return clone(fallback)
+
+	const lines = value.map(item => normalizePath(item, '')).filter(Boolean)
+
+	return Array.from(new Set(lines))
+}
+
+const mergeSitemapItems = (
+	value: unknown,
+	fallback: HomePageContent['technicalSeo']['sitemapItems']
+): HomePageContent['technicalSeo']['sitemapItems'] => {
+	if (!Array.isArray(value)) return clone(fallback)
+
+	return value.map((item, index) => {
+		const base = clone(fallback[index] ?? fallback[fallback.length - 1])
+		if (!isRecord(item)) return base
+
+		return {
+			...base,
+			...item,
+			path: normalizePath(item.path, base.path),
+			changeFrequency: normalizeSitemapChangeFrequency(
+				item.changeFrequency,
+				base.changeFrequency
+			),
+			priority: normalizePriority(item.priority, base.priority),
+			enabled:
+				typeof item.enabled === 'boolean' ? item.enabled : base.enabled
+		}
+	})
+}
+
+export const DEFAULT_HOME_PAGE_FOOTER_CONTENT: HomePageContent['footer'] =
+	{
+		aboutTitle: 'О нас:',
+		infoLines: ['ООО «ЮБС»', 'ИНН: 2700019628', 'ОГРН: 1232700016460'],
+		email: 'info@winwidget.ru',
+		vkUrl: 'https://vk.ru',
+		telegramUrl: 'https://t.me/ybs_one',
+		vkAriaLabel: 'Winwidget во ВКонтакте',
+		telegramAriaLabel: 'Winwidget в Telegram'
+	}
+
+export const DEFAULT_HOME_PAGE_BODY_CONTENT: HomePageContent['body'] = {
+	enabled: false,
+	html: ''
+}
+
+export const DEFAULT_HOME_PAGE_HEAD_CONTENT: HomePageContent['head'] = {
+	enabled: false,
+	html: ''
+}
+
+export const DEFAULT_HOME_PAGE_TECHNICAL_SEO_CONTENT: HomePageContent['technicalSeo'] =
+	{
+		baseUrl: 'https://winwidget.ru',
+		robotsDisallow: [
+			'/admin/',
+			'/cabinet/',
+			'/wheels/',
+			'/quizzes/',
+			'/callbacks/',
+			'/timers/',
+			'/page-wheel/',
+			'/page-quiz/',
+			'/page-callback/',
+			'/page-timer/',
+			'/payment/',
+			'/logout/',
+			'/login/',
+			'/register/',
+			'/restore-password/',
+			'/social-auth/'
+		],
+		sitemapItems: [
+			{
+				path: '/',
+				changeFrequency: 'weekly',
+				priority: 1,
+				enabled: true
+			},
+			{
+				path: '/legal-documentation/personal-policy',
+				changeFrequency: 'yearly',
+				priority: 0.3,
+				enabled: true
+			},
+			{
+				path: '/legal-documentation/consent-processing',
+				changeFrequency: 'yearly',
+				priority: 0.3,
+				enabled: true
+			},
+			{
+				path: '/legal-documentation/cookie-notice',
+				changeFrequency: 'yearly',
+				priority: 0.3,
+				enabled: true
+			},
+			{
+				path: '/legal-documentation/oferta',
+				changeFrequency: 'yearly',
+				priority: 0.3,
+				enabled: true
+			}
+		]
+	}
+
 export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 	seo: {
 		title: 'Winwidget — виджеты для увеличения конверсии сайта',
@@ -94,6 +272,7 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 		ogDescription:
 			'Колесо фортуны для сайта. Собирайте контакты посетителей через игровую механику. Интеграция с amoCRM, Битрикс24, Telegram.'
 	},
+	technicalSeo: DEFAULT_HOME_PAGE_TECHNICAL_SEO_CONTENT,
 	demoWidgets: {
 		enabled: true,
 		bubbleTexts: {
@@ -419,7 +598,10 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 		enabled: true,
 		text: 'Попробуйте сейчас\nи начните получать больше заявок уже через 10 минут',
 		buttonText: 'Начать бесплатный период'
-	}
+	},
+	footer: DEFAULT_HOME_PAGE_FOOTER_CONTENT,
+	head: DEFAULT_HOME_PAGE_HEAD_CONTENT,
+	body: DEFAULT_HOME_PAGE_BODY_CONTENT
 }
 
 export const normalizeHomePageContent = (
@@ -452,6 +634,27 @@ export const normalizeHomePageContent = (
 		...defaultContent,
 		...content,
 		seo: mergeObject(defaultContent.seo, content.seo),
+		technicalSeo: {
+			...mergeObject(defaultContent.technicalSeo, content.technicalSeo),
+			baseUrl: normalizeBaseUrl(
+				isRecord(content.technicalSeo)
+					? content.technicalSeo.baseUrl
+					: undefined,
+				defaultContent.technicalSeo.baseUrl
+			),
+			robotsDisallow: mergeRobotsDisallow(
+				isRecord(content.technicalSeo)
+					? content.technicalSeo.robotsDisallow
+					: undefined,
+				defaultContent.technicalSeo.robotsDisallow
+			),
+			sitemapItems: mergeSitemapItems(
+				isRecord(content.technicalSeo)
+					? content.technicalSeo.sitemapItems
+					: undefined,
+				defaultContent.technicalSeo.sitemapItems
+			)
+		},
 		demoWidgets: {
 			...defaultContent.demoWidgets,
 			...(isRecord(content.demoWidgets) ? content.demoWidgets : {}),
@@ -513,6 +716,35 @@ export const normalizeHomePageContent = (
 				defaultContent.faq.items
 			)
 		},
-		cta: mergeObject(defaultContent.cta, content.cta)
+		cta: mergeObject(defaultContent.cta, content.cta),
+		footer: {
+			...mergeObject(defaultContent.footer, content.footer),
+			infoLines: mergeStringArray(
+				isRecord(content.footer) ? content.footer.infoLines : undefined,
+				defaultContent.footer.infoLines
+			)
+		},
+		head: {
+			...mergeObject(defaultContent.head, content.head),
+			enabled:
+				isRecord(content.head) && typeof content.head.enabled === 'boolean'
+					? content.head.enabled
+					: defaultContent.head.enabled,
+			html:
+				isRecord(content.head) && typeof content.head.html === 'string'
+					? content.head.html
+					: defaultContent.head.html
+		},
+		body: {
+			...mergeObject(defaultContent.body, content.body),
+			enabled:
+				isRecord(content.body) && typeof content.body.enabled === 'boolean'
+					? content.body.enabled
+					: defaultContent.body.enabled,
+			html:
+				isRecord(content.body) && typeof content.body.html === 'string'
+					? content.body.html
+					: defaultContent.body.html
+		}
 	}
 }

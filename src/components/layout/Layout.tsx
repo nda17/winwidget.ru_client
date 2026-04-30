@@ -12,7 +12,11 @@ import { NextPage } from 'next'
 import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
 
-const Layout: NextPage<ILayout> = ({ children, siteSettings }) => {
+const Layout: NextPage<ILayout> = ({
+	children,
+	siteSettings,
+	footerContent
+}) => {
 	const visibleVeilBackground = useVeilBackgroundStore(
 		state => state.visible
 	)
@@ -61,7 +65,7 @@ const Layout: NextPage<ILayout> = ({ children, siteSettings }) => {
 			<main className={isLandingPage ? styles.mainLanding : styles.main}>
 				{children}
 			</main>
-			<Footer />
+			<Footer content={footerContent} />
 		</div>
 	)
 }

@@ -1,54 +1,79 @@
 import styles from '@/components/layout/footer/Footer.module.scss'
 import AppIcon from '@/components/ui/icons/AppIcon'
 import { PUBLIC_PAGES } from '@/config/pages/public.config'
+import { DEFAULT_HOME_PAGE_FOOTER_CONTENT } from '@/services/home-page-content/home-page-content.defaults'
+import type { HomePageFooterContent } from '@/services/home-page-content/home-page-content.types'
 import clsx from 'clsx'
 import { NextPage } from 'next'
 import Link from 'next/link'
 
-const Footer: NextPage = () => {
+interface FooterProps {
+	content?: HomePageFooterContent
+}
+
+const Footer: NextPage<FooterProps> = ({ content }) => {
 	const year = 2025
 	const currentYear = new Date().getFullYear()
+	const footerContent = content ?? DEFAULT_HOME_PAGE_FOOTER_CONTENT
+	const email = footerContent.email.trim()
+	const vkUrl = footerContent.vkUrl.trim()
+	const telegramUrl = footerContent.telegramUrl.trim()
 
 	return (
 		<footer className={styles.footer}>
 			<div className={clsx(styles['layout-container'])}>
 				<div className={clsx(styles['information-wrapper'])}>
 					<div className={clsx(styles['contacts-wrapper'])}>
-						<p className={clsx(styles['title-block'])}>О нас:</p>
-						<p className={clsx(styles['info-llc'])}>ООО «ЮБС»</p>
-						<p className={clsx(styles['info-llc'])}>ИНН: 2700019628</p>
-						<p className={clsx(styles['info-llc'])}>ОГРН: 1232700016460</p>
+						<p className={clsx(styles['title-block'])}>
+							{footerContent.aboutTitle}
+						</p>
+						{footerContent.infoLines.map((line, index) => (
+							<p
+								key={`${line}-${index}`}
+								className={clsx(styles['info-llc'])}
+							>
+								{line}
+							</p>
+						))}
 
-						<a
-							href="mailto:info@winwidget.ru"
-							className={clsx(styles['link-contact'])}
-						>
-							info@winwidget.ru
-						</a>
+						{email && (
+							<a
+								href={`mailto:${email}`}
+								className={clsx(styles['link-contact'])}
+							>
+								{email}
+							</a>
+						)}
 
-						<nav
-							className={clsx(styles['socials-wrapper'])}
-							aria-label="Социальные сети"
-						>
-							<div className={clsx(styles['link-icon-wrapper'])}>
-								<Link
-									href={PUBLIC_PAGES.SOCIALS_LINK_VK}
-									className={clsx(styles['link-icon'])}
-									aria-label="Winwidget во ВКонтакте"
-									title="Winwidget во ВКонтакте"
-								>
-									<AppIcon name="vk" fill="#000000" />
-								</Link>
-								<Link
-									href={PUBLIC_PAGES.SOCIALS_LINK_TG}
-									className={clsx(styles['link-icon'])}
-									aria-label="Winwidget в Telegram"
-									title="Winwidget в Telegram"
-								>
-									<AppIcon name="telegram" fill="#000000" />
-								</Link>
-							</div>
-						</nav>
+						{(vkUrl || telegramUrl) && (
+							<nav
+								className={clsx(styles['socials-wrapper'])}
+								aria-label="Социальные сети"
+							>
+								<div className={clsx(styles['link-icon-wrapper'])}>
+									{vkUrl && (
+										<Link
+											href={vkUrl}
+											className={clsx(styles['link-icon'])}
+											aria-label={footerContent.vkAriaLabel}
+											title={footerContent.vkAriaLabel}
+										>
+											<AppIcon name="vk" fill="#000000" />
+										</Link>
+									)}
+									{telegramUrl && (
+										<Link
+											href={telegramUrl}
+											className={clsx(styles['link-icon'])}
+											aria-label={footerContent.telegramAriaLabel}
+											title={footerContent.telegramAriaLabel}
+										>
+											<AppIcon name="telegram" fill="#000000" />
+										</Link>
+									)}
+								</div>
+							</nav>
+						)}
 					</div>
 
 					<nav

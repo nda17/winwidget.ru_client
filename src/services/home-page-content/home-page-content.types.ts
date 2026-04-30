@@ -23,6 +23,7 @@ export interface HomePageContentRecord {
 
 export interface HomePageContent {
 	seo: HomePageSeoContent
+	technicalSeo: HomePageTechnicalSeoContent
 	demoWidgets: HomePageDemoWidgetsContent
 	hero: HomePageHeroContent
 	analysis: HomePageAnalysisContent
@@ -32,6 +33,9 @@ export interface HomePageContent {
 	pricing: HomePagePricingContent
 	faq: HomePageFaqContent
 	cta: HomePageCtaContent
+	footer: HomePageFooterContent
+	head: HomePageHeadContent
+	body: HomePageBodyContent
 }
 
 export interface HomePageSeoContent {
@@ -40,6 +44,28 @@ export interface HomePageSeoContent {
 	keywords: string[]
 	ogTitle: string
 	ogDescription: string
+}
+
+export type HomePageSitemapChangeFrequency =
+	| 'always'
+	| 'hourly'
+	| 'daily'
+	| 'weekly'
+	| 'monthly'
+	| 'yearly'
+	| 'never'
+
+export interface HomePageTechnicalSeoContent {
+	baseUrl: string
+	robotsDisallow: string[]
+	sitemapItems: HomePageSitemapItem[]
+}
+
+export interface HomePageSitemapItem {
+	path: string
+	changeFrequency: HomePageSitemapChangeFrequency
+	priority: number
+	enabled: boolean
 }
 
 export interface HomePageDemoWidgetsContent {
@@ -154,4 +180,24 @@ export interface HomePageCtaContent {
 	enabled: boolean
 	text: string
 	buttonText: string
+}
+
+export interface HomePageFooterContent {
+	aboutTitle: string
+	infoLines: string[]
+	email: string
+	vkUrl: string
+	telegramUrl: string
+	vkAriaLabel: string
+	telegramAriaLabel: string
+}
+
+export interface HomePageBodyContent {
+	enabled: boolean
+	html: string
+}
+
+export interface HomePageHeadContent {
+	enabled: boolean
+	html: string
 }
