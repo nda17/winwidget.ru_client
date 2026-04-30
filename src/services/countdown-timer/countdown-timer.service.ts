@@ -26,6 +26,7 @@ const countdownTimerService = {
 		payload: Partial<{
 			name: string
 			isActive: boolean
+			installDomain: string
 			config: Partial<CountdownTimerConfig>
 		}>
 	) {

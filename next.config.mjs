@@ -4,8 +4,37 @@ const apiBase =
 		? process.env.NEXT_PUBLIC_PRODUCTION_HOST
 		: process.env.NEXT_PUBLIC_DEVELOPMENT_HOST || 'http://localhost:4200'
 
+const widgetPreviewFrameHeaders = [
+	{
+		key: 'Content-Security-Policy',
+		value: "frame-ancestors 'self'"
+	},
+	{
+		key: 'X-Frame-Options',
+		value: 'SAMEORIGIN'
+	}
+]
+
 const nextConfig = {
 	output: 'standalone',
+	headers: () => [
+		{
+			source: '/page-wheel/:path*',
+			headers: widgetPreviewFrameHeaders
+		},
+		{
+			source: '/page-quiz/:path*',
+			headers: widgetPreviewFrameHeaders
+		},
+		{
+			source: '/page-callback/:path*',
+			headers: widgetPreviewFrameHeaders
+		},
+		{
+			source: '/page-timer/:path*',
+			headers: widgetPreviewFrameHeaders
+		}
+	],
 	rewrites: () => {
 		return [
 			{

@@ -43,6 +43,7 @@ export interface Callback {
 	publicKey: string
 	name: string
 	isActive: boolean
+	installDomain: string
 	config: CallbackConfig
 	createdAt: string
 	updatedAt: string

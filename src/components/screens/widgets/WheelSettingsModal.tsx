@@ -20,6 +20,9 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 	const [tab, setTab] = useState<Tab>('main')
 	const [config, setConfig] = useState<WidgetConfig>({ ...widget.config })
 	const [name, setName] = useState(widget.name)
+	const [installDomain, setInstallDomain] = useState(
+		widget.installDomain ?? ''
+	)
 	const titleId = useId()
 	const [cooldownInput, setCooldownInput] = useState(
 		String(widget.config.spinCooldownDays ?? 0)
@@ -27,9 +30,13 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 	const [confirmReset, setConfirmReset] = useState(false)
 	const [confirmResetAttempts, setConfirmResetAttempts] = useState(false)
 	const [savedSnapshot, setSavedSnapshot] = useState(() =>
-		JSON.stringify({ name: widget.name, config: widget.config })
+		JSON.stringify({
+			name: widget.name,
+			installDomain: widget.installDomain ?? '',
+			config: widget.config
+		})
 	)
-	const currentSnapshot = JSON.stringify({ name, config })
+	const currentSnapshot = JSON.stringify({ name, installDomain, config })
 	const hasUnsavedChanges = currentSnapshot !== savedSnapshot
 
 	const DEFAULT_CONFIG: WidgetConfig = {
@@ -87,17 +94,29 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 	}
 
 	const saveMutation = useMutation({
-		mutationFn: (data: { name: string; config: WidgetConfig }) =>
-			widgetService.updateWidget(widget.id, data),
+		mutationFn: (data: {
+			name: string
+			installDomain?: string
+			config: WidgetConfig
+		}) =>
+			widgetService.updateWidget(widget.id, {
+				...data,
+				installDomain: data.installDomain ?? installDomain
+			}),
 		onMutate: () =>
 			toast.loading('Сохраняем настройки, пожалуйста подождите...'),
 		onSuccess: (updated, _, toastId) => {
 			toast.success('Сохранено', { id: toastId })
 			setName(updated.name)
+			setInstallDomain(updated.installDomain ?? '')
 			setConfig(updated.config)
 			setCooldownInput(String(updated.config.spinCooldownDays ?? 0))
 			setSavedSnapshot(
-				JSON.stringify({ name: updated.name, config: updated.config })
+				JSON.stringify({
+					name: updated.name,
+					installDomain: updated.installDomain ?? '',
+					config: updated.config
+				})
 			)
 			onSaved(updated)
 		},
@@ -119,10 +138,15 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 		onSuccess: (updated, _, toastId) => {
 			toast.success('Попытки всех посетителей сброшены', { id: toastId })
 			setName(updated.name)
+			setInstallDomain(updated.installDomain ?? '')
 			setConfig(updated.config)
 			setCooldownInput(String(updated.config.spinCooldownDays ?? 0))
 			setSavedSnapshot(
-				JSON.stringify({ name: updated.name, config: updated.config })
+				JSON.stringify({
+					name: updated.name,
+					installDomain: updated.installDomain ?? '',
+					config: updated.config
+				})
 			)
 			onSaved(updated)
 		},
@@ -220,6 +244,7 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 		setConfig(sanitizedConfig)
 		saveMutation.mutate({
 			name: sanitizedName,
+			installDomain,
 			config: sanitizedConfig
 		})
 	}
@@ -1400,6 +1425,27 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 									<h3 className={styles.settingsGroupTitle}>
 										Установка на сайт
 									</h3>
+								</div>
+
+								<div className={styles.field}>
+									<label
+										className={styles.label}
+										htmlFor={`${titleId}-install-domain`}
+									>
+										Домен установки виджета
+									</label>
+									<input
+										id={`${titleId}-install-domain`}
+										className={styles.input}
+										value={installDomain}
+										placeholder="site.ru"
+										onChange={e => setInstallDomain(e.target.value)}
+									/>
+									<p className={styles.hint}>
+										Пока домен пустой, встроенный виджет не отображается;
+										прямая ссылка и QR работают. Можно указать
+										https://page.site.ru — сохранится site.ru.
+									</p>
 								</div>
 
 								<div className={styles.field}>

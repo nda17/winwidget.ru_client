@@ -125,18 +125,34 @@ const CountdownTimerSettingsModal = ({
 		mergeConfig(timer.config)
 	)
 	const [name, setName] = useState(timer.name)
+	const [installDomain, setInstallDomain] = useState(
+		timer.installDomain ?? ''
+	)
 	const [confirmResetDefaults, setConfirmResetDefaults] = useState(false)
 	const [confirmResetTimers, setConfirmResetTimers] = useState(false)
 	const [savedSnapshot, setSavedSnapshot] = useState(
-		JSON.stringify({ name: timer.name, config: mergeConfig(timer.config) })
+		JSON.stringify({
+			name: timer.name,
+			installDomain: timer.installDomain ?? '',
+			config: mergeConfig(timer.config)
+		})
 	)
-	const currentSnapshot = JSON.stringify({ name, config: cfg })
+	const currentSnapshot = JSON.stringify({
+		name,
+		installDomain,
+		config: cfg
+	})
 	const hasUnsavedChanges = currentSnapshot !== savedSnapshot
 
 	const mutation = useMutation({
-		mutationFn: (data?: { name: string; config: CountdownTimerConfig }) =>
+		mutationFn: (data?: {
+			name: string
+			installDomain?: string
+			config: CountdownTimerConfig
+		}) =>
 			countdownTimerService.updateCountdownTimer(timer.id, {
 				name: data?.name ?? name,
+				installDomain: data?.installDomain ?? installDomain,
 				config: data?.config ?? cfg
 			}),
 		onMutate: () =>
@@ -145,9 +161,14 @@ const CountdownTimerSettingsModal = ({
 			const nextConfig = mergeConfig(updated.config)
 			toast.success('Сохранено', { id: toastId })
 			setName(updated.name)
+			setInstallDomain(updated.installDomain ?? '')
 			setCfg(nextConfig)
 			setSavedSnapshot(
-				JSON.stringify({ name: updated.name, config: nextConfig })
+				JSON.stringify({
+					name: updated.name,
+					installDomain: updated.installDomain ?? '',
+					config: nextConfig
+				})
 			)
 			onSaved({ ...updated, config: nextConfig })
 			notifyTimerWidgetUpdated(timer.publicKey)
@@ -216,7 +237,11 @@ const CountdownTimerSettingsModal = ({
 		}
 		setName(sanitizedName)
 		setCfg(sanitizedConfig)
-		mutation.mutate({ name: sanitizedName, config: sanitizedConfig })
+		mutation.mutate({
+			name: sanitizedName,
+			installDomain,
+			config: sanitizedConfig
+		})
 	}
 
 	const handleResetDefaults = () => {
@@ -910,6 +935,26 @@ const CountdownTimerSettingsModal = ({
 						<div className={styles.fields}>
 							<div className={styles.settingsGroup}>
 								<h3 className={styles.settingsGroupTitle}>Код виджета</h3>
+								<div className={styles.field}>
+									<label
+										className={styles.label}
+										htmlFor={`${titleId}-install-domain`}
+									>
+										Домен установки виджета
+									</label>
+									<input
+										id={`${titleId}-install-domain`}
+										className={styles.input}
+										value={installDomain}
+										placeholder="site.ru"
+										onChange={e => setInstallDomain(e.target.value)}
+									/>
+									<p className={styles.hint}>
+										Пока домен пустой, встроенный виджет не отображается;
+										прямая ссылка и QR работают. Можно указать
+										https://page.site.ru — сохранится site.ru.
+									</p>
+								</div>
 								<div className={styles.field}>
 									<textarea
 										className={`${styles.textarea} ${styles.codeArea}`}

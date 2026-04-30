@@ -411,6 +411,9 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 	const [tab, setTab] = useState<Tab>('main')
 	const [config, setConfig] = useState<QuizConfig>({ ...quiz.config })
 	const [name, setName] = useState(quiz.name)
+	const [installDomain, setInstallDomain] = useState(
+		quiz.installDomain ?? ''
+	)
 	const [scoreMode, setScoreMode] = useState<ScoreMode>('simple')
 	const titleId = useId()
 	const [cooldownInput, setCooldownInput] = useState(
@@ -419,22 +422,38 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 	const [confirmResetAttempts, setConfirmResetAttempts] = useState(false)
 	const [confirmResetDefaults, setConfirmResetDefaults] = useState(false)
 	const [savedSnapshot, setSavedSnapshot] = useState(
-		JSON.stringify({ name: quiz.name, config: quiz.config })
+		JSON.stringify({
+			name: quiz.name,
+			installDomain: quiz.installDomain ?? '',
+			config: quiz.config
+		})
 	)
-	const currentSnapshot = JSON.stringify({ name, config })
+	const currentSnapshot = JSON.stringify({ name, installDomain, config })
 	const hasUnsavedChanges = currentSnapshot !== savedSnapshot
 
 	const saveMutation = useMutation({
-		mutationFn: (data: { name: string; config: QuizConfig }) =>
-			quizService.updateQuiz(quiz.id, data),
+		mutationFn: (data: {
+			name: string
+			installDomain?: string
+			config: QuizConfig
+		}) =>
+			quizService.updateQuiz(quiz.id, {
+				...data,
+				installDomain: data.installDomain ?? installDomain
+			}),
 		onMutate: () =>
 			toast.loading('Сохраняем настройки, пожалуйста подождите...'),
 		onSuccess: (updated, _, toastId) => {
 			toast.success('Сохранено', { id: toastId })
 			setName(updated.name)
+			setInstallDomain(updated.installDomain ?? '')
 			setConfig(updated.config)
 			setSavedSnapshot(
-				JSON.stringify({ name: updated.name, config: updated.config })
+				JSON.stringify({
+					name: updated.name,
+					installDomain: updated.installDomain ?? '',
+					config: updated.config
+				})
 			)
 			onSaved(updated)
 		},
@@ -455,9 +474,15 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 			toast.loading('Сбрасываем попытки, пожалуйста подождите...'),
 		onSuccess: (updated, _, toastId) => {
 			toast.success('Попытки всех посетителей сброшены', { id: toastId })
+			setName(updated.name)
+			setInstallDomain(updated.installDomain ?? '')
 			setConfig(updated.config)
 			setSavedSnapshot(
-				JSON.stringify({ name: updated.name, config: updated.config })
+				JSON.stringify({
+					name: updated.name,
+					installDomain: updated.installDomain ?? '',
+					config: updated.config
+				})
 			)
 			onSaved(updated)
 		},
@@ -746,7 +771,7 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 		}
 		const sanitizedName = name.trim() || 'Квиз'
 		setName(sanitizedName)
-		saveMutation.mutate({ name: sanitizedName, config })
+		saveMutation.mutate({ name: sanitizedName, installDomain, config })
 	}
 
 	const handleResetAttempts = () => {
@@ -2245,6 +2270,27 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 									<h3 className={styles.settingsGroupTitle}>
 										Установка на сайт
 									</h3>
+								</div>
+
+								<div className={styles.field}>
+									<label
+										className={styles.label}
+										htmlFor={`${titleId}-install-domain`}
+									>
+										Домен установки виджета
+									</label>
+									<input
+										id={`${titleId}-install-domain`}
+										className={styles.input}
+										value={installDomain}
+										placeholder="site.ru"
+										onChange={e => setInstallDomain(e.target.value)}
+									/>
+									<p className={styles.hint}>
+										Пока домен пустой, встроенный виджет не отображается;
+										прямая ссылка и QR работают. Можно указать
+										https://page.site.ru — сохранится site.ru.
+									</p>
 								</div>
 
 								<div className={styles.field}>

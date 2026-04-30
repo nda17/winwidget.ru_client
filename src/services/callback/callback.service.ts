@@ -23,6 +23,7 @@ const callbackService = {
 		payload: Partial<{
 			name: string
 			isActive: boolean
+			installDomain: string
 			config: Partial<CallbackConfig>
 		}>
 	) {

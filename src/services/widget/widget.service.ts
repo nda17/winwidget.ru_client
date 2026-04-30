@@ -23,6 +23,7 @@ const widgetService = {
 		payload: Partial<{
 			name: string
 			isActive: boolean
+			installDomain: string
 			config: Partial<WidgetConfig>
 		}>
 	) {

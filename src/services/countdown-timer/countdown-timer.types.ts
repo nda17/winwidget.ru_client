@@ -59,6 +59,7 @@ export interface CountdownTimer {
 	publicKey: string
 	name: string
 	isActive: boolean
+	installDomain: string
 	config: CountdownTimerConfig
 	createdAt: string
 	updatedAt: string

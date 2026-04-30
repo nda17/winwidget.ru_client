@@ -73,6 +73,7 @@ export interface Quiz {
 	publicKey: string
 	name: string
 	isActive: boolean
+	installDomain: string
 	config: QuizConfig
 	createdAt: string
 	updatedAt: string

@@ -61,6 +61,7 @@ export interface Widget {
 	publicKey: string
 	name: string
 	isActive: boolean
+	installDomain: string
 	config: WidgetConfig
 	createdAt: string
 	updatedAt: string

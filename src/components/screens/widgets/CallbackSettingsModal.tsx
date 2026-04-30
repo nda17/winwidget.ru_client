@@ -80,17 +80,33 @@ const CallbackSettingsModal = ({ callback, onClose, onSaved }: Props) => {
 	const [tab, setTab] = useState<Tab>('main')
 	const [cfg, setCfg] = useState<CallbackConfig>({ ...callback.config })
 	const [name, setName] = useState(callback.name)
+	const [installDomain, setInstallDomain] = useState(
+		callback.installDomain ?? ''
+	)
 	const [confirmResetDefaults, setConfirmResetDefaults] = useState(false)
 	const [savedSnapshot, setSavedSnapshot] = useState(
-		JSON.stringify({ name: callback.name, config: callback.config })
+		JSON.stringify({
+			name: callback.name,
+			installDomain: callback.installDomain ?? '',
+			config: callback.config
+		})
 	)
-	const currentSnapshot = JSON.stringify({ name, config: cfg })
+	const currentSnapshot = JSON.stringify({
+		name,
+		installDomain,
+		config: cfg
+	})
 	const hasUnsavedChanges = currentSnapshot !== savedSnapshot
 
 	const mutation = useMutation({
-		mutationFn: (data?: { name: string; config: CallbackConfig }) =>
+		mutationFn: (data?: {
+			name: string
+			installDomain?: string
+			config: CallbackConfig
+		}) =>
 			callbackService.updateCallback(callback.id, {
 				name: data?.name ?? name,
+				installDomain: data?.installDomain ?? installDomain,
 				config: data?.config ?? cfg
 			}),
 		onMutate: () =>
@@ -98,9 +114,14 @@ const CallbackSettingsModal = ({ callback, onClose, onSaved }: Props) => {
 		onSuccess: (updated, _, toastId) => {
 			toast.success('Сохранено', { id: toastId })
 			setName(updated.name)
+			setInstallDomain(updated.installDomain ?? '')
 			setCfg(updated.config)
 			setSavedSnapshot(
-				JSON.stringify({ name: updated.name, config: updated.config })
+				JSON.stringify({
+					name: updated.name,
+					installDomain: updated.installDomain ?? '',
+					config: updated.config
+				})
 			)
 			onSaved(updated)
 		},
@@ -970,6 +991,27 @@ const CallbackSettingsModal = ({ callback, onClose, onSaved }: Props) => {
 									<h3 className={styles.settingsGroupTitle}>
 										Установка на сайт
 									</h3>
+								</div>
+
+								<div className={styles.field}>
+									<label
+										className={styles.label}
+										htmlFor={`${titleId}-install-domain`}
+									>
+										Домен установки виджета
+									</label>
+									<input
+										id={`${titleId}-install-domain`}
+										className={styles.input}
+										value={installDomain}
+										placeholder="site.ru"
+										onChange={e => setInstallDomain(e.target.value)}
+									/>
+									<p className={styles.hint}>
+										Пока домен пустой, встроенный виджет не отображается;
+										прямая ссылка и QR работают. Можно указать
+										https://page.site.ru — сохранится site.ru.
+									</p>
 								</div>
 
 								<div className={styles.field}>

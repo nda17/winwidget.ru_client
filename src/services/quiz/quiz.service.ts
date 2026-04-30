@@ -23,6 +23,7 @@ const quizService = {
 		payload: Partial<{
 			name: string
 			isActive: boolean
+			installDomain: string
 			config: Partial<QuizConfig>
 		}>
 	) {
