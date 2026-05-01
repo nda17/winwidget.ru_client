@@ -1441,17 +1441,20 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 										placeholder="site.ru"
 										onChange={e => setInstallDomain(e.target.value)}
 									/>
-									<p className={styles.domainHint}>
-										Если не указан домен или не корректный домен, виджет не
-										появится после добавления кода.
-										<br />
-										<br />
-										Прямая ссылка и QR-код работают без указания домена.
-										<br />
-										<br />
-										Формат добавления домена: https://page.example.ru,
-										https://example.ru, www.example.ru, example.ru
-									</p>
+									<div className={styles.domainHint}>
+										<p>
+											Указанный домен сайта и сайт, на котором фактически
+											будет добавлен код виджета, должны совпадать, иначе
+											виджет не появится после добавления кода.
+										</p>
+										<p>
+											Прямая ссылка и QR-код работают без указания домена.
+										</p>
+										<p>
+											Формат добавления домена: https://page.example.ru,
+											https://example.ru, www.example.ru, example.ru
+										</p>
+									</div>
 								</div>
 
 								<div className={styles.field}>
