@@ -5,6 +5,7 @@ import DemoWheel from '@/components/screens/home/demo-wheel/DemoWheel'
 import DemoQuiz from '@/components/screens/home/demo-quiz/DemoQuiz'
 import DemoCallback from '@/components/screens/home/demo-callback/DemoCallback'
 import DemoCountdown from '@/components/screens/home/demo-countdown/DemoCountdown'
+import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import styles from './DemoWidgets.module.scss'
 
@@ -117,7 +118,14 @@ const DemoWidgets = ({ content }: Props) => {
 				>
 					{activeDemo === 'wheel' ? (
 						<>
-							<span className={styles.floatIcon}>🎁</span>
+							<Image
+								src="/images/tools/wheel-gift-button.png"
+								alt=""
+								width={64}
+								height={64}
+								className={styles.floatIcon}
+								aria-hidden="true"
+							/>
 							<span
 								className={`${styles.floatLabel} ${styles.floatLabelWheel}`}
 							>

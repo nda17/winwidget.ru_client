@@ -103,7 +103,7 @@
 /* Wheel */
 
 .floatIcon {
-	@apply text-[58px] leading-none;
+	@apply block w-16 h-16 object-contain;
 	filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35))
 		drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 	transform-origin: 50% 100%;
