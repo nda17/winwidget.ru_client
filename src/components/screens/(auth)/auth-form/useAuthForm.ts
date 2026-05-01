@@ -71,7 +71,7 @@ const clearPendingEmailRegistrationState = () => {
 	window.localStorage.removeItem(PENDING_EMAIL_REGISTRATION_STORAGE_KEY)
 }
 
-const useAuthForm = (isLogin: boolean) => {
+const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 	const { previousRoute } = useNavigationContext()
 	const setAuth = useAuthStore(state => state.setAuth)
 	const setAuthResolved = useAuthStore(state => state.setAuthResolved)
@@ -80,6 +80,7 @@ const useAuthForm = (isLogin: boolean) => {
 	const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email')
 	const [isPhoneCodeRequested, setIsPhoneCodeRequested] = useState(false)
 	const [isEmailCodeRequested, setIsEmailCodeRequested] = useState(false)
+	const [authMessage, setAuthMessage] = useState(initialAuthMessage)
 
 	const { register, handleSubmit, reset, formState, watch, setValue } =
 		useForm<IFormData>({
@@ -126,6 +127,15 @@ const useAuthForm = (isLogin: boolean) => {
 		toast.error(`${prefix}: ${error.response?.data?.message}`)
 	}
 
+	const handleLoginError = (error: unknown) => {
+		const message = axios.isAxiosError(error)
+			? error.response?.data?.message || 'Не удалось войти'
+			: 'Не удалось войти'
+
+		setAuthMessage(message)
+		toast.error(`Ошибка входа: ${message}`)
+	}
+
 	const { mutate: mutateLogin, isPending: isLoginPending } = useMutation({
 		mutationKey: ['login'],
 		mutationFn: ({
@@ -150,9 +160,7 @@ const useAuthForm = (isLogin: boolean) => {
 			})
 		},
 		onError(error) {
-			if (axios.isAxiosError(error)) {
-				toast.error(`Ошибка входа: ${error.response?.data?.message}`)
-			}
+			handleLoginError(error)
 		}
 	})
 
@@ -335,11 +343,13 @@ const useAuthForm = (isLogin: boolean) => {
 				})
 			},
 			onError(error) {
-				if (axios.isAxiosError(error)) {
-					toast.error(`Ошибка входа: ${error.response?.data?.message}`)
-				}
+				handleLoginError(error)
 			}
 		})
+
+	useEffect(() => {
+		setAuthMessage(initialAuthMessage)
+	}, [initialAuthMessage])
 
 	useEffect(() => {
 		if (isLogin) {
@@ -381,6 +391,7 @@ const useAuthForm = (isLogin: boolean) => {
 	}, [authMethod, clearEmailCodeStep, resetPhoneMask, setValue])
 
 	const onSubmit: SubmitHandler<IFormData> = async data => {
+		setAuthMessage('')
 		let token: string | null = null
 		const recaptchaAction =
 			authMethod === 'phone'
@@ -498,6 +509,7 @@ const useAuthForm = (isLogin: boolean) => {
 		phoneInputRef,
 		phoneMask,
 		resendEmailCode,
+		authMessage,
 		resetEmailCodeStep: () => {
 			clearEmailCodeStep()
 		},

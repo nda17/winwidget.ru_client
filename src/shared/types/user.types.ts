@@ -7,6 +7,8 @@ export type UserLoginMethod =
 	| 'GITHUB'
 	| 'YANDEX'
 
+export type UserStatus = 'ACTIVE' | 'DEACTIVATED'
+
 export interface IUser {
 	id: string
 	name?: string
@@ -16,6 +18,9 @@ export interface IUser {
 	loginMethods?: UserLoginMethod[]
 	password?: string
 	avatarPath?: string
+	status: UserStatus
+	personalDataConsentRevokedAt?: string | null
 	rights: UserRole[]
 	createdAt: string
+	updatedAt: string
 }

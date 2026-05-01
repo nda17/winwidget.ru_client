@@ -5,6 +5,7 @@ import { useUserEdit } from '@/components/screens/admin/user/edit/useUserEdit'
 import AdminNavigation from '@/components/ui/admin/admin-navigation/AdminNavigation'
 import AdminSectionHeading from '@/components/ui/admin/admin-section-heading/AdminSectionHeading'
 import AdminTooltip from '@/components/ui/admin/admin-tooltip/AdminTooltip'
+import ConfirmDialog from '@/components/ui/confirm-dialog/ConfirmDialog'
 import FieldEmail from '@/components/ui/form-elements/admin-page/field-email/FieldEmail'
 import FieldId from '@/components/ui/form-elements/admin-page/field-id/FieldId'
 import FieldName from '@/components/ui/form-elements/admin-page/field-name/FieldName'
@@ -27,7 +28,7 @@ import { IParamsUrl } from '@/shared/types/params-url.types'
 import clsx from 'clsx'
 import { NextPage } from 'next'
 import Link from 'next/link'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 
 const FIELD_STYLE = { marginBottom: 0 }
@@ -43,7 +44,15 @@ const formatCreatedAt = (value: string) =>
 		dateStyle: 'medium'
 	}).format(new Date(value))
 
+const formatDateTime = (value: string) =>
+	new Intl.DateTimeFormat('ru-RU', {
+		dateStyle: 'medium',
+		timeStyle: 'short'
+	}).format(new Date(value))
+
 const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
+	const [isActivationConfirmOpen, setIsActivationConfirmOpen] =
+		useState(false)
 	const {
 		handleSubmit,
 		register,
@@ -53,7 +62,14 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 		watch
 	} = useForm<IUserEditInput>({ mode: 'onChange' })
 
-	const { isLoading, data, onSubmit, isSaving } = useUserEdit(params)
+	const {
+		isLoading,
+		data,
+		onSubmit,
+		isSaving,
+		isActivationUpdating,
+		toggleActivation
+	} = useUserEdit(params)
 
 	const loginMethodLabels: Record<UserLoginMethod, string> = {
 		EMAIL: 'Email',
@@ -71,7 +87,6 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 			email: data.email ?? '',
 			isAdmin: data.rights.includes(UserRole.ADMIN),
 			isPhoneVerified: Boolean(data.isPhoneVerified),
-			isUser: data.rights.includes(UserRole.USER),
 			name: data.name ?? '',
 			password: '',
 			phone: data.phone ?? ''
@@ -82,7 +97,20 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 		data?.loginMethods?.map(
 			method => loginMethodLabels[method] ?? method
 		) ?? []
-	const isUserChecked = Boolean(watch('isUser'))
+	const isDeactivated = data?.status === 'DEACTIVATED'
+	const activationActionLabel = isDeactivated
+		? 'Активировать пользователя'
+		: 'Деактивировать пользователя'
+	const activationConfirmTitle = isDeactivated
+		? 'Активировать пользователя?'
+		: 'Деактивировать пользователя?'
+	const activationConfirmMessage = isDeactivated
+		? 'Пользователь снова сможет входить в аккаунт. Повторная активация считается новым согласием на обработку персональных данных.'
+		: 'Пользователь не сможет входить в аккаунт, его refresh token будет сброшен, рассылки будут запрещены, а все его виджеты будут отключены.'
+	const revokedAtLabel = data?.personalDataConsentRevokedAt
+		? formatDateTime(data.personalDataConsentRevokedAt)
+		: null
+	const isUserChecked = true
 	const isAdminChecked = Boolean(watch('isAdmin'))
 	const isPhoneVerifiedChecked = Boolean(watch('isPhoneVerified'))
 	const hasPhoneValue = Boolean(
@@ -100,6 +128,19 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 				risk="high"
 				riskText="Ошибка может выдать лишние права, убрать доступ или изменить данные входа. Перед сохранением сверяй пользователя и поля."
 			/>
+
+			{isActivationConfirmOpen && data && (
+				<ConfirmDialog
+					title={activationConfirmTitle}
+					message={activationConfirmMessage}
+					confirmLabel={activationActionLabel}
+					onCancel={() => setIsActivationConfirmOpen(false)}
+					onConfirm={() => {
+						setIsActivationConfirmOpen(false)
+						void toggleActivation()
+					}}
+				/>
+			)}
 
 			{isLoading ? (
 				<div className={styles.layout}>
@@ -340,6 +381,16 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 											Телефон подтверждён
 										</span>
 									)}
+									<span
+										className={clsx(
+											styles.badge,
+											isDeactivated
+												? styles.badgeDanger
+												: styles.badgeSuccess
+										)}
+									>
+										{isDeactivated ? 'Деактивирован' : 'Активен'}
+									</span>
 								</div>
 							</div>
 
@@ -368,6 +419,12 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 										{formatCreatedAt(data.createdAt)}
 									</p>
 								</div>
+								{revokedAtLabel && (
+									<div className={styles.infoItem}>
+										<p className={styles.infoLabel}>Согласие отозвано</p>
+										<p className={styles.infoValue}>{revokedAtLabel}</p>
+									</div>
+								)}
 							</div>
 						</div>
 					</aside>
@@ -423,7 +480,7 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 								/>
 
 								<div className={styles.rightsGrid}>
-									<label
+									<div
 										className={clsx(
 											styles.rightCard,
 											isUserChecked && styles.rightCardActive
@@ -432,17 +489,20 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 										<div>
 											<p className={styles.rightCardTitle}>USER</p>
 											<p className={styles.rightCardDescription}>
-												Базовый доступ к личному кабинету и функциям
-												сервиса.
+												Базовая роль всегда активна для аккаунта и не
+												снимается вручную.
 											</p>
 										</div>
 										<input
-											required
+											id="user-role-user"
 											type="checkbox"
 											className={styles.rightCheckbox}
-											{...register('isUser', { required: true })}
+											checked={isUserChecked}
+											disabled
+											readOnly
+											aria-label="Роль USER"
 										/>
-									</label>
+									</div>
 
 									<label
 										className={clsx(
@@ -660,6 +720,59 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 											})}
 										/>
 									</div>
+								</div>
+							</div>
+
+							<div className={styles.formSection}>
+								<div>
+									<div className={styles.titleWithHelp}>
+										<p className={styles.sectionTitle}>Статус аккаунта</p>
+										<AdminTooltip
+											title="Статус аккаунта"
+											description="Деактивация запрещает вход, исключает пользователя из рассылок и отключает его виджеты."
+											risk="high"
+											riskText="Активируйте аккаунт обратно только после обращения пользователя. Повторная активация означает новое согласие на обработку персональных данных."
+										/>
+									</div>
+									<p className={styles.sectionHint}>
+										Текущий статус меняется отдельным подтверждаемым
+										действием и не зависит от сохранения формы.
+									</p>
+								</div>
+
+								<div
+									className={clsx(
+										styles.activationPanel,
+										isDeactivated && styles.activationPanelDanger
+									)}
+								>
+									<div>
+										<p className={styles.activationTitle}>
+											{isDeactivated
+												? 'Аккаунт деактивирован'
+												: 'Аккаунт активен'}
+										</p>
+										<p className={styles.activationText}>
+											{isDeactivated
+												? 'Пользователь не может войти, не попадает в рассылки, а его виджеты были отключены.'
+												: 'Пользователь может входить в аккаунт и получать рассылки по выбранной аудитории.'}
+										</p>
+									</div>
+									<button
+										type="button"
+										className={clsx(
+											styles.activationButton,
+											isDeactivated
+												? styles.activateButton
+												: styles.deactivateButton
+										)}
+										disabled={isActivationUpdating}
+										onClick={() => setIsActivationConfirmOpen(true)}
+									>
+										{isActivationUpdating
+											? 'Обновляем...'
+											: activationActionLabel}
+									</button>
 								</div>
 							</div>
 

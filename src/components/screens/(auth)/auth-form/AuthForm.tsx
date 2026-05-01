@@ -17,7 +17,7 @@ import {
 import clsx from 'clsx'
 import { NextPage } from 'next'
 
-const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
+const AuthForm: NextPage<IAuthFormProps> = ({ isLogin, authMessage }) => {
 	const {
 		handleSubmit,
 		isLoading,
@@ -33,9 +33,10 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 		phoneInputRef,
 		phoneMask,
 		resendEmailCode,
+		authMessage: currentAuthMessage,
 		resetEmailCodeStep,
 		resetPhoneCodeStep
-	} = useAuthForm(isLogin)
+	} = useAuthForm(isLogin, authMessage)
 
 	return (
 		<form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
@@ -61,6 +62,12 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin }) => {
 					Телефон
 				</button>
 			</div>
+
+			{currentAuthMessage && (
+				<div className={styles['auth-alert']} role="alert">
+					{currentAuthMessage}
+				</div>
+			)}
 
 			{authMethod === 'email' ? (
 				<>

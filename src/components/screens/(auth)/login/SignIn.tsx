@@ -2,7 +2,11 @@ import AuthForm from '@/components/screens/(auth)/auth-form/AuthForm'
 import styles from '@/components/screens/(auth)/login/SignIn.module.scss'
 import { NextPage } from 'next'
 
-const SignIn: NextPage = () => {
+interface ISignInProps {
+	authMessage?: string
+}
+
+const SignIn: NextPage<ISignInProps> = ({ authMessage }) => {
 	return (
 		<section className={styles.wrapper} aria-labelledby="sign-in-title">
 			<div className={styles.form}>
@@ -12,7 +16,7 @@ const SignIn: NextPage = () => {
 				<p className={styles.subtitle}>
 					Войдите в личный кабинет и управляйте виджетами в одной панели.
 				</p>
-				<AuthForm isLogin />
+				<AuthForm isLogin authMessage={authMessage} />
 			</div>
 		</section>
 	)

@@ -65,9 +65,46 @@ export const useUserEdit = (params: { id: string }) => {
 		}
 	})
 
+	const {
+		isPending: isActivationUpdating,
+		mutateAsync: toggleActivationAsync
+	} = useMutation({
+		mutationKey: ['toggle-user-activation', userId],
+		mutationFn: () => UserService.toggleUserActivation(userId),
+		onSuccess({ data }) {
+			toast.success(
+				data.status === 'DEACTIVATED'
+					? 'Пользователь деактивирован'
+					: 'Пользователь активирован'
+			)
+			void queryClient.invalidateQueries({
+				queryKey: ['get-user-by-id', userId]
+			})
+			void queryClient.invalidateQueries({ queryKey: ['get-user-list'] })
+		},
+		onError(error) {
+			if (axios.isAxiosError(error)) {
+				toast.error(
+					error.response?.data?.message ||
+						'Не удалось изменить статус пользователя'
+				)
+				return
+			}
+
+			toast.error('Не удалось изменить статус пользователя')
+		}
+	})
+
 	const onSubmit: SubmitHandler<IUserEditInput> = async data => {
 		await mutateAsync(data)
 	}
 
-	return { onSubmit, isLoading, data, isSaving: isPending }
+	return {
+		onSubmit,
+		isLoading,
+		data,
+		isSaving: isPending,
+		isActivationUpdating,
+		toggleActivation: toggleActivationAsync
+	}
 }

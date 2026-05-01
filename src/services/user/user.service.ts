@@ -53,6 +53,12 @@ class UserService {
 		)
 	}
 
+	async toggleUserActivation(id: string) {
+		return axiosInterceptorsRequest.patch<IUser>(
+			`${this._BASE_URL}/user/${id}/toggle-activation`
+		)
+	}
+
 	async updateProfile(data: IProfileEditInput) {
 		return axiosInterceptorsRequest.patch<boolean>(
 			`${this._BASE_URL}/profile`,

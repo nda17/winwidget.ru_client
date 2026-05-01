@@ -24,6 +24,10 @@
 		}
 	}
 
+	.auth-alert {
+		@apply mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-relaxed text-red-700;
+	}
+
 	.verification-hint {
 		@apply rounded-2xl border border-[#e0d6f0] px-4 py-2 text-[0.78rem] leading-snug mb-3 text-[#666] bg-[#f8f5ff];
 	}
