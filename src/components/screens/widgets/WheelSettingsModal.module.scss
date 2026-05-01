@@ -109,6 +109,9 @@ select.input {
 .hint {
 	@apply text-xs text-[#bbb];
 }
+.domainHint {
+	@apply text-xs leading-5 text-red-600;
+}
 .infoText {
 	@apply m-0 text-sm leading-6 text-[#555];
 }

@@ -949,10 +949,16 @@ const CountdownTimerSettingsModal = ({
 										placeholder="site.ru"
 										onChange={e => setInstallDomain(e.target.value)}
 									/>
-									<p className={styles.hint}>
-										Пока домен пустой, встроенный виджет не отображается;
-										прямая ссылка и QR работают. Можно указать
-										https://page.site.ru — сохранится site.ru.
+									<p className={styles.domainHint}>
+										Если не указан домен или не корректный домен, виджет не
+										появится после добавления кода.
+										<br />
+										<br />
+										Прямая ссылка и QR-код работают без указания домена.
+										<br />
+										<br />
+										Формат добавления домена: https://page.example.ru,
+										https://example.ru, www.example.ru, example.ru
 									</p>
 								</div>
 								<div className={styles.field}>
