@@ -181,10 +181,7 @@ select.input {
 	@apply text-xs text-[#bbb];
 }
 .domainHint {
-	@apply m-0 flex flex-col gap-1 text-xs leading-5 text-red-600;
-}
-.domainHint p {
-	@apply m-0;
+	@apply m-0 text-xs text-red-600;
 }
 .infoText {
 	@apply m-0 text-sm leading-6 text-[#555];
