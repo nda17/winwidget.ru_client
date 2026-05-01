@@ -487,32 +487,50 @@ const CabinetWidgets = () => {
 												})
 											}
 										}}
-										aria-label={item.isActive ? 'Отключить' : 'Включить'}
+										aria-label={
+											item.isActive
+												? 'Отключить виджет'
+												: 'Включить виджет'
+										}
+										data-tooltip={
+											item.isActive
+												? 'Отключить виджет. Он пропадёт на всех сайтах, где установлен.'
+												: 'Включить виджет. Он снова появится на всех сайтах, где установлен.'
+										}
 									>
 										<span className={styles.toggleThumb} />
 									</button>
 
-									<span className={styles.widgetName}>
-										{item.name}
+									<div className={styles.widgetInfo}>
+										<div className={styles.widgetNameLine}>
+											<span className={styles.widgetName}>
+												{item.name}
+											</span>
+											<span className={styles.widgetTypeBadge}>
+												{kind === 'wheel'
+													? 'Колесо'
+													: kind === 'quiz'
+														? 'Квиз'
+														: kind === 'callback'
+															? 'Звонок'
+															: 'Таймер'}
+											</span>
+										</div>
 										<span
-											style={{
-												marginLeft: 8,
-												fontSize: 11,
-												color: '#7b3fa0',
-												background: '#f3eeff',
-												borderRadius: 4,
-												padding: '1px 6px'
-											}}
+											className={`${styles.widgetDomain} ${!item.installDomain ? styles.widgetDomainEmpty : ''}`}
+											data-tooltip={
+												item.installDomain
+													? 'Это сайт, на котором работает установленный виджет.'
+													: 'Нужно добавить домен, где будет работать виджет.'
+											}
 										>
-											{kind === 'wheel'
-												? 'Колесо'
-												: kind === 'quiz'
-													? 'Квиз'
-													: kind === 'callback'
-														? 'Звонок'
-														: 'Таймер'}
+											<span className={styles.widgetDomainText}>
+												{item.installDomain
+													? `Домен: ${item.installDomain}`
+													: 'Домен не добавлен'}
+											</span>
 										</span>
-									</span>
+									</div>
 
 									<div className={styles.actions}>
 										<a

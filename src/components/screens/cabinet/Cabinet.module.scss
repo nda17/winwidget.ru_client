@@ -251,6 +251,25 @@
 .toggle {
 	@apply relative shrink-0 rounded-full transition-[background] duration-200 cursor-pointer border-none w-12 h-[26px] bg-[#e0d6f0];
 }
+.toggle::after {
+	content: attr(data-tooltip);
+	@apply absolute left-0 bottom-[calc(100%+8px)] z-10 w-max max-w-[260px] rounded-md bg-[#1f1630] text-left text-white text-[12px] font-semibold leading-[1.35] whitespace-normal py-[7px] px-[9px] opacity-0 pointer-events-none transition-[opacity,transform] duration-150;
+	transform: translateY(4px);
+}
+.toggle::before {
+	content: '';
+	@apply absolute left-5 bottom-[calc(100%+3px)] z-10 w-2 h-2 bg-[#1f1630] opacity-0 pointer-events-none transition-opacity duration-150;
+	transform: rotate(45deg);
+}
+.toggle:hover::after,
+.toggle:focus-visible::after {
+	@apply opacity-100;
+	transform: translateY(0);
+}
+.toggle:hover::before,
+.toggle:focus-visible::before {
+	@apply opacity-100;
+}
 .toggle.toggleOn {
 	background: linear-gradient(90deg, #7b3fa0, #c21b84);
 }
@@ -260,15 +279,52 @@
 .toggleOn .toggleThumb {
 	@apply translate-x-[22px];
 }
+.widgetInfo {
+	@apply min-w-0 flex flex-col gap-1;
+}
+.widgetNameLine {
+	@apply min-w-0 flex items-center gap-2;
+}
 .widgetName {
-	@apply flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-medium text-[#1a1a1a];
+	@apply min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-medium text-[#1a1a1a];
+}
+.widgetTypeBadge {
+	@apply shrink-0 rounded bg-[#f3eeff] text-[11px] font-semibold text-[#7b3fa0] py-px px-[6px];
+}
+.widgetDomain {
+	@apply relative block w-fit max-w-full rounded-md bg-[#f8f5ff] border border-[#e7dcf7] text-[12px] font-medium text-[#8b6aa8] py-[2px] px-[7px];
+}
+.widgetDomain::after {
+	content: attr(data-tooltip);
+	@apply absolute left-0 top-[calc(100%+8px)] z-10 w-max max-w-[260px] rounded-md bg-[#1f1630] text-left text-white text-[12px] font-semibold leading-[1.35] whitespace-normal py-[7px] px-[9px] opacity-0 pointer-events-none transition-[opacity,transform] duration-150;
+	transform: translateY(-4px);
+}
+.widgetDomain::before {
+	content: '';
+	@apply absolute left-4 top-[calc(100%+3px)] z-10 w-2 h-2 bg-[#1f1630] opacity-0 pointer-events-none transition-opacity duration-150;
+	transform: rotate(45deg);
+}
+.widgetDomain:hover::after,
+.widgetDomain:focus-visible::after {
+	@apply opacity-100;
+	transform: translateY(0);
+}
+.widgetDomain:hover::before,
+.widgetDomain:focus-visible::before {
+	@apply opacity-100;
+}
+.widgetDomainText {
+	@apply block max-w-full overflow-hidden text-ellipsis whitespace-nowrap;
+}
+.widgetDomainEmpty {
+	@apply bg-[#fff8f0] border-[#f4d2a3] text-[#b45309];
 }
 .actions {
 	@apply flex flex-wrap items-center justify-end gap-[14px] min-w-0 max-w-full;
 	justify-self: end;
 }
 .actionBtn {
-	@apply flex items-center gap-1 text-sm cursor-pointer border-none bg-transparent text-[#aaa] no-underline transition-colors duration-150;
+	@apply flex items-center gap-1 text-sm cursor-pointer border-none bg-transparent text-[#aaa] no-underline whitespace-nowrap transition-colors duration-150;
 }
 .actionBtn:hover {
 	@apply text-[#7b3fa0];
@@ -305,6 +361,29 @@
 	@apply text-center text-[#bbb] p-10;
 }
 
+@media (max-width: 1024px) {
+	.widgetRow {
+		@apply items-start;
+		grid-template-columns: auto minmax(0, 1fr);
+		row-gap: 10px;
+	}
+	.actions,
+	.actionsSkeleton {
+		@apply w-full justify-end pt-2 border-t border-[#f0eaf8];
+		grid-column: 1 / -1;
+		justify-self: stretch;
+	}
+}
+
+@media (hover: none) {
+	.toggle::before,
+	.toggle::after,
+	.widgetDomain::before,
+	.widgetDomain::after {
+		@apply hidden;
+	}
+}
+
 @media (max-width: 768px) {
 	.cabinet {
 		@apply pt-7 px-[14px] pb-[60px];
@@ -324,6 +403,12 @@
 	.widgetRow {
 		@apply py-3 px-[14px];
 		column-gap: 10px;
+	}
+	.widgetNameLine {
+		@apply flex-wrap gap-x-2 gap-y-1;
+	}
+	.widgetDomain {
+		@apply max-w-full text-[11px];
 	}
 	.emptyWidgetRow {
 		@apply px-5 py-9;
@@ -395,6 +480,12 @@
 	}
 	.widgetName {
 		@apply min-w-0 overflow-hidden text-ellipsis whitespace-nowrap;
+	}
+	.widgetInfo {
+		@apply flex-1;
+	}
+	.widgetDomain {
+		@apply w-full;
 	}
 	.actions {
 		@apply w-full justify-end pt-[6px] gap-3 border-t border-[#f0eaf8];
