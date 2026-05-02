@@ -28,6 +28,13 @@ const useAdminSubscriptions = () => {
 		enabled: auth
 	})
 
+	const { data: subscriptionHistory, isLoading: isHistoryLoading } =
+		useQuery({
+			queryKey: ['admin-subscription-history'],
+			queryFn: () => subscriptionService.adminGetHistory(),
+			enabled: auth
+		})
+
 	// ── User search for subscription actions ─────────────────────────
 	const [userSearch, setUserSearch] = useState('')
 	const [bonusUserSearch, setBonusUserSearch] = useState('')
@@ -141,6 +148,9 @@ const useAdminSubscriptions = () => {
 				queryClient.invalidateQueries({
 					queryKey: ['admin-subscriptions']
 				})
+				queryClient.invalidateQueries({
+					queryKey: ['admin-subscription-history']
+				})
 				resetBonusForm()
 			},
 			onError(error) {
@@ -223,7 +233,9 @@ const useAdminSubscriptions = () => {
 
 	return {
 		subscriptions,
+		subscriptionHistory,
 		isLoading,
+		isHistoryLoading,
 		userSearch,
 		setUserSearch: (e: ChangeEvent<HTMLInputElement>) =>
 			setUserSearch(e.target.value),

@@ -4,10 +4,31 @@ import {
 	Plan,
 	Subscription
 } from '@/services/widget/widget.types'
-import { IUser } from '@/shared/types/user.types'
+
+export interface IAdminSubscriptionUser {
+	id: string
+	name: string | null
+	email: string | null
+}
 
 export interface IAdminSubscription extends Subscription {
-	user: Pick<IUser, 'id' | 'name' | 'email'>
+	user: IAdminSubscriptionUser | null
+}
+
+export type SubscriptionHistoryAction = 'BONUS_DAYS'
+
+export interface IAdminSubscriptionHistory {
+	id: string
+	subscriptionId: string
+	userId: string
+	adminId: string | null
+	action: SubscriptionHistoryAction
+	days: number | null
+	oldExpiresAt: string | null
+	newExpiresAt: string | null
+	createdAt: string
+	user: IAdminSubscriptionUser | null
+	admin: IAdminSubscriptionUser | null
 }
 
 export interface IAdminActivateInput {
@@ -90,6 +111,13 @@ const subscriptionService = {
 	async adminGetAll(): Promise<IAdminSubscription[]> {
 		const { data } = await axiosInterceptorsRequest.get(
 			'/subscriptions/admin/list'
+		)
+		return data
+	},
+
+	async adminGetHistory(): Promise<IAdminSubscriptionHistory[]> {
+		const { data } = await axiosInterceptorsRequest.get(
+			'/subscriptions/admin/history'
 		)
 		return data
 	},

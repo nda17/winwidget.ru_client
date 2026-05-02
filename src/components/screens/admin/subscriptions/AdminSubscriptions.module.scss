@@ -147,6 +147,18 @@
 		@apply text-xs text-gray-600 break-all;
 	}
 
+	.historyUser {
+		@apply block text-sm text-gray-700;
+	}
+
+	.historyEmail {
+		@apply block text-xs text-gray-600 break-all mt-0.5;
+	}
+
+	.historyAction {
+		@apply inline-block px-2 py-0.5 rounded-md text-xs font-500 bg-aqua bg-opacity-10 text-aqua;
+	}
+
 	// ── Badges ───────────────────────────────────────────────────────
 	.badge {
 		@apply inline-block px-2 py-0.5 rounded-md text-xs font-500 text-white;

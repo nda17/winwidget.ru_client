@@ -7,6 +7,7 @@ import Heading from '@/components/ui/heading/Heading'
 import Pagination from '@/components/ui/pagination/Pagination'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import useAdminSubscriptions from '@/hooks/useAdminSubscriptions'
+import type { SubscriptionHistoryAction } from '@/services/subscription/subscription.service'
 import { BillingPeriod, Plan } from '@/services/widget/widget.types'
 import clsx from 'clsx'
 import { NextPage } from 'next'
@@ -30,10 +31,37 @@ const STATUS_LABELS = {
 	CANCELLED: 'Отменена'
 }
 
+const HISTORY_ACTION_LABELS: Record<SubscriptionHistoryAction, string> = {
+	BONUS_DAYS: 'Бонусные дни'
+}
+
+const dateFormatter = new Intl.DateTimeFormat('ru-RU')
+
+const dateTimeFormatter = new Intl.DateTimeFormat('ru-RU', {
+	dateStyle: 'short',
+	timeStyle: 'short'
+})
+
+const formatDate = (value?: string | null) =>
+	value ? dateFormatter.format(new Date(value)) : '—'
+
+const formatDateTime = (value?: string | null) =>
+	value ? dateTimeFormatter.format(new Date(value)) : '—'
+
+const formatUserLabel = (
+	user?: { id: string; name: string | null; email: string | null } | null
+) => user?.name || user?.email || user?.id || '—'
+
+const formatUserName = (
+	user?: { id: string; name: string | null; email: string | null } | null
+) => user?.name || (user?.email ? 'Без имени' : user?.id) || '—'
+
 const AdminSubscriptions: NextPage = () => {
 	const {
 		subscriptions,
+		subscriptionHistory,
 		isLoading,
+		isHistoryLoading,
 		userSearch,
 		setUserSearch,
 		userSearchResults,
@@ -74,10 +102,31 @@ const AdminSubscriptions: NextPage = () => {
 	const firstIndex = lastIndex - itemQuantity
 	const activePage = subscriptions?.slice(firstIndex, lastIndex) ?? []
 	const listPage = Array.from({ length: totalPages }, (_, i) => i + 1)
+	const [historyCurrentPage, setHistoryCurrentPage] = useState(1)
+	const historyItemQuantity = 10
+	const historyTotalItems = subscriptionHistory?.length ?? 0
+	const historyTotalPages = Math.max(
+		1,
+		Math.ceil(historyTotalItems / historyItemQuantity)
+	)
+	const historyLastIndex = historyCurrentPage * historyItemQuantity
+	const historyFirstIndex = historyLastIndex - historyItemQuantity
+	const activeHistoryPage =
+		subscriptionHistory?.slice(historyFirstIndex, historyLastIndex) ?? []
+	const historyListPage = Array.from(
+		{ length: historyTotalPages },
+		(_, i) => i + 1
+	)
 
 	const prevPage = () => setCurrentPage(p => Math.max(1, p - 1))
 	const nextPage = () => setCurrentPage(p => Math.min(totalPages, p + 1))
 	const changeActivePage = (page: number) => setCurrentPage(page)
+	const prevHistoryPage = () =>
+		setHistoryCurrentPage(p => Math.max(1, p - 1))
+	const nextHistoryPage = () =>
+		setHistoryCurrentPage(p => Math.min(historyTotalPages, p + 1))
+	const changeActiveHistoryPage = (page: number) =>
+		setHistoryCurrentPage(page)
 
 	return (
 		<section className={styles.wrapper}>
@@ -362,6 +411,163 @@ const AdminSubscriptions: NextPage = () => {
 					{isExtendingDays ? 'Начисление...' : 'Начислить бонусные дни'}
 				</button>
 			</div>
+
+			<AdminSectionHeading
+				text="История бонусных начислений"
+				title="История бонусных начислений"
+				description="Фиксирует дату начисления, пользователя, количество дней, администратора и изменение даты окончания подписки."
+				risk="low"
+				riskText="Блок только показывает уже выполненные начисления и не меняет данные подписок."
+			/>
+			{isHistoryLoading ? (
+				<div className={styles.card}>
+					{Array.from({ length: 3 }).map((_, i) => (
+						<SkeletonLoader
+							key={i}
+							count={1}
+							className={styles.skeletonRow}
+						/>
+					))}
+				</div>
+			) : subscriptionHistory?.length ? (
+				<div className={styles['list-section']}>
+					<div className={styles['list-meta']}>
+						<div>
+							<p className={styles['meta-title']}>История</p>
+							<p className={styles['meta-subtitle']}>
+								Всего записей: {historyTotalItems}
+							</p>
+						</div>
+						<p className={styles['meta-subtitle']}>
+							Показано {activeHistoryPage.length} из {historyTotalItems}
+						</p>
+					</div>
+
+					<div className={styles['mobile-list']}>
+						{activeHistoryPage.map(item => (
+							<div key={item.id} className={styles['sub-card']}>
+								<div className={styles['card-row']}>
+									<span className={styles['card-label']}>Дата</span>
+									<span className={styles['card-value']}>
+										{formatDateTime(item.createdAt)}
+									</span>
+								</div>
+								<div className={styles['card-row']}>
+									<span className={styles['card-label']}>
+										Пользователь
+									</span>
+									<span className={styles['card-value']}>
+										{formatUserName(item.user)}
+										{item.user?.email && (
+											<span className={styles['card-email']}>
+												{item.user.email}
+											</span>
+										)}
+									</span>
+								</div>
+								<div className={styles['card-row']}>
+									<span className={styles['card-label']}>Действие</span>
+									<span className={styles.historyAction}>
+										{HISTORY_ACTION_LABELS[item.action]}
+									</span>
+								</div>
+								<div className={styles['card-row']}>
+									<span className={styles['card-label']}>Дней</span>
+									<span className={styles['card-value']}>
+										{item.days ?? '—'}
+									</span>
+								</div>
+								<div className={styles['card-row']}>
+									<span className={styles['card-label']}>
+										Кто начислил
+									</span>
+									<span className={styles['card-value']}>
+										{item.admin
+											? formatUserLabel(item.admin)
+											: 'Админ удалён'}
+									</span>
+								</div>
+								<div className={styles['card-row']}>
+									<span className={styles['card-label']}>Было</span>
+									<span className={styles['card-value']}>
+										{formatDate(item.oldExpiresAt)}
+									</span>
+								</div>
+								<div className={styles['card-row']}>
+									<span className={styles['card-label']}>Стало</span>
+									<span className={styles['card-value']}>
+										{formatDate(item.newExpiresAt)}
+									</span>
+								</div>
+							</div>
+						))}
+					</div>
+
+					<div className={styles['table-scroll']}>
+						<table className={styles.table}>
+							<caption className="srOnly">
+								История бонусных начислений подписок
+							</caption>
+							<thead>
+								<tr>
+									<th scope="col">Дата</th>
+									<th scope="col">Пользователь</th>
+									<th scope="col">Действие</th>
+									<th scope="col">Дней</th>
+									<th scope="col">Кто начислил</th>
+									<th scope="col">Было</th>
+									<th scope="col">Стало</th>
+								</tr>
+							</thead>
+							<tbody>
+								{activeHistoryPage.map(item => (
+									<tr key={item.id}>
+										<td>{formatDateTime(item.createdAt)}</td>
+										<td>
+											<span className={styles.historyUser}>
+												{formatUserName(item.user)}
+											</span>
+											{item.user?.email && (
+												<span className={styles.historyEmail}>
+													{item.user.email}
+												</span>
+											)}
+										</td>
+										<td>
+											<span className={styles.historyAction}>
+												{HISTORY_ACTION_LABELS[item.action]}
+											</span>
+										</td>
+										<td>{item.days ?? '—'}</td>
+										<td>
+											{item.admin
+												? formatUserLabel(item.admin)
+												: 'Админ удалён'}
+										</td>
+										<td>{formatDate(item.oldExpiresAt)}</td>
+										<td>{formatDate(item.newExpiresAt)}</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+					{historyTotalItems > historyItemQuantity && (
+						<Pagination
+							listPage={historyListPage}
+							currentPage={historyCurrentPage}
+							prevPage={prevHistoryPage}
+							nextPage={nextHistoryPage}
+							changeActivePage={changeActiveHistoryPage}
+						/>
+					)}
+				</div>
+			) : (
+				<div className={styles.card}>
+					<p className={styles['meta-subtitle']}>
+						Истории начислений пока нет
+					</p>
+				</div>
+			)}
 
 			{/* ── Subscriptions table ────────────────────────────────── */}
 			<AdminSectionHeading
