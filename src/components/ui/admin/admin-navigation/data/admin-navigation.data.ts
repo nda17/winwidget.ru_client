@@ -16,6 +16,10 @@ export const navItems: INavItem[] = [
 		link: ADMIN_PAGES.SUBSCRIPTIONS
 	},
 	{
+		title: 'Платежи',
+		link: ADMIN_PAGES.PAYMENTS
+	},
+	{
 		title: 'Тарифы',
 		link: ADMIN_PAGES.TARIFFS
 	},

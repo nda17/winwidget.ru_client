@@ -14,36 +14,6 @@ const config: Config = {
 	darkMode: 'media',
 
 	theme: {
-		colors: {
-			primary,
-			black: colors.black,
-			white: colors.white,
-			green: colors.green,
-			red: colors.red,
-			extraRed: '#ff0000',
-			firebrick: '#b22222',
-			tomato: '#ff6347',
-			darkYellow: '#b0965f',
-			primary: '#FF9902',
-			secondary: '#161D25',
-			'text-color': '#2E3239',
-			'bg-color': '#F2F2F5',
-			aqua: '#268697',
-			gray: {
-				300: '#d9dae8',
-				500: '#999AA5',
-				600: '#66676E',
-				700: '#39393f',
-				800: '#242529',
-				900: '#191B1F',
-				950: '#101215'
-			},
-			transparent: colors.transparent,
-			yellow: {
-				700: '#F5C521'
-			}
-		},
-
 		container: {
 			center: true,
 			padding: {
@@ -60,6 +30,35 @@ const config: Config = {
 		},
 
 		extend: {
+			colors: {
+				primary: '#FF9902',
+				secondary: '#161D25',
+				'text-color': '#2E3239',
+				'bg-color': '#F2F2F5',
+				aqua: '#268697',
+
+				extraRed: '#ff0000',
+				firebrick: '#b22222',
+				tomato: '#ff6347',
+				darkYellow: '#b0965f',
+
+				gray: {
+					...colors.gray,
+					300: '#d9dae8',
+					500: '#999AA5',
+					600: '#66676E',
+					700: '#39393f',
+					800: '#242529',
+					900: '#191B1F',
+					950: '#101215'
+				},
+
+				yellow: {
+					...colors.yellow,
+					700: '#F5C521'
+				}
+			},
+
 			backgroundSize: {
 				auto: 'auto',
 				cover: 'cover',

@@ -1,0 +1,224 @@
+.wrapper {
+	@apply w-full max-w-[88rem] mx-auto px-4 flex flex-col items-center relative;
+}
+
+.card,
+.resultCard {
+	@apply w-full max-w-[680px] rounded-layout border border-gray-300 bg-white shadow-sm p-5 mb-6 flex flex-col gap-5;
+
+	@media (max-width: 480px) {
+		@apply p-3 gap-4;
+	}
+}
+
+.field {
+	@apply flex flex-col gap-1 relative;
+}
+
+.label {
+	@apply text-sm font-500 text-gray-700;
+}
+
+.hint {
+	@apply text-xs text-gray-500 leading-snug;
+}
+
+.input {
+	@apply w-full border border-gray-300 rounded-md px-3 py-2 text-sm outline-none focus:border-primary transition-colors;
+}
+
+.primaryBtn {
+	@apply self-start bg-primary text-white px-6 py-2 rounded-md text-sm font-500 hover:opacity-80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
+
+	@media (max-width: 480px) {
+		@apply w-full;
+	}
+}
+
+.resultTitle {
+	@apply text-base font-semibold text-gray-700;
+}
+
+.resultGrid {
+	@apply grid grid-cols-4 gap-3;
+
+	@media (max-width: 768px) {
+		@apply grid-cols-2;
+	}
+
+	@media (max-width: 480px) {
+		@apply grid-cols-1;
+	}
+
+	> div {
+		@apply flex flex-col gap-1 rounded-md bg-gray-300 bg-opacity-10 border border-gray-300 p-3 min-w-0;
+	}
+}
+
+.resultLabel {
+	@apply text-xs text-gray-600;
+}
+
+.resultValue {
+	@apply text-sm font-semibold text-gray-700 break-all;
+}
+
+.resultMessage {
+	@apply text-sm text-gray-700;
+}
+
+.skeletonRow {
+	@apply h-8 w-full mb-3;
+}
+
+.list-section {
+	@apply w-full rounded-layout border border-gray-300 bg-white shadow-sm overflow-hidden mb-6;
+}
+
+.list-meta {
+	@apply flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-5 py-4 border-b border-gray-300 bg-gray-300 bg-opacity-20;
+}
+
+.list-controls {
+	@apply flex flex-col gap-2 sm:items-end;
+}
+
+.status-filters {
+	@apply flex flex-wrap gap-2;
+}
+
+.filterBtn {
+	@apply border border-gray-300 bg-white rounded-md px-3 py-1.5 text-xs font-500 text-gray-600 transition-colors hover:border-primary hover:text-primary;
+}
+
+.filterBtnActive {
+	@apply border-primary bg-primary text-white hover:text-white;
+}
+
+.meta-title {
+	@apply text-[1.1rem] font-semibold text-gray-700;
+}
+
+.meta-subtitle {
+	@apply text-sm text-gray-600;
+}
+
+.mobile-list {
+	@apply flex flex-col lg:hidden;
+}
+
+.paymentCard {
+	@apply px-4 py-4 border-b border-gray-300 last:border-b-0 flex flex-col gap-3;
+}
+
+.emptyState {
+	@apply px-5 py-8 text-center;
+}
+
+.cardRow {
+	@apply flex items-start justify-between gap-3;
+}
+
+.cardLabel {
+	@apply text-xs text-gray-600 flex-shrink-0 w-24;
+}
+
+.cardValue {
+	@apply text-sm text-gray-700 flex flex-col text-right min-w-0 break-words;
+}
+
+.cardExtra {
+	@apply text-xs text-gray-600 break-all;
+}
+
+.table-scroll {
+	@apply hidden lg:block w-full overflow-x-auto;
+}
+
+.table {
+	@apply w-full text-sm;
+
+	thead tr {
+		@apply border-b border-gray-300 bg-gray-300 bg-opacity-10;
+
+		th {
+			@apply text-left px-4 py-3 text-gray-700 font-500 whitespace-nowrap;
+		}
+	}
+
+	tbody tr {
+		@apply border-b border-gray-300 last:border-b-0 hover:bg-gray-300 hover:bg-opacity-10 transition-colors;
+
+		td {
+			@apply px-4 py-3 text-gray-700 align-top;
+		}
+	}
+}
+
+.userCell {
+	@apply flex flex-col gap-1 min-w-[12rem];
+}
+
+.userContact {
+	@apply text-xs text-gray-600 break-all;
+}
+
+.paymentRef {
+	@apply flex flex-col items-end gap-1 min-w-0 max-w-full text-right;
+
+	@media (min-width: 1024px) {
+		@apply items-start min-w-[13rem] text-left;
+	}
+}
+
+.paymentId {
+	@apply block max-w-full text-xs text-gray-700 break-all;
+}
+
+.paymentLink {
+	@apply text-xs text-primary hover:opacity-80 transition-opacity;
+}
+
+.badge {
+	@apply inline-block px-2 py-0.5 rounded-md text-xs font-500 text-white whitespace-nowrap bg-gray-500;
+
+	&.badge-trial {
+		@apply bg-gray-500;
+	}
+
+	&.badge-easy {
+		@apply bg-aqua;
+	}
+
+	&.badge-hard {
+		@apply bg-primary;
+	}
+}
+
+.status {
+	@apply inline-block px-2 py-0.5 rounded-md text-xs font-500 whitespace-nowrap;
+
+	&.status-pending {
+		@apply bg-yellow-100 text-yellow-700;
+	}
+
+	&.status-succeeded {
+		@apply bg-green-100 text-green-700;
+	}
+
+	&.status-cancelled {
+		@apply bg-red-100 text-red-500;
+	}
+}
+
+.checkBtn {
+	@apply text-xs text-primary border border-primary rounded px-2 py-1 hover:bg-primary hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
+
+	&:disabled:hover {
+		@apply bg-white text-primary;
+	}
+
+	@media (max-width: 1023px) {
+		@apply self-end;
+	}
+}

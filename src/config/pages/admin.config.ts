@@ -4,6 +4,7 @@ class AdminPages {
 	USER = '/admin/user'
 	SETTINGS = '/admin/settings'
 	MAILINGS = '/admin/mailings'
+	PAYMENTS = '/admin/payments'
 	CONTENT = '/admin/content'
 	TARIFFS = '/admin/tariffs'
 	BACKLOG = '/admin/backlog'
