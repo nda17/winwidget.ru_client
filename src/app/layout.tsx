@@ -6,7 +6,7 @@ import { EnumTokens } from '@/services/auth/auth.service'
 import { getHomePageContent } from '@/services/home-page-content/home-page-content.server'
 import { getSiteSettings } from '@/services/site-settings/site-settings.server'
 import type { Metadata } from 'next'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import type { PropsWithChildren } from 'react'
 
 export const metadata: Metadata = {
@@ -26,17 +26,22 @@ export const metadata: Metadata = {
 }
 
 const RootLayout = async ({ children }: PropsWithChildren<unknown>) => {
-	const [siteSettings, homePageContent, cookieStore] = await Promise.all([
-		getSiteSettings(),
-		getHomePageContent(),
-		cookies()
-	])
+	const [siteSettings, homePageContent, cookieStore, headersList] =
+		await Promise.all([
+			getSiteSettings(),
+			getHomePageContent(),
+			cookies(),
+			headers()
+		])
+	const isWidgetPreview =
+		headersList.get('x-winwidget-widget-preview') === '1'
 	const headHtml = homePageContent.head.enabled
 		? homePageContent.head.html.trim()
 		: ''
-	const bodyHtml = homePageContent.body.enabled
-		? homePageContent.body.html.trim()
-		: ''
+	const bodyHtml =
+		!isWidgetPreview && homePageContent.body.enabled
+			? homePageContent.body.html.trim()
+			: ''
 	const hasSessionHint = Boolean(
 		cookieStore.get(EnumTokens.ACCESS_TOKEN)?.value ||
 		cookieStore.get(EnumTokens.REFRESH_TOKEN)?.value
