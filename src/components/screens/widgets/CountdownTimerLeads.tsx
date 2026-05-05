@@ -4,11 +4,12 @@ import countdownTimerService from '@/services/countdown-timer/countdown-timer.se
 import { CountdownTimerLead } from '@/services/countdown-timer/countdown-timer.types'
 import { Subscription as WidgetSubscription } from '@/services/widget/widget.types'
 import widgetService from '@/services/widget/widget.service'
+import Pagination from '@/components/ui/pagination/Pagination'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import styles from './WidgetLeads.module.scss'
 
@@ -22,10 +23,18 @@ const CountdownTimerLeads = ({ timerId }: Props) => {
 	const [exporting, setExporting] = useState<
 		'csv' | 'xlsx' | 'pdf' | null
 	>(null)
+	const [currentPage, setCurrentPage] = useState(1)
+	const itemQuantity = 50
 
 	const { data, isLoading } = useQuery({
-		queryKey: ['countdown-timer-leads', timerId],
-		queryFn: () => countdownTimerService.getLeads(timerId),
+		queryKey: [
+			'countdown-timer-leads',
+			timerId,
+			currentPage,
+			itemQuantity
+		],
+		queryFn: () =>
+			countdownTimerService.getLeads(timerId, currentPage, itemQuantity),
 		enabled: !!auth
 	})
 
@@ -38,6 +47,18 @@ const CountdownTimerLeads = ({ timerId }: Props) => {
 	const canAccess =
 		subscription?.plan === 'TRIAL' || subscription?.plan === 'HARD'
 	const isPending = !isAuthResolved || (!!auth && isLoading)
+	const totalPages = data?.totalPages ?? currentPage
+	const listPage = Array.from({ length: totalPages }, (_, i) => i + 1)
+
+	useEffect(() => {
+		if (currentPage > totalPages) {
+			setCurrentPage(totalPages)
+		}
+	}, [currentPage, totalPages])
+
+	const prevPage = () => setCurrentPage(p => Math.max(1, p - 1))
+	const nextPage = () => setCurrentPage(p => Math.min(totalPages, p + 1))
+	const changeActivePage = (page: number) => setCurrentPage(page)
 
 	const formatDate = (iso: string) =>
 		new Date(iso).toLocaleString('ru-RU', {
@@ -170,7 +191,9 @@ const CountdownTimerLeads = ({ timerId }: Props) => {
 						<tbody>
 							{data.leads.map((lead, i) => (
 								<tr key={lead.id}>
-									<td className={styles.td}>{i + 1}</td>
+									<td className={styles.td}>
+										{(data.page - 1) * data.limit + i + 1}
+									</td>
 									<td className={styles.td}>
 										{formatDate(lead.createdAt)}
 									</td>
@@ -193,6 +216,20 @@ const CountdownTimerLeads = ({ timerId }: Props) => {
 							))}
 						</tbody>
 					</table>
+					{data.total > data.limit && (
+						<>
+							<p className={styles.pagination}>
+								Показано {data.leads.length} из {data.total}
+							</p>
+							<Pagination
+								listPage={listPage}
+								currentPage={currentPage}
+								prevPage={prevPage}
+								nextPage={nextPage}
+								changeActivePage={changeActivePage}
+							/>
+						</>
+					)}
 				</div>
 			)}
 		</div>

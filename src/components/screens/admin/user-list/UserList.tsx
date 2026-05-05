@@ -16,6 +16,9 @@ import { NextPage } from 'next'
 import { useEffect, useState } from 'react'
 
 const UserList: NextPage = () => {
+	const [currentPage, setCurrentPage] = useState(1)
+	const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
+	const itemQuantity = 10
 	const {
 		data,
 		isLoading,
@@ -23,22 +26,14 @@ const UserList: NextPage = () => {
 		handleClear,
 		searchTerm,
 		deleteAsync
-	} = useUserList()
+	} = useUserList(currentPage, itemQuantity)
 
 	//Pagination settings
-	const [currentPage, setCurrentPage] = useState(1)
-	const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
-	const itemQuantity = 10
-	const totalItems = data?.length ?? 0
-	const totalPages = Math.max(1, Math.ceil(totalItems / itemQuantity))
+	const activePage = data?.items ?? []
+	const totalItems = data?.total ?? 0
+	const totalPages = data?.totalPages ?? currentPage
 	const loadingRows = Array.from({ length: 5 }, (_, index) => index)
-	const lastCardIndex = currentPage * itemQuantity
-	const firstCardIndex = lastCardIndex - itemQuantity
-	const activePage = data?.slice(firstCardIndex, lastCardIndex) ?? []
-	const listPage = []
-	for (let i = 1; i <= totalPages; i++) {
-		listPage.push(i)
-	}
+	const listPage = Array.from({ length: totalPages }, (_, i) => i + 1)
 
 	useEffect(() => {
 		setCurrentPage(1)
@@ -87,7 +82,7 @@ const UserList: NextPage = () => {
 		return user.rights
 	}
 
-	const deleteTarget = data?.find(user => user.id === deleteTargetId)
+	const deleteTarget = activePage.find(user => user.id === deleteTargetId)
 	const deleteTargetLabel =
 		deleteTarget?.name ||
 		deleteTarget?.email ||
@@ -270,7 +265,7 @@ const UserList: NextPage = () => {
 						</table>
 					</div>
 				</div>
-			) : data?.length ? (
+			) : totalItems ? (
 				<div className={styles['list-section']}>
 					<div className={styles['list-meta']}>
 						<div>

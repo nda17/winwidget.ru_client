@@ -17,21 +17,39 @@ import toast from 'react-hot-toast'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
-const useAdminSubscriptions = () => {
+interface UseAdminSubscriptionsParams {
+	subscriptionPage: number
+	subscriptionLimit: number
+	historyPage: number
+	historyLimit: number
+	onSubscriptionSuccess?: () => void
+	onBonusSuccess?: () => void
+}
+
+const useAdminSubscriptions = ({
+	subscriptionPage,
+	subscriptionLimit,
+	historyPage,
+	historyLimit,
+	onSubscriptionSuccess,
+	onBonusSuccess
+}: UseAdminSubscriptionsParams) => {
 	const queryClient = useQueryClient()
 
 	const auth = useAuthStore(state => state.auth)
 
 	const { data: subscriptions, isLoading } = useQuery({
-		queryKey: ['admin-subscriptions'],
-		queryFn: () => subscriptionService.adminGetAll(),
+		queryKey: ['admin-subscriptions', subscriptionPage, subscriptionLimit],
+		queryFn: () =>
+			subscriptionService.adminGetAll(subscriptionPage, subscriptionLimit),
 		enabled: auth
 	})
 
 	const { data: subscriptionHistory, isLoading: isHistoryLoading } =
 		useQuery({
-			queryKey: ['admin-subscription-history'],
-			queryFn: () => subscriptionService.adminGetHistory(),
+			queryKey: ['admin-subscription-history', historyPage, historyLimit],
+			queryFn: () =>
+				subscriptionService.adminGetHistory(historyPage, historyLimit),
 			enabled: auth
 		})
 
@@ -43,8 +61,8 @@ const useAdminSubscriptions = () => {
 
 	const { data: userSearchResults, isFetching: isSearching } = useQuery({
 		queryKey: ['user-search', debouncedSearch],
-		queryFn: () => userService.fetchUserList(debouncedSearch),
-		select: ({ data }) => data,
+		queryFn: () => userService.fetchUserList(debouncedSearch, 1, 20),
+		select: ({ data }) => data.items,
 		enabled: debouncedSearch.length > 0
 	})
 
@@ -55,8 +73,9 @@ const useAdminSubscriptions = () => {
 				'subscription-bonus',
 				debouncedBonusSearch
 			],
-			queryFn: () => userService.fetchUserList(debouncedBonusSearch),
-			select: ({ data }) => data,
+			queryFn: () =>
+				userService.fetchUserList(debouncedBonusSearch, 1, 20),
+			select: ({ data }) => data.items,
 			enabled: debouncedBonusSearch.length > 0
 		})
 
@@ -126,6 +145,7 @@ const useAdminSubscriptions = () => {
 			subscriptionService.adminActivate(body),
 		onSuccess() {
 			toast.success('Подписка активирована')
+			onSubscriptionSuccess?.()
 			queryClient.invalidateQueries({ queryKey: ['admin-subscriptions'] })
 			resetActivationForm()
 		},
@@ -145,6 +165,8 @@ const useAdminSubscriptions = () => {
 				subscriptionService.adminExtendDays(body),
 			onSuccess() {
 				toast.success('Бонусные дни начислены')
+				onSubscriptionSuccess?.()
+				onBonusSuccess?.()
 				queryClient.invalidateQueries({
 					queryKey: ['admin-subscriptions']
 				})
@@ -169,6 +191,7 @@ const useAdminSubscriptions = () => {
 			subscriptionService.adminCancel(userId),
 		onSuccess() {
 			toast.success('Подписка отменена')
+			onSubscriptionSuccess?.()
 			queryClient.invalidateQueries({ queryKey: ['admin-subscriptions'] })
 		},
 		onError(error) {

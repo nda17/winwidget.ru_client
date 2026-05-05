@@ -109,6 +109,7 @@ export interface LeadsResponse {
 	total: number
 	page: number
 	limit: number
+	totalPages: number
 }
 
 export interface WidgetsResponse {

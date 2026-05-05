@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import quizService from '@/services/quiz/quiz.service'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import {
@@ -10,6 +10,7 @@ import {
 } from '@/services/quiz/quiz.types'
 import { Subscription as WidgetSubscription } from '@/services/widget/widget.types'
 import widgetService from '@/services/widget/widget.service'
+import Pagination from '@/components/ui/pagination/Pagination'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import styles from './WidgetLeads.module.scss'
 import Link from 'next/link'
@@ -26,10 +27,12 @@ const QuizLeads = ({ quizId }: Props) => {
 	const [exporting, setExporting] = useState<
 		'csv' | 'xlsx' | 'pdf' | null
 	>(null)
+	const [currentPage, setCurrentPage] = useState(1)
+	const itemQuantity = 50
 
 	const { data, isLoading } = useQuery({
-		queryKey: ['quiz-leads', quizId],
-		queryFn: () => quizService.getLeads(quizId),
+		queryKey: ['quiz-leads', quizId, currentPage, itemQuantity],
+		queryFn: () => quizService.getLeads(quizId, currentPage, itemQuantity),
 		enabled: !!auth
 	})
 
@@ -49,6 +52,18 @@ const QuizLeads = ({ quizId }: Props) => {
 	})
 
 	const isPending = !isAuthResolved || (!!auth && isLoading)
+	const totalPages = data?.totalPages ?? currentPage
+	const listPage = Array.from({ length: totalPages }, (_, i) => i + 1)
+
+	useEffect(() => {
+		if (currentPage > totalPages) {
+			setCurrentPage(totalPages)
+		}
+	}, [currentPage, totalPages])
+
+	const prevPage = () => setCurrentPage(p => Math.max(1, p - 1))
+	const nextPage = () => setCurrentPage(p => Math.min(totalPages, p + 1))
+	const changeActivePage = (page: number) => setCurrentPage(page)
 
 	const formatPhone = (raw: string) => {
 		const digits = raw.replace(/\D/g, '')
@@ -325,7 +340,7 @@ const QuizLeads = ({ quizId }: Props) => {
 							{data.leads.map((lead, i) => (
 								<tr key={lead.id} className={styles.tr}>
 									<td className={styles.td} data-label="#">
-										{i + 1}
+										{(data.page - 1) * data.limit + i + 1}
 									</td>
 									<td className={styles.td} data-label="Дата">
 										{formatDate(lead.createdAt)}
@@ -365,9 +380,18 @@ const QuizLeads = ({ quizId }: Props) => {
 					</table>
 
 					{data.total > data.limit && (
-						<p className={styles.pagination}>
-							Показано {data.leads.length} из {data.total}
-						</p>
+						<>
+							<p className={styles.pagination}>
+								Показано {data.leads.length} из {data.total}
+							</p>
+							<Pagination
+								listPage={listPage}
+								currentPage={currentPage}
+								prevPage={prevPage}
+								nextPage={nextPage}
+								changeActivePage={changeActivePage}
+							/>
+						</>
 					)}
 				</div>
 			)}

@@ -14,6 +14,14 @@ export interface IProfileIdentityCodeInput {
 	code?: string
 }
 
+export interface IUserListResponse {
+	items: IUser[]
+	total: number
+	page: number
+	limit: number
+	totalPages: number
+}
+
 class UserService {
 	private _BASE_URL = '/users'
 
@@ -21,15 +29,15 @@ class UserService {
 		return axiosInterceptorsRequest.get<IUser>(`${this._BASE_URL}/profile`)
 	}
 
-	async fetchUserList(searchTerm?: string) {
-		return axiosInterceptorsRequest.get<IUser[]>(
+	async fetchUserList(searchTerm?: string, page = 1, limit = 20) {
+		return axiosInterceptorsRequest.get<IUserListResponse>(
 			`${this._BASE_URL}/user-list`,
 			{
-				params: searchTerm
-					? {
-							searchTerm
-						}
-					: {}
+				params: {
+					searchTerm: searchTerm || undefined,
+					page,
+					limit
+				}
 			}
 		)
 	}

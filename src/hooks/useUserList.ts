@@ -10,15 +10,15 @@ import axios from 'axios'
 import { ChangeEvent, MouseEvent, useState } from 'react'
 import toast from 'react-hot-toast'
 
-const useUserList = () => {
+const useUserList = (page: number, limit: number) => {
 	const auth = useAuthStore(state => state.auth)
 	const [searchTerm, setSearchTerm] = useState('')
 	const queryClient = useQueryClient()
 	const debouncedSearch = useDebounce(searchTerm, 500)
 
 	const { data, isLoading } = useQuery({
-		queryKey: ['get-user-list', debouncedSearch],
-		queryFn: () => UserService.fetchUserList(debouncedSearch),
+		queryKey: ['get-user-list', debouncedSearch, page, limit],
+		queryFn: () => UserService.fetchUserList(debouncedSearch, page, limit),
 		select: ({ data }) => data,
 		enabled: auth
 	})

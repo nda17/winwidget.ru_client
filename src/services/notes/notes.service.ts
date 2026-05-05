@@ -8,9 +8,20 @@ export interface Note {
 	updatedAt: string
 }
 
+export interface NotesResponse {
+	items: Note[]
+	total: number
+	page: number
+	limit: number
+	totalPages: number
+	doneTotal: number
+}
+
 const notesService = {
-	async getAll(): Promise<Note[]> {
-		const { data } = await axiosInterceptorsRequest.get('/notes')
+	async getAll(page: number, limit: number): Promise<NotesResponse> {
+		const { data } = await axiosInterceptorsRequest.get('/notes', {
+			params: { page, limit }
+		})
 		return data
 	},
 

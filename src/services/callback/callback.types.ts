@@ -65,6 +65,7 @@ export interface CallbackLeadsResponse {
 	total: number
 	page: number
 	limit: number
+	totalPages: number
 }
 
 export interface CallbacksResponse {

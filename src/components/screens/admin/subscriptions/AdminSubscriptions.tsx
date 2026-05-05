@@ -11,7 +11,7 @@ import type { SubscriptionHistoryAction } from '@/services/subscription/subscrip
 import { BillingPeriod, Plan } from '@/services/widget/widget.types'
 import clsx from 'clsx'
 import { NextPage } from 'next'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import styles from './AdminSubscriptions.module.scss'
 
 const PLAN_LABELS: Record<Plan, string> = {
@@ -57,6 +57,10 @@ const formatUserName = (
 ) => user?.name || (user?.email ? 'Без имени' : user?.id) || '—'
 
 const AdminSubscriptions: NextPage = () => {
+	const [currentPage, setCurrentPage] = useState(1)
+	const [historyCurrentPage, setHistoryCurrentPage] = useState(1)
+	const itemQuantity = 15
+	const historyItemQuantity = 10
 	const {
 		subscriptions,
 		subscriptionHistory,
@@ -92,31 +96,39 @@ const AdminSubscriptions: NextPage = () => {
 		cancelTargetId,
 		confirmCancel,
 		dismissCancel
-	} = useAdminSubscriptions()
+	} = useAdminSubscriptions({
+		subscriptionPage: currentPage,
+		subscriptionLimit: itemQuantity,
+		historyPage: historyCurrentPage,
+		historyLimit: historyItemQuantity,
+		onSubscriptionSuccess: () => setCurrentPage(1),
+		onBonusSuccess: () => setHistoryCurrentPage(1)
+	})
 
-	const [currentPage, setCurrentPage] = useState(1)
-	const itemQuantity = 15
-	const totalItems = subscriptions?.length ?? 0
-	const totalPages = Math.max(1, Math.ceil(totalItems / itemQuantity))
-	const lastIndex = currentPage * itemQuantity
-	const firstIndex = lastIndex - itemQuantity
-	const activePage = subscriptions?.slice(firstIndex, lastIndex) ?? []
+	const activePage = subscriptions?.items ?? []
+	const totalItems = subscriptions?.total ?? 0
+	const totalPages = subscriptions?.totalPages ?? currentPage
 	const listPage = Array.from({ length: totalPages }, (_, i) => i + 1)
-	const [historyCurrentPage, setHistoryCurrentPage] = useState(1)
-	const historyItemQuantity = 10
-	const historyTotalItems = subscriptionHistory?.length ?? 0
-	const historyTotalPages = Math.max(
-		1,
-		Math.ceil(historyTotalItems / historyItemQuantity)
-	)
-	const historyLastIndex = historyCurrentPage * historyItemQuantity
-	const historyFirstIndex = historyLastIndex - historyItemQuantity
-	const activeHistoryPage =
-		subscriptionHistory?.slice(historyFirstIndex, historyLastIndex) ?? []
+	const activeHistoryPage = subscriptionHistory?.items ?? []
+	const historyTotalItems = subscriptionHistory?.total ?? 0
+	const historyTotalPages =
+		subscriptionHistory?.totalPages ?? historyCurrentPage
 	const historyListPage = Array.from(
 		{ length: historyTotalPages },
 		(_, i) => i + 1
 	)
+
+	useEffect(() => {
+		if (currentPage > totalPages) {
+			setCurrentPage(totalPages)
+		}
+	}, [currentPage, totalPages])
+
+	useEffect(() => {
+		if (historyCurrentPage > historyTotalPages) {
+			setHistoryCurrentPage(historyTotalPages)
+		}
+	}, [historyCurrentPage, historyTotalPages])
 
 	const prevPage = () => setCurrentPage(p => Math.max(1, p - 1))
 	const nextPage = () => setCurrentPage(p => Math.min(totalPages, p + 1))
@@ -429,7 +441,7 @@ const AdminSubscriptions: NextPage = () => {
 						/>
 					))}
 				</div>
-			) : subscriptionHistory?.length ? (
+			) : historyTotalItems ? (
 				<div className={styles['list-section']}>
 					<div className={styles['list-meta']}>
 						<div>
@@ -587,7 +599,7 @@ const AdminSubscriptions: NextPage = () => {
 						/>
 					))}
 				</div>
-			) : subscriptions?.length ? (
+			) : totalItems ? (
 				<div className={styles['list-section']}>
 					<div className={styles['list-meta']}>
 						<div>

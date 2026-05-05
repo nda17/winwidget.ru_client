@@ -25,9 +25,9 @@ const AdminNotes: NextPage = () => {
 	const [currentPage, setCurrentPage] = useState(1)
 	const itemQuantity = 10
 
-	const { data: notes = [], isLoading } = useQuery({
-		queryKey: ['notes'],
-		queryFn: notesService.getAll,
+	const { data, isLoading } = useQuery({
+		queryKey: ['notes', currentPage, itemQuantity],
+		queryFn: () => notesService.getAll(currentPage, itemQuantity),
 		enabled: auth
 	})
 
@@ -35,6 +35,7 @@ const AdminNotes: NextPage = () => {
 		mutationFn: (text: string) => notesService.create(text),
 		onMutate: () => toast.loading('Добавляем задачу...'),
 		onSuccess: (_, __, toastId) => {
+			setCurrentPage(1)
 			queryClient.invalidateQueries({ queryKey: ['notes'] })
 			setInputText('')
 			toast.success('Задача добавлена', { id: toastId as string })
@@ -87,16 +88,12 @@ const AdminNotes: NextPage = () => {
 		setDeleteTarget(null)
 	}
 
-	const pending = notes.filter(n => !n.done)
-	const done = notes.filter(n => n.done)
-	const orderedNotes = [...pending, ...done]
-	const totalItems = orderedNotes.length
-	const totalPages = Math.max(1, Math.ceil(totalItems / itemQuantity))
-	const lastCardIndex = currentPage * itemQuantity
-	const firstCardIndex = lastCardIndex - itemQuantity
-	const activeNotes = orderedNotes.slice(firstCardIndex, lastCardIndex)
+	const activeNotes = data?.items ?? []
 	const activePending = activeNotes.filter(n => !n.done)
 	const activeDone = activeNotes.filter(n => n.done)
+	const totalItems = data?.total ?? 0
+	const totalPages = data?.totalPages ?? currentPage
+	const doneTotal = data?.doneTotal ?? 0
 	const listPage = Array.from({ length: totalPages }, (_, i) => i + 1)
 
 	useEffect(() => {
@@ -163,7 +160,7 @@ const AdminNotes: NextPage = () => {
 						<SkeletonLoader count={1} className="h-[44px]" />
 						<SkeletonLoader count={1} className="h-[44px]" />
 					</div>
-				) : notes.length === 0 ? (
+				) : totalItems === 0 ? (
 					<p className={styles.empty}>Задач пока нет</p>
 				) : (
 					<>
@@ -176,9 +173,7 @@ const AdminNotes: NextPage = () => {
 						)}
 						{activeDone.length > 0 && (
 							<>
-								<p className={styles.doneLabel}>
-									Выполнено ({done.length})
-								</p>
+								<p className={styles.doneLabel}>Выполнено ({doneTotal})</p>
 								<NoteList
 									notes={activeDone}
 									onToggle={handleToggle}

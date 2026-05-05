@@ -4,11 +4,12 @@ import callbackService from '@/services/callback/callback.service'
 import { CallbackLead } from '@/services/callback/callback.types'
 import { Subscription as WidgetSubscription } from '@/services/widget/widget.types'
 import widgetService from '@/services/widget/widget.service'
+import Pagination from '@/components/ui/pagination/Pagination'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import styles from './WidgetLeads.module.scss'
 
@@ -22,10 +23,13 @@ const CallbackLeads = ({ callbackId }: Props) => {
 	const [exporting, setExporting] = useState<
 		'csv' | 'xlsx' | 'pdf' | null
 	>(null)
+	const [currentPage, setCurrentPage] = useState(1)
+	const itemQuantity = 50
 
 	const { data, isLoading } = useQuery({
-		queryKey: ['callback-leads', callbackId],
-		queryFn: () => callbackService.getLeads(callbackId),
+		queryKey: ['callback-leads', callbackId, currentPage, itemQuantity],
+		queryFn: () =>
+			callbackService.getLeads(callbackId, currentPage, itemQuantity),
 		enabled: !!auth
 	})
 
@@ -39,6 +43,18 @@ const CallbackLeads = ({ callbackId }: Props) => {
 		subscription?.plan === 'TRIAL' || subscription?.plan === 'HARD'
 
 	const isPending = !isAuthResolved || (!!auth && isLoading)
+	const totalPages = data?.totalPages ?? currentPage
+	const listPage = Array.from({ length: totalPages }, (_, i) => i + 1)
+
+	useEffect(() => {
+		if (currentPage > totalPages) {
+			setCurrentPage(totalPages)
+		}
+	}, [currentPage, totalPages])
+
+	const prevPage = () => setCurrentPage(p => Math.max(1, p - 1))
+	const nextPage = () => setCurrentPage(p => Math.min(totalPages, p + 1))
+	const changeActivePage = (page: number) => setCurrentPage(page)
 
 	const formatPhone = (raw: string) => {
 		const digits = raw.replace(/\D/g, '')
@@ -272,7 +288,7 @@ const CallbackLeads = ({ callbackId }: Props) => {
 							{data.leads.map((lead, i) => (
 								<tr key={lead.id} className={styles.tr}>
 									<td className={styles.td} data-label="#">
-										{i + 1}
+										{(data.page - 1) * data.limit + i + 1}
 									</td>
 									<td className={styles.td} data-label="Дата">
 										{formatDate(lead.createdAt)}
@@ -308,9 +324,18 @@ const CallbackLeads = ({ callbackId }: Props) => {
 					</table>
 
 					{data.total > data.limit && (
-						<p className={styles.pagination}>
-							Показано {data.leads.length} из {data.total}
-						</p>
+						<>
+							<p className={styles.pagination}>
+								Показано {data.leads.length} из {data.total}
+							</p>
+							<Pagination
+								listPage={listPage}
+								currentPage={currentPage}
+								prevPage={prevPage}
+								nextPage={nextPage}
+								changeActivePage={changeActivePage}
+							/>
+						</>
 					)}
 				</div>
 			)}

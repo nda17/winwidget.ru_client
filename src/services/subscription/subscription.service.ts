@@ -15,6 +15,14 @@ export interface IAdminSubscription extends Subscription {
 	user: IAdminSubscriptionUser | null
 }
 
+export interface IAdminSubscriptionsResponse {
+	items: IAdminSubscription[]
+	total: number
+	page: number
+	limit: number
+	totalPages: number
+}
+
 export type SubscriptionHistoryAction = 'BONUS_DAYS'
 
 export interface IAdminSubscriptionHistory {
@@ -29,6 +37,14 @@ export interface IAdminSubscriptionHistory {
 	createdAt: string
 	user: IAdminSubscriptionUser | null
 	admin: IAdminSubscriptionUser | null
+}
+
+export interface IAdminSubscriptionHistoryResponse {
+	items: IAdminSubscriptionHistory[]
+	total: number
+	page: number
+	limit: number
+	totalPages: number
 }
 
 export interface IAdminActivateInput {
@@ -108,16 +124,28 @@ const subscriptionService = {
 		return data
 	},
 
-	async adminGetAll(): Promise<IAdminSubscription[]> {
+	async adminGetAll(
+		page: number,
+		limit: number
+	): Promise<IAdminSubscriptionsResponse> {
 		const { data } = await axiosInterceptorsRequest.get(
-			'/subscriptions/admin/list'
+			'/subscriptions/admin/list',
+			{
+				params: { page, limit }
+			}
 		)
 		return data
 	},
 
-	async adminGetHistory(): Promise<IAdminSubscriptionHistory[]> {
+	async adminGetHistory(
+		page: number,
+		limit: number
+	): Promise<IAdminSubscriptionHistoryResponse> {
 		const { data } = await axiosInterceptorsRequest.get(
-			'/subscriptions/admin/history'
+			'/subscriptions/admin/history',
+			{
+				params: { page, limit }
+			}
 		)
 		return data
 	},
