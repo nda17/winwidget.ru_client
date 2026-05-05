@@ -1,0 +1,124 @@
+.wrapper {
+	@apply w-full max-w-[88rem] mx-auto px-4 flex flex-col items-center relative;
+}
+
+.card {
+	@apply w-full rounded-layout border border-gray-300 bg-white shadow-sm p-5 mb-6;
+}
+
+.skeletonRow {
+	@apply h-8 w-full mb-3;
+}
+
+.listSection {
+	@apply w-full rounded-layout border border-gray-300 bg-white shadow-sm overflow-hidden mb-6;
+}
+
+.listMeta {
+	@apply flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-5 py-4 border-b border-gray-300 bg-gray-300 bg-opacity-20;
+}
+
+.metaTitle {
+	@apply text-[1.1rem] font-semibold text-gray-700;
+}
+
+.metaSubtitle {
+	@apply text-sm text-gray-600;
+}
+
+.tableScroll {
+	@apply hidden lg:block w-full overflow-x-auto;
+}
+
+.mobileList {
+	@apply flex flex-col lg:hidden;
+}
+
+.table {
+	@apply w-full text-sm;
+
+	thead tr {
+		@apply border-b border-gray-300 bg-gray-300 bg-opacity-10;
+
+		th {
+			@apply text-left px-4 py-3 text-gray-700 font-500 whitespace-nowrap;
+		}
+	}
+
+	tbody tr {
+		@apply border-b border-gray-300 last:border-b-0 hover:bg-gray-300 hover:bg-opacity-10 transition-colors;
+
+		td {
+			@apply px-4 py-3 text-gray-700 align-top;
+		}
+	}
+}
+
+.eventCard {
+	@apply px-4 py-4 border-b border-gray-300 last:border-b-0 flex flex-col gap-2;
+}
+
+.cardRow {
+	@apply flex items-start justify-between gap-3;
+}
+
+.cardLabel {
+	@apply text-xs text-gray-600 flex-shrink-0 w-24;
+}
+
+.cardValue {
+	@apply text-sm text-gray-700 flex flex-col text-right min-w-0 break-words;
+}
+
+.cardDetails {
+	@apply mt-2 rounded-md bg-gray-300 bg-opacity-10 p-3;
+
+	p {
+		@apply text-sm text-gray-700 mb-1;
+	}
+
+	span {
+		@apply block text-xs text-gray-600 break-words;
+	}
+}
+
+.sectionBadge {
+	@apply inline-flex w-fit items-center rounded-md px-2 py-0.5 text-xs font-500;
+}
+
+.section-payments {
+	@apply bg-green-100 text-green-700;
+}
+
+.section-mailings {
+	@apply bg-aqua bg-opacity-10 text-aqua;
+}
+
+.section-tasks {
+	@apply bg-primary bg-opacity-10 text-primary;
+}
+
+.section-subscriptions {
+	@apply bg-yellow-100 text-yellow-700;
+}
+
+.section-users {
+	@apply bg-blue-100 text-blue-700;
+}
+
+.section-backlog {
+	@apply bg-gray-300 text-gray-700;
+}
+
+.actor {
+	@apply block text-sm text-gray-700;
+}
+
+.actorEmail,
+.details {
+	@apply block text-xs text-gray-600 break-all mt-0.5;
+}
+
+.description {
+	@apply block text-sm text-gray-700;
+}

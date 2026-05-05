@@ -36,6 +36,10 @@ export const navItems: INavItem[] = [
 		link: ADMIN_PAGES.MAILINGS
 	},
 	{
+		title: 'Журнал событий',
+		link: ADMIN_PAGES.EVENT_LOG
+	},
+	{
 		title: 'Система',
 		link: ADMIN_PAGES.SYSTEM
 	},
