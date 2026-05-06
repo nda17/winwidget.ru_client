@@ -12,7 +12,15 @@ import styles from './DemoWidgets.module.scss'
 type ActiveDemo = 'wheel' | 'quiz' | 'callback' | 'countdown'
 
 const SWITCH_INTERVAL = 7000
-const FADE_DURATION = 400
+const FADE_DURATION = 520
+const EDGE_OFFSET = 12
+const MOBILE_EDGE_OFFSET = 8
+const DEMO_ORDER: ActiveDemo[] = ['wheel', 'quiz', 'callback', 'countdown']
+
+const getNextDemo = (demo: ActiveDemo) => {
+	const currentIndex = DEMO_ORDER.indexOf(demo)
+	return DEMO_ORDER[(currentIndex + 1) % DEMO_ORDER.length]
+}
 
 interface Props {
 	content: HomePageDemoWidgetsContent
@@ -20,13 +28,17 @@ interface Props {
 
 const DemoWidgets = ({ content }: Props) => {
 	const [activeDemo, setActiveDemo] = useState<ActiveDemo>('wheel')
-	const [btnVisible, setBtnVisible] = useState(true)
+	const [previousDemo, setPreviousDemo] = useState<ActiveDemo | null>(null)
 	const [wheelOpen, setWheelOpen] = useState(false)
 	const [quizOpen, setQuizOpen] = useState(false)
 	const [callbackOpen, setCallbackOpen] = useState(false)
 	const [countdownOpen, setCountdownOpen] = useState(false)
 	const [bubbleVisible, setBubbleVisible] = useState(false)
 	const floatRef = useRef<HTMLDivElement>(null)
+	const activeDemoRef = useRef<ActiveDemo>('wheel')
+	const switchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+		null
+	)
 
 	useEffect(() => {
 		const updateRight = () => {
@@ -35,7 +47,9 @@ const DemoWidgets = ({ content }: Props) => {
 			if (!mainEl || !floatEl) return
 			const fromViewportRight =
 				window.innerWidth - mainEl.getBoundingClientRect().right
-			floatEl.style.right = fromViewportRight + 24 + 'px'
+			const edgeOffset =
+				window.innerWidth <= 480 ? MOBILE_EDGE_OFFSET : EDGE_OFFSET
+			floatEl.style.right = fromViewportRight + edgeOffset + 'px'
 		}
 		updateRight()
 		window.addEventListener('resize', updateRight)
@@ -44,19 +58,30 @@ const DemoWidgets = ({ content }: Props) => {
 
 	useEffect(() => {
 		const interval = setInterval(() => {
-			setBtnVisible(false)
+			const currentDemo = activeDemoRef.current
+			const nextDemo = getNextDemo(currentDemo)
+
+			if (switchTimeoutRef.current) {
+				clearTimeout(switchTimeoutRef.current)
+			}
+
+			setPreviousDemo(currentDemo)
+			setActiveDemo(nextDemo)
+			activeDemoRef.current = nextDemo
 			setBubbleVisible(false)
-			setTimeout(() => {
-				setActiveDemo(prev => {
-					if (prev === 'wheel') return 'quiz'
-					if (prev === 'quiz') return 'callback'
-					if (prev === 'callback') return 'countdown'
-					return 'wheel'
-				})
-				setBtnVisible(true)
+
+			switchTimeoutRef.current = setTimeout(() => {
+				setPreviousDemo(null)
 			}, FADE_DURATION)
 		}, SWITCH_INTERVAL)
-		return () => clearInterval(interval)
+
+		return () => {
+			clearInterval(interval)
+
+			if (switchTimeoutRef.current) {
+				clearTimeout(switchTimeoutRef.current)
+			}
+		}
 	}, [])
 
 	useEffect(() => {
@@ -71,6 +96,82 @@ const DemoWidgets = ({ content }: Props) => {
 		else if (activeDemo === 'quiz') setQuizOpen(true)
 		else if (activeDemo === 'callback') setCallbackOpen(true)
 		else setCountdownOpen(true)
+	}
+
+	const renderButtonContent = (demo: ActiveDemo) => {
+		if (demo === 'wheel') {
+			return (
+				<>
+					<Image
+						src="/images/tools/wheel-gift-button.png"
+						alt=""
+						width={64}
+						height={64}
+						className={styles.floatIcon}
+						aria-hidden="true"
+					/>
+					<span
+						className={`${styles.floatLabel} ${styles.floatLabelWheel}`}
+					>
+						{content.labels.wheel}
+					</span>
+				</>
+			)
+		}
+
+		if (demo === 'quiz') {
+			return (
+				<>
+					<Image
+						src="/images/tools/quiz-button.png"
+						alt=""
+						width={60}
+						height={60}
+						className={styles.floatIconQuiz}
+						aria-hidden="true"
+					/>
+					<span
+						className={`${styles.floatLabel} ${styles.floatLabelQuiz}`}
+					>
+						{content.labels.quiz.split('\n').map((line, index, lines) => (
+							<span key={`${line}-${index}`}>
+								{line}
+								{index < lines.length - 1 && <br />}
+							</span>
+						))}
+					</span>
+				</>
+			)
+		}
+
+		if (demo === 'callback') {
+			return (
+				<Image
+					src="/images/tools/callback-button.png"
+					alt=""
+					width={60}
+					height={60}
+					className={styles.floatIconCallback}
+					aria-hidden="true"
+				/>
+			)
+		}
+
+		return (
+			<>
+				<Image
+					src="/images/tools/timer-button.png"
+					alt=""
+					width={60}
+					height={60}
+					className={styles.floatIconTimer}
+					aria-hidden="true"
+				/>
+				<span className={`${styles.floatLabel} ${styles.floatLabelTimer}`}>
+					{content.labels.countdown}
+				</span>
+			</>
+		)
 	}
 
 	return (
@@ -110,77 +211,25 @@ const DemoWidgets = ({ content }: Props) => {
 									? 'Открыть демо обратного звонка'
 									: 'Открыть демо таймера обратного отсчёта'
 					}
-					style={{
-						opacity: btnVisible ? 1 : 0,
-						transform: btnVisible ? 'scale(1)' : 'scale(0.85)',
-						transition: `opacity ${FADE_DURATION}ms ease, transform ${FADE_DURATION}ms ease`
-					}}
 				>
-					{activeDemo === 'wheel' ? (
-						<>
-							<Image
-								src="/images/tools/wheel-gift-button.png"
-								alt=""
-								width={64}
-								height={64}
-								className={styles.floatIcon}
-								aria-hidden="true"
-							/>
-							<span
-								className={`${styles.floatLabel} ${styles.floatLabelWheel}`}
-							>
-								{content.labels.wheel}
-							</span>
-						</>
-					) : activeDemo === 'quiz' ? (
-						<>
-							<Image
-								src="/images/tools/quiz-button.png"
-								alt=""
-								width={60}
-								height={60}
-								className={styles.floatIconQuiz}
-								aria-hidden="true"
-							/>
-							<span
-								className={`${styles.floatLabel} ${styles.floatLabelQuiz}`}
-							>
-								{content.labels.quiz
-									.split('\n')
-									.map((line, index, lines) => (
-										<span key={`${line}-${index}`}>
-											{line}
-											{index < lines.length - 1 && <br />}
-										</span>
-									))}
-							</span>
-						</>
-					) : activeDemo === 'callback' ? (
-						<Image
-							src="/images/tools/callback-button.png"
-							alt=""
-							width={60}
-							height={60}
-							className={styles.floatIconCallback}
-							aria-hidden="true"
-						/>
-					) : (
-						<>
-							<Image
-								src="/images/tools/timer-button.png"
-								alt=""
-								width={60}
-								height={60}
-								className={styles.floatIconTimer}
-								aria-hidden="true"
-							/>
-							<span
-								className={`${styles.floatLabel} ${styles.floatLabelTimer}`}
-							>
-								{content.labels.countdown}
-							</span>
-						</>
+					{previousDemo && previousDemo !== activeDemo && (
+						<span
+							key={`previous-${previousDemo}`}
+							className={`${styles.buttonLayer} ${styles.buttonLayerLeaving}`}
+						>
+							{renderButtonContent(previousDemo)}
+						</span>
 					)}
+					<span
+						key={`active-${activeDemo}`}
+						className={`${styles.buttonLayer} ${
+							previousDemo
+								? styles.buttonLayerEntering
+								: styles.buttonLayerActive
+						}`}
+					>
+						{renderButtonContent(activeDemo)}
+					</span>
 				</button>
 			</div>
 

@@ -1,5 +1,6 @@
 .floatOuter {
-	@apply fixed right-6 bottom-6 z-[29];
+	@apply fixed right-3 z-[29];
+	bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
 }
 
 /* ── Bubble cloud ─────────────────────────────────────────── */
@@ -33,6 +34,17 @@
 	to {
 		opacity: 1;
 		transform: translateY(-50%) scale(1);
+	}
+}
+
+@keyframes bubbleInMobile {
+	from {
+		opacity: 0;
+		transform: translateY(8px) scale(0.92);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
 	}
 }
 
@@ -88,7 +100,7 @@
 /* ── Float button ─────────────────────────────────────────── */
 
 .floatBtn {
-	@apply flex flex-col items-center gap-[5px] bg-transparent border-none cursor-pointer p-0 select-none;
+	@apply relative flex items-end justify-center w-[118px] h-[98px] overflow-visible bg-transparent border-none cursor-pointer p-0 select-none;
 	animation:
 		giftBounce 3s ease-in-out infinite 4s,
 		demoGlow 2.5s ease-in-out infinite 4s;
@@ -98,6 +110,24 @@
 		transform: scale(1.08) !important;
 		opacity: 1 !important;
 	}
+}
+
+.buttonLayer {
+	@apply absolute inset-x-0 bottom-0 flex flex-col items-center gap-[5px] pointer-events-none;
+	transform-origin: 50% 100%;
+}
+
+.buttonLayerActive {
+	opacity: 1;
+	transform: translateY(0) scale(1);
+}
+
+.buttonLayerEntering {
+	animation: demoButtonIn 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.buttonLayerLeaving {
+	animation: demoButtonOut 520ms ease both;
 }
 
 /* Wheel */
@@ -163,6 +193,90 @@
 		drop-shadow(0 2px 8px rgba(0, 0, 0, 0.22));
 }
 
+@media (max-width: 480px) {
+	.floatOuter {
+		@apply right-2;
+		bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+	}
+
+	.bubble {
+		@apply right-0;
+		top: auto;
+		bottom: calc(100% + 10px);
+		width: min(188px, calc(100vw - 20px));
+		padding: 10px 30px 10px 12px;
+		transform: none;
+		animation: bubbleInMobile 320ms cubic-bezier(0.22, 1, 0.36, 1);
+	}
+
+	.bubbleText {
+		@apply text-xs;
+		line-height: 1.35;
+	}
+
+	.bubbleDot {
+		@apply w-2.5 h-2.5;
+		left: 10px;
+		top: -5px;
+	}
+
+	.bubbleTail {
+		@apply top-auto;
+		right: 24px;
+		bottom: -8px;
+		transform: none;
+		border-top: 8px solid #fff;
+		border-right: 7px solid transparent;
+		border-bottom: 0;
+		border-left: 7px solid transparent;
+	}
+
+	.floatBtn {
+		@apply w-[86px] h-[76px];
+	}
+
+	.floatIcon {
+		@apply w-[50px] h-[50px];
+	}
+
+	.floatIconQuiz,
+	.floatIconCallback,
+	.floatIconTimer {
+		@apply w-12 h-12;
+	}
+
+	.floatLabel {
+		@apply text-[9px] px-2 py-[2px];
+		letter-spacing: 0.4px;
+	}
+
+	.floatLabelTimer {
+		padding: 4px 8px;
+	}
+}
+
+@media (max-width: 360px) {
+	.bubble {
+		width: min(168px, calc(100vw - 16px));
+		padding: 9px 28px 9px 11px;
+	}
+
+	.floatBtn {
+		@apply w-[78px] h-[70px];
+	}
+
+	.floatIcon,
+	.floatIconQuiz,
+	.floatIconCallback,
+	.floatIconTimer {
+		@apply w-11 h-11;
+	}
+
+	.floatLabel {
+		@apply text-[8px] px-[7px];
+	}
+}
+
 /* ── Shared animations ────────────────────────────────────── */
 
 @keyframes demoGlow {
@@ -195,5 +309,27 @@
 	}
 	100% {
 		transform: translateY(0) scale(1);
+	}
+}
+
+@keyframes demoButtonIn {
+	from {
+		opacity: 0;
+		transform: translateY(8px) scale(0.9);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+@keyframes demoButtonOut {
+	from {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+	to {
+		opacity: 0;
+		transform: translateY(-8px) scale(0.9);
 	}
 }

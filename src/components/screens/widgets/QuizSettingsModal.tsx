@@ -1124,6 +1124,11 @@ const QuizSettingsModal = ({
 											<p className={styles.hint}>
 												PNG с прозрачным фоном, до 320x320 px и до 200 КБ.
 											</p>
+											<p className={styles.hint}>
+												После загрузки обновите страницу с установленным
+												виджетом. Если кнопка осталась старой, выполните
+												жёсткое обновление: Ctrl+F5 или Cmd+Shift+R.
+											</p>
 											<div className={styles.buttonImageActions}>
 												<label
 													htmlFor={buttonImageInputId}
