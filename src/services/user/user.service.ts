@@ -1,6 +1,11 @@
 import { axiosInterceptorsRequest } from '@/api/interceptors'
 import { IUserEditInput } from '@/components/screens/admin/user/edit/user-edit.interface'
 import { IUser } from '@/shared/types/user.types'
+import {
+	BillingPeriod,
+	Plan,
+	Subscription
+} from '@/services/widget/widget.types'
 
 export interface IProfileEditInput {
 	name?: string
@@ -20,6 +25,103 @@ export interface IUserListResponse {
 	page: number
 	limit: number
 	totalPages: number
+}
+
+export type AdminUserOverviewPaymentStatus =
+	| 'PENDING'
+	| 'SUCCEEDED'
+	| 'CANCELLED'
+
+export type AdminUserOverviewWidgetType =
+	| 'WHEEL'
+	| 'QUIZ'
+	| 'CALLBACK'
+	| 'COUNTDOWN_TIMER'
+
+export type AdminUserOverviewActivityRole = 'TARGET' | 'ADMIN'
+
+export interface IAdminUserOverviewPayment {
+	id: string
+	yookassaId: string
+	status: AdminUserOverviewPaymentStatus
+	amount: string
+	plan: Plan | null
+	billingPeriod: BillingPeriod | null
+	createdAt: string
+	updatedAt: string
+}
+
+export interface IAdminUserOverviewCount {
+	type: AdminUserOverviewWidgetType
+	label: string
+	count: number
+}
+
+export interface IAdminUserOverviewWidgetCount extends IAdminUserOverviewCount {
+	active: number
+	inactive: number
+}
+
+export interface IAdminUserOverviewWidget {
+	id: string
+	type: AdminUserOverviewWidgetType
+	label: string
+	name: string
+	isActive: boolean
+	installDomain: string
+	leadsCount: number
+	updatedAt: string
+}
+
+export interface IAdminUserOverviewLead {
+	id: string
+	type: AdminUserOverviewWidgetType
+	label: string
+	sourceName: string
+	contact: string | null
+	phone: string | null
+	email: string | null
+	url: string | null
+	detail: string | null
+	createdAt: string
+}
+
+export interface IAdminUserOverviewActivity {
+	id: string
+	section: string
+	action: string
+	description: string
+	entityType: string | null
+	entityLabel: string | null
+	adminName: string | null
+	adminEmail: string | null
+	targetUserId: string | null
+	createdAt: string
+	role: AdminUserOverviewActivityRole
+}
+
+export interface IAdminUserOverview {
+	subscription: Subscription | null
+	payments: {
+		total: number
+		counts: Record<AdminUserOverviewPaymentStatus, number>
+		latest: IAdminUserOverviewPayment[]
+	}
+	widgets: {
+		total: number
+		active: number
+		inactive: number
+		byType: IAdminUserOverviewWidgetCount[]
+		latest: IAdminUserOverviewWidget[]
+	}
+	leads: {
+		total: number
+		byType: IAdminUserOverviewCount[]
+		latest: IAdminUserOverviewLead[]
+	}
+	activity: {
+		latest: IAdminUserOverviewActivity[]
+	}
 }
 
 class UserService {
@@ -45,6 +147,12 @@ class UserService {
 	async fetchUserById(id: string) {
 		return axiosInterceptorsRequest.get<IUser>(
 			`${this._BASE_URL}/edit/${id}`
+		)
+	}
+
+	async fetchUserOverview(id: string) {
+		return axiosInterceptorsRequest.get<IAdminUserOverview>(
+			`${this._BASE_URL}/edit/${id}/overview`
 		)
 	}
 

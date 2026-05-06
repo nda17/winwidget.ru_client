@@ -26,6 +26,13 @@ export const useUserEdit = (params: { id: string }) => {
 		enabled: auth && !!userId
 	})
 
+	const { data: overview, isLoading: isOverviewLoading } = useQuery({
+		queryKey: ['get-user-overview', userId],
+		queryFn: () => UserService.fetchUserOverview(userId),
+		select: ({ data }) => data,
+		enabled: auth && !!userId && Boolean(data)
+	})
+
 	useEffect(() => {
 		if (!isError) return
 
@@ -48,6 +55,9 @@ export const useUserEdit = (params: { id: string }) => {
 			toast.success('Изменения данных пользователя сохранены')
 			void queryClient.invalidateQueries({
 				queryKey: ['get-user-by-id', userId]
+			})
+			void queryClient.invalidateQueries({
+				queryKey: ['get-user-overview', userId]
 			})
 			void queryClient.invalidateQueries({ queryKey: ['get-user-list'] })
 			router.push(ADMIN_PAGES.USER_LIST)
@@ -80,6 +90,9 @@ export const useUserEdit = (params: { id: string }) => {
 			void queryClient.invalidateQueries({
 				queryKey: ['get-user-by-id', userId]
 			})
+			void queryClient.invalidateQueries({
+				queryKey: ['get-user-overview', userId]
+			})
 			void queryClient.invalidateQueries({ queryKey: ['get-user-list'] })
 		},
 		onError(error) {
@@ -103,6 +116,8 @@ export const useUserEdit = (params: { id: string }) => {
 		onSubmit,
 		isLoading,
 		data,
+		overview,
+		isOverviewLoading,
 		isSaving: isPending,
 		isActivationUpdating,
 		toggleActivation: toggleActivationAsync

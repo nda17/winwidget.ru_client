@@ -17,6 +17,7 @@ import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import UserInfo from '@/components/ui/user-info/UserInfo'
 import { ADMIN_PAGES } from '@/config/pages/admin.config'
 import { UserRole } from '@/services/auth/auth.types'
+import type { IAdminUserOverview } from '@/services/user/user.service'
 import { UserLoginMethod } from '@/shared/types/user.types'
 import {
 	validName,
@@ -32,6 +33,55 @@ import { useEffect, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 
 const FIELD_STYLE = { marginBottom: 0 }
+
+const PLAN_LABELS: Record<string, string> = {
+	TRIAL: 'Trial',
+	EASY: 'Easy',
+	HARD: 'Hard'
+}
+
+const PERIOD_LABELS: Record<string, string> = {
+	MONTHLY: 'Месяц',
+	YEARLY: 'Год'
+}
+
+const SUBSCRIPTION_STATUS_LABELS: Record<string, string> = {
+	ACTIVE: 'Активна',
+	EXPIRED: 'Истекла',
+	CANCELLED: 'Отменена'
+}
+
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+	PENDING: 'Ожидает',
+	SUCCEEDED: 'Оплачен',
+	CANCELLED: 'Отменён'
+}
+
+const EVENT_SECTION_LABELS: Record<string, string> = {
+	PAYMENTS: 'Платежи',
+	MAILINGS: 'Рассылки',
+	TASKS: 'Задачи',
+	SUBSCRIPTIONS: 'Подписки',
+	USERS: 'Пользователи',
+	BACKLOG: 'Бэклог'
+}
+
+const EVENT_ACTION_LABELS: Record<string, string> = {
+	PAYMENT_MANUAL_CHECK: 'Проверка платежа',
+	PAYMENT_CLEANUP_RUN: 'Очистка платежей',
+	MAILING_BROADCAST_SEND: 'Рассылка',
+	SUBSCRIPTION_ACTIVATE: 'Активация подписки',
+	SUBSCRIPTION_EXTEND_DAYS: 'Бонусные дни',
+	SUBSCRIPTION_CANCEL: 'Отмена подписки',
+	SUBSCRIPTION_EXPIRY_CHECK_RUN: 'Проверка сроков',
+	VERIFICATION_CHALLENGE_CLEANUP_RUN: 'Очистка кодов',
+	USER_UPDATE: 'Редактирование',
+	USER_TOGGLE_ACTIVATION: 'Статус аккаунта',
+	USER_DELETE: 'Удаление',
+	BACKLOG_TASK_CREATE: 'Создание задачи',
+	BACKLOG_TASK_UPDATE: 'Обновление задачи',
+	BACKLOG_TASK_DELETE: 'Удаление задачи'
+}
 
 const formatOptionalPattern = (
 	value: string | undefined,
@@ -50,6 +100,252 @@ const formatDateTime = (value: string) =>
 		timeStyle: 'short'
 	}).format(new Date(value))
 
+const formatAmount = (value: string) => {
+	const amount = Number(value)
+
+	if (Number.isNaN(amount)) {
+		return `${value} ₽`
+	}
+
+	return new Intl.NumberFormat('ru-RU', {
+		style: 'currency',
+		currency: 'RUB'
+	}).format(amount)
+}
+
+const getLabel = (
+	labels: Record<string, string>,
+	value?: string | null
+) => (value ? (labels[value] ?? value) : 'Нет данных')
+
+const UserOverview360 = ({
+	overview,
+	isLoading
+}: {
+	overview?: IAdminUserOverview
+	isLoading: boolean
+}) => {
+	if (isLoading) {
+		return (
+			<div className={styles.overview}>
+				<div className={styles.overviewHeader}>
+					<SkeletonLoader
+						count={1}
+						className={styles.loadingSectionTitle}
+					/>
+					<SkeletonLoader
+						count={1}
+						className={styles.loadingSectionHint}
+					/>
+				</div>
+				<div className={styles.overviewLoadingGrid}>
+					<SkeletonLoader count={1} className={styles.loadingInfoCard} />
+					<SkeletonLoader count={1} className={styles.loadingInfoCard} />
+					<SkeletonLoader count={1} className={styles.loadingInfoCard} />
+				</div>
+			</div>
+		)
+	}
+
+	if (!overview) {
+		return (
+			<div className={styles.overview}>
+				<p className={styles.overviewTitle}>Карточка 360</p>
+				<p className={styles.overviewEmpty}>
+					Сводка по пользователю сейчас недоступна.
+				</p>
+			</div>
+		)
+	}
+
+	const subscription = overview.subscription
+	const latestPayment = overview.payments.latest[0]
+
+	return (
+		<div className={styles.overview}>
+			<div className={styles.overviewHeader}>
+				<p className={styles.overviewTitle}>Карточка 360</p>
+				<p className={styles.overviewSubtitle}>
+					Сводка по подписке, платежам, виджетам, лидам и действиям.
+				</p>
+			</div>
+
+			<div className={styles.overviewSection}>
+				<p className={styles.overviewSectionTitle}>Подписка</p>
+				<div className={styles.overviewMetricGrid}>
+					<div>
+						<span className={styles.overviewMetricLabel}>Тариф</span>
+						<span className={styles.overviewMetricValue}>
+							{subscription
+								? getLabel(PLAN_LABELS, subscription.plan)
+								: 'Нет подписки'}
+						</span>
+					</div>
+					<div>
+						<span className={styles.overviewMetricLabel}>Статус</span>
+						<span className={styles.overviewMetricValue}>
+							{subscription
+								? getLabel(SUBSCRIPTION_STATUS_LABELS, subscription.status)
+								: 'Нет данных'}
+						</span>
+					</div>
+					<div>
+						<span className={styles.overviewMetricLabel}>Период</span>
+						<span className={styles.overviewMetricValue}>
+							{subscription
+								? getLabel(PERIOD_LABELS, subscription.billingPeriod)
+								: 'Нет данных'}
+						</span>
+					</div>
+					<div>
+						<span className={styles.overviewMetricLabel}>Лиды</span>
+						<span className={styles.overviewMetricValue}>
+							{subscription?.leadsThisPeriod ?? 0}
+						</span>
+					</div>
+				</div>
+				<p className={styles.overviewNote}>
+					Окончание:{' '}
+					{subscription?.expiresAt
+						? formatDateTime(subscription.expiresAt)
+						: 'без даты'}
+				</p>
+			</div>
+
+			<div className={styles.overviewSection}>
+				<p className={styles.overviewSectionTitle}>Платежи</p>
+				<div className={styles.overviewPills}>
+					<span className={styles.overviewPill}>
+						Всего {overview.payments.total}
+					</span>
+					<span className={styles.overviewPill}>
+						Ожидает {overview.payments.counts.PENDING}
+					</span>
+					<span className={styles.overviewPill}>
+						Оплачено {overview.payments.counts.SUCCEEDED}
+					</span>
+					<span className={styles.overviewPill}>
+						Отменено {overview.payments.counts.CANCELLED}
+					</span>
+				</div>
+				{latestPayment ? (
+					<div className={styles.overviewList}>
+						<div className={styles.overviewListItem}>
+							<div>
+								<p className={styles.overviewListTitle}>
+									{formatAmount(latestPayment.amount)}
+								</p>
+								<p className={styles.overviewListMeta}>
+									{getLabel(PAYMENT_STATUS_LABELS, latestPayment.status)}
+									{' · '}
+									{formatDateTime(latestPayment.createdAt)}
+								</p>
+							</div>
+						</div>
+					</div>
+				) : (
+					<p className={styles.overviewEmpty}>Платежей пока нет.</p>
+				)}
+			</div>
+
+			<div className={styles.overviewSection}>
+				<p className={styles.overviewSectionTitle}>Виджеты</p>
+				<div className={styles.overviewPills}>
+					<span className={styles.overviewPill}>
+						Всего {overview.widgets.total}
+					</span>
+					<span
+						className={clsx(
+							styles.overviewPill,
+							styles.overviewPillSuccess
+						)}
+					>
+						Активны {overview.widgets.active}
+					</span>
+					<span
+						className={clsx(styles.overviewPill, styles.overviewPillMuted)}
+					>
+						Выключены {overview.widgets.inactive}
+					</span>
+				</div>
+				<div className={styles.overviewList}>
+					{overview.widgets.byType.map(item => (
+						<div key={item.type} className={styles.overviewListItem}>
+							<div>
+								<p className={styles.overviewListTitle}>{item.label}</p>
+								<p className={styles.overviewListMeta}>
+									{item.active} активных из {item.count}
+								</p>
+							</div>
+						</div>
+					))}
+				</div>
+			</div>
+
+			<div className={styles.overviewSection}>
+				<p className={styles.overviewSectionTitle}>Лиды</p>
+				<div className={styles.overviewPills}>
+					<span className={styles.overviewPill}>
+						Всего {overview.leads.total}
+					</span>
+					{overview.leads.byType.map(item => (
+						<span key={item.type} className={styles.overviewPill}>
+							{item.label} {item.count}
+						</span>
+					))}
+				</div>
+				{overview.leads.latest.length ? (
+					<div className={styles.overviewList}>
+						{overview.leads.latest.slice(0, 3).map(lead => (
+							<div key={lead.id} className={styles.overviewListItem}>
+								<div>
+									<p className={styles.overviewListTitle}>
+										{lead.contact || 'Контакт не указан'}
+									</p>
+									<p className={styles.overviewListMeta}>
+										{lead.label} · {lead.sourceName} ·{' '}
+										{formatDateTime(lead.createdAt)}
+									</p>
+								</div>
+							</div>
+						))}
+					</div>
+				) : (
+					<p className={styles.overviewEmpty}>Лидов пока нет.</p>
+				)}
+			</div>
+
+			<div className={styles.overviewSection}>
+				<p className={styles.overviewSectionTitle}>Последние действия</p>
+				{overview.activity.latest.length ? (
+					<div className={styles.overviewList}>
+						{overview.activity.latest.map(item => (
+							<div key={item.id} className={styles.overviewListItem}>
+								<div>
+									<p className={styles.overviewListTitle}>
+										{getLabel(EVENT_ACTION_LABELS, item.action)}
+									</p>
+									<p className={styles.overviewListMeta}>
+										{getLabel(EVENT_SECTION_LABELS, item.section)} ·{' '}
+										{formatDateTime(item.createdAt)}
+									</p>
+									<p className={styles.overviewListMeta}>
+										{item.description}
+									</p>
+								</div>
+							</div>
+						))}
+					</div>
+				) : (
+					<p className={styles.overviewEmpty}>
+						Действий по пользователю пока нет.
+					</p>
+				)}
+			</div>
+		</div>
+	)
+}
+
 const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 	const [isActivationConfirmOpen, setIsActivationConfirmOpen] =
 		useState(false)
@@ -65,6 +361,8 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 	const {
 		isLoading,
 		data,
+		overview,
+		isOverviewLoading,
 		onSubmit,
 		isSaving,
 		isActivationUpdating,
@@ -426,6 +724,11 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 									</div>
 								)}
 							</div>
+
+							<UserOverview360
+								overview={overview}
+								isLoading={isOverviewLoading}
+							/>
 						</div>
 					</aside>
 
