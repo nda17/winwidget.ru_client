@@ -24,16 +24,24 @@ export interface IAdminSubscriptionsResponse {
 }
 
 export type SubscriptionHistoryAction = 'BONUS_DAYS'
+export type AdminBonusAudience =
+	| 'SINGLE'
+	| 'ACTIVE_SUBSCRIPTION'
+	| 'INACTIVE_SUBSCRIPTION'
+	| 'ALL'
 
 export interface IAdminSubscriptionHistory {
 	id: string
-	subscriptionId: string
-	userId: string
+	subscriptionId: string | null
+	userId: string | null
 	adminId: string | null
 	action: SubscriptionHistoryAction
 	days: number | null
 	oldExpiresAt: string | null
 	newExpiresAt: string | null
+	targetAudience: AdminBonusAudience | null
+	targetLabel: string | null
+	affectedUsersCount: number | null
 	createdAt: string
 	user: IAdminSubscriptionUser | null
 	admin: IAdminSubscriptionUser | null
@@ -56,8 +64,17 @@ export interface IAdminActivateInput {
 }
 
 export interface IAdminExtendDaysInput {
-	userId: string
+	userId?: string
 	days: number
+	audience?: AdminBonusAudience
+}
+
+export interface IAdminExtendDaysResult {
+	audience: AdminBonusAudience
+	audienceLabel: string
+	affectedUsersCount: number
+	historyId: string
+	subscription?: Subscription
 }
 
 export interface IPendingPayment {
@@ -160,7 +177,7 @@ const subscriptionService = {
 
 	async adminExtendDays(
 		body: IAdminExtendDaysInput
-	): Promise<Subscription> {
+	): Promise<IAdminExtendDaysResult> {
 		const { data } = await axiosInterceptorsRequest.post(
 			'/subscriptions/admin/extend-days',
 			body

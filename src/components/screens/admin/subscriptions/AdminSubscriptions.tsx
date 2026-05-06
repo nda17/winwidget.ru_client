@@ -7,7 +7,11 @@ import Heading from '@/components/ui/heading/Heading'
 import Pagination from '@/components/ui/pagination/Pagination'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import useAdminSubscriptions from '@/hooks/useAdminSubscriptions'
-import type { SubscriptionHistoryAction } from '@/services/subscription/subscription.service'
+import type {
+	AdminBonusAudience,
+	IAdminSubscriptionHistory,
+	SubscriptionHistoryAction
+} from '@/services/subscription/subscription.service'
 import { BillingPeriod, Plan } from '@/services/widget/widget.types'
 import clsx from 'clsx'
 import { NextPage } from 'next'
@@ -35,6 +39,39 @@ const HISTORY_ACTION_LABELS: Record<SubscriptionHistoryAction, string> = {
 	BONUS_DAYS: 'Бонусные дни'
 }
 
+const BONUS_AUDIENCE_LABELS: Record<AdminBonusAudience, string> = {
+	SINGLE: 'Один пользователь',
+	ACTIVE_SUBSCRIPTION: 'Активные пользователи',
+	INACTIVE_SUBSCRIPTION: 'Неактивные пользователи',
+	ALL: 'Все пользователи'
+}
+
+const BONUS_AUDIENCE_HISTORY_LABELS: Record<AdminBonusAudience, string> = {
+	SINGLE: 'Выбранный пользователь',
+	ACTIVE_SUBSCRIPTION: 'Все активные пользователи',
+	INACTIVE_SUBSCRIPTION: 'Все неактивные пользователи',
+	ALL: 'Все пользователи'
+}
+
+const BONUS_AUDIENCE_DESCRIPTIONS: Record<AdminBonusAudience, string> = {
+	SINGLE: 'Начисление одному выбранному пользователю',
+	ACTIVE_SUBSCRIPTION:
+		'Все, у кого на текущий момент есть действующая подписка',
+	INACTIVE_SUBSCRIPTION:
+		'Все, у кого на текущий момент нет действующей подписки',
+	ALL: 'Все пользователи в базе данных независимо от подписки'
+}
+
+const BONUS_DAYS_HINTS: Record<AdminBonusAudience, string> = {
+	SINGLE:
+		'Если подписка активна — дни добавятся к текущей дате окончания. Если истекла или отменена — срок начнётся с сегодняшнего дня',
+	ACTIVE_SUBSCRIPTION:
+		'Дни добавятся к текущей дате окончания всем пользователям с действующей подпиской',
+	INACTIVE_SUBSCRIPTION:
+		'Пользователям без действующей подписки срок начнётся с сегодняшнего дня. Если подписки не было — будет создана TRIAL-подписка',
+	ALL: 'Активным пользователям дни добавятся к текущей дате окончания, остальным срок начнётся с сегодняшнего дня'
+}
+
 const dateFormatter = new Intl.DateTimeFormat('ru-RU')
 
 const dateTimeFormatter = new Intl.DateTimeFormat('ru-RU', {
@@ -55,6 +92,22 @@ const formatUserLabel = (
 const formatUserName = (
 	user?: { id: string; name: string | null; email: string | null } | null
 ) => user?.name || (user?.email ? 'Без имени' : user?.id) || '—'
+
+const isMassBonusHistory = (item: IAdminSubscriptionHistory) =>
+	Boolean(item.targetAudience && item.targetAudience !== 'SINGLE')
+
+const formatHistoryTargetName = (item: IAdminSubscriptionHistory) =>
+	isMassBonusHistory(item)
+		? item.targetLabel ||
+			BONUS_AUDIENCE_HISTORY_LABELS[
+				item.targetAudience as AdminBonusAudience
+			]
+		: formatUserName(item.user)
+
+const formatHistoryTargetDetails = (item: IAdminSubscriptionHistory) =>
+	isMassBonusHistory(item)
+		? `Затронуто: ${item.affectedUsersCount ?? 0}`
+		: item.user?.email || ''
 
 const AdminSubscriptions: NextPage = () => {
 	const [currentPage, setCurrentPage] = useState(1)
@@ -78,6 +131,8 @@ const AdminSubscriptions: NextPage = () => {
 		bonusSelectedUserId,
 		bonusSelectedUserName,
 		selectBonusUser,
+		bonusAudience,
+		setBonusAudience,
 		plan,
 		setPlan,
 		billingPeriod,
@@ -90,6 +145,9 @@ const AdminSubscriptions: NextPage = () => {
 		setBonusDays,
 		isExtendingDays,
 		handleExtendDays,
+		bonusConfirm,
+		confirmExtendDays,
+		dismissExtendDays,
 		extendIfActive,
 		setExtendIfActive,
 		cancel,
@@ -150,6 +208,20 @@ const AdminSubscriptions: NextPage = () => {
 					cancelLabel="Назад"
 					onConfirm={confirmCancel}
 					onCancel={dismissCancel}
+				/>
+			)}
+			{bonusConfirm && (
+				<ConfirmDialog
+					title="Начислить бонусные дни?"
+					message={`Будет начислено ${bonusConfirm.days} дн. ${
+						bonusConfirm.audience === 'SINGLE'
+							? `Пользователь: ${bonusSelectedUserName}.`
+							: `Аудитория: ${BONUS_AUDIENCE_HISTORY_LABELS[bonusConfirm.audience]}.`
+					} Действие сразу изменит подписки.`}
+					confirmLabel="Начислить"
+					cancelLabel="Назад"
+					onConfirm={confirmExtendDays}
+					onCancel={dismissExtendDays}
 				/>
 			)}
 			<Heading text="Панель администратора" />
@@ -336,71 +408,94 @@ const AdminSubscriptions: NextPage = () => {
 			/>
 			<div className={styles.card}>
 				<div className={styles.field}>
-					<label htmlFor="bonus-user-search" className={styles.label}>
-						Пользователь
-					</label>
+					<p className={styles.label}>Кому начислить</p>
 					<p className={styles.hint}>
-						Найдите пользователя, которому нужно добавить дни
+						{BONUS_AUDIENCE_DESCRIPTIONS[bonusAudience]}
 					</p>
-					{bonusSelectedUserId ? (
-						<div className={styles.selectedUser}>
-							<span>{bonusSelectedUserName}</span>
+					<div className={styles.audienceOptions}>
+						{(
+							Object.keys(BONUS_AUDIENCE_LABELS) as AdminBonusAudience[]
+						).map(audience => (
 							<button
+								key={audience}
 								type="button"
-								className={styles.clearBtn}
-								onClick={() => selectBonusUser('', '')}
-							>
-								✕
-							</button>
-						</div>
-					) : (
-						<div className={styles.searchWrap}>
-							<input
-								id="bonus-user-search"
-								name="bonus-user-search"
-								className={styles.input}
-								placeholder="Поиск по имени, email, телефону"
-								value={bonusUserSearch}
-								onChange={setBonusUserSearch}
-							/>
-							{bonusUserSearchResults &&
-								bonusUserSearchResults.length > 0 && (
-									<ul className={styles.dropdown}>
-										{bonusUserSearchResults.map(u => (
-											<li key={u.id}>
-												<button
-													type="button"
-													className={styles.dropdownItem}
-													onClick={() =>
-														selectBonusUser(
-															u.id,
-															`${u.name || 'Без имени'} (${u.email || u.phone || u.id})`
-														)
-													}
-												>
-													<span className={styles.dropdownName}>
-														{u.name || 'Без имени'}
-													</span>
-													<span className={styles.dropdownEmail}>
-														{u.email || u.phone || u.id}
-													</span>
-												</button>
-											</li>
-										))}
-									</ul>
+								className={clsx(
+									styles.optionBtn,
+									bonusAudience === audience && styles.optionBtnActive
 								)}
-						</div>
-					)}
+								onClick={() => setBonusAudience(audience)}
+							>
+								{BONUS_AUDIENCE_LABELS[audience]}
+							</button>
+						))}
+					</div>
 				</div>
+
+				{bonusAudience === 'SINGLE' && (
+					<div className={styles.field}>
+						<label htmlFor="bonus-user-search" className={styles.label}>
+							Пользователь
+						</label>
+						<p className={styles.hint}>
+							Найдите пользователя, которому нужно добавить дни
+						</p>
+						{bonusSelectedUserId ? (
+							<div className={styles.selectedUser}>
+								<span>{bonusSelectedUserName}</span>
+								<button
+									type="button"
+									className={styles.clearBtn}
+									onClick={() => selectBonusUser('', '')}
+								>
+									✕
+								</button>
+							</div>
+						) : (
+							<div className={styles.searchWrap}>
+								<input
+									id="bonus-user-search"
+									name="bonus-user-search"
+									className={styles.input}
+									placeholder="Поиск по имени, email, телефону"
+									value={bonusUserSearch}
+									onChange={setBonusUserSearch}
+								/>
+								{bonusUserSearchResults &&
+									bonusUserSearchResults.length > 0 && (
+										<ul className={styles.dropdown}>
+											{bonusUserSearchResults.map(u => (
+												<li key={u.id}>
+													<button
+														type="button"
+														className={styles.dropdownItem}
+														onClick={() =>
+															selectBonusUser(
+																u.id,
+																`${u.name || 'Без имени'} (${u.email || u.phone || u.id})`
+															)
+														}
+													>
+														<span className={styles.dropdownName}>
+															{u.name || 'Без имени'}
+														</span>
+														<span className={styles.dropdownEmail}>
+															{u.email || u.phone || u.id}
+														</span>
+													</button>
+												</li>
+											))}
+										</ul>
+									)}
+							</div>
+						)}
+					</div>
+				)}
 
 				<div className={styles.field}>
 					<label htmlFor="bonus-days" className={styles.label}>
 						Количество дней
 					</label>
-					<p className={styles.hint}>
-						Если подписка активна — дни добавятся к текущей дате окончания.
-						Если истекла или отменена — срок начнётся с сегодняшнего дня
-					</p>
+					<p className={styles.hint}>{BONUS_DAYS_HINTS[bonusAudience]}</p>
 					<input
 						id="bonus-days"
 						name="bonus-days"
@@ -418,7 +513,10 @@ const AdminSubscriptions: NextPage = () => {
 				<button
 					className={styles.bonusBtn}
 					onClick={handleExtendDays}
-					disabled={isExtendingDays || !bonusSelectedUserId}
+					disabled={
+						isExtendingDays ||
+						(bonusAudience === 'SINGLE' && !bonusSelectedUserId)
+					}
 				>
 					{isExtendingDays ? 'Начисление...' : 'Начислить бонусные дни'}
 				</button>
@@ -427,7 +525,7 @@ const AdminSubscriptions: NextPage = () => {
 			<AdminSectionHeading
 				text="История бонусных начислений"
 				title="История бонусных начислений"
-				description="Фиксирует дату начисления, пользователя, количество дней, администратора и изменение даты окончания подписки."
+				description="Фиксирует дату начисления, пользователя или аудиторию, количество дней, администратора и изменение даты окончания подписки."
 				risk="low"
 				riskText="Блок только показывает уже выполненные начисления и не меняет данные подписок."
 			/>
@@ -469,10 +567,10 @@ const AdminSubscriptions: NextPage = () => {
 										Пользователь
 									</span>
 									<span className={styles['card-value']}>
-										{formatUserName(item.user)}
-										{item.user?.email && (
+										{formatHistoryTargetName(item)}
+										{formatHistoryTargetDetails(item) && (
 											<span className={styles['card-email']}>
-												{item.user.email}
+												{formatHistoryTargetDetails(item)}
 											</span>
 										)}
 									</span>
@@ -537,11 +635,11 @@ const AdminSubscriptions: NextPage = () => {
 										<td>{formatDateTime(item.createdAt)}</td>
 										<td>
 											<span className={styles.historyUser}>
-												{formatUserName(item.user)}
+												{formatHistoryTargetName(item)}
 											</span>
-											{item.user?.email && (
+											{formatHistoryTargetDetails(item) && (
 												<span className={styles.historyEmail}>
-													{item.user.email}
+													{formatHistoryTargetDetails(item)}
 												</span>
 											)}
 										</td>

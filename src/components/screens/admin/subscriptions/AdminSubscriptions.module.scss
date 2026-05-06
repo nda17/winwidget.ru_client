@@ -78,6 +78,18 @@
 		@apply bg-aqua text-white px-6 py-2 rounded-md text-sm font-500 hover:opacity-80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
 	}
 
+	.audienceOptions {
+		@apply grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2;
+	}
+
+	.optionBtn {
+		@apply border border-gray-300 bg-white text-gray-700 rounded-md px-3 py-2 text-sm font-500 hover:border-primary hover:text-primary transition-colors;
+	}
+
+	.optionBtnActive {
+		@apply bg-primary border-primary text-white hover:text-white;
+	}
+
 	.skeletonRow {
 		@apply h-8 w-full mb-3;
 	}

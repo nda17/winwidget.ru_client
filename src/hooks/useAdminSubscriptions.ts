@@ -1,4 +1,5 @@
 import subscriptionService, {
+	AdminBonusAudience,
 	IAdminActivateInput,
 	IAdminExtendDaysInput
 } from '@/services/subscription/subscription.service'
@@ -16,6 +17,12 @@ import { ChangeEvent, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 
 const today = () => new Date().toISOString().slice(0, 10)
+
+interface BonusConfirmState {
+	audience: AdminBonusAudience
+	days: number
+	userId?: string
+}
 
 interface UseAdminSubscriptionsParams {
 	subscriptionPage: number
@@ -107,6 +114,8 @@ const useAdminSubscriptions = ({
 		useState<BillingPeriod>('MONTHLY')
 	const [startsAt, setStartsAt] = useState(today())
 	const [extendIfActive, setExtendIfActive] = useState(true)
+	const [bonusAudience, setBonusAudience] =
+		useState<AdminBonusAudience>('SINGLE')
 	const [bonusDays, setBonusDays] = useState('')
 
 	const selectUser = (id: string, label: string) => {
@@ -135,6 +144,7 @@ const useAdminSubscriptions = ({
 		setBonusSelectedUserId('')
 		setBonusSelectedUserName('')
 		setBonusUserSearch('')
+		setBonusAudience('SINGLE')
 		setBonusDays('')
 	}
 
@@ -163,8 +173,18 @@ const useAdminSubscriptions = ({
 			mutationKey: ['admin-extend-subscription-days'],
 			mutationFn: (body: IAdminExtendDaysInput) =>
 				subscriptionService.adminExtendDays(body),
-			onSuccess() {
-				toast.success('Бонусные дни начислены')
+			onMutate() {
+				return toast.loading(
+					'Ожидайте, процесс начисления может занять время'
+				)
+			},
+			onSuccess(result, _body, toastId) {
+				toast.success(
+					result.affectedUsersCount > 1
+						? `Бонусные дни начислены: ${result.affectedUsersCount} пользователей`
+						: 'Бонусные дни начислены',
+					{ id: toastId }
+				)
 				onSubscriptionSuccess?.()
 				onBonusSuccess?.()
 				queryClient.invalidateQueries({
@@ -175,13 +195,14 @@ const useAdminSubscriptions = ({
 				})
 				resetBonusForm()
 			},
-			onError(error) {
-				if (axios.isAxiosError(error)) {
-					toast.error(
-						error.response?.data?.message ??
-							'Ошибка начисления бонусных дней'
-					)
-				}
+			onError(error, _body, toastId) {
+				toast.error(
+					axios.isAxiosError(error)
+						? (error.response?.data?.message ??
+								'Ошибка начисления бонусных дней')
+						: 'Ошибка начисления бонусных дней',
+					{ id: toastId }
+				)
 			}
 		})
 
@@ -204,6 +225,8 @@ const useAdminSubscriptions = ({
 	})
 
 	const [cancelTargetId, setCancelTargetId] = useState<string | null>(null)
+	const [bonusConfirm, setBonusConfirm] =
+		useState<BonusConfirmState | null>(null)
 
 	const cancel = (userId: string) => setCancelTargetId(userId)
 
@@ -213,6 +236,8 @@ const useAdminSubscriptions = ({
 	}
 
 	const dismissCancel = () => setCancelTargetId(null)
+
+	const dismissExtendDays = () => setBonusConfirm(null)
 
 	const handleActivate = async () => {
 		if (!selectedUserId) {
@@ -230,7 +255,7 @@ const useAdminSubscriptions = ({
 	}
 
 	const handleExtendDays = async () => {
-		if (!bonusSelectedUserId) {
+		if (bonusAudience === 'SINGLE' && !bonusSelectedUserId) {
 			toast.error('Выберите пользователя')
 			return
 		}
@@ -247,11 +272,28 @@ const useAdminSubscriptions = ({
 			return
 		}
 
-		const body: IAdminExtendDaysInput = {
-			userId: bonusSelectedUserId,
+		setBonusConfirm({
+			audience: bonusAudience,
+			userId: bonusAudience === 'SINGLE' ? bonusSelectedUserId : undefined,
 			days
+		})
+	}
+
+	const confirmExtendDays = async () => {
+		if (!bonusConfirm || isExtendingDays) return
+
+		const body: IAdminExtendDaysInput = {
+			userId: bonusConfirm.userId,
+			audience: bonusConfirm.audience,
+			days: bonusConfirm.days
 		}
-		await extendDays(body)
+
+		setBonusConfirm(null)
+		try {
+			await extendDays(body)
+		} catch {
+			// Toast is shown by the mutation onError handler.
+		}
 	}
 
 	return {
@@ -273,6 +315,8 @@ const useAdminSubscriptions = ({
 		bonusSelectedUserId,
 		bonusSelectedUserName,
 		selectBonusUser,
+		bonusAudience,
+		setBonusAudience,
 		plan,
 		setPlan,
 		billingPeriod,
@@ -285,6 +329,9 @@ const useAdminSubscriptions = ({
 		setBonusDays,
 		isExtendingDays,
 		handleExtendDays,
+		bonusConfirm,
+		confirmExtendDays,
+		dismissExtendDays,
 		extendIfActive,
 		setExtendIfActive,
 		cancel,
