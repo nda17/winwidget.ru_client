@@ -156,6 +156,8 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 			})
 		}
 	})
+	const isDangerActionPending =
+		saveMutation.isPending || resetAttemptsMutation.isPending
 
 	const setField = <K extends keyof WidgetConfig>(
 		key: K,
@@ -207,8 +209,8 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 			return
 		}
 		const spin = config.spinDuration ?? 5
-		if (spin < 3 || spin > 10) {
-			toast.error('Длительность анимации должна быть от 3 до 10 секунд')
+		if (spin < 4 || spin > 10) {
+			toast.error('Длительность анимации должна быть от 4 до 10 секунд')
 			return
 		}
 		const bottom = config.buttonBottom
@@ -505,6 +507,8 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 									<input
 										className={styles.input}
 										type="number"
+										min={4}
+										max={10}
 										value={config.spinDuration ?? ''}
 										onChange={e => {
 											const val = parseInt(e.target.value)
@@ -516,7 +520,7 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 										placeholder="5"
 									/>
 									<p className={styles.hint}>
-										От 3 до 10 секунд. Рекомендуемое значение 5-7 секунд.
+										От 4 до 10 секунд. Рекомендуемое значение 5-7 секунд.
 									</p>
 								</div>
 							</div>
@@ -977,10 +981,7 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 											type="button"
 											className={styles.resetAttemptsBtn}
 											onClick={() => setConfirmResetAttempts(true)}
-											disabled={
-												resetAttemptsMutation.isPending ||
-												saveMutation.isPending
-											}
+											disabled={isDangerActionPending}
 										>
 											Сбросить попытки всех посетителей
 										</button>
@@ -1000,7 +1001,7 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 														)
 														setConfirmResetAttempts(false)
 													}}
-													disabled={resetAttemptsMutation.isPending}
+													disabled={isDangerActionPending}
 												>
 													{resetAttemptsMutation.isPending
 														? 'Сброс...'
@@ -1009,6 +1010,7 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 												<button
 													type="button"
 													className={styles.cancelBtn}
+													disabled={isDangerActionPending}
 													onClick={() => setConfirmResetAttempts(false)}
 												>
 													Отмена
@@ -1022,6 +1024,7 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 											type="button"
 											className={styles.resetAttemptsBtn}
 											onClick={() => setConfirmReset(true)}
+											disabled={isDangerActionPending}
 										>
 											Сбросить все настройки до значений по умолчанию
 										</button>
@@ -1035,7 +1038,7 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 												<button
 													type="button"
 													className={styles.resetAttemptsBtn}
-													disabled={saveMutation.isPending}
+													disabled={isDangerActionPending}
 													onClick={() => {
 														setConfig(DEFAULT_CONFIG)
 														setCooldownInput('0')
@@ -1051,6 +1054,7 @@ const WheelSettingsModal = ({ widget, onClose, onSaved }: Props) => {
 												<button
 													type="button"
 													className={styles.cancelBtn}
+													disabled={isDangerActionPending}
 													onClick={() => setConfirmReset(false)}
 												>
 													Отмена
