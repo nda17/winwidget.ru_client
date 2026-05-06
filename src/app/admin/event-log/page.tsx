@@ -6,8 +6,14 @@ export const metadata: Metadata = {
 	description: 'Admin panel event log page'
 }
 
-const AdminEventLogPage = () => {
-	return <AdminEventLog />
+interface AdminEventLogPageProps {
+	searchParams?: {
+		userId?: string
+	}
+}
+
+const AdminEventLogPage = ({ searchParams }: AdminEventLogPageProps) => {
+	return <AdminEventLog userId={searchParams?.userId} />
 }
 
 export default AdminEventLogPage

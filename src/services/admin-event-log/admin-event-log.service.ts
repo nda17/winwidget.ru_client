@@ -55,12 +55,13 @@ export interface IAdminEventLogResponse {
 const adminEventLogService = {
 	async getAll(
 		page: number,
-		limit: number
+		limit: number,
+		userId?: string
 	): Promise<IAdminEventLogResponse> {
 		const { data } = await axiosInterceptorsRequest.get(
 			'/admin-event-log',
 			{
-				params: { page, limit }
+				params: { page, limit, userId: userId || undefined }
 			}
 		)
 		return data

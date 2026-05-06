@@ -120,10 +120,12 @@ const getLabel = (
 
 const UserOverview360 = ({
 	overview,
-	isLoading
+	isLoading,
+	userId
 }: {
 	overview?: IAdminUserOverview
 	isLoading: boolean
+	userId: string
 }) => {
 	if (isLoading) {
 		return (
@@ -316,7 +318,15 @@ const UserOverview360 = ({
 			</div>
 
 			<div className={styles.overviewSection}>
-				<p className={styles.overviewSectionTitle}>Последние действия</p>
+				<div className={styles.overviewSectionHeader}>
+					<p className={styles.overviewSectionTitle}>Последние действия</p>
+					<Link
+						href={`${ADMIN_PAGES.EVENT_LOG}?userId=${encodeURIComponent(userId)}`}
+						className={styles.overviewSectionLink}
+					>
+						Все действия
+					</Link>
+				</div>
 				{overview.activity.latest.length ? (
 					<div className={styles.overviewList}>
 						{overview.activity.latest.map(item => (
@@ -728,6 +738,7 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 							<UserOverview360
 								overview={overview}
 								isLoading={isOverviewLoading}
+								userId={data.id}
 							/>
 						</div>
 					</aside>

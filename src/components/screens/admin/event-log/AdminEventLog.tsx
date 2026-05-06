@@ -5,6 +5,7 @@ import AdminSectionHeading from '@/components/ui/admin/admin-section-heading/Adm
 import Heading from '@/components/ui/heading/Heading'
 import Pagination from '@/components/ui/pagination/Pagination'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
+import { ADMIN_PAGES } from '@/config/pages/admin.config'
 import adminEventLogService, {
 	AdminEventLogAction,
 	AdminEventLogSection,
@@ -14,6 +15,7 @@ import { useAuthStore } from '@/store/auth-store/auth-store'
 import { useQuery } from '@tanstack/react-query'
 import clsx from 'clsx'
 import { NextPage } from 'next'
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import styles from './AdminEventLog.module.scss'
 
@@ -62,6 +64,18 @@ const formatTarget = (item: IAdminEventLogItem) =>
 	item.targetUserId ||
 	item.entityId ||
 	'—'
+
+const getUserFilterHref = (userId: string) =>
+	`${ADMIN_PAGES.EVENT_LOG}?userId=${encodeURIComponent(userId)}`
+
+const renderUserFilterLink = (label: string, userId?: string | null) =>
+	userId ? (
+		<Link href={getUserFilterHref(userId)} className={styles.userLink}>
+			{label}
+		</Link>
+	) : (
+		label
+	)
 
 const getPrimitiveMetadata = (item: IAdminEventLogItem, key: string) => {
 	const value = item.metadata?.[key]
@@ -114,14 +128,20 @@ const formatMetadata = (item: IAdminEventLogItem) => {
 	return parts.join(' · ') || '—'
 }
 
-const AdminEventLog: NextPage = () => {
+interface AdminEventLogProps {
+	userId?: string
+}
+
+const AdminEventLog: NextPage<AdminEventLogProps> = ({ userId }) => {
 	const auth = useAuthStore(state => state.auth)
+	const userIdFilter = userId?.trim() || undefined
 	const [currentPage, setCurrentPage] = useState(1)
 	const itemQuantity = 20
 
 	const { data, isLoading, isFetching } = useQuery({
-		queryKey: ['admin-event-log', currentPage, itemQuantity],
-		queryFn: () => adminEventLogService.getAll(currentPage, itemQuantity),
+		queryKey: ['admin-event-log', currentPage, itemQuantity, userIdFilter],
+		queryFn: () =>
+			adminEventLogService.getAll(currentPage, itemQuantity, userIdFilter),
 		enabled: auth
 	})
 
@@ -136,10 +156,18 @@ const AdminEventLog: NextPage = () => {
 		}
 	}, [currentPage, totalPages])
 
+	useEffect(() => {
+		setCurrentPage(1)
+	}, [userIdFilter])
+
 	const prevPage = () => setCurrentPage(page => Math.max(1, page - 1))
 	const nextPage = () =>
 		setCurrentPage(page => Math.min(totalPages, page + 1))
 	const changeActivePage = (page: number) => setCurrentPage(page)
+	const renderActor = (item: IAdminEventLogItem) =>
+		renderUserFilterLink(formatActor(item), item.adminId)
+	const renderTarget = (item: IAdminEventLogItem) =>
+		renderUserFilterLink(formatTarget(item), item.targetUserId)
 
 	return (
 		<section className={styles.wrapper}>
@@ -152,6 +180,21 @@ const AdminEventLog: NextPage = () => {
 				risk="low"
 				riskText="Раздел только показывает уже записанные события и не меняет данные проекта."
 			/>
+
+			{userIdFilter && (
+				<div className={styles.filterBar}>
+					<div>
+						<p className={styles.filterTitle}>Фильтр по пользователю</p>
+						<p className={styles.filterValue}>{userIdFilter}</p>
+					</div>
+					<Link
+						href={ADMIN_PAGES.EVENT_LOG}
+						className={styles.clearFilter}
+					>
+						Показать все события
+					</Link>
+				</div>
+			)}
 
 			{isLoading ? (
 				<div className={styles.card}>
@@ -191,7 +234,7 @@ const AdminEventLog: NextPage = () => {
 								<div className={styles.cardRow}>
 									<span className={styles.cardLabel}>Админ</span>
 									<span className={styles.cardValue}>
-										{formatActor(item)}
+										{renderActor(item)}
 									</span>
 								</div>
 								<div className={styles.cardRow}>
@@ -214,7 +257,7 @@ const AdminEventLog: NextPage = () => {
 								<div className={styles.cardRow}>
 									<span className={styles.cardLabel}>Объект</span>
 									<span className={styles.cardValue}>
-										{formatTarget(item)}
+										{renderTarget(item)}
 									</span>
 								</div>
 								<div className={styles.cardDetails}>
@@ -247,7 +290,7 @@ const AdminEventLog: NextPage = () => {
 										<td>{formatDateTime(item.createdAt)}</td>
 										<td>
 											<span className={styles.actor}>
-												{formatActor(item)}
+												{renderActor(item)}
 											</span>
 											{item.adminEmail && (
 												<span className={styles.actorEmail}>
@@ -266,7 +309,7 @@ const AdminEventLog: NextPage = () => {
 											</span>
 										</td>
 										<td>{ACTION_LABELS[item.action] ?? item.action}</td>
-										<td>{formatTarget(item)}</td>
+										<td>{renderTarget(item)}</td>
 										<td>
 											<span className={styles.description}>
 												{item.description}

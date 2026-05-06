@@ -14,6 +14,26 @@
 	@apply w-full rounded-layout border border-gray-300 bg-white shadow-sm overflow-hidden mb-6;
 }
 
+.filterBar {
+	@apply w-full rounded-layout border border-gray-300 bg-white shadow-sm px-5 py-4 mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between;
+}
+
+.filterTitle {
+	@apply text-sm font-semibold text-gray-700;
+}
+
+.filterValue {
+	@apply mt-1 text-xs text-gray-600 break-all;
+}
+
+.clearFilter {
+	@apply inline-flex items-center justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors;
+
+	&:hover {
+		@apply bg-gray-300 bg-opacity-20 text-red-700;
+	}
+}
+
 .listMeta {
 	@apply flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-5 py-4 border-b border-gray-300 bg-gray-300 bg-opacity-20;
 }
@@ -68,6 +88,14 @@
 
 .cardValue {
 	@apply text-sm text-gray-700 flex flex-col text-right min-w-0 break-words;
+}
+
+.userLink {
+	@apply text-red-600 font-semibold transition-colors break-words;
+
+	&:hover {
+		@apply text-red-700;
+	}
 }
 
 .cardDetails {
