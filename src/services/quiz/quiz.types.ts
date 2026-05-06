@@ -46,6 +46,7 @@ export interface QuizConfig {
 	buttonBottom: number
 	buttonOffset: number
 	buttonSize: number
+	buttonImageUrl: string
 	bubbleEnabled: boolean
 	bubbleText: string
 	autoOpenDelay: number | null

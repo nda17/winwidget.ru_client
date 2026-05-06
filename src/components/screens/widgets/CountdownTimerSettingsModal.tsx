@@ -6,15 +6,18 @@ import {
 	CountdownTimerConfig
 } from '@/services/countdown-timer/countdown-timer.types'
 import { useMutation } from '@tanstack/react-query'
-import { useId, useState } from 'react'
+import Image from 'next/image'
+import { ChangeEvent, useId, useState } from 'react'
 import toast from 'react-hot-toast'
 import styles from './CountdownTimerSettingsModal.module.scss'
 import DirectLinkQr from './DirectLinkQr'
 
 type Tab = 'main' | 'timer' | 'form' | 'integrations' | 'code' | 'info'
+const BUTTON_IMAGE_MAX_SIZE_BYTES = 200 * 1024
 
 interface Props {
 	timer: CountdownTimer
+	canUseCustomButtonImage: boolean
 	onClose: () => void
 	onSaved: (updated: CountdownTimer) => void
 }
@@ -38,6 +41,7 @@ const getDefaultConfig = (): CountdownTimerConfig => ({
 	buttonBottom: 3,
 	buttonOffset: 3,
 	buttonSize: 60,
+	buttonImageUrl: '',
 	autoOpenDelay: null,
 	bubbleText: 'Акция',
 	title: 'Скидка ограничена по времени',
@@ -116,10 +120,12 @@ const notifyTimerWidgetUpdated = (publicKey: string) => {
 
 const CountdownTimerSettingsModal = ({
 	timer,
+	canUseCustomButtonImage,
 	onClose,
 	onSaved
 }: Props) => {
 	const titleId = useId()
+	const buttonImageInputId = useId()
 	const [tab, setTab] = useState<Tab>('main')
 	const [cfg, setCfg] = useState<CountdownTimerConfig>(
 		mergeConfig(timer.config)
@@ -179,7 +185,38 @@ const CountdownTimerSettingsModal = ({
 			})
 		}
 	})
-	const isDangerActionPending = mutation.isPending
+	const buttonImageMutation = useMutation({
+		mutationFn: (file: File) => {
+			const formData = new FormData()
+			formData.append('file', file)
+			return countdownTimerService.uploadButtonImage(timer.id, formData)
+		},
+		onMutate: () =>
+			toast.loading('Загружаем картинку кнопки, пожалуйста подождите...'),
+		onSuccess: (updated, _, toastId) => {
+			const nextConfig = mergeConfig(updated.config)
+			toast.success('Картинка кнопки обновлена', { id: toastId })
+			setName(updated.name)
+			setInstallDomain(updated.installDomain ?? '')
+			setCfg(nextConfig)
+			setSavedSnapshot(
+				JSON.stringify({
+					name: updated.name,
+					installDomain: updated.installDomain ?? '',
+					config: nextConfig
+				})
+			)
+			onSaved({ ...updated, config: nextConfig })
+			notifyTimerWidgetUpdated(timer.publicKey)
+		},
+		onError: (e: any, _, toastId) => {
+			toast.error(e?.response?.data?.message || 'Ошибка загрузки', {
+				id: toastId
+			})
+		}
+	})
+	const isDangerActionPending =
+		mutation.isPending || buttonImageMutation.isPending
 
 	const set = (patch: Partial<CountdownTimerConfig>) =>
 		setCfg(prev => ({ ...prev, ...patch }))
@@ -203,6 +240,52 @@ const CountdownTimerSettingsModal = ({
 	).replace(/\/$/, '')
 	const embedCode = `<script src="${apiUrl}/widgets/timer.js" data-key="${timer.publicKey}" async></script>`
 	const previewUrl = `${publicSiteUrl}/page-timer/${timer.publicKey}`
+	const defaultButtonImageUrl = `${apiUrl}/widgets/timer-button.png`
+	const buttonImagePreviewUrl = cfg.buttonImageUrl || defaultButtonImageUrl
+	const buttonImageUploadDisabled =
+		!canUseCustomButtonImage ||
+		hasUnsavedChanges ||
+		buttonImageMutation.isPending
+
+	const handleButtonImageUpload = (
+		event: ChangeEvent<HTMLInputElement>
+	) => {
+		const file = event.target.files?.[0]
+		event.target.value = ''
+
+		if (!file) return
+
+		if (!canUseCustomButtonImage) {
+			toast.error('Своя картинка кнопки доступна только на тарифе Hard')
+			return
+		}
+
+		if (hasUnsavedChanges) {
+			toast.error('Сначала сохраните текущие настройки виджета')
+			return
+		}
+
+		if (file.type !== 'image/png') {
+			toast.error('Загрузите картинку в формате PNG')
+			return
+		}
+
+		if (file.size > BUTTON_IMAGE_MAX_SIZE_BYTES) {
+			toast.error('Картинка кнопки должна быть не больше 200 КБ')
+			return
+		}
+
+		buttonImageMutation.mutate(file)
+	}
+
+	const handleResetButtonImage = () => {
+		const nextConfig = { ...cfg, buttonImageUrl: '' }
+		setCfg(nextConfig)
+		mutation.mutate({
+			name: name.trim() || 'Таймер',
+			config: nextConfig
+		})
+	}
 
 	const handleSave = () => {
 		const sanitizedName = name.trim() || 'Таймер'
@@ -351,6 +434,67 @@ const CountdownTimerSettingsModal = ({
 											}
 											placeholder="Как основной цвет"
 										/>
+									</div>
+								</div>
+								<div className={styles.field}>
+									<p className={styles.label}>Картинка кнопки открытия:</p>
+									<div className={styles.buttonImageBox}>
+										<div className={styles.buttonImagePreview}>
+											<Image
+												src={buttonImagePreviewUrl}
+												alt="Картинка кнопки открытия"
+												width={80}
+												height={80}
+												unoptimized
+											/>
+										</div>
+										<div className={styles.buttonImageContent}>
+											<p className={styles.hint}>
+												PNG с прозрачным фоном, до 320x320 px и до 200 КБ.
+											</p>
+											<div className={styles.buttonImageActions}>
+												<label
+													htmlFor={buttonImageInputId}
+													className={`${styles.copyBtn} ${
+														buttonImageUploadDisabled
+															? styles.buttonImageUploadDisabled
+															: ''
+													}`}
+												>
+													Загрузить PNG
+												</label>
+												<input
+													id={buttonImageInputId}
+													type="file"
+													accept="image/png"
+													className={styles.fileInput}
+													disabled={buttonImageUploadDisabled}
+													onChange={handleButtonImageUpload}
+												/>
+												{cfg.buttonImageUrl && (
+													<button
+														type="button"
+														className={styles.resetAttemptsBtn}
+														disabled={isDangerActionPending}
+														onClick={handleResetButtonImage}
+													>
+														Вернуть стандартную
+													</button>
+												)}
+											</div>
+											{!canUseCustomButtonImage && (
+												<p className={styles.domainHint}>
+													Своя картинка кнопки доступна только на активном
+													тарифе Hard.
+												</p>
+											)}
+											{canUseCustomButtonImage && hasUnsavedChanges && (
+												<p className={styles.hint}>
+													Перед загрузкой картинки сохраните текущие
+													настройки.
+												</p>
+											)}
+										</div>
 									</div>
 								</div>
 								<div className={styles.field}>

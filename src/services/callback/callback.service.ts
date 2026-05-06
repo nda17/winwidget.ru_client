@@ -34,6 +34,19 @@ const callbackService = {
 		return data
 	},
 
+	async uploadButtonImage(id: string, file: FormData) {
+		const { data } = await axiosInterceptorsRequest.post(
+			`/callbacks/${id}/button-image`,
+			file,
+			{
+				headers: {
+					'Content-Type': 'multipart/form-data'
+				}
+			}
+		)
+		return data
+	},
+
 	async deleteCallback(id: string) {
 		const { data } = await axiosInterceptorsRequest.delete(
 			`/callbacks/${id}`

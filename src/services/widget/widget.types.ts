@@ -32,6 +32,7 @@ export interface WidgetConfig {
 	buttonBottom: number
 	buttonOffset: number
 	buttonSize: number
+	buttonImageUrl: string
 	bubbleEnabled: boolean
 	bubbleText: string
 	alreadyPlayedTitle: string

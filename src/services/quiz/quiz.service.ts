@@ -34,6 +34,19 @@ const quizService = {
 		return data
 	},
 
+	async uploadButtonImage(id: string, file: FormData) {
+		const { data } = await axiosInterceptorsRequest.post(
+			`/quizzes/${id}/button-image`,
+			file,
+			{
+				headers: {
+					'Content-Type': 'multipart/form-data'
+				}
+			}
+		)
+		return data
+	},
+
 	async deleteQuiz(id: string) {
 		const { data } = await axiosInterceptorsRequest.delete(
 			`/quizzes/${id}`

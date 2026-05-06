@@ -82,6 +82,8 @@ const CabinetWidgets = () => {
 		quizzesData?.subscription ||
 		callbacksData?.subscription ||
 		timersData?.subscription
+	const canUseCustomButtonImage =
+		subscription?.plan === 'HARD' && subscription.status === 'ACTIVE'
 
 	const allItems: ListItem[] = [
 		...(widgetsData?.widgets || []).map(w => ({
@@ -644,6 +646,7 @@ const CabinetWidgets = () => {
 			{settingsWidget && (
 				<WheelSettingsModal
 					widget={settingsWidget}
+					canUseCustomButtonImage={canUseCustomButtonImage}
 					onClose={() => setSettingsWidget(null)}
 					onSaved={updated => {
 						setSettingsWidget(updated)
@@ -655,6 +658,7 @@ const CabinetWidgets = () => {
 			{settingsQuiz && (
 				<QuizSettingsModal
 					quiz={settingsQuiz}
+					canUseCustomButtonImage={canUseCustomButtonImage}
 					onClose={() => setSettingsQuiz(null)}
 					onSaved={updated => {
 						setSettingsQuiz(updated)
@@ -666,6 +670,7 @@ const CabinetWidgets = () => {
 			{settingsCallback && (
 				<CallbackSettingsModal
 					callback={settingsCallback}
+					canUseCustomButtonImage={canUseCustomButtonImage}
 					onClose={() => setSettingsCallback(null)}
 					onSaved={updated => {
 						setSettingsCallback(updated)
@@ -677,6 +682,7 @@ const CabinetWidgets = () => {
 			{settingsTimer && (
 				<CountdownTimerSettingsModal
 					timer={settingsTimer}
+					canUseCustomButtonImage={canUseCustomButtonImage}
 					onClose={() => setSettingsTimer(null)}
 					onSaved={updated => {
 						setSettingsTimer(updated)

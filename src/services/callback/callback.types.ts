@@ -22,6 +22,7 @@ export interface CallbackConfig {
 	buttonBottom: number
 	buttonOffset: number
 	buttonSize: number
+	buttonImageUrl: string
 	autoOpenDelay: number | null
 	bubbleEnabled?: boolean
 	bubbleText?: string

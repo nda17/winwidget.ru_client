@@ -34,6 +34,19 @@ const widgetService = {
 		return data
 	},
 
+	async uploadButtonImage(id: string, file: FormData) {
+		const { data } = await axiosInterceptorsRequest.post(
+			`/widgets/${id}/button-image`,
+			file,
+			{
+				headers: {
+					'Content-Type': 'multipart/form-data'
+				}
+			}
+		)
+		return data
+	},
+
 	async deleteWidget(id: string) {
 		const { data } = await axiosInterceptorsRequest.delete(
 			`/widgets/${id}`

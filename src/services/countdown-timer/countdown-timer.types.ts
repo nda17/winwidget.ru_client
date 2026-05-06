@@ -28,6 +28,7 @@ export interface CountdownTimerConfig {
 	buttonBottom: number
 	buttonOffset: number
 	buttonSize: number
+	buttonImageUrl: string
 	autoOpenDelay: number | null
 	bubbleText: string
 	title: string

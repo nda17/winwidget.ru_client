@@ -37,6 +37,19 @@ const countdownTimerService = {
 		return data
 	},
 
+	async uploadButtonImage(id: string, file: FormData) {
+		const { data } = await axiosInterceptorsRequest.post(
+			`/countdown-timers/${id}/button-image`,
+			file,
+			{
+				headers: {
+					'Content-Type': 'multipart/form-data'
+				}
+			}
+		)
+		return data
+	},
+
 	async deleteCountdownTimer(id: string) {
 		const { data } = await axiosInterceptorsRequest.delete(
 			`/countdown-timers/${id}`
