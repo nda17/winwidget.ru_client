@@ -492,6 +492,8 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 			})
 		}
 	})
+	const isDangerActionPending =
+		saveMutation.isPending || resetAttemptsMutation.isPending
 
 	const setField = <K extends keyof QuizConfig>(
 		key: K,
@@ -1471,7 +1473,7 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 											type="button"
 											className={styles.resetAttemptsBtn}
 											onClick={() => setConfirmResetAttempts(true)}
-											disabled={resetAttemptsMutation.isPending}
+											disabled={isDangerActionPending}
 										>
 											Сбросить попытки всех посетителей
 										</button>
@@ -1486,7 +1488,7 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 													type="button"
 													className={styles.resetAttemptsBtn}
 													onClick={handleResetAttempts}
-													disabled={resetAttemptsMutation.isPending}
+													disabled={isDangerActionPending}
 												>
 													{resetAttemptsMutation.isPending
 														? 'Сброс...'
@@ -1495,6 +1497,7 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 												<button
 													type="button"
 													className={styles.cancelBtn}
+													disabled={isDangerActionPending}
 													onClick={() => setConfirmResetAttempts(false)}
 												>
 													Отмена
@@ -1508,6 +1511,7 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 											type="button"
 											className={styles.resetAttemptsBtn}
 											onClick={() => setConfirmResetDefaults(true)}
+											disabled={isDangerActionPending}
 										>
 											Сбросить все настройки до значений по умолчанию
 										</button>
@@ -1521,7 +1525,7 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 												<button
 													type="button"
 													className={styles.resetAttemptsBtn}
-													disabled={saveMutation.isPending}
+													disabled={isDangerActionPending}
 													onClick={() => {
 														const resetConfig = {
 															...DEFAULT_CONFIG,
@@ -1542,6 +1546,7 @@ const QuizSettingsModal = ({ quiz, onClose, onSaved }: Props) => {
 												<button
 													type="button"
 													className={styles.cancelBtn}
+													disabled={isDangerActionPending}
 													onClick={() => setConfirmResetDefaults(false)}
 												>
 													Отмена

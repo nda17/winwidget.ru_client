@@ -179,6 +179,7 @@ const CountdownTimerSettingsModal = ({
 			})
 		}
 	})
+	const isDangerActionPending = mutation.isPending
 
 	const set = (patch: Partial<CountdownTimerConfig>) =>
 		setCfg(prev => ({ ...prev, ...patch }))
@@ -520,13 +521,14 @@ const CountdownTimerSettingsModal = ({
 													type="button"
 													className={styles.resetAttemptsBtn}
 													onClick={handleResetDefaults}
-													disabled={mutation.isPending}
+													disabled={isDangerActionPending}
 												>
 													Да, сбросить
 												</button>
 												<button
 													type="button"
 													className={styles.cancelBtn}
+													disabled={isDangerActionPending}
 													onClick={() => setConfirmResetDefaults(false)}
 												>
 													Отмена
@@ -538,6 +540,7 @@ const CountdownTimerSettingsModal = ({
 											type="button"
 											className={styles.resetAttemptsBtn}
 											onClick={() => setConfirmResetDefaults(true)}
+											disabled={isDangerActionPending}
 										>
 											Сбросить все настройки до значений по умолчанию
 										</button>
@@ -554,13 +557,14 @@ const CountdownTimerSettingsModal = ({
 													type="button"
 													className={styles.resetAttemptsBtn}
 													onClick={handleResetTimers}
-													disabled={mutation.isPending}
+													disabled={isDangerActionPending}
 												>
 													Подтвердить сброс
 												</button>
 												<button
 													type="button"
 													className={styles.cancelBtn}
+													disabled={isDangerActionPending}
 													onClick={() => setConfirmResetTimers(false)}
 												>
 													Отмена
@@ -572,6 +576,7 @@ const CountdownTimerSettingsModal = ({
 											type="button"
 											className={styles.resetAttemptsBtn}
 											onClick={() => setConfirmResetTimers(true)}
+											disabled={isDangerActionPending}
 										>
 											Сбросить персональные таймеры для всех посетителей
 										</button>

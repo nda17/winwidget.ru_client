@@ -131,6 +131,7 @@ const CallbackSettingsModal = ({ callback, onClose, onSaved }: Props) => {
 			})
 		}
 	})
+	const isDangerActionPending = mutation.isPending
 
 	const set = (patch: Partial<CallbackConfig>) =>
 		setCfg(prev => ({ ...prev, ...patch }))
@@ -540,6 +541,7 @@ const CallbackSettingsModal = ({ callback, onClose, onSaved }: Props) => {
 											type="button"
 											className={styles.resetAttemptsBtn}
 											onClick={() => setConfirmResetDefaults(true)}
+											disabled={isDangerActionPending}
 										>
 											Сбросить все настройки до значений по умолчанию
 										</button>
@@ -553,7 +555,7 @@ const CallbackSettingsModal = ({ callback, onClose, onSaved }: Props) => {
 												<button
 													type="button"
 													className={styles.resetAttemptsBtn}
-													disabled={mutation.isPending}
+													disabled={isDangerActionPending}
 													onClick={handleResetDefaults}
 												>
 													Да, сбросить
@@ -561,6 +563,7 @@ const CallbackSettingsModal = ({ callback, onClose, onSaved }: Props) => {
 												<button
 													type="button"
 													className={styles.cancelBtn}
+													disabled={isDangerActionPending}
 													onClick={() => setConfirmResetDefaults(false)}
 												>
 													Отмена
