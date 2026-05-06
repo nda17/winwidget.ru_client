@@ -5,6 +5,7 @@ import {
 	formatDemoPhone,
 	isDemoPhoneValid
 } from '@/utils/demo-phone.util'
+import Image from 'next/image'
 import { useEffect, useId, useRef, useState } from 'react'
 import styles from './DemoWheel.module.scss'
 
@@ -381,7 +382,14 @@ const DemoWheel = ({
 						onClick={() => setInternalOpen(true)}
 						aria-label="Приз! Открыть демо-виджет"
 					>
-						<span className={styles.floatIcon}>🎁</span>
+						<Image
+							src="/images/tools/wheel-gift-button.png"
+							alt=""
+							width={64}
+							height={64}
+							className={styles.floatIcon}
+							aria-hidden="true"
+						/>
 						<span className={styles.floatLabel}>Приз!</span>
 					</button>
 				</div>

@@ -134,41 +134,14 @@ const DemoWidgets = ({ content }: Props) => {
 						</>
 					) : activeDemo === 'quiz' ? (
 						<>
-							<span className={styles.floatIconQuiz}>
-								<svg
-									width="60"
-									height="60"
-									viewBox="0 0 60 60"
-									fill="none"
-								>
-									<defs>
-										<radialGradient id="dwqGrad" cx="40%" cy="30%" r="70%">
-											<stop offset="0%" stopColor="#7c3aed" />
-											<stop offset="100%" stopColor="#4705fb" />
-										</radialGradient>
-									</defs>
-									<circle cx="30" cy="30" r="30" fill="url(#dwqGrad)" />
-									<circle
-										cx="30"
-										cy="30"
-										r="28"
-										fill="none"
-										stroke="rgba(255,255,255,0.18)"
-										strokeWidth="1"
-									/>
-									<text
-										x="30"
-										y="38"
-										textAnchor="middle"
-										fontFamily="system-ui,sans-serif"
-										fontSize="28"
-										fontWeight="900"
-										fill="white"
-									>
-										?
-									</text>
-								</svg>
-							</span>
+							<Image
+								src="/images/tools/quiz-button.png"
+								alt=""
+								width={60}
+								height={60}
+								className={styles.floatIconQuiz}
+								aria-hidden="true"
+							/>
 							<span
 								className={`${styles.floatLabel} ${styles.floatLabelQuiz}`}
 							>
@@ -183,90 +156,24 @@ const DemoWidgets = ({ content }: Props) => {
 							</span>
 						</>
 					) : activeDemo === 'callback' ? (
-						<>
-							<span className={styles.floatIconCallback}>
-								<span className={styles.floatCallbackRing1} />
-								<span className={styles.floatCallbackRing2} />
-								<span className={styles.floatCallbackRing3} />
-								<svg
-									width="60"
-									height="60"
-									viewBox="0 0 60 60"
-									fill="none"
-								>
-									<defs>
-										<linearGradient
-											id="dwcbGrad"
-											x1="0"
-											y1="0"
-											x2="60"
-											y2="60"
-											gradientUnits="userSpaceOnUse"
-										>
-											<stop offset="0%" stopColor="#4ade80" />
-											<stop offset="100%" stopColor="#16a34a" />
-										</linearGradient>
-									</defs>
-									<circle cx="30" cy="30" r="30" fill="url(#dwcbGrad)" />
-									<circle
-										cx="30"
-										cy="30"
-										r="27"
-										fill="none"
-										stroke="rgba(255,255,255,0.22)"
-										strokeWidth="1.5"
-									/>
-									<path
-										d="M21 19.5c0-.83.67-1.5 1.5-1.5h3.1c.4 0 .77.24.9.6l1.4 4c.14.38.03.82-.28 1.1l-1.62 1.62c1.15 2.38 3.08 4.3 5.46 5.46l1.62-1.62c.28-.3.72-.42 1.1-.28l4 1.4c.36.13.6.5.6.9V34c0 .83-.67 1.5-1.5 1.5C28.27 35.5 21 28.23 21 19.5z"
-										fill="white"
-										opacity="0.95"
-									/>
-								</svg>
-							</span>
-						</>
+						<Image
+							src="/images/tools/callback-button.png"
+							alt=""
+							width={60}
+							height={60}
+							className={styles.floatIconCallback}
+							aria-hidden="true"
+						/>
 					) : (
 						<>
-							<span className={styles.floatIconTimer}>
-								<span className={styles.floatTimerRing1} />
-								<span className={styles.floatTimerRing2} />
-								<svg
-									width="60"
-									height="60"
-									viewBox="0 0 60 60"
-									fill="none"
-								>
-									<defs>
-										<linearGradient
-											id="dwTimerGrad"
-											x1="0"
-											y1="0"
-											x2="60"
-											y2="60"
-											gradientUnits="userSpaceOnUse"
-										>
-											<stop offset="0%" stopColor="#22d3ee" />
-											<stop offset="100%" stopColor="#0284c7" />
-										</linearGradient>
-									</defs>
-									<circle
-										cx="30"
-										cy="30"
-										r="30"
-										fill="url(#dwTimerGrad)"
-									/>
-									<circle
-										cx="30"
-										cy="30"
-										r="26"
-										stroke="rgba(255,255,255,0.22)"
-										strokeWidth="1.5"
-									/>
-									<path
-										d="M30 16a14 14 0 1014 14 14 14 0 00-14-14zm1.2 7v7.4l5 3-.95 1.56-6.05-3.62V23h2z"
-										fill="white"
-									/>
-								</svg>
-							</span>
+							<Image
+								src="/images/tools/timer-button.png"
+								alt=""
+								width={60}
+								height={60}
+								className={styles.floatIconTimer}
+								aria-hidden="true"
+							/>
 							<span
 								className={`${styles.floatLabel} ${styles.floatLabelTimer}`}
 							>
