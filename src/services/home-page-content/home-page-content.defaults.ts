@@ -490,6 +490,7 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 					'Установка виджетов на сайт, открытие по прямой ссылке, QR-коду',
 					'Email уведомления / Telegram',
 					'Аналитика бонусов',
+					'Своя картинка кнопки открытия виджета',
 					'Интеграции с amoCRM, Bitrix24, Яндекс Метрика, VK Ретаргетинг, Roistat, по Webhook',
 					'Выгрузка заявок в Exсel, PDF, CSV'
 				],
