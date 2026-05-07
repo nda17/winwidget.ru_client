@@ -4,7 +4,10 @@ import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import subscriptionService, {
 	type IPendingPayment
 } from '@/services/subscription/subscription.service'
-import type { HomePagePaymentContent } from '@/services/home-page-content/home-page-content.types'
+import type {
+	HomePagePricingContent,
+	HomePagePricingPlan
+} from '@/services/home-page-content/home-page-content.types'
 import tariffPricesService from '@/services/tariff-prices/tariff-prices.service'
 import {
 	createTariffPriceMap,
@@ -25,11 +28,63 @@ const PLAN_PRIORITY: Record<Plan, number> = {
 
 type PaidPlan = Extract<Plan, 'EASY' | 'HARD'>
 
+const PLAN_COLORS: Record<PaidPlan, string> = {
+	EASY: '#4705fb',
+	HARD: '#7b2fff'
+}
+
+const PLAN_TITLE_FALLBACK: Record<Plan, string> = {
+	TRIAL: 'Тест-драйв',
+	EASY: 'Easy',
+	HARD: 'Hard'
+}
+
+const BILLING_PERIOD_LABEL: Record<BillingPeriod, string> = {
+	MONTHLY: 'месяц',
+	YEARLY: 'год'
+}
+
+const PAYMENT_COPY = {
+	title: 'Оплата',
+	paymentDisabledNotice: 'Оплата временно недоступна. Попробуйте позже.',
+	currentPlanText: 'Текущий тариф:',
+	currentPlanUntilText: 'до',
+	activeStatusText: 'Активен',
+	expiredStatusText: 'Истек',
+	pendingPaymentTitle: 'У вас есть незавершённый платёж',
+	pendingPaymentUnavailableTitle: 'Этот платёж больше недоступен',
+	pendingPaymentText:
+		'Можно вернуться к оплате {payment} или отменить текущую попытку и создать новый платёж.',
+	pendingPaymentUnavailableText:
+		'У вас активен тариф {currentPlan}. Оплата более низкого тарифа {payment} недоступна до окончания текущей подписки. Можно отменить эту попытку.',
+	pendingPaymentResumeButtonText: 'Вернуться к оплате',
+	pendingPaymentCancelButtonText: 'Отменить платёж',
+	pendingPaymentCancelLoadingText: 'Отменяем...',
+	periodLegendText: 'Период оплаты',
+	pricePerMonthText: '/мес',
+	yearlyTotalText: '{amount} ₽ / год',
+	unavailableButtonText: 'Недоступно',
+	renewButtonText: 'Продлить',
+	payButtonText: 'Оплатить',
+	downgradeRestrictionText:
+		'Понижение недоступно, пока активен {currentPlan}',
+	paymentNote:
+		'После оплаты подписка активируется автоматически. Оплата через ЮKassa.',
+	pendingPaymentNote:
+		'Пока есть незавершённый платёж, создание нового платежа недоступно.',
+	carryoverNote:
+		'Оплачивать подписку можно сколько угодно раз — срок суммируется. При продлении текущего тарифа и переходе на более высокий оставшиеся дни переносятся на новый период.'
+}
+
 const formatRub = (value: number) =>
 	new Intl.NumberFormat('ru-RU').format(value)
 
 const isPaidPlan = (plan: string): plan is PaidPlan =>
 	plan === 'EASY' || plan === 'HARD'
+
+const isPaidPricingPlan = (
+	plan: HomePagePricingPlan
+): plan is HomePagePricingPlan & { key: PaidPlan } => isPaidPlan(plan.key)
 
 const formatText = (
 	template: string,
@@ -68,33 +123,28 @@ const renderTemplate = (
 
 const getPendingPaymentLabel = (
 	pendingPayment: IPendingPayment,
-	content: HomePagePaymentContent,
-	planLabel: Record<Plan, string>,
-	billingPeriodLabel: Record<BillingPeriod, string>
+	planLabel: Record<Plan, string>
 ) => {
 	const paymentPlanLabel =
 		pendingPayment.plan && planLabel[pendingPayment.plan]
 			? planLabel[pendingPayment.plan]
-			: content.pendingPaymentFallbackPlanText
+			: 'выбранный тариф'
 
 	const periodLabel = pendingPayment.billingPeriod
-		? billingPeriodLabel[pendingPayment.billingPeriod]
-		: content.pendingPaymentFallbackPeriodText
+		? BILLING_PERIOD_LABEL[pendingPayment.billingPeriod]
+		: 'период'
 
-	return formatText(content.pendingPaymentLabelText, {
-		plan: paymentPlanLabel,
-		period: periodLabel
-	})
+	return `${paymentPlanLabel} на ${periodLabel}`
 }
 
 interface PricingProps {
-	content: HomePagePaymentContent
+	pricingContent: HomePagePricingContent
 	paymentEnabled?: boolean
 	tariffPrices?: TariffPrice[] | null
 }
 
 const Pricing = ({
-	content,
+	pricingContent,
 	paymentEnabled = true,
 	tariffPrices = null
 }: PricingProps) => {
@@ -107,25 +157,15 @@ const Pricing = ({
 		initialData: tariffPrices ?? undefined
 	})
 	const tariffPriceMap = createTariffPriceMap(actualTariffPrices)
-	const paidPlans = content.plans.filter(
-		(
-			plan
-		): plan is HomePagePaymentContent['plans'][number] & {
-			key: PaidPlan
-		} => isPaidPlan(plan.key)
-	)
+	const paidPlans = pricingContent.plans.filter(isPaidPricingPlan)
 	const planLabel: Record<Plan, string> = {
-		TRIAL: content.trialPlanLabel,
+		TRIAL: PLAN_TITLE_FALLBACK.TRIAL,
 		EASY:
-			paidPlans.find(plan => plan.key === 'EASY')?.name ??
-			content.pendingPaymentFallbackPlanText,
+			paidPlans.find(plan => plan.key === 'EASY')?.title ??
+			PLAN_TITLE_FALLBACK.EASY,
 		HARD:
-			paidPlans.find(plan => plan.key === 'HARD')?.name ??
-			content.pendingPaymentFallbackPlanText
-	}
-	const billingPeriodLabel: Record<BillingPeriod, string> = {
-		MONTHLY: content.monthlyPeriodText,
-		YEARLY: content.yearlyPeriodText
+			paidPlans.find(plan => plan.key === 'HARD')?.title ??
+			PLAN_TITLE_FALLBACK.HARD
 	}
 
 	const { data: subscription, isLoading: subLoading } = useQuery({
@@ -152,13 +192,14 @@ const Pricing = ({
 			plan: Plan
 			billingPeriod: BillingPeriod
 		}) => subscriptionService.createPayment(plan, billingPeriod),
-		onMutate: () => toast.loading(content.createPaymentLoadingText),
+		onMutate: () =>
+			toast.loading('Создаём платёж, пожалуйста подождите...'),
 		onSuccess: ({ confirmationUrl }, _, toastId) => {
 			toast.dismiss(toastId)
 			window.location.href = confirmationUrl
 		},
 		onError: (e: any, _, toastId) => {
-			toast.error(e?.response?.data?.message || content.paymentErrorText, {
+			toast.error(e?.response?.data?.message || 'Ошибка оплаты', {
 				id: toastId
 			})
 		}
@@ -166,7 +207,7 @@ const Pricing = ({
 
 	const cancelPendingMutation = useMutation({
 		mutationFn: subscriptionService.cancelPendingPayment,
-		onMutate: () => toast.loading(content.cancelPaymentLoadingText),
+		onMutate: () => toast.loading('Отменяем незавершённый платёж...'),
 		onSuccess: async (result, _, toastId) => {
 			await refetch()
 			toast.success(result.message, {
@@ -175,7 +216,7 @@ const Pricing = ({
 		},
 		onError: (e: any, _, toastId) => {
 			toast.error(
-				e?.response?.data?.message || content.cancelPaymentErrorText,
+				e?.response?.data?.message || 'Не удалось отменить платёж',
 				{
 					id: toastId
 				}
@@ -193,12 +234,7 @@ const Pricing = ({
 		: null
 	const hasPendingPayment = Boolean(activePendingPayment)
 	const pendingPaymentLabel = activePendingPayment
-		? getPendingPaymentLabel(
-				activePendingPayment,
-				content,
-				planLabel,
-				billingPeriodLabel
-			)
+		? getPendingPaymentLabel(activePendingPayment, planLabel)
 		: null
 	const currentPlanLabel = currentPlan ? planLabel[currentPlan] : null
 	const isPendingDowngradeBlocked = Boolean(
@@ -217,12 +253,12 @@ const Pricing = ({
 	return (
 		<section className={styles.page} aria-labelledby="pricing-page-title">
 			<h1 id="pricing-page-title" className={styles.title}>
-				{content.title}
+				{PAYMENT_COPY.title}
 			</h1>
 
 			{!paymentEnabled && (
 				<div className={styles.paymentDisabledNotice}>
-					{content.paymentDisabledNotice}
+					{PAYMENT_COPY.paymentDisabledNotice}
 				</div>
 			)}
 
@@ -248,12 +284,12 @@ const Pricing = ({
 			) : subscription ? (
 				<div className={styles.currentPlan}>
 					<span>
-						{content.currentPlanText}{' '}
+						{PAYMENT_COPY.currentPlanText}{' '}
 						<strong>{planLabel[subscription.plan]}</strong>
 					</span>
 					{subscription.expiresAt && (
 						<span>
-							{content.currentPlanUntilText}{' '}
+							{PAYMENT_COPY.currentPlanUntilText}{' '}
 							{new Date(subscription.expiresAt).toLocaleDateString(
 								'ru-RU'
 							)}
@@ -265,8 +301,8 @@ const Pricing = ({
 						}
 					>
 						{isActive
-							? content.activeStatusText
-							: content.expiredStatusText}
+							? PAYMENT_COPY.activeStatusText
+							: PAYMENT_COPY.expiredStatusText}
 					</span>
 				</div>
 			) : null}
@@ -302,24 +338,31 @@ const Pricing = ({
 					<div className={styles.pendingCopy}>
 						<p className={styles.pendingTitle}>
 							{isPendingDowngradeBlocked
-								? content.pendingPaymentUnavailableTitle
-								: content.pendingPaymentTitle}
+								? PAYMENT_COPY.pendingPaymentUnavailableTitle
+								: PAYMENT_COPY.pendingPaymentTitle}
 						</p>
 						<p className={styles.pendingText}>
 							{isPendingDowngradeBlocked ? (
 								<>
-									{renderTemplate(content.pendingPaymentUnavailableText, {
-										currentPlan: (
-											<strong key="currentPlan">{currentPlanLabel}</strong>
-										),
-										payment: (
-											<strong key="payment">{pendingPaymentLabel}</strong>
-										)
-									})}
+									{renderTemplate(
+										PAYMENT_COPY.pendingPaymentUnavailableText,
+										{
+											currentPlan: (
+												<strong key="currentPlan">
+													{currentPlanLabel}
+												</strong>
+											),
+											payment: (
+												<strong key="payment">
+													{pendingPaymentLabel}
+												</strong>
+											)
+										}
+									)}
 								</>
 							) : (
 								<>
-									{renderTemplate(content.pendingPaymentText, {
+									{renderTemplate(PAYMENT_COPY.pendingPaymentText, {
 										payment: (
 											<strong key="payment">{pendingPaymentLabel}</strong>
 										)
@@ -334,7 +377,7 @@ const Pricing = ({
 								href={activePendingPayment?.confirmationUrl ?? undefined}
 								className={styles.pendingResumeBtn}
 							>
-								{content.pendingPaymentResumeButtonText}
+								{PAYMENT_COPY.pendingPaymentResumeButtonText}
 							</a>
 						)}
 						<button
@@ -344,8 +387,8 @@ const Pricing = ({
 							disabled={cancelPendingMutation.isPending}
 						>
 							{cancelPendingMutation.isPending
-								? content.pendingPaymentCancelLoadingText
-								: content.pendingPaymentCancelButtonText}
+								? PAYMENT_COPY.pendingPaymentCancelLoadingText
+								: PAYMENT_COPY.pendingPaymentCancelButtonText}
 						</button>
 					</div>
 				</div>
@@ -353,24 +396,24 @@ const Pricing = ({
 
 			{/* Period toggle */}
 			<fieldset className={styles.periodGroup}>
-				<legend className="srOnly">{content.periodLegendText}</legend>
+				<legend className="srOnly">{PAYMENT_COPY.periodLegendText}</legend>
 				<div className={styles.periodToggle}>
 					<button
 						type="button"
 						className={`${styles.periodBtn} ${!isYearly ? styles.periodActive : ''}`}
 						onClick={() => setPeriod('MONTHLY')}
 					>
-						{content.monthlyToggleText}
+						{pricingContent.monthlyToggleText}
 					</button>
 					<button
 						type="button"
 						className={`${styles.periodBtn} ${isYearly ? styles.periodActive : ''}`}
 						onClick={() => setPeriod('YEARLY')}
 					>
-						{content.yearlyToggleText}
-						{content.discountText && (
+						{pricingContent.yearlyToggleText}
+						{pricingContent.discountText && (
 							<span className={styles.discount}>
-								{content.discountText}
+								{pricingContent.discountText}
 							</span>
 						)}
 					</button>
@@ -403,21 +446,24 @@ const Pricing = ({
 							<h2
 								id={titleId}
 								className={styles.planName}
-								style={{ color: plan.color }}
+								style={{ color: PLAN_COLORS[plan.key] }}
 							>
-								{plan.name}
+								{plan.title}
 							</h2>
+							{plan.subtitle && (
+								<p className={styles.planSubtitle}>{plan.subtitle}</p>
+							)}
 
 							<div className={styles.priceBlock}>
 								<span className={styles.price}>{formatRub(price)} ₽</span>
 								<span className={styles.pricePer}>
-									{content.pricePerMonthText}
+									{PAYMENT_COPY.pricePerMonthText}
 								</span>
 							</div>
 
 							{isYearly && (
 								<p className={styles.yearlyNote}>
-									{formatText(content.yearlyTotalText, {
+									{formatText(PAYMENT_COPY.yearlyTotalText, {
 										amount: formatRub(planPrices.YEARLY)
 									})}
 								</p>
@@ -432,7 +478,7 @@ const Pricing = ({
 							<button
 								type="button"
 								className={styles.buyBtn}
-								style={{ background: plan.color }}
+								style={{ background: PLAN_COLORS[plan.key] }}
 								disabled={
 									isActionsDisabled ||
 									hasPendingPayment ||
@@ -446,15 +492,15 @@ const Pricing = ({
 								}
 							>
 								{isDowngradeBlocked
-									? content.unavailableButtonText
+									? PAYMENT_COPY.unavailableButtonText
 									: isCurrentPlan
-										? content.renewButtonText
-										: content.payButtonText}
+										? PAYMENT_COPY.renewButtonText
+										: PAYMENT_COPY.payButtonText}
 							</button>
 
 							{isDowngradeBlocked && currentPlanLabel && (
 								<p className={styles.planRestriction}>
-									{renderTemplate(content.downgradeRestrictionText, {
+									{renderTemplate(PAYMENT_COPY.downgradeRestrictionText, {
 										currentPlan: (
 											<strong key="currentPlan">{currentPlanLabel}</strong>
 										)
@@ -466,17 +512,23 @@ const Pricing = ({
 				})}
 			</div>
 
-			{content.paymentNote && (
-				<p className={styles.note}>{content.paymentNote}</p>
+			{PAYMENT_COPY.paymentNote && (
+				<p className={styles.note}>{PAYMENT_COPY.paymentNote}</p>
 			)}
 
-			{hasPendingPayment && content.pendingPaymentNote && (
-				<p className={styles.notePending}>{content.pendingPaymentNote}</p>
+			{hasPendingPayment && PAYMENT_COPY.pendingPaymentNote && (
+				<p className={styles.notePending}>
+					{PAYMENT_COPY.pendingPaymentNote}
+				</p>
 			)}
 
-			{isActive && currentPlan !== 'TRIAL' && content.carryoverNote && (
-				<p className={styles.noteCarryover}>{content.carryoverNote}</p>
-			)}
+			{isActive &&
+				currentPlan !== 'TRIAL' &&
+				PAYMENT_COPY.carryoverNote && (
+					<p className={styles.noteCarryover}>
+						{PAYMENT_COPY.carryoverNote}
+					</p>
+				)}
 		</section>
 	)
 }

@@ -118,7 +118,10 @@
 	box-shadow: 0 8px 32px rgb(100 60 180 / 0.1);
 }
 .planName {
-	@apply text-2xl font-bold mb-4 text-[#7b3fa0];
+	@apply text-2xl font-bold mb-2 text-[#7b3fa0];
+}
+.planSubtitle {
+	@apply mb-4 text-sm font-semibold text-[#6f6482];
 }
 .priceBlock {
 	@apply flex items-baseline gap-1 mb-1;

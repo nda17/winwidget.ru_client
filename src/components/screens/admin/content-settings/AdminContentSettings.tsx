@@ -38,7 +38,6 @@ type ContentArea = HomeContentEditorArea
 
 const AREAS: Array<{ key: ContentArea; label: string }> = [
 	{ key: 'home', label: 'Главная страница' },
-	{ key: 'payment', label: 'Платежи' },
 	{ key: 'demo', label: 'Демо-виджеты' },
 	{ key: 'footer', label: 'Footer' },
 	{ key: 'head', label: 'Head' },
@@ -182,7 +181,7 @@ const AdminContentSettings: NextPage = () => {
 						<AdminSectionHeading
 							text="Редактирование SEO"
 							title="SEO-настройки"
-							description="Управляет SEO главной страницы, robots.txt и sitemap.xml."
+							description="Управляет SEO главной страницы, страницы оплаты, robots.txt и sitemap.xml."
 							risk="high"
 							riskText="Ошибки в robots или sitemap могут повлиять на индексацию сайта. Не добавляйте служебные страницы в sitemap."
 						/>
@@ -200,19 +199,6 @@ const AdminContentSettings: NextPage = () => {
 							riskText="Короткие тексты демо-блока видны посетителю сразу. Проверьте их на понятность и длину."
 						/>
 						<HomeContentEditor area="demo" />
-					</>
-				)
-			case 'payment':
-				return (
-					<>
-						<AdminSectionHeading
-							text="Редактирование платежей"
-							title="Платежи"
-							description="Управляет контентом страницы оплаты: заголовками, пояснениями, кнопками и списком возможностей тарифов."
-							risk="high"
-							riskText="Реальные суммы платежей редактируются только в разделе Тарифы. Здесь меняйте только тексты и карточки, чтобы не было рассинхрона."
-						/>
-						<HomeContentEditor area="payment" />
 					</>
 				)
 			case 'body':

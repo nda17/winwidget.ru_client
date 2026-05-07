@@ -169,50 +169,6 @@ export interface HomePagePlanPrice {
 export interface HomePagePaymentContent {
 	seoTitle: string
 	seoDescription: string
-	title: string
-	periodLegendText: string
-	monthlyToggleText: string
-	yearlyToggleText: string
-	discountText: string
-	pricePerMonthText: string
-	yearlyTotalText: string
-	monthlyPeriodText: string
-	yearlyPeriodText: string
-	currentPlanText: string
-	currentPlanUntilText: string
-	activeStatusText: string
-	expiredStatusText: string
-	trialPlanLabel: string
-	pendingPaymentFallbackPlanText: string
-	pendingPaymentFallbackPeriodText: string
-	pendingPaymentLabelText: string
-	paymentDisabledNotice: string
-	pendingPaymentTitle: string
-	pendingPaymentUnavailableTitle: string
-	pendingPaymentText: string
-	pendingPaymentUnavailableText: string
-	pendingPaymentResumeButtonText: string
-	pendingPaymentCancelButtonText: string
-	pendingPaymentCancelLoadingText: string
-	payButtonText: string
-	renewButtonText: string
-	unavailableButtonText: string
-	downgradeRestrictionText: string
-	paymentNote: string
-	pendingPaymentNote: string
-	carryoverNote: string
-	createPaymentLoadingText: string
-	paymentErrorText: string
-	cancelPaymentLoadingText: string
-	cancelPaymentErrorText: string
-	plans: HomePagePaymentPlan[]
-}
-
-export interface HomePagePaymentPlan {
-	key: string
-	name: string
-	color: string
-	features: string[]
 }
 
 export interface HomePageFaqContent {

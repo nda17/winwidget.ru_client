@@ -21,7 +21,7 @@ const PaymentPage = async () => {
 	])
 	return (
 		<Pricing
-			content={content.payment}
+			pricingContent={content.pricing}
 			paymentEnabled={settings?.paymentEnabled ?? true}
 			tariffPrices={tariffPrices}
 		/>
