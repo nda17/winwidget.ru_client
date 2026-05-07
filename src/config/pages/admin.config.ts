@@ -6,6 +6,7 @@ class AdminPages {
 	MAILINGS = '/admin/mailings'
 	EVENT_LOG = '/admin/event-log'
 	PAYMENTS = '/admin/payments'
+	TELEGRAM_BOT = '/admin/telegram-bot'
 	CONTENT = '/admin/content'
 	TARIFFS = '/admin/tariffs'
 	BACKLOG = '/admin/backlog'

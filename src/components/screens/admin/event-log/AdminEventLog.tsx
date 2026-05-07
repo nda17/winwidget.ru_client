@@ -27,7 +27,8 @@ const SECTION_LABELS: Record<AdminEventLogSection, string> = {
 	TASKS: 'Ручные задачи',
 	SUBSCRIPTIONS: 'Подписки',
 	USERS: 'Пользователи',
-	BACKLOG: 'Бэклог'
+	BACKLOG: 'Бэклог',
+	TELEGRAM_BOT: 'Telegram-бот'
 }
 
 const ACTION_LABELS: Record<AdminEventLogAction, string> = {
@@ -44,7 +45,8 @@ const ACTION_LABELS: Record<AdminEventLogAction, string> = {
 	USER_DELETE: 'Удаление пользователя',
 	BACKLOG_TASK_CREATE: 'Создание задачи',
 	BACKLOG_TASK_UPDATE: 'Обновление задачи',
-	BACKLOG_TASK_DELETE: 'Удаление задачи'
+	BACKLOG_TASK_DELETE: 'Удаление задачи',
+	TELEGRAM_BOT_SETTINGS_UPDATE: 'Настройки Telegram-бота'
 }
 
 type EventLogSectionFilter = AdminEventLogSection | 'ALL'
@@ -159,6 +161,10 @@ const formatMetadata = (item: IAdminEventLogItem) => {
 	const providerStatus = getPrimitiveMetadata(item, 'providerStatus')
 	const localStatus = getPrimitiveMetadata(item, 'localStatus')
 	const status = getPrimitiveMetadata(item, 'status')
+	const dailySummaryEnabled = getPrimitiveMetadata(
+		item,
+		'dailySummaryEnabled'
+	)
 	const updatedFields = metadata.updatedFields
 
 	if (affectedCount) parts.push(`Затронуто: ${affectedCount}`)
@@ -171,6 +177,11 @@ const formatMetadata = (item: IAdminEventLogItem) => {
 	if (providerStatus) parts.push(`YooKassa: ${providerStatus}`)
 	if (localStatus) parts.push(`Локально: ${localStatus}`)
 	if (status) parts.push(`Статус: ${status}`)
+	if (dailySummaryEnabled) {
+		parts.push(
+			`Сводка: ${dailySummaryEnabled === 'true' ? 'включена' : 'выключена'}`
+		)
+	}
 	if (Array.isArray(updatedFields) && updatedFields.length) {
 		parts.push(`Поля: ${updatedFields.join(', ')}`)
 	}

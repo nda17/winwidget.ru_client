@@ -20,6 +20,10 @@ export const navItems: INavItem[] = [
 		link: ADMIN_PAGES.PAYMENTS
 	},
 	{
+		title: 'Telegram-бот',
+		link: ADMIN_PAGES.TELEGRAM_BOT
+	},
+	{
 		title: 'Тарифы',
 		link: ADMIN_PAGES.TARIFFS
 	},

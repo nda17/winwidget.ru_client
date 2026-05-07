@@ -7,6 +7,7 @@ export type AdminEventLogSection =
 	| 'SUBSCRIPTIONS'
 	| 'USERS'
 	| 'BACKLOG'
+	| 'TELEGRAM_BOT'
 
 export type AdminEventLogAction =
 	| 'PAYMENT_MANUAL_CHECK'
@@ -23,6 +24,7 @@ export type AdminEventLogAction =
 	| 'BACKLOG_TASK_CREATE'
 	| 'BACKLOG_TASK_UPDATE'
 	| 'BACKLOG_TASK_DELETE'
+	| 'TELEGRAM_BOT_SETTINGS_UPDATE'
 
 export interface IAdminEventLogItem {
 	id: string
