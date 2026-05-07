@@ -826,10 +826,7 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 
 						<div className={styles.list}>
 							{draft.technicalSeo.sitemapItems.map((item, index) => (
-								<div
-									key={`${item.path}-${index}`}
-									className={styles.itemCard}
-								>
+								<div key={`sitemap-${index}`} className={styles.itemCard}>
 									<div className={styles.itemHeader}>
 										<span className={styles.itemTitle}>
 											Страница sitemap {index + 1}
@@ -1419,7 +1416,7 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 						<div className={styles.list}>
 							{draft.analysis.cards.map((card, index) => (
 								<div
-									key={`${card.text}-${index}`}
+									key={`analysis-card-${index}`}
 									className={styles.itemCard}
 								>
 									<div className={styles.itemHeader}>
@@ -1522,7 +1519,7 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 						<div className={styles.list}>
 							{draft.integrations.items.map((item, index) => (
 								<div
-									key={`${item.title}-${index}`}
+									key={`integration-${index}`}
 									className={styles.itemCard}
 								>
 									<div className={styles.itemHeader}>
@@ -1685,10 +1682,7 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 						</div>
 						<div className={styles.list}>
 							{draft.tools.items.map((item, index) => (
-								<div
-									key={`${item.title}-${index}`}
-									className={styles.itemCard}
-								>
+								<div key={`tool-${index}`} className={styles.itemCard}>
 									<div className={styles.itemHeader}>
 										<span className={styles.itemTitle}>
 											Инструмент {index + 1}
@@ -1848,10 +1842,7 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 						</div>
 						<div className={styles.list}>
 							{draft.steps.items.map((step, index) => (
-								<div
-									key={`${step.text}-${index}`}
-									className={styles.itemCard}
-								>
+								<div key={`step-${index}`} className={styles.itemCard}>
 									<div className={styles.itemHeader}>
 										<span className={styles.itemTitle}>
 											Шаг {index + 1}
@@ -2127,10 +2118,7 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 						/>
 						<div className={styles.list}>
 							{draft.faq.items.map((item, index) => (
-								<div
-									key={`${item.question}-${index}`}
-									className={styles.itemCard}
-								>
+								<div key={`faq-${index}`} className={styles.itemCard}>
 									<div className={styles.itemHeader}>
 										<span className={styles.itemTitle}>
 											Вопрос {index + 1}
