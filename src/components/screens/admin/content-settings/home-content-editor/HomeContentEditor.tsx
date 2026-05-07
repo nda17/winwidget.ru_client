@@ -8,6 +8,7 @@ import type {
 	HomePageContent,
 	HomePageIntegrationIconKey,
 	HomePageIntegrationItem,
+	HomePagePaymentPlan,
 	HomePagePricingPlan,
 	HomePageSitemapChangeFrequency,
 	HomePageSitemapItem,
@@ -69,6 +70,7 @@ export type HomeContentEditorArea =
 	| 'footer'
 	| 'seo'
 	| 'demo'
+	| 'payment'
 	| 'head'
 	| 'body'
 
@@ -140,6 +142,20 @@ const EDITOR_META: Record<
 		successText: 'Демо-виджеты сохранены',
 		resetLoadingText: 'Сбрасываем демо-виджеты...',
 		resetSuccessText: 'Демо-виджеты сброшены к дефолту'
+	},
+	payment: {
+		title: 'Платежи',
+		helpTitle: 'Контент страницы оплаты',
+		helpDescription:
+			'Управляет текстами, подсказками и списком возможностей на странице /payment. Суммы оплаты остаются в разделе Тарифы.',
+		riskText:
+			'Ошибки в текстах оплаты могут запутать клиента перед платежом. Цены меняйте только в разделе Тарифы, чтобы не было рассинхрона с ЮKassa.',
+		hint: 'Изменения попадут на страницу /payment после сохранения. Реальные цены здесь не редактируются.',
+		saveLabel: 'Сохранить платежи',
+		loadingText: 'Загрузка контента платежей...',
+		successText: 'Контент платежей сохранён',
+		resetLoadingText: 'Сбрасываем платежи...',
+		resetSuccessText: 'Платежи сброшены к дефолту'
 	},
 	body: {
 		title: 'Body',
@@ -325,6 +341,13 @@ const prepareContentForSave = (
 			features: cleanStringList(plan.features)
 		}))
 	},
+	payment: {
+		...content.payment,
+		plans: content.payment.plans.map(plan => ({
+			...plan,
+			features: cleanStringList(plan.features)
+		}))
+	},
 	footer: {
 		...content.footer,
 		infoLines: cleanStringList(content.footer.infoLines)
@@ -475,6 +498,7 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 	const isFooterArea = area === 'footer'
 	const isSeoArea = area === 'seo'
 	const isDemoArea = area === 'demo'
+	const isPaymentArea = area === 'payment'
 	const isBodyArea = area === 'body'
 	const isHeadArea = area === 'head'
 	const defaultContent = useMemo(() => normalizeHomePageContent(), [])
@@ -560,6 +584,10 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 			nextContent.demoWidgets = defaultContent.demoWidgets
 		}
 
+		if (isPaymentArea) {
+			nextContent.payment = defaultContent.payment
+		}
+
 		setDraft(nextContent)
 
 		const promise = mutation.mutateAsync(nextContent)
@@ -603,6 +631,21 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 		updateDraft(prev => ({
 			...prev,
 			pricing: { ...prev.pricing, plans }
+		}))
+
+	const updatePaymentField = <K extends keyof HomePageContent['payment']>(
+		key: K,
+		value: HomePageContent['payment'][K]
+	) =>
+		updateDraft(prev => ({
+			...prev,
+			payment: { ...prev.payment, [key]: value }
+		}))
+
+	const updatePaymentPlans = (plans: HomePagePaymentPlan[]) =>
+		updateDraft(prev => ({
+			...prev,
+			payment: { ...prev.payment, plans }
 		}))
 
 	const updateSitemapItems = (sitemapItems: HomePageSitemapItem[]) =>
@@ -1286,6 +1329,473 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 						hint="Код будет добавлен внутри тега head после сохранения."
 					/>
 				</section>
+			)}
+
+			{isPaymentArea && (
+				<>
+					<section className={styles.panel}>
+						<SectionTitle
+							title="Страница оплаты"
+							description="Редактирует основной заголовок, SEO и сообщения страницы /payment. Реальные суммы оплаты здесь не меняются."
+							risk="high"
+							riskText="Если текст не совпадёт с настоящими условиями тарифов, клиент может неверно понять оплату. Цены редактируются только в разделе Тарифы."
+						>
+							Страница оплаты
+						</SectionTitle>
+						<div className={styles.gridTwo}>
+							<TextField
+								id="payment-seo-title"
+								label="SEO title"
+								value={draft.payment.seoTitle}
+								onChange={value => updatePaymentField('seoTitle', value)}
+							/>
+							<TextField
+								id="payment-title"
+								label="Заголовок H1"
+								value={draft.payment.title}
+								onChange={value => updatePaymentField('title', value)}
+							/>
+						</div>
+						<TextAreaField
+							id="payment-seo-description"
+							label="SEO description"
+							value={draft.payment.seoDescription}
+							onChange={value =>
+								updatePaymentField('seoDescription', value)
+							}
+						/>
+						<TextAreaField
+							id="payment-disabled-notice"
+							label="Сообщение при отключённой оплате"
+							value={draft.payment.paymentDisabledNotice}
+							onChange={value =>
+								updatePaymentField('paymentDisabledNotice', value)
+							}
+						/>
+					</section>
+
+					<section className={styles.panel}>
+						<SectionTitle
+							title="Переключатель и статусы"
+							description="Управляет подписями периода оплаты, текущего тарифа, статусов и кнопок покупки."
+							risk="medium"
+							riskText="Эти тексты видны перед созданием платежа. Не меняйте смысл так, чтобы он противоречил реальным правилам оплаты."
+						>
+							Периоды и кнопки
+						</SectionTitle>
+						<div className={styles.gridThree}>
+							<TextField
+								id="payment-period-legend"
+								label="Подпись группы периода"
+								value={draft.payment.periodLegendText}
+								onChange={value =>
+									updatePaymentField('periodLegendText', value)
+								}
+							/>
+							<TextField
+								id="payment-monthly-toggle"
+								label="Переключатель помесячно"
+								value={draft.payment.monthlyToggleText}
+								onChange={value =>
+									updatePaymentField('monthlyToggleText', value)
+								}
+							/>
+							<TextField
+								id="payment-yearly-toggle"
+								label="Переключатель за год"
+								value={draft.payment.yearlyToggleText}
+								onChange={value =>
+									updatePaymentField('yearlyToggleText', value)
+								}
+							/>
+							<TextField
+								id="payment-discount"
+								label="Бейдж скидки"
+								value={draft.payment.discountText}
+								onChange={value =>
+									updatePaymentField('discountText', value)
+								}
+							/>
+						</div>
+						<div className={styles.gridThree}>
+							<TextField
+								id="payment-price-per-month"
+								label="Подпись цены за месяц"
+								value={draft.payment.pricePerMonthText}
+								onChange={value =>
+									updatePaymentField('pricePerMonthText', value)
+								}
+							/>
+							<TextField
+								id="payment-yearly-total"
+								label="Годовая сумма"
+								value={draft.payment.yearlyTotalText}
+								onChange={value =>
+									updatePaymentField('yearlyTotalText', value)
+								}
+								placeholder="{amount} ₽ / год"
+							/>
+							<TextField
+								id="payment-trial-label"
+								label="Название trial"
+								value={draft.payment.trialPlanLabel}
+								onChange={value =>
+									updatePaymentField('trialPlanLabel', value)
+								}
+							/>
+						</div>
+						<div className={styles.gridThree}>
+							<TextField
+								id="payment-current-plan"
+								label="Текущий тариф"
+								value={draft.payment.currentPlanText}
+								onChange={value =>
+									updatePaymentField('currentPlanText', value)
+								}
+							/>
+							<TextField
+								id="payment-current-until"
+								label="Подпись даты окончания"
+								value={draft.payment.currentPlanUntilText}
+								onChange={value =>
+									updatePaymentField('currentPlanUntilText', value)
+								}
+							/>
+							<TextField
+								id="payment-active-status"
+								label="Статус активен"
+								value={draft.payment.activeStatusText}
+								onChange={value =>
+									updatePaymentField('activeStatusText', value)
+								}
+							/>
+						</div>
+						<div className={styles.gridThree}>
+							<TextField
+								id="payment-expired-status"
+								label="Статус истёк"
+								value={draft.payment.expiredStatusText}
+								onChange={value =>
+									updatePaymentField('expiredStatusText', value)
+								}
+							/>
+							<TextField
+								id="payment-pay-button"
+								label="Кнопка оплаты"
+								value={draft.payment.payButtonText}
+								onChange={value =>
+									updatePaymentField('payButtonText', value)
+								}
+							/>
+							<TextField
+								id="payment-renew-button"
+								label="Кнопка продления"
+								value={draft.payment.renewButtonText}
+								onChange={value =>
+									updatePaymentField('renewButtonText', value)
+								}
+							/>
+						</div>
+						<TextField
+							id="payment-unavailable-button"
+							label="Кнопка при недоступном тарифе"
+							value={draft.payment.unavailableButtonText}
+							onChange={value =>
+								updatePaymentField('unavailableButtonText', value)
+							}
+						/>
+					</section>
+
+					<section className={styles.panel}>
+						<SectionTitle
+							title="Незавершённые платежи"
+							description="Тексты для блока, который появляется, если у пользователя есть pending-платёж."
+							risk="medium"
+							riskText="Этот блок объясняет, почему нельзя создать новый платёж. Сохраняйте понятные действия для пользователя."
+						>
+							Незавершённые платежи
+						</SectionTitle>
+						<div className={styles.gridTwo}>
+							<TextField
+								id="payment-pending-title"
+								label="Заголовок"
+								value={draft.payment.pendingPaymentTitle}
+								onChange={value =>
+									updatePaymentField('pendingPaymentTitle', value)
+								}
+							/>
+							<TextField
+								id="payment-pending-unavailable-title"
+								label="Заголовок недоступного платежа"
+								value={draft.payment.pendingPaymentUnavailableTitle}
+								onChange={value =>
+									updatePaymentField(
+										'pendingPaymentUnavailableTitle',
+										value
+									)
+								}
+							/>
+						</div>
+						<TextAreaField
+							id="payment-pending-text"
+							label="Текст обычного pending-платежа"
+							value={draft.payment.pendingPaymentText}
+							onChange={value =>
+								updatePaymentField('pendingPaymentText', value)
+							}
+							hint="Доступна подстановка {payment}."
+						/>
+						<TextAreaField
+							id="payment-pending-unavailable-text"
+							label="Текст недоступного pending-платежа"
+							value={draft.payment.pendingPaymentUnavailableText}
+							onChange={value =>
+								updatePaymentField('pendingPaymentUnavailableText', value)
+							}
+							hint="Доступны подстановки {currentPlan} и {payment}."
+						/>
+						<div className={styles.gridThree}>
+							<TextField
+								id="payment-pending-resume"
+								label="Кнопка возврата к оплате"
+								value={draft.payment.pendingPaymentResumeButtonText}
+								onChange={value =>
+									updatePaymentField(
+										'pendingPaymentResumeButtonText',
+										value
+									)
+								}
+							/>
+							<TextField
+								id="payment-pending-cancel"
+								label="Кнопка отмены платежа"
+								value={draft.payment.pendingPaymentCancelButtonText}
+								onChange={value =>
+									updatePaymentField(
+										'pendingPaymentCancelButtonText',
+										value
+									)
+								}
+							/>
+							<TextField
+								id="payment-pending-cancel-loading"
+								label="Состояние отмены"
+								value={draft.payment.pendingPaymentCancelLoadingText}
+								onChange={value =>
+									updatePaymentField(
+										'pendingPaymentCancelLoadingText',
+										value
+									)
+								}
+							/>
+						</div>
+						<div className={styles.gridThree}>
+							<TextField
+								id="payment-pending-plan-fallback"
+								label="Fallback тарифа"
+								value={draft.payment.pendingPaymentFallbackPlanText}
+								onChange={value =>
+									updatePaymentField(
+										'pendingPaymentFallbackPlanText',
+										value
+									)
+								}
+							/>
+							<TextField
+								id="payment-pending-period-fallback"
+								label="Fallback периода"
+								value={draft.payment.pendingPaymentFallbackPeriodText}
+								onChange={value =>
+									updatePaymentField(
+										'pendingPaymentFallbackPeriodText',
+										value
+									)
+								}
+							/>
+							<TextField
+								id="payment-pending-label"
+								label="Шаблон подписи платежа"
+								value={draft.payment.pendingPaymentLabelText}
+								onChange={value =>
+									updatePaymentField('pendingPaymentLabelText', value)
+								}
+								placeholder="{plan} на {period}"
+							/>
+						</div>
+						<div className={styles.gridTwo}>
+							<TextField
+								id="payment-monthly-period"
+								label="Период месяц"
+								value={draft.payment.monthlyPeriodText}
+								onChange={value =>
+									updatePaymentField('monthlyPeriodText', value)
+								}
+							/>
+							<TextField
+								id="payment-yearly-period"
+								label="Период год"
+								value={draft.payment.yearlyPeriodText}
+								onChange={value =>
+									updatePaymentField('yearlyPeriodText', value)
+								}
+							/>
+						</div>
+					</section>
+
+					<section className={styles.panel}>
+						<SectionTitle
+							title="Примечания и toast"
+							description="Нижние примечания страницы оплаты и сообщения действий пользователя."
+							risk="medium"
+							riskText="Toast-сообщения сопровождают создание и отмену платежа. Они должны быть короткими и понятными."
+						>
+							Примечания
+						</SectionTitle>
+						<TextAreaField
+							id="payment-note"
+							label="Примечание под тарифами"
+							value={draft.payment.paymentNote}
+							onChange={value => updatePaymentField('paymentNote', value)}
+						/>
+						<TextAreaField
+							id="payment-pending-note"
+							label="Примечание при pending-платеже"
+							value={draft.payment.pendingPaymentNote}
+							onChange={value =>
+								updatePaymentField('pendingPaymentNote', value)
+							}
+						/>
+						<TextAreaField
+							id="payment-carryover-note"
+							label="Примечание о суммировании срока"
+							value={draft.payment.carryoverNote}
+							onChange={value =>
+								updatePaymentField('carryoverNote', value)
+							}
+						/>
+						<TextAreaField
+							id="payment-downgrade-text"
+							label="Ограничение понижения тарифа"
+							value={draft.payment.downgradeRestrictionText}
+							onChange={value =>
+								updatePaymentField('downgradeRestrictionText', value)
+							}
+							hint="Доступна подстановка {currentPlan}."
+						/>
+						<div className={styles.gridTwo}>
+							<TextField
+								id="payment-create-loading"
+								label="Toast создания платежа"
+								value={draft.payment.createPaymentLoadingText}
+								onChange={value =>
+									updatePaymentField('createPaymentLoadingText', value)
+								}
+							/>
+							<TextField
+								id="payment-error"
+								label="Fallback ошибки оплаты"
+								value={draft.payment.paymentErrorText}
+								onChange={value =>
+									updatePaymentField('paymentErrorText', value)
+								}
+							/>
+							<TextField
+								id="payment-cancel-loading"
+								label="Toast отмены платежа"
+								value={draft.payment.cancelPaymentLoadingText}
+								onChange={value =>
+									updatePaymentField('cancelPaymentLoadingText', value)
+								}
+							/>
+							<TextField
+								id="payment-cancel-error"
+								label="Fallback ошибки отмены"
+								value={draft.payment.cancelPaymentErrorText}
+								onChange={value =>
+									updatePaymentField('cancelPaymentErrorText', value)
+								}
+							/>
+						</div>
+					</section>
+
+					<section className={styles.panel}>
+						<div className={styles.panelHeader}>
+							<div>
+								<SectionTitle
+									title="Тарифы на странице оплаты"
+									description="Редактирует названия, цвета и список возможностей карточек оплаты. Суммы подтягиваются из раздела Тарифы."
+									risk="high"
+									riskText="Не добавляйте сюда цены руками. Реальная сумма платежа всегда берётся из раздела Тарифы и backend-сервиса."
+								>
+									Карточки тарифов
+								</SectionTitle>
+								<p className={styles.fieldHint}>
+									Цены карточек редактируются в разделе Тарифы.
+								</p>
+							</div>
+						</div>
+						<div className={styles.list}>
+							{draft.payment.plans.map((plan, index) => (
+								<div key={plan.key} className={styles.itemCard}>
+									<div className={styles.itemHeader}>
+										<span className={styles.itemTitle}>
+											Тариф {plan.key}
+										</span>
+									</div>
+									<div className={styles.gridTwo}>
+										<TextField
+											id={`payment-plan-name-${index}`}
+											label="Название"
+											value={plan.name}
+											onChange={value =>
+												updatePaymentPlans(
+													updateItem(draft.payment.plans, index, {
+														name: value
+													})
+												)
+											}
+										/>
+										<div className={styles.field}>
+											<label
+												htmlFor={`payment-plan-color-${index}`}
+												className={styles.fieldLabel}
+											>
+												Цвет
+											</label>
+											<input
+												id={`payment-plan-color-${index}`}
+												type="color"
+												className={styles.input}
+												value={plan.color}
+												onChange={event =>
+													updatePaymentPlans(
+														updateItem(draft.payment.plans, index, {
+															color: event.target.value
+														})
+													)
+												}
+											/>
+										</div>
+									</div>
+									<TextAreaField
+										id={`payment-plan-features-${index}`}
+										label="Возможности"
+										value={featuresToText(plan.features)}
+										onChange={value =>
+											updatePaymentPlans(
+												updateItem(draft.payment.plans, index, {
+													features: textToFeatures(value)
+												})
+											)
+										}
+										hint="Каждый пункт с новой строки."
+										rows={6}
+									/>
+								</div>
+							))}
+						</div>
+					</section>
+				</>
 			)}
 
 			{isHomeArea && (

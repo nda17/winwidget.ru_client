@@ -1,6 +1,7 @@
 import type {
 	HomePageContent,
 	HomePageIntegrationIconKey,
+	HomePagePaymentPlan,
 	HomePagePricingPlan,
 	HomePageSitemapChangeFrequency
 } from '@/services/home-page-content/home-page-content.types'
@@ -63,6 +64,26 @@ const mergePricingPlans = (
 				...base.yearly,
 				...(isRecord(item.yearly) ? item.yearly : {})
 			}
+		}
+	})
+}
+
+const mergePaymentPlans = (
+	value: unknown,
+	fallback: HomePagePaymentPlan[]
+): HomePagePaymentPlan[] => {
+	if (!Array.isArray(value)) return clone(fallback)
+
+	return value.map((item, index) => {
+		const base = clone(fallback[index] ?? fallback[fallback.length - 1])
+		if (!isRecord(item)) return base
+
+		return {
+			...base,
+			...item,
+			features: Array.isArray(item.features)
+				? item.features.map(feature => String(feature))
+				: base.features
 		}
 	})
 }
@@ -505,6 +526,84 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 			}
 		]
 	},
+	payment: {
+		seoTitle: 'Тарифы и оплата',
+		seoDescription:
+			'Тарифы Winwidget и оплата подписки через ЮKassa. Виджеты для увеличения конверсии сайта.',
+		title: 'Оплата',
+		periodLegendText: 'Период оплаты',
+		monthlyToggleText: 'Ежемесячно',
+		yearlyToggleText: 'За год',
+		discountText: '−60%',
+		pricePerMonthText: '/мес',
+		yearlyTotalText: '{amount} ₽ / год',
+		monthlyPeriodText: 'месяц',
+		yearlyPeriodText: 'год',
+		currentPlanText: 'Текущий тариф:',
+		currentPlanUntilText: 'до',
+		activeStatusText: 'Активен',
+		expiredStatusText: 'Истек',
+		trialPlanLabel: 'Тест-драйв',
+		pendingPaymentFallbackPlanText: 'выбранный тариф',
+		pendingPaymentFallbackPeriodText: 'период',
+		pendingPaymentLabelText: '{plan} на {period}',
+		paymentDisabledNotice: 'Оплата временно недоступна. Попробуйте позже.',
+		pendingPaymentTitle: 'У вас есть незавершённый платёж',
+		pendingPaymentUnavailableTitle: 'Этот платёж больше недоступен',
+		pendingPaymentText:
+			'Можно вернуться к оплате {payment} или отменить текущую попытку и создать новый платёж.',
+		pendingPaymentUnavailableText:
+			'У вас активен тариф {currentPlan}. Оплата более низкого тарифа {payment} недоступна до окончания текущей подписки. Можно отменить эту попытку.',
+		pendingPaymentResumeButtonText: 'Вернуться к оплате',
+		pendingPaymentCancelButtonText: 'Отменить платёж',
+		pendingPaymentCancelLoadingText: 'Отменяем...',
+		payButtonText: 'Оплатить',
+		renewButtonText: 'Продлить',
+		unavailableButtonText: 'Недоступно',
+		downgradeRestrictionText:
+			'Понижение недоступно, пока активен {currentPlan}',
+		paymentNote:
+			'После оплаты подписка активируется автоматически. Оплата через ЮKassa.',
+		pendingPaymentNote:
+			'Пока есть незавершённый платёж, создание нового платежа недоступно.',
+		carryoverNote:
+			'Оплачивать подписку можно сколько угодно раз — срок суммируется. При продлении текущего тарифа и переходе на более высокий оставшиеся дни переносятся на новый период.',
+		createPaymentLoadingText: 'Создаём платёж, пожалуйста подождите...',
+		paymentErrorText: 'Ошибка оплаты',
+		cancelPaymentLoadingText: 'Отменяем незавершённый платёж...',
+		cancelPaymentErrorText: 'Не удалось отменить платёж',
+		plans: [
+			{
+				key: 'EASY',
+				name: 'Easy',
+				color: '#4705fb',
+				features: [
+					'1 виджет',
+					'100 заявок в месяц',
+					'Хранение всех заявок в личном кабинете',
+					'Email уведомления / Telegram',
+					'Установка виджета на сайт, открытие по прямой ссылке и QR-коду',
+					'Интеграции с amoCRM, Bitrix24, Яндекс Метрика, VK Ретаргетинг, Roistat и Webhook'
+				]
+			},
+			{
+				key: 'HARD',
+				name: 'Hard',
+				color: '#7b2fff',
+				features: [
+					'10 любых виджетов',
+					'Безлимитные заявки',
+					'Хранение всех заявок в личном кабинете',
+					'Установка виджетов на сайт, открытие по прямой ссылке и QR-коду',
+					'Email уведомления / Telegram',
+					'Аналитика бонусов',
+					'Своя картинка кнопки открытия виджета',
+					'Интеграции с amoCRM, Bitrix24, Яндекс Метрика, VK Ретаргетинг, Roistat и Webhook',
+					'Выгрузка заявок в Excel, PDF, CSV'
+				]
+			}
+		]
+	},
 	faq: {
 		enabled: true,
 		title: 'Часто задаваемые вопросы',
@@ -707,6 +806,14 @@ export const normalizeHomePageContent = (
 			plans: mergePricingPlans(
 				isRecord(content.pricing) ? content.pricing.plans : undefined,
 				defaultContent.pricing.plans
+			)
+		},
+		payment: {
+			...defaultContent.payment,
+			...(isRecord(content.payment) ? content.payment : {}),
+			plans: mergePaymentPlans(
+				isRecord(content.payment) ? content.payment.plans : undefined,
+				defaultContent.payment.plans
 			)
 		},
 		faq: {

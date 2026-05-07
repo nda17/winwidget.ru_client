@@ -4,6 +4,7 @@ import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import subscriptionService, {
 	type IPendingPayment
 } from '@/services/subscription/subscription.service'
+import type { HomePagePaymentContent } from '@/services/home-page-content/home-page-content.types'
 import tariffPricesService from '@/services/tariff-prices/tariff-prices.service'
 import {
 	createTariffPriceMap,
@@ -12,46 +13,9 @@ import {
 import { BillingPeriod, Plan } from '@/services/widget/widget.types'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import toast from 'react-hot-toast'
 import styles from './Pricing.module.scss'
-
-const PLANS = [
-	{
-		key: 'EASY' as Plan,
-		name: 'Easy',
-		color: '#4705fb',
-		features: [
-			'1 виджет',
-			'100 заявок в месяц',
-			'Хранение всех заявок в личном кабинете',
-			'Email уведомления / Telegram',
-			'Установка виджета на сайт, открытие по прямой ссылке и QR-коду',
-			'Интеграции с amoCRM, Bitrix24, Яндекс Метрика, VK Ретаргетинг, Roistat и Webhook'
-		]
-	},
-	{
-		key: 'HARD' as Plan,
-		name: 'Hard',
-		color: '#7b2fff',
-		features: [
-			'10 любых виджетов',
-			'Безлимитные заявки',
-			'Хранение всех заявок в личном кабинете',
-			'Установка виджетов на сайт, открытие по прямой ссылке и QR-коду',
-			'Email уведомления / Telegram',
-			'Аналитика бонусов',
-			'Своя картинка кнопки открытия виджета',
-			'Интеграции с amoCRM, Bitrix24, Яндекс Метрика, VK Ретаргетинг, Roistat и Webhook',
-			'Выгрузка заявок в Excel, PDF, CSV'
-		]
-	}
-]
-
-const billingPeriodLabel: Record<BillingPeriod, string> = {
-	MONTHLY: 'месяц',
-	YEARLY: 'год'
-}
 
 const PLAN_PRIORITY: Record<Plan, number> = {
 	TRIAL: 0,
@@ -59,36 +23,78 @@ const PLAN_PRIORITY: Record<Plan, number> = {
 	HARD: 2
 }
 
-const planLabel: Record<Plan, string> = {
-	TRIAL: 'Тест-драйв',
-	EASY: 'Easy',
-	HARD: 'Hard'
-}
+type PaidPlan = Extract<Plan, 'EASY' | 'HARD'>
 
 const formatRub = (value: number) =>
 	new Intl.NumberFormat('ru-RU').format(value)
 
-const getPendingPaymentLabel = (pendingPayment: IPendingPayment) => {
-	const planLabel =
-		pendingPayment.plan === 'EASY'
-			? 'Easy'
-			: pendingPayment.plan === 'HARD'
-				? 'Hard'
-				: 'выбранный тариф'
+const isPaidPlan = (plan: string): plan is PaidPlan =>
+	plan === 'EASY' || plan === 'HARD'
+
+const formatText = (
+	template: string,
+	values: Record<string, string>
+): string =>
+	Object.entries(values).reduce(
+		(text, [key, value]) => text.split(`{${key}}`).join(value),
+		template
+	)
+
+const renderTemplate = (
+	template: string,
+	values: Record<string, ReactNode>
+): ReactNode[] => {
+	const result: ReactNode[] = []
+	const pattern = /\{([a-zA-Z0-9_]+)\}/g
+	let lastIndex = 0
+	let match: RegExpExecArray | null
+
+	while ((match = pattern.exec(template)) !== null) {
+		if (match.index > lastIndex) {
+			result.push(template.slice(lastIndex, match.index))
+		}
+
+		const value = values[match[1]]
+		result.push(value ?? match[0])
+		lastIndex = pattern.lastIndex
+	}
+
+	if (lastIndex < template.length) {
+		result.push(template.slice(lastIndex))
+	}
+
+	return result
+}
+
+const getPendingPaymentLabel = (
+	pendingPayment: IPendingPayment,
+	content: HomePagePaymentContent,
+	planLabel: Record<Plan, string>,
+	billingPeriodLabel: Record<BillingPeriod, string>
+) => {
+	const paymentPlanLabel =
+		pendingPayment.plan && planLabel[pendingPayment.plan]
+			? planLabel[pendingPayment.plan]
+			: content.pendingPaymentFallbackPlanText
 
 	const periodLabel = pendingPayment.billingPeriod
 		? billingPeriodLabel[pendingPayment.billingPeriod]
-		: 'период'
+		: content.pendingPaymentFallbackPeriodText
 
-	return `${planLabel} на ${periodLabel}`
+	return formatText(content.pendingPaymentLabelText, {
+		plan: paymentPlanLabel,
+		period: periodLabel
+	})
 }
 
 interface PricingProps {
+	content: HomePagePaymentContent
 	paymentEnabled?: boolean
 	tariffPrices?: TariffPrice[] | null
 }
 
 const Pricing = ({
+	content,
 	paymentEnabled = true,
 	tariffPrices = null
 }: PricingProps) => {
@@ -101,6 +107,26 @@ const Pricing = ({
 		initialData: tariffPrices ?? undefined
 	})
 	const tariffPriceMap = createTariffPriceMap(actualTariffPrices)
+	const paidPlans = content.plans.filter(
+		(
+			plan
+		): plan is HomePagePaymentContent['plans'][number] & {
+			key: PaidPlan
+		} => isPaidPlan(plan.key)
+	)
+	const planLabel: Record<Plan, string> = {
+		TRIAL: content.trialPlanLabel,
+		EASY:
+			paidPlans.find(plan => plan.key === 'EASY')?.name ??
+			content.pendingPaymentFallbackPlanText,
+		HARD:
+			paidPlans.find(plan => plan.key === 'HARD')?.name ??
+			content.pendingPaymentFallbackPlanText
+	}
+	const billingPeriodLabel: Record<BillingPeriod, string> = {
+		MONTHLY: content.monthlyPeriodText,
+		YEARLY: content.yearlyPeriodText
+	}
 
 	const { data: subscription, isLoading: subLoading } = useQuery({
 		queryKey: ['subscription'],
@@ -126,14 +152,13 @@ const Pricing = ({
 			plan: Plan
 			billingPeriod: BillingPeriod
 		}) => subscriptionService.createPayment(plan, billingPeriod),
-		onMutate: () =>
-			toast.loading('Создаём платёж, пожалуйста подождите...'),
+		onMutate: () => toast.loading(content.createPaymentLoadingText),
 		onSuccess: ({ confirmationUrl }, _, toastId) => {
 			toast.dismiss(toastId)
 			window.location.href = confirmationUrl
 		},
 		onError: (e: any, _, toastId) => {
-			toast.error(e?.response?.data?.message || 'Ошибка оплаты', {
+			toast.error(e?.response?.data?.message || content.paymentErrorText, {
 				id: toastId
 			})
 		}
@@ -141,7 +166,7 @@ const Pricing = ({
 
 	const cancelPendingMutation = useMutation({
 		mutationFn: subscriptionService.cancelPendingPayment,
-		onMutate: () => toast.loading('Отменяем незавершённый платёж...'),
+		onMutate: () => toast.loading(content.cancelPaymentLoadingText),
 		onSuccess: async (result, _, toastId) => {
 			await refetch()
 			toast.success(result.message, {
@@ -150,7 +175,7 @@ const Pricing = ({
 		},
 		onError: (e: any, _, toastId) => {
 			toast.error(
-				e?.response?.data?.message || 'Не удалось отменить платёж',
+				e?.response?.data?.message || content.cancelPaymentErrorText,
 				{
 					id: toastId
 				}
@@ -163,19 +188,25 @@ const Pricing = ({
 	const currentPlan = subscription?.plan
 	const currentPeriod = subscription?.billingPeriod
 	const isActive = subscription?.status === 'ACTIVE'
-	const hasPendingPayment = Boolean(
-		pendingPayment && pendingPayment.confirmationUrl
-	)
-	const pendingPaymentLabel = hasPendingPayment
-		? getPendingPaymentLabel(pendingPayment)
+	const activePendingPayment = pendingPayment?.confirmationUrl
+		? pendingPayment
+		: null
+	const hasPendingPayment = Boolean(activePendingPayment)
+	const pendingPaymentLabel = activePendingPayment
+		? getPendingPaymentLabel(
+				activePendingPayment,
+				content,
+				planLabel,
+				billingPeriodLabel
+			)
 		: null
 	const currentPlanLabel = currentPlan ? planLabel[currentPlan] : null
 	const isPendingDowngradeBlocked = Boolean(
 		hasPendingPayment &&
 		isActive &&
 		currentPlan &&
-		pendingPayment?.plan &&
-		PLAN_PRIORITY[currentPlan] > PLAN_PRIORITY[pendingPayment.plan]
+		activePendingPayment?.plan &&
+		PLAN_PRIORITY[currentPlan] > PLAN_PRIORITY[activePendingPayment.plan]
 	)
 	const isActionsDisabled =
 		!paymentEnabled ||
@@ -186,12 +217,12 @@ const Pricing = ({
 	return (
 		<section className={styles.page} aria-labelledby="pricing-page-title">
 			<h1 id="pricing-page-title" className={styles.title}>
-				Оплата
+				{content.title}
 			</h1>
 
 			{!paymentEnabled && (
 				<div className={styles.paymentDisabledNotice}>
-					Оплата временно недоступна. Попробуйте позже.
+					{content.paymentDisabledNotice}
 				</div>
 			)}
 
@@ -217,11 +248,12 @@ const Pricing = ({
 			) : subscription ? (
 				<div className={styles.currentPlan}>
 					<span>
-						Текущий тариф: <strong>{planLabel[subscription.plan]}</strong>
+						{content.currentPlanText}{' '}
+						<strong>{planLabel[subscription.plan]}</strong>
 					</span>
 					{subscription.expiresAt && (
 						<span>
-							до{' '}
+							{content.currentPlanUntilText}{' '}
 							{new Date(subscription.expiresAt).toLocaleDateString(
 								'ru-RU'
 							)}
@@ -232,7 +264,9 @@ const Pricing = ({
 							isActive ? styles.statusActive : styles.statusExpired
 						}
 					>
-						{isActive ? 'Активен' : 'Истек'}
+						{isActive
+							? content.activeStatusText
+							: content.expiredStatusText}
 					</span>
 				</div>
 			) : null}
@@ -268,22 +302,28 @@ const Pricing = ({
 					<div className={styles.pendingCopy}>
 						<p className={styles.pendingTitle}>
 							{isPendingDowngradeBlocked
-								? 'Этот платёж больше недоступен'
-								: 'У вас есть незавершённый платёж'}
+								? content.pendingPaymentUnavailableTitle
+								: content.pendingPaymentTitle}
 						</p>
 						<p className={styles.pendingText}>
 							{isPendingDowngradeBlocked ? (
 								<>
-									У вас активен тариф <strong>{currentPlanLabel}</strong>.
-									Оплата более низкого тарифа{' '}
-									<strong>{pendingPaymentLabel}</strong> недоступна до
-									окончания текущей подписки. Можно отменить эту попытку.
+									{renderTemplate(content.pendingPaymentUnavailableText, {
+										currentPlan: (
+											<strong key="currentPlan">{currentPlanLabel}</strong>
+										),
+										payment: (
+											<strong key="payment">{pendingPaymentLabel}</strong>
+										)
+									})}
 								</>
 							) : (
 								<>
-									Можно вернуться к оплате{' '}
-									<strong>{pendingPaymentLabel}</strong> или отменить
-									текущую попытку и создать новый платёж.
+									{renderTemplate(content.pendingPaymentText, {
+										payment: (
+											<strong key="payment">{pendingPaymentLabel}</strong>
+										)
+									})}
 								</>
 							)}
 						</p>
@@ -291,10 +331,10 @@ const Pricing = ({
 					<div className={styles.pendingActions}>
 						{!isPendingDowngradeBlocked && (
 							<a
-								href={pendingPayment.confirmationUrl ?? undefined}
+								href={activePendingPayment?.confirmationUrl ?? undefined}
 								className={styles.pendingResumeBtn}
 							>
-								Вернуться к оплате
+								{content.pendingPaymentResumeButtonText}
 							</a>
 						)}
 						<button
@@ -304,8 +344,8 @@ const Pricing = ({
 							disabled={cancelPendingMutation.isPending}
 						>
 							{cancelPendingMutation.isPending
-								? 'Отменяем...'
-								: 'Отменить платёж'}
+								? content.pendingPaymentCancelLoadingText
+								: content.pendingPaymentCancelButtonText}
 						</button>
 					</div>
 				</div>
@@ -313,28 +353,32 @@ const Pricing = ({
 
 			{/* Period toggle */}
 			<fieldset className={styles.periodGroup}>
-				<legend className="srOnly">Период оплаты</legend>
+				<legend className="srOnly">{content.periodLegendText}</legend>
 				<div className={styles.periodToggle}>
 					<button
 						type="button"
 						className={`${styles.periodBtn} ${!isYearly ? styles.periodActive : ''}`}
 						onClick={() => setPeriod('MONTHLY')}
 					>
-						Ежемесячно
+						{content.monthlyToggleText}
 					</button>
 					<button
 						type="button"
 						className={`${styles.periodBtn} ${isYearly ? styles.periodActive : ''}`}
 						onClick={() => setPeriod('YEARLY')}
 					>
-						За год
-						<span className={styles.discount}>−60%</span>
+						{content.yearlyToggleText}
+						{content.discountText && (
+							<span className={styles.discount}>
+								{content.discountText}
+							</span>
+						)}
 					</button>
 				</div>
 			</fieldset>
 
 			<div className={styles.plans}>
-				{PLANS.map(plan => {
+				{paidPlans.map(plan => {
 					const planPrices = tariffPriceMap[plan.key]
 					const price = isYearly
 						? Math.round(planPrices.YEARLY / 12)
@@ -366,12 +410,16 @@ const Pricing = ({
 
 							<div className={styles.priceBlock}>
 								<span className={styles.price}>{formatRub(price)} ₽</span>
-								<span className={styles.pricePer}>/мес</span>
+								<span className={styles.pricePer}>
+									{content.pricePerMonthText}
+								</span>
 							</div>
 
 							{isYearly && (
 								<p className={styles.yearlyNote}>
-									{formatRub(planPrices.YEARLY)} ₽ / год
+									{formatText(content.yearlyTotalText, {
+										amount: formatRub(planPrices.YEARLY)
+									})}
 								</p>
 							)}
 
@@ -398,16 +446,19 @@ const Pricing = ({
 								}
 							>
 								{isDowngradeBlocked
-									? 'Недоступно'
+									? content.unavailableButtonText
 									: isCurrentPlan
-										? 'Продлить'
-										: 'Оплатить'}
+										? content.renewButtonText
+										: content.payButtonText}
 							</button>
 
 							{isDowngradeBlocked && currentPlanLabel && (
 								<p className={styles.planRestriction}>
-									Понижение недоступно, пока активен{' '}
-									<strong>{currentPlanLabel}</strong>
+									{renderTemplate(content.downgradeRestrictionText, {
+										currentPlan: (
+											<strong key="currentPlan">{currentPlanLabel}</strong>
+										)
+									})}
 								</p>
 							)}
 						</article>
@@ -415,24 +466,16 @@ const Pricing = ({
 				})}
 			</div>
 
-			<p className={styles.note}>
-				После оплаты подписка активируется автоматически. Оплата через
-				ЮKassa.
-			</p>
-
-			{hasPendingPayment && (
-				<p className={styles.notePending}>
-					Пока есть незавершённый платёж, создание нового платежа
-					недоступно.
-				</p>
+			{content.paymentNote && (
+				<p className={styles.note}>{content.paymentNote}</p>
 			)}
 
-			{isActive && currentPlan !== 'TRIAL' && (
-				<p className={styles.noteCarryover}>
-					Оплачивать подписку можно сколько угодно раз — срок суммируется.
-					При продлении текущего тарифа и переходе на более высокий
-					оставшиеся дни переносятся на новый период.
-				</p>
+			{hasPendingPayment && content.pendingPaymentNote && (
+				<p className={styles.notePending}>{content.pendingPaymentNote}</p>
+			)}
+
+			{isActive && currentPlan !== 'TRIAL' && content.carryoverNote && (
+				<p className={styles.noteCarryover}>{content.carryoverNote}</p>
 			)}
 		</section>
 	)
