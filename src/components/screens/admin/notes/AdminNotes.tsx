@@ -5,7 +5,10 @@ import ConfirmDialog from '@/components/ui/confirm-dialog/ConfirmDialog'
 import Heading from '@/components/ui/heading/Heading'
 import Pagination from '@/components/ui/pagination/Pagination'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
-import notesService, { Note } from '@/services/notes/notes.service'
+import notesService, {
+	IAdminNoteFilters,
+	Note
+} from '@/services/notes/notes.service'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import {
 	useMutation,
@@ -13,9 +16,40 @@ import {
 	useQueryClient
 } from '@tanstack/react-query'
 import { NextPage } from 'next'
-import { KeyboardEvent, useEffect, useState } from 'react'
+import { FormEvent, KeyboardEvent, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import styles from './AdminNotes.module.scss'
+
+type NoteStatusFilter = IAdminNoteFilters['status'] | 'ALL'
+
+interface NoteFilterDraft {
+	status: NoteStatusFilter
+	createdFrom: string
+	createdTo: string
+}
+
+const DEFAULT_NOTE_FILTERS: NoteFilterDraft = {
+	status: 'ALL',
+	createdFrom: '',
+	createdTo: ''
+}
+
+const STATUS_FILTER_OPTIONS: Array<{
+	value: NoteStatusFilter
+	label: string
+}> = [
+	{ value: 'ALL', label: 'Все задачи' },
+	{ value: 'PENDING', label: 'В работе' },
+	{ value: 'DONE', label: 'Выполнено' }
+]
+
+const normalizeNoteFilters = (
+	draft: NoteFilterDraft
+): IAdminNoteFilters => ({
+	status: draft.status === 'ALL' ? undefined : draft.status,
+	createdFrom: draft.createdFrom || undefined,
+	createdTo: draft.createdTo || undefined
+})
 
 const AdminNotes: NextPage = () => {
 	const auth = useAuthStore(state => state.auth)
@@ -23,11 +57,13 @@ const AdminNotes: NextPage = () => {
 	const [inputText, setInputText] = useState('')
 	const [deleteTarget, setDeleteTarget] = useState<Note | null>(null)
 	const [currentPage, setCurrentPage] = useState(1)
+	const [filterDraft, setFilterDraft] = useState(DEFAULT_NOTE_FILTERS)
+	const [filters, setFilters] = useState<IAdminNoteFilters>({})
 	const itemQuantity = 10
 
 	const { data, isLoading } = useQuery({
-		queryKey: ['notes', currentPage, itemQuantity],
-		queryFn: () => notesService.getAll(currentPage, itemQuantity),
+		queryKey: ['notes', currentPage, itemQuantity, filters],
+		queryFn: () => notesService.getAll(currentPage, itemQuantity, filters),
 		enabled: auth
 	})
 
@@ -75,6 +111,20 @@ const AdminNotes: NextPage = () => {
 		const text = inputText.trim()
 		if (!text) return
 		createMutation.mutate(text)
+	}
+
+	const applyFilters = (event: FormEvent<HTMLFormElement>) => {
+		event.preventDefault()
+		setFilters(normalizeNoteFilters(filterDraft))
+		setCurrentPage(1)
+		toast.success('Фильтры бэклога применены')
+	}
+
+	const resetFilters = () => {
+		setFilterDraft(DEFAULT_NOTE_FILTERS)
+		setFilters({})
+		setCurrentPage(1)
+		toast.success('Фильтры бэклога сброшены')
 	}
 
 	const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -152,6 +202,69 @@ const AdminNotes: NextPage = () => {
 						Добавить
 					</button>
 				</div>
+				<form className={styles.filters} onSubmit={applyFilters}>
+					<div className={styles.filterGrid}>
+						<label className={styles.filterField}>
+							<span className={styles.filterLabel}>Статус</span>
+							<select
+								className={styles.filterInput}
+								value={filterDraft.status}
+								onChange={event =>
+									setFilterDraft(prev => ({
+										...prev,
+										status: event.target.value as NoteStatusFilter
+									}))
+								}
+							>
+								{STATUS_FILTER_OPTIONS.map(option => (
+									<option key={option.value} value={option.value}>
+										{option.label}
+									</option>
+								))}
+							</select>
+						</label>
+						<label className={styles.filterField}>
+							<span className={styles.filterLabel}>Создано с</span>
+							<input
+								className={styles.filterInput}
+								type="date"
+								value={filterDraft.createdFrom}
+								onChange={event =>
+									setFilterDraft(prev => ({
+										...prev,
+										createdFrom: event.target.value
+									}))
+								}
+							/>
+						</label>
+						<label className={styles.filterField}>
+							<span className={styles.filterLabel}>Создано по</span>
+							<input
+								className={styles.filterInput}
+								type="date"
+								value={filterDraft.createdTo}
+								onChange={event =>
+									setFilterDraft(prev => ({
+										...prev,
+										createdTo: event.target.value
+									}))
+								}
+							/>
+						</label>
+					</div>
+					<div className={styles.filterActions}>
+						<button type="submit" className={styles.filterApply}>
+							Применить
+						</button>
+						<button
+							type="button"
+							className={styles.filterReset}
+							onClick={resetFilters}
+						>
+							Сбросить
+						</button>
+					</div>
+				</form>
 
 				{isLoading ? (
 					<div className={styles.skeletonList}>

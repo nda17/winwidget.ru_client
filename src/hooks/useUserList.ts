@@ -1,5 +1,7 @@
 import { useDebounce } from '@/hooks/useDebounce'
-import UserService from '@/services/user/user.service'
+import UserService, {
+	IAdminUserListFilters
+} from '@/services/user/user.service'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import {
 	useMutation,
@@ -10,15 +12,20 @@ import axios from 'axios'
 import { ChangeEvent, MouseEvent, useState } from 'react'
 import toast from 'react-hot-toast'
 
-const useUserList = (page: number, limit: number) => {
+const useUserList = (
+	page: number,
+	limit: number,
+	filters?: IAdminUserListFilters
+) => {
 	const auth = useAuthStore(state => state.auth)
 	const [searchTerm, setSearchTerm] = useState('')
 	const queryClient = useQueryClient()
 	const debouncedSearch = useDebounce(searchTerm, 500)
 
 	const { data, isLoading } = useQuery({
-		queryKey: ['get-user-list', debouncedSearch, page, limit],
-		queryFn: () => UserService.fetchUserList(debouncedSearch, page, limit),
+		queryKey: ['get-user-list', debouncedSearch, page, limit, filters],
+		queryFn: () =>
+			UserService.fetchUserList(debouncedSearch, page, limit, filters),
 		select: ({ data }) => data,
 		enabled: auth
 	})

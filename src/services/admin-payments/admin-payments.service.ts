@@ -31,6 +31,18 @@ export interface IAdminPaymentsResponse {
 	totalPages: number
 }
 
+export type AdminPaymentNullablePlanFilter = Plan | 'NONE'
+export type AdminPaymentNullablePeriodFilter = BillingPeriod | 'NONE'
+
+export interface IAdminPaymentFilters {
+	status?: AdminPaymentStatus
+	plan?: AdminPaymentNullablePlanFilter
+	billingPeriod?: AdminPaymentNullablePeriodFilter
+	createdFrom?: string
+	createdTo?: string
+	search?: string
+}
+
 export interface IAdminCheckPaymentResult {
 	payment: IAdminPayment
 	providerStatus: string
@@ -42,12 +54,12 @@ const adminPaymentsService = {
 	async getPayments(
 		page: number,
 		limit: number,
-		status?: AdminPaymentStatus
+		filters?: IAdminPaymentFilters
 	): Promise<IAdminPaymentsResponse> {
 		const { data } = await axiosInterceptorsRequest.get(
 			'/payments/admin/list',
 			{
-				params: { page, limit, status }
+				params: { page, limit, ...filters }
 			}
 		)
 		return data

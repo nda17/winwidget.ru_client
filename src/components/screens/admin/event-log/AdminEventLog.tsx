@@ -9,6 +9,7 @@ import { ADMIN_PAGES } from '@/config/pages/admin.config'
 import adminEventLogService, {
 	AdminEventLogAction,
 	AdminEventLogSection,
+	IAdminEventLogFilters,
 	IAdminEventLogItem
 } from '@/services/admin-event-log/admin-event-log.service'
 import { useAuthStore } from '@/store/auth-store/auth-store'
@@ -16,7 +17,8 @@ import { useQuery } from '@tanstack/react-query'
 import clsx from 'clsx'
 import { NextPage } from 'next'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import styles from './AdminEventLog.module.scss'
 
 const SECTION_LABELS: Record<AdminEventLogSection, string> = {
@@ -44,6 +46,57 @@ const ACTION_LABELS: Record<AdminEventLogAction, string> = {
 	BACKLOG_TASK_UPDATE: 'Обновление задачи',
 	BACKLOG_TASK_DELETE: 'Удаление задачи'
 }
+
+type EventLogSectionFilter = AdminEventLogSection | 'ALL'
+type EventLogActionFilter = AdminEventLogAction | 'ALL'
+
+interface EventLogFilterDraft {
+	section: EventLogSectionFilter
+	action: EventLogActionFilter
+	adminId: string
+	createdFrom: string
+	createdTo: string
+}
+
+const DEFAULT_EVENT_LOG_FILTERS: EventLogFilterDraft = {
+	section: 'ALL',
+	action: 'ALL',
+	adminId: '',
+	createdFrom: '',
+	createdTo: ''
+}
+
+const SECTION_FILTER_OPTIONS: Array<{
+	value: EventLogSectionFilter
+	label: string
+}> = [
+	{ value: 'ALL', label: 'Все разделы' },
+	...Object.entries(SECTION_LABELS).map(([value, label]) => ({
+		value: value as AdminEventLogSection,
+		label
+	}))
+]
+
+const ACTION_FILTER_OPTIONS: Array<{
+	value: EventLogActionFilter
+	label: string
+}> = [
+	{ value: 'ALL', label: 'Все действия' },
+	...Object.entries(ACTION_LABELS).map(([value, label]) => ({
+		value: value as AdminEventLogAction,
+		label
+	}))
+]
+
+const normalizeEventLogFilters = (
+	draft: EventLogFilterDraft
+): IAdminEventLogFilters => ({
+	section: draft.section === 'ALL' ? undefined : draft.section,
+	action: draft.action === 'ALL' ? undefined : draft.action,
+	adminId: draft.adminId.trim() || undefined,
+	createdFrom: draft.createdFrom || undefined,
+	createdTo: draft.createdTo || undefined
+})
 
 const formatDateTime = (value: string) =>
 	new Intl.DateTimeFormat('ru-RU', {
@@ -136,12 +189,23 @@ const AdminEventLog: NextPage<AdminEventLogProps> = ({ userId }) => {
 	const auth = useAuthStore(state => state.auth)
 	const userIdFilter = userId?.trim() || undefined
 	const [currentPage, setCurrentPage] = useState(1)
+	const [filterDraft, setFilterDraft] = useState(DEFAULT_EVENT_LOG_FILTERS)
+	const [filters, setFilters] = useState<IAdminEventLogFilters>({})
 	const itemQuantity = 20
 
 	const { data, isLoading, isFetching } = useQuery({
-		queryKey: ['admin-event-log', currentPage, itemQuantity, userIdFilter],
+		queryKey: [
+			'admin-event-log',
+			currentPage,
+			itemQuantity,
+			userIdFilter,
+			filters
+		],
 		queryFn: () =>
-			adminEventLogService.getAll(currentPage, itemQuantity, userIdFilter),
+			adminEventLogService.getAll(currentPage, itemQuantity, {
+				...filters,
+				userId: userIdFilter
+			}),
 		enabled: auth
 	})
 
@@ -169,6 +233,20 @@ const AdminEventLog: NextPage<AdminEventLogProps> = ({ userId }) => {
 	const renderTarget = (item: IAdminEventLogItem) =>
 		renderUserFilterLink(formatTarget(item), item.targetUserId)
 
+	const applyFilters = (event: FormEvent<HTMLFormElement>) => {
+		event.preventDefault()
+		setFilters(normalizeEventLogFilters(filterDraft))
+		setCurrentPage(1)
+		toast.success('Фильтры журнала применены')
+	}
+
+	const resetFilters = () => {
+		setFilterDraft(DEFAULT_EVENT_LOG_FILTERS)
+		setFilters({})
+		setCurrentPage(1)
+		toast.success('Фильтры журнала сброшены')
+	}
+
 	return (
 		<section className={styles.wrapper}>
 			<Heading text="Панель администратора" />
@@ -195,6 +273,103 @@ const AdminEventLog: NextPage<AdminEventLogProps> = ({ userId }) => {
 					</Link>
 				</div>
 			)}
+
+			<form className={styles.filters} onSubmit={applyFilters}>
+				<div className={styles.filterGrid}>
+					<label className={styles.filterField}>
+						<span className={styles.filterLabel}>Раздел</span>
+						<select
+							className={styles.filterInput}
+							value={filterDraft.section}
+							onChange={event =>
+								setFilterDraft(prev => ({
+									...prev,
+									section: event.target.value as EventLogSectionFilter
+								}))
+							}
+						>
+							{SECTION_FILTER_OPTIONS.map(option => (
+								<option key={option.value} value={option.value}>
+									{option.label}
+								</option>
+							))}
+						</select>
+					</label>
+					<label className={styles.filterField}>
+						<span className={styles.filterLabel}>Действие</span>
+						<select
+							className={styles.filterInput}
+							value={filterDraft.action}
+							onChange={event =>
+								setFilterDraft(prev => ({
+									...prev,
+									action: event.target.value as EventLogActionFilter
+								}))
+							}
+						>
+							{ACTION_FILTER_OPTIONS.map(option => (
+								<option key={option.value} value={option.value}>
+									{option.label}
+								</option>
+							))}
+						</select>
+					</label>
+					<label className={styles.filterField}>
+						<span className={styles.filterLabel}>ID админа</span>
+						<input
+							className={styles.filterInput}
+							value={filterDraft.adminId}
+							onChange={event =>
+								setFilterDraft(prev => ({
+									...prev,
+									adminId: event.target.value
+								}))
+							}
+							placeholder="ID администратора"
+						/>
+					</label>
+					<label className={styles.filterField}>
+						<span className={styles.filterLabel}>Дата с</span>
+						<input
+							className={styles.filterInput}
+							type="date"
+							value={filterDraft.createdFrom}
+							onChange={event =>
+								setFilterDraft(prev => ({
+									...prev,
+									createdFrom: event.target.value
+								}))
+							}
+						/>
+					</label>
+					<label className={styles.filterField}>
+						<span className={styles.filterLabel}>Дата по</span>
+						<input
+							className={styles.filterInput}
+							type="date"
+							value={filterDraft.createdTo}
+							onChange={event =>
+								setFilterDraft(prev => ({
+									...prev,
+									createdTo: event.target.value
+								}))
+							}
+						/>
+					</label>
+				</div>
+				<div className={styles.filterActions}>
+					<button type="submit" className={styles.filterApply}>
+						Применить
+					</button>
+					<button
+						type="button"
+						className={styles.filterReset}
+						onClick={resetFilters}
+					>
+						Сбросить
+					</button>
+				</div>
+			</form>
 
 			{isLoading ? (
 				<div className={styles.card}>

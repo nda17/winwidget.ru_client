@@ -55,6 +55,23 @@ export interface IAdminSubscriptionHistoryResponse {
 	totalPages: number
 }
 
+export type AdminSubscriptionPeriodFilter = BillingPeriod | 'NONE'
+
+export interface IAdminSubscriptionFilters {
+	plan?: Plan
+	status?: Subscription['status']
+	billingPeriod?: AdminSubscriptionPeriodFilter
+	expiresFrom?: string
+	expiresTo?: string
+}
+
+export interface IAdminSubscriptionHistoryFilters {
+	audience?: AdminBonusAudience
+	adminId?: string
+	createdFrom?: string
+	createdTo?: string
+}
+
 export interface IAdminActivateInput {
 	userId: string
 	plan: Plan
@@ -143,12 +160,13 @@ const subscriptionService = {
 
 	async adminGetAll(
 		page: number,
-		limit: number
+		limit: number,
+		filters?: IAdminSubscriptionFilters
 	): Promise<IAdminSubscriptionsResponse> {
 		const { data } = await axiosInterceptorsRequest.get(
 			'/subscriptions/admin/list',
 			{
-				params: { page, limit }
+				params: { page, limit, ...filters }
 			}
 		)
 		return data
@@ -156,12 +174,13 @@ const subscriptionService = {
 
 	async adminGetHistory(
 		page: number,
-		limit: number
+		limit: number,
+		filters?: IAdminSubscriptionHistoryFilters
 	): Promise<IAdminSubscriptionHistoryResponse> {
 		const { data } = await axiosInterceptorsRequest.get(
 			'/subscriptions/admin/history',
 			{
-				params: { page, limit }
+				params: { page, limit, ...filters }
 			}
 		)
 		return data

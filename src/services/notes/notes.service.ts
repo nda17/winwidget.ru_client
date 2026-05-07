@@ -17,10 +17,22 @@ export interface NotesResponse {
 	doneTotal: number
 }
 
+export type AdminNoteStatusFilter = 'DONE' | 'PENDING'
+
+export interface IAdminNoteFilters {
+	status?: AdminNoteStatusFilter
+	createdFrom?: string
+	createdTo?: string
+}
+
 const notesService = {
-	async getAll(page: number, limit: number): Promise<NotesResponse> {
+	async getAll(
+		page: number,
+		limit: number,
+		filters?: IAdminNoteFilters
+	): Promise<NotesResponse> {
 		const { data } = await axiosInterceptorsRequest.get('/notes', {
-			params: { page, limit }
+			params: { page, limit, ...filters }
 		})
 		return data
 	},

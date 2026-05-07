@@ -10,14 +10,63 @@ import Pagination from '@/components/ui/pagination/Pagination'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import { ADMIN_PAGES } from '@/config/pages/admin.config'
 import useUserList from '@/hooks/useUserList'
+import { IAdminUserListFilters } from '@/services/user/user.service'
 import { UserLoginMethod } from '@/shared/types/user.types'
 import clsx from 'clsx'
 import { NextPage } from 'next'
-import { useEffect, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
+
+type UserRoleFilter = IAdminUserListFilters['role'] | 'ALL'
+type UserSubscriptionFilter = IAdminUserListFilters['subscription'] | 'ALL'
+
+interface UserFilterDraft {
+	role: UserRoleFilter
+	subscription: UserSubscriptionFilter
+	registeredFrom: string
+	registeredTo: string
+}
+
+const DEFAULT_USER_FILTERS: UserFilterDraft = {
+	role: 'ALL',
+	subscription: 'ALL',
+	registeredFrom: '',
+	registeredTo: ''
+}
+
+const ROLE_FILTER_OPTIONS: Array<{
+	value: UserRoleFilter
+	label: string
+}> = [
+	{ value: 'ALL', label: 'Все роли' },
+	{ value: 'USER', label: 'USER' },
+	{ value: 'ADMIN', label: 'ADMIN' }
+]
+
+const SUBSCRIPTION_FILTER_OPTIONS: Array<{
+	value: UserSubscriptionFilter
+	label: string
+}> = [
+	{ value: 'ALL', label: 'Все пользователи' },
+	{ value: 'HAS', label: 'Есть подписка' },
+	{ value: 'NONE', label: 'Нет подписки' }
+]
+
+const normalizeUserFilters = (
+	draft: UserFilterDraft
+): IAdminUserListFilters => ({
+	role: draft.role === 'ALL' ? undefined : draft.role,
+	subscription:
+		draft.subscription === 'ALL' ? undefined : draft.subscription,
+	registeredFrom: draft.registeredFrom || undefined,
+	registeredTo: draft.registeredTo || undefined
+})
 
 const UserList: NextPage = () => {
 	const [currentPage, setCurrentPage] = useState(1)
 	const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
+	const [filterDraft, setFilterDraft] = useState(DEFAULT_USER_FILTERS)
+	const [filters, setFilters] = useState<IAdminUserListFilters>({})
 	const itemQuantity = 10
 	const {
 		data,
@@ -26,7 +75,7 @@ const UserList: NextPage = () => {
 		handleClear,
 		searchTerm,
 		deleteAsync
-	} = useUserList(currentPage, itemQuantity)
+	} = useUserList(currentPage, itemQuantity, filters)
 
 	//Pagination settings
 	const activePage = data?.items ?? []
@@ -37,7 +86,7 @@ const UserList: NextPage = () => {
 
 	useEffect(() => {
 		setCurrentPage(1)
-	}, [searchTerm])
+	}, [filters, searchTerm])
 
 	useEffect(() => {
 		if (currentPage > totalPages) {
@@ -97,6 +146,20 @@ const UserList: NextPage = () => {
 		setDeleteTargetId(null)
 	}
 
+	const applyFilters = (event: FormEvent<HTMLFormElement>) => {
+		event.preventDefault()
+		setFilters(normalizeUserFilters(filterDraft))
+		setCurrentPage(1)
+		toast.success('Фильтры пользователей применены')
+	}
+
+	const resetFilters = () => {
+		setFilterDraft(DEFAULT_USER_FILTERS)
+		setFilters({})
+		setCurrentPage(1)
+		toast.success('Фильтры пользователей сброшены')
+	}
+
 	return (
 		<section className={styles.wrapper}>
 			{deleteTargetId && (
@@ -123,6 +186,89 @@ const UserList: NextPage = () => {
 				risk="high"
 				riskText="Удаление пользователя необратимо и может сломать доступ, подписки или связанные данные. Перед удалением проверяй ID и контакт."
 			/>
+			<form className={styles.filters} onSubmit={applyFilters}>
+				<div className={styles['filter-grid']}>
+					<label className={styles['filter-field']}>
+						<span className={styles['filter-label']}>Роль</span>
+						<select
+							className={styles['filter-input']}
+							value={filterDraft.role}
+							onChange={event =>
+								setFilterDraft(prev => ({
+									...prev,
+									role: event.target.value as UserRoleFilter
+								}))
+							}
+						>
+							{ROLE_FILTER_OPTIONS.map(option => (
+								<option key={option.value} value={option.value}>
+									{option.label}
+								</option>
+							))}
+						</select>
+					</label>
+					<label className={styles['filter-field']}>
+						<span className={styles['filter-label']}>Подписка</span>
+						<select
+							className={styles['filter-input']}
+							value={filterDraft.subscription}
+							onChange={event =>
+								setFilterDraft(prev => ({
+									...prev,
+									subscription: event.target
+										.value as UserSubscriptionFilter
+								}))
+							}
+						>
+							{SUBSCRIPTION_FILTER_OPTIONS.map(option => (
+								<option key={option.value} value={option.value}>
+									{option.label}
+								</option>
+							))}
+						</select>
+					</label>
+					<label className={styles['filter-field']}>
+						<span className={styles['filter-label']}>Регистрация с</span>
+						<input
+							className={styles['filter-input']}
+							type="date"
+							value={filterDraft.registeredFrom}
+							onChange={event =>
+								setFilterDraft(prev => ({
+									...prev,
+									registeredFrom: event.target.value
+								}))
+							}
+						/>
+					</label>
+					<label className={styles['filter-field']}>
+						<span className={styles['filter-label']}>Регистрация по</span>
+						<input
+							className={styles['filter-input']}
+							type="date"
+							value={filterDraft.registeredTo}
+							onChange={event =>
+								setFilterDraft(prev => ({
+									...prev,
+									registeredTo: event.target.value
+								}))
+							}
+						/>
+					</label>
+				</div>
+				<div className={styles['filter-actions']}>
+					<button type="submit" className={styles['filter-apply']}>
+						Применить
+					</button>
+					<button
+						type="button"
+						className={styles['filter-reset']}
+						onClick={resetFilters}
+					>
+						Сбросить
+					</button>
+				</div>
+			</form>
 			{isLoading ? (
 				<div className={styles['list-section']}>
 					<div className={styles['list-meta']}>

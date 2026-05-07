@@ -1,7 +1,9 @@
 import subscriptionService, {
 	AdminBonusAudience,
 	IAdminActivateInput,
-	IAdminExtendDaysInput
+	IAdminExtendDaysInput,
+	IAdminSubscriptionFilters,
+	IAdminSubscriptionHistoryFilters
 } from '@/services/subscription/subscription.service'
 import { BillingPeriod, Plan } from '@/services/widget/widget.types'
 import userService from '@/services/user/user.service'
@@ -29,6 +31,8 @@ interface UseAdminSubscriptionsParams {
 	subscriptionLimit: number
 	historyPage: number
 	historyLimit: number
+	subscriptionFilters?: IAdminSubscriptionFilters
+	historyFilters?: IAdminSubscriptionHistoryFilters
 	onSubscriptionSuccess?: () => void
 	onBonusSuccess?: () => void
 }
@@ -38,6 +42,8 @@ const useAdminSubscriptions = ({
 	subscriptionLimit,
 	historyPage,
 	historyLimit,
+	subscriptionFilters,
+	historyFilters,
 	onSubscriptionSuccess,
 	onBonusSuccess
 }: UseAdminSubscriptionsParams) => {
@@ -46,17 +52,35 @@ const useAdminSubscriptions = ({
 	const auth = useAuthStore(state => state.auth)
 
 	const { data: subscriptions, isLoading } = useQuery({
-		queryKey: ['admin-subscriptions', subscriptionPage, subscriptionLimit],
+		queryKey: [
+			'admin-subscriptions',
+			subscriptionPage,
+			subscriptionLimit,
+			subscriptionFilters
+		],
 		queryFn: () =>
-			subscriptionService.adminGetAll(subscriptionPage, subscriptionLimit),
+			subscriptionService.adminGetAll(
+				subscriptionPage,
+				subscriptionLimit,
+				subscriptionFilters
+			),
 		enabled: auth
 	})
 
 	const { data: subscriptionHistory, isLoading: isHistoryLoading } =
 		useQuery({
-			queryKey: ['admin-subscription-history', historyPage, historyLimit],
+			queryKey: [
+				'admin-subscription-history',
+				historyPage,
+				historyLimit,
+				historyFilters
+			],
 			queryFn: () =>
-				subscriptionService.adminGetHistory(historyPage, historyLimit),
+				subscriptionService.adminGetHistory(
+					historyPage,
+					historyLimit,
+					historyFilters
+				),
 			enabled: auth
 		})
 

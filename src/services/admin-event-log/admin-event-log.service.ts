@@ -52,16 +52,25 @@ export interface IAdminEventLogResponse {
 	totalPages: number
 }
 
+export interface IAdminEventLogFilters {
+	userId?: string
+	adminId?: string
+	section?: AdminEventLogSection
+	action?: AdminEventLogAction
+	createdFrom?: string
+	createdTo?: string
+}
+
 const adminEventLogService = {
 	async getAll(
 		page: number,
 		limit: number,
-		userId?: string
+		filters?: IAdminEventLogFilters
 	): Promise<IAdminEventLogResponse> {
 		const { data } = await axiosInterceptorsRequest.get(
 			'/admin-event-log',
 			{
-				params: { page, limit, userId: userId || undefined }
+				params: { page, limit, ...filters }
 			}
 		)
 		return data

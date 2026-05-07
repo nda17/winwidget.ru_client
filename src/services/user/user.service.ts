@@ -27,6 +27,15 @@ export interface IUserListResponse {
 	totalPages: number
 }
 
+export type AdminUserSubscriptionFilter = 'HAS' | 'NONE'
+
+export interface IAdminUserListFilters {
+	role?: 'USER' | 'ADMIN'
+	registeredFrom?: string
+	registeredTo?: string
+	subscription?: AdminUserSubscriptionFilter
+}
+
 export type AdminUserOverviewPaymentStatus =
 	| 'PENDING'
 	| 'SUCCEEDED'
@@ -131,14 +140,20 @@ class UserService {
 		return axiosInterceptorsRequest.get<IUser>(`${this._BASE_URL}/profile`)
 	}
 
-	async fetchUserList(searchTerm?: string, page = 1, limit = 20) {
+	async fetchUserList(
+		searchTerm?: string,
+		page = 1,
+		limit = 20,
+		filters?: IAdminUserListFilters
+	) {
 		return axiosInterceptorsRequest.get<IUserListResponse>(
 			`${this._BASE_URL}/user-list`,
 			{
 				params: {
 					searchTerm: searchTerm || undefined,
 					page,
-					limit
+					limit,
+					...filters
 				}
 			}
 		)

@@ -8,14 +8,18 @@ import Pagination from '@/components/ui/pagination/Pagination'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import useAdminSubscriptions from '@/hooks/useAdminSubscriptions'
 import type {
+	AdminSubscriptionPeriodFilter,
 	AdminBonusAudience,
+	IAdminSubscriptionFilters,
+	IAdminSubscriptionHistoryFilters,
 	IAdminSubscriptionHistory,
 	SubscriptionHistoryAction
 } from '@/services/subscription/subscription.service'
 import { BillingPeriod, Plan } from '@/services/widget/widget.types'
 import clsx from 'clsx'
 import { NextPage } from 'next'
-import { useEffect, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import styles from './AdminSubscriptions.module.scss'
 
 const PLAN_LABELS: Record<Plan, string> = {
@@ -72,6 +76,110 @@ const BONUS_DAYS_HINTS: Record<AdminBonusAudience, string> = {
 	ALL: 'Активным пользователям дни добавятся к текущей дате окончания, остальным срок начнётся с сегодняшнего дня'
 }
 
+type SubscriptionPlanFilter = Plan | 'ALL'
+type SubscriptionStatusFilter =
+	| NonNullable<IAdminSubscriptionFilters['status']>
+	| 'ALL'
+type SubscriptionPeriodFilter = AdminSubscriptionPeriodFilter | 'ALL'
+type SubscriptionHistoryAudienceFilter = AdminBonusAudience | 'ANY'
+
+interface SubscriptionFilterDraft {
+	plan: SubscriptionPlanFilter
+	status: SubscriptionStatusFilter
+	billingPeriod: SubscriptionPeriodFilter
+	expiresFrom: string
+	expiresTo: string
+}
+
+interface SubscriptionHistoryFilterDraft {
+	audience: SubscriptionHistoryAudienceFilter
+	adminId: string
+	createdFrom: string
+	createdTo: string
+}
+
+const DEFAULT_SUBSCRIPTION_FILTERS: SubscriptionFilterDraft = {
+	plan: 'ALL',
+	status: 'ALL',
+	billingPeriod: 'ALL',
+	expiresFrom: '',
+	expiresTo: ''
+}
+
+const DEFAULT_HISTORY_FILTERS: SubscriptionHistoryFilterDraft = {
+	audience: 'ANY',
+	adminId: '',
+	createdFrom: '',
+	createdTo: ''
+}
+
+const PLAN_FILTER_OPTIONS: Array<{
+	value: SubscriptionPlanFilter
+	label: string
+}> = [
+	{ value: 'ALL', label: 'Все тарифы' },
+	{ value: 'TRIAL', label: PLAN_LABELS.TRIAL },
+	{ value: 'EASY', label: PLAN_LABELS.EASY },
+	{ value: 'HARD', label: PLAN_LABELS.HARD }
+]
+
+const STATUS_FILTER_OPTIONS: Array<{
+	value: SubscriptionStatusFilter
+	label: string
+}> = [
+	{ value: 'ALL', label: 'Все статусы' },
+	{ value: 'ACTIVE', label: STATUS_LABELS.ACTIVE },
+	{ value: 'EXPIRED', label: STATUS_LABELS.EXPIRED },
+	{ value: 'CANCELLED', label: STATUS_LABELS.CANCELLED }
+]
+
+const PERIOD_FILTER_OPTIONS: Array<{
+	value: SubscriptionPeriodFilter
+	label: string
+}> = [
+	{ value: 'ALL', label: 'Все периоды' },
+	{ value: 'MONTHLY', label: PERIOD_LABELS.MONTHLY },
+	{ value: 'YEARLY', label: PERIOD_LABELS.YEARLY },
+	{ value: 'NONE', label: 'Без периода' }
+]
+
+const HISTORY_AUDIENCE_FILTER_OPTIONS: Array<{
+	value: SubscriptionHistoryAudienceFilter
+	label: string
+}> = [
+	{ value: 'ANY', label: 'Все аудитории' },
+	{ value: 'SINGLE', label: BONUS_AUDIENCE_LABELS.SINGLE },
+	{
+		value: 'ACTIVE_SUBSCRIPTION',
+		label: BONUS_AUDIENCE_LABELS.ACTIVE_SUBSCRIPTION
+	},
+	{
+		value: 'INACTIVE_SUBSCRIPTION',
+		label: BONUS_AUDIENCE_LABELS.INACTIVE_SUBSCRIPTION
+	},
+	{ value: 'ALL', label: BONUS_AUDIENCE_LABELS.ALL }
+]
+
+const normalizeSubscriptionFilters = (
+	draft: SubscriptionFilterDraft
+): IAdminSubscriptionFilters => ({
+	plan: draft.plan === 'ALL' ? undefined : draft.plan,
+	status: draft.status === 'ALL' ? undefined : draft.status,
+	billingPeriod:
+		draft.billingPeriod === 'ALL' ? undefined : draft.billingPeriod,
+	expiresFrom: draft.expiresFrom || undefined,
+	expiresTo: draft.expiresTo || undefined
+})
+
+const normalizeHistoryFilters = (
+	draft: SubscriptionHistoryFilterDraft
+): IAdminSubscriptionHistoryFilters => ({
+	audience: draft.audience === 'ANY' ? undefined : draft.audience,
+	adminId: draft.adminId.trim() || undefined,
+	createdFrom: draft.createdFrom || undefined,
+	createdTo: draft.createdTo || undefined
+})
+
 const dateFormatter = new Intl.DateTimeFormat('ru-RU')
 
 const dateTimeFormatter = new Intl.DateTimeFormat('ru-RU', {
@@ -112,6 +220,16 @@ const formatHistoryTargetDetails = (item: IAdminSubscriptionHistory) =>
 const AdminSubscriptions: NextPage = () => {
 	const [currentPage, setCurrentPage] = useState(1)
 	const [historyCurrentPage, setHistoryCurrentPage] = useState(1)
+	const [subscriptionFilterDraft, setSubscriptionFilterDraft] = useState(
+		DEFAULT_SUBSCRIPTION_FILTERS
+	)
+	const [historyFilterDraft, setHistoryFilterDraft] = useState(
+		DEFAULT_HISTORY_FILTERS
+	)
+	const [subscriptionFilters, setSubscriptionFilters] =
+		useState<IAdminSubscriptionFilters>({})
+	const [historyFilters, setHistoryFilters] =
+		useState<IAdminSubscriptionHistoryFilters>({})
 	const itemQuantity = 15
 	const historyItemQuantity = 10
 	const {
@@ -159,6 +277,8 @@ const AdminSubscriptions: NextPage = () => {
 		subscriptionLimit: itemQuantity,
 		historyPage: historyCurrentPage,
 		historyLimit: historyItemQuantity,
+		subscriptionFilters,
+		historyFilters,
 		onSubscriptionSuccess: () => setCurrentPage(1),
 		onBonusSuccess: () => setHistoryCurrentPage(1)
 	})
@@ -197,6 +317,36 @@ const AdminSubscriptions: NextPage = () => {
 		setHistoryCurrentPage(p => Math.min(historyTotalPages, p + 1))
 	const changeActiveHistoryPage = (page: number) =>
 		setHistoryCurrentPage(page)
+
+	const applySubscriptionFilters = (event: FormEvent<HTMLFormElement>) => {
+		event.preventDefault()
+		setSubscriptionFilters(
+			normalizeSubscriptionFilters(subscriptionFilterDraft)
+		)
+		setCurrentPage(1)
+		toast.success('Фильтры подписок применены')
+	}
+
+	const resetSubscriptionFilters = () => {
+		setSubscriptionFilterDraft(DEFAULT_SUBSCRIPTION_FILTERS)
+		setSubscriptionFilters({})
+		setCurrentPage(1)
+		toast.success('Фильтры подписок сброшены')
+	}
+
+	const applyHistoryFilters = (event: FormEvent<HTMLFormElement>) => {
+		event.preventDefault()
+		setHistoryFilters(normalizeHistoryFilters(historyFilterDraft))
+		setHistoryCurrentPage(1)
+		toast.success('Фильтры истории применены')
+	}
+
+	const resetHistoryFilters = () => {
+		setHistoryFilterDraft(DEFAULT_HISTORY_FILTERS)
+		setHistoryFilters({})
+		setHistoryCurrentPage(1)
+		toast.success('Фильтры истории сброшены')
+	}
 
 	return (
 		<section className={styles.wrapper}>
@@ -529,6 +679,84 @@ const AdminSubscriptions: NextPage = () => {
 				risk="low"
 				riskText="Блок только показывает уже выполненные начисления и не меняет данные подписок."
 			/>
+			<form className={styles.filters} onSubmit={applyHistoryFilters}>
+				<div className={styles['filter-grid']}>
+					<label className={styles['filter-field']}>
+						<span className={styles['filter-label']}>Аудитория</span>
+						<select
+							className={styles['filter-input']}
+							value={historyFilterDraft.audience}
+							onChange={event =>
+								setHistoryFilterDraft(prev => ({
+									...prev,
+									audience: event.target
+										.value as SubscriptionHistoryAudienceFilter
+								}))
+							}
+						>
+							{HISTORY_AUDIENCE_FILTER_OPTIONS.map(option => (
+								<option key={option.value} value={option.value}>
+									{option.label}
+								</option>
+							))}
+						</select>
+					</label>
+					<label className={styles['filter-field']}>
+						<span className={styles['filter-label']}>ID админа</span>
+						<input
+							className={styles['filter-input']}
+							value={historyFilterDraft.adminId}
+							onChange={event =>
+								setHistoryFilterDraft(prev => ({
+									...prev,
+									adminId: event.target.value
+								}))
+							}
+							placeholder="ID администратора"
+						/>
+					</label>
+					<label className={styles['filter-field']}>
+						<span className={styles['filter-label']}>Начислено с</span>
+						<input
+							className={styles['filter-input']}
+							type="date"
+							value={historyFilterDraft.createdFrom}
+							onChange={event =>
+								setHistoryFilterDraft(prev => ({
+									...prev,
+									createdFrom: event.target.value
+								}))
+							}
+						/>
+					</label>
+					<label className={styles['filter-field']}>
+						<span className={styles['filter-label']}>Начислено по</span>
+						<input
+							className={styles['filter-input']}
+							type="date"
+							value={historyFilterDraft.createdTo}
+							onChange={event =>
+								setHistoryFilterDraft(prev => ({
+									...prev,
+									createdTo: event.target.value
+								}))
+							}
+						/>
+					</label>
+				</div>
+				<div className={styles['filter-actions']}>
+					<button type="submit" className={styles['filter-apply']}>
+						Применить
+					</button>
+					<button
+						type="button"
+						className={styles['filter-reset']}
+						onClick={resetHistoryFilters}
+					>
+						Сбросить
+					</button>
+				</div>
+			</form>
 			{isHistoryLoading ? (
 				<div className={styles.card}>
 					{Array.from({ length: 3 }).map((_, i) => (
@@ -687,6 +915,108 @@ const AdminSubscriptions: NextPage = () => {
 				risk="high"
 				riskText="Кнопка отмены снимает активный доступ пользователя к тарифу. Используй её только когда отмена точно нужна."
 			/>
+			<form className={styles.filters} onSubmit={applySubscriptionFilters}>
+				<div className={styles['filter-grid']}>
+					<label className={styles['filter-field']}>
+						<span className={styles['filter-label']}>Тариф</span>
+						<select
+							className={styles['filter-input']}
+							value={subscriptionFilterDraft.plan}
+							onChange={event =>
+								setSubscriptionFilterDraft(prev => ({
+									...prev,
+									plan: event.target.value as SubscriptionPlanFilter
+								}))
+							}
+						>
+							{PLAN_FILTER_OPTIONS.map(option => (
+								<option key={option.value} value={option.value}>
+									{option.label}
+								</option>
+							))}
+						</select>
+					</label>
+					<label className={styles['filter-field']}>
+						<span className={styles['filter-label']}>Статус</span>
+						<select
+							className={styles['filter-input']}
+							value={subscriptionFilterDraft.status}
+							onChange={event =>
+								setSubscriptionFilterDraft(prev => ({
+									...prev,
+									status: event.target.value as SubscriptionStatusFilter
+								}))
+							}
+						>
+							{STATUS_FILTER_OPTIONS.map(option => (
+								<option key={option.value} value={option.value}>
+									{option.label}
+								</option>
+							))}
+						</select>
+					</label>
+					<label className={styles['filter-field']}>
+						<span className={styles['filter-label']}>Период</span>
+						<select
+							className={styles['filter-input']}
+							value={subscriptionFilterDraft.billingPeriod}
+							onChange={event =>
+								setSubscriptionFilterDraft(prev => ({
+									...prev,
+									billingPeriod: event.target
+										.value as SubscriptionPeriodFilter
+								}))
+							}
+						>
+							{PERIOD_FILTER_OPTIONS.map(option => (
+								<option key={option.value} value={option.value}>
+									{option.label}
+								</option>
+							))}
+						</select>
+					</label>
+					<label className={styles['filter-field']}>
+						<span className={styles['filter-label']}>Окончание с</span>
+						<input
+							className={styles['filter-input']}
+							type="date"
+							value={subscriptionFilterDraft.expiresFrom}
+							onChange={event =>
+								setSubscriptionFilterDraft(prev => ({
+									...prev,
+									expiresFrom: event.target.value
+								}))
+							}
+						/>
+					</label>
+					<label className={styles['filter-field']}>
+						<span className={styles['filter-label']}>Окончание по</span>
+						<input
+							className={styles['filter-input']}
+							type="date"
+							value={subscriptionFilterDraft.expiresTo}
+							onChange={event =>
+								setSubscriptionFilterDraft(prev => ({
+									...prev,
+									expiresTo: event.target.value
+								}))
+							}
+						/>
+					</label>
+				</div>
+				<div className={styles['filter-actions']}>
+					<button type="submit" className={styles['filter-apply']}>
+						Применить
+					</button>
+					<button
+						type="button"
+						className={styles['filter-reset']}
+						onClick={resetSubscriptionFilters}
+					>
+						Сбросить
+					</button>
+				</div>
+			</form>
 			{isLoading ? (
 				<div className={styles.card}>
 					{Array.from({ length: 5 }).map((_, i) => (

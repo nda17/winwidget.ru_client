@@ -7,7 +7,10 @@ import Heading from '@/components/ui/heading/Heading'
 import Pagination from '@/components/ui/pagination/Pagination'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import adminPaymentsService, {
+	AdminPaymentNullablePeriodFilter,
+	AdminPaymentNullablePlanFilter,
 	AdminPaymentStatus,
+	IAdminPaymentFilters,
 	IAdminCheckPaymentResult,
 	IAdminPayment
 } from '@/services/admin-payments/admin-payments.service'
@@ -42,6 +45,17 @@ const STATUS_LABELS: Record<AdminPaymentStatus, string> = {
 }
 
 type StatusFilter = AdminPaymentStatus | 'ALL'
+type PaymentPlanFilter = AdminPaymentNullablePlanFilter | 'ALL'
+type PaymentPeriodFilter = AdminPaymentNullablePeriodFilter | 'ALL'
+
+interface PaymentFilterDraft {
+	status: StatusFilter
+	plan: PaymentPlanFilter
+	billingPeriod: PaymentPeriodFilter
+	createdFrom: string
+	createdTo: string
+	search: string
+}
 
 const STATUS_FILTER_OPTIONS: Array<{
 	value: StatusFilter
@@ -52,6 +66,51 @@ const STATUS_FILTER_OPTIONS: Array<{
 	{ value: 'SUCCEEDED', label: STATUS_LABELS.SUCCEEDED },
 	{ value: 'CANCELLED', label: STATUS_LABELS.CANCELLED }
 ]
+
+const PLAN_FILTER_OPTIONS: Array<{
+	value: PaymentPlanFilter
+	label: string
+}> = [
+	{ value: 'ALL', label: 'Все тарифы' },
+	{ value: 'TRIAL', label: PLAN_LABELS.TRIAL },
+	{ value: 'EASY', label: PLAN_LABELS.EASY },
+	{ value: 'HARD', label: PLAN_LABELS.HARD },
+	{ value: 'NONE', label: 'Без тарифа' }
+]
+
+const PERIOD_FILTER_OPTIONS: Array<{
+	value: PaymentPeriodFilter
+	label: string
+}> = [
+	{ value: 'ALL', label: 'Все периоды' },
+	{ value: 'MONTHLY', label: PERIOD_LABELS.MONTHLY },
+	{ value: 'YEARLY', label: PERIOD_LABELS.YEARLY },
+	{ value: 'NONE', label: 'Без периода' }
+]
+
+const DEFAULT_PAYMENT_FILTERS: PaymentFilterDraft = {
+	status: 'ALL',
+	plan: 'ALL',
+	billingPeriod: 'ALL',
+	createdFrom: '',
+	createdTo: '',
+	search: ''
+}
+
+const normalizePaymentFilters = (
+	draft: PaymentFilterDraft
+): IAdminPaymentFilters => ({
+	status: draft.status === 'ALL' ? undefined : draft.status,
+	plan: draft.plan === 'ALL' ? undefined : draft.plan,
+	billingPeriod:
+		draft.billingPeriod === 'ALL' ? undefined : draft.billingPeriod,
+	createdFrom: draft.createdFrom || undefined,
+	createdTo: draft.createdTo || undefined,
+	search: draft.search.trim() || undefined
+})
+
+const hasActiveFilters = (filters: IAdminPaymentFilters) =>
+	Object.values(filters).some(Boolean)
 
 const formatDate = (value: string) =>
 	new Intl.DateTimeFormat('ru-RU', {
@@ -85,30 +144,25 @@ const AdminPayments: NextPage = () => {
 	const queryClient = useQueryClient()
 	const auth = useAuthStore(state => state.auth)
 	const [currentPage, setCurrentPage] = useState(1)
-	const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
+	const [filterDraft, setFilterDraft] = useState(DEFAULT_PAYMENT_FILTERS)
+	const [filters, setFilters] = useState<IAdminPaymentFilters>({})
 	const [paymentId, setPaymentId] = useState('')
 	const [lastResult, setLastResult] =
 		useState<IAdminCheckPaymentResult | null>(null)
 	const itemQuantity = 20
-	const selectedStatus = statusFilter === 'ALL' ? undefined : statusFilter
 
 	const { data, isLoading, isFetching } = useQuery({
-		queryKey: ['admin-payments', currentPage, itemQuantity, statusFilter],
+		queryKey: ['admin-payments', currentPage, itemQuantity, filters],
 		queryFn: () =>
-			adminPaymentsService.getPayments(
-				currentPage,
-				itemQuantity,
-				selectedStatus
-			),
+			adminPaymentsService.getPayments(currentPage, itemQuantity, filters),
 		enabled: auth
 	})
 
 	const totalPages = data?.totalPages ?? 1
 	const listPage = Array.from({ length: totalPages }, (_, i) => i + 1)
-	const emptyListText =
-		statusFilter === 'ALL'
-			? 'Платежей пока нет'
-			: 'Платежей с таким статусом нет'
+	const emptyListText = !hasActiveFilters(filters)
+		? 'Платежей пока нет'
+		: 'Платежей с такими фильтрами нет'
 
 	useEffect(() => {
 		if (currentPage > totalPages) {
@@ -152,18 +206,18 @@ const AdminPayments: NextPage = () => {
 		runCheck(paymentId)
 	}
 
-	const handleStatusFilterChange = (nextStatus: StatusFilter) => {
-		if (nextStatus === statusFilter) {
-			return
-		}
-
-		setStatusFilter(nextStatus)
+	const applyFilters = (event: FormEvent<HTMLFormElement>) => {
+		event.preventDefault()
+		setFilters(normalizePaymentFilters(filterDraft))
 		setCurrentPage(1)
-		toast.success(
-			nextStatus === 'ALL'
-				? 'Показаны все платежи'
-				: `Фильтр: ${STATUS_LABELS[nextStatus]}`
-		)
+		toast.success('Фильтры платежей применены')
+	}
+
+	const resetFilters = () => {
+		setFilterDraft(DEFAULT_PAYMENT_FILTERS)
+		setFilters({})
+		setCurrentPage(1)
+		toast.success('Фильтры платежей сброшены')
 	}
 
 	const prevPage = () => setCurrentPage(p => Math.max(1, p - 1))
@@ -282,6 +336,121 @@ const AdminPayments: NextPage = () => {
 				risk="medium"
 				riskText="Кнопка проверки в строке синхронизирует выбранный платёж с YooKassa и может изменить доступ пользователя к тарифу."
 			/>
+			<form className={styles.filters} onSubmit={applyFilters}>
+				<div className={styles['filter-grid']}>
+					<label className={styles['filter-field']}>
+						<span className={styles['filter-label']}>Статус</span>
+						<select
+							className={styles['filter-input']}
+							value={filterDraft.status}
+							onChange={event =>
+								setFilterDraft(prev => ({
+									...prev,
+									status: event.target.value as StatusFilter
+								}))
+							}
+						>
+							{STATUS_FILTER_OPTIONS.map(option => (
+								<option key={option.value} value={option.value}>
+									{option.label}
+								</option>
+							))}
+						</select>
+					</label>
+					<label className={styles['filter-field']}>
+						<span className={styles['filter-label']}>Тариф</span>
+						<select
+							className={styles['filter-input']}
+							value={filterDraft.plan}
+							onChange={event =>
+								setFilterDraft(prev => ({
+									...prev,
+									plan: event.target.value as PaymentPlanFilter
+								}))
+							}
+						>
+							{PLAN_FILTER_OPTIONS.map(option => (
+								<option key={option.value} value={option.value}>
+									{option.label}
+								</option>
+							))}
+						</select>
+					</label>
+					<label className={styles['filter-field']}>
+						<span className={styles['filter-label']}>Период</span>
+						<select
+							className={styles['filter-input']}
+							value={filterDraft.billingPeriod}
+							onChange={event =>
+								setFilterDraft(prev => ({
+									...prev,
+									billingPeriod: event.target.value as PaymentPeriodFilter
+								}))
+							}
+						>
+							{PERIOD_FILTER_OPTIONS.map(option => (
+								<option key={option.value} value={option.value}>
+									{option.label}
+								</option>
+							))}
+						</select>
+					</label>
+					<label className={styles['filter-field']}>
+						<span className={styles['filter-label']}>Поиск</span>
+						<input
+							className={styles['filter-input']}
+							value={filterDraft.search}
+							onChange={event =>
+								setFilterDraft(prev => ({
+									...prev,
+									search: event.target.value
+								}))
+							}
+							placeholder="ID, YooKassa, контакт"
+						/>
+					</label>
+					<label className={styles['filter-field']}>
+						<span className={styles['filter-label']}>Дата с</span>
+						<input
+							className={styles['filter-input']}
+							type="date"
+							value={filterDraft.createdFrom}
+							onChange={event =>
+								setFilterDraft(prev => ({
+									...prev,
+									createdFrom: event.target.value
+								}))
+							}
+						/>
+					</label>
+					<label className={styles['filter-field']}>
+						<span className={styles['filter-label']}>Дата по</span>
+						<input
+							className={styles['filter-input']}
+							type="date"
+							value={filterDraft.createdTo}
+							onChange={event =>
+								setFilterDraft(prev => ({
+									...prev,
+									createdTo: event.target.value
+								}))
+							}
+						/>
+					</label>
+				</div>
+				<div className={styles['filter-actions']}>
+					<button type="submit" className={styles['filter-apply']}>
+						Применить
+					</button>
+					<button
+						type="button"
+						className={styles['filter-reset']}
+						onClick={resetFilters}
+					>
+						Сбросить
+					</button>
+				</div>
+			</form>
 
 			{isLoading ? (
 				<div className={styles.card}>
@@ -303,26 +472,6 @@ const AdminPayments: NextPage = () => {
 							</p>
 						</div>
 						<div className={styles['list-controls']}>
-							<div
-								className={styles['status-filters']}
-								role="group"
-								aria-label="Фильтр по статусу платежа"
-							>
-								{STATUS_FILTER_OPTIONS.map(option => (
-									<button
-										key={option.value}
-										type="button"
-										className={clsx(
-											styles.filterBtn,
-											statusFilter === option.value &&
-												styles.filterBtnActive
-										)}
-										onClick={() => handleStatusFilterChange(option.value)}
-									>
-										{option.label}
-									</button>
-								))}
-							</div>
 							<p className={styles['meta-subtitle']}>
 								{isFetching
 									? 'Обновляем...'
