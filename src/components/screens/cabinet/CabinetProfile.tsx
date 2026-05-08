@@ -17,8 +17,9 @@ import {
 	validPhoneCode
 } from '@/shared/regex'
 import { useQueryClient } from '@tanstack/react-query'
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
+import toast from 'react-hot-toast'
 import styles from './Cabinet.module.scss'
 
 type EmailBindingForm = { email: string; code: string }
@@ -49,6 +50,12 @@ const CabinetProfile = () => {
 	const { user } = useUser()
 	const queryClient = useQueryClient()
 	const { onSubmit, isLoading: isSaving } = useProfileEdit()
+	const hasPaymentContact = Boolean(user?.email || user?.phone)
+	const hasTelegram = Boolean(user?.loginMethods?.includes('TELEGRAM'))
+	const shouldShowPaymentContactNotice = Boolean(
+		user && hasTelegram && !hasPaymentContact
+	)
+	const [telegramBindingUrl, setTelegramBindingUrl] = useState('')
 
 	const handleDeleteAvatar = async () => {
 		const currentAvatar = user?.avatarPath
@@ -80,10 +87,13 @@ const CabinetProfile = () => {
 		isVerifyingEmailCode,
 		isSendingPhoneCode,
 		isVerifyingPhoneCode,
+		telegramBindingRequested,
+		isStartingTelegramBinding,
 		requestEmailCode,
 		confirmEmailCode,
 		requestPhoneCode,
 		confirmPhoneCode,
+		requestTelegramBinding,
 		resetEmailBinding,
 		resetPhoneBinding
 	} = useProfileIdentityBinding()
@@ -183,6 +193,34 @@ const CabinetProfile = () => {
 		resetPhoneBinding()
 	}
 
+	const handleTelegramBindingStart = async () => {
+		let telegramWindow: Window | null = null
+
+		if (typeof window !== 'undefined') {
+			telegramWindow = window.open('about:blank', '_blank')
+		}
+
+		const data = await requestTelegramBinding()
+
+		if (!data) {
+			telegramWindow?.close()
+			return
+		}
+
+		setTelegramBindingUrl(data.botUrl)
+
+		if (telegramWindow) {
+			telegramWindow.location.href = data.botUrl
+		} else if (typeof window !== 'undefined') {
+			window.open(data.botUrl, '_blank', 'noopener,noreferrer')
+		}
+	}
+
+	const handleTelegramStatusCheck = async () => {
+		await queryClient.invalidateQueries({ queryKey: ['get-profile'] })
+		toast.success('Статус профиля обновлён')
+	}
+
 	const phoneRegistration = regPhone('phone', {
 		required: 'Введите номер телефона',
 		pattern: { value: validPhone, message: 'Проверьте правильность ввода' }
@@ -193,6 +231,17 @@ const CabinetProfile = () => {
 			{/* ── Identity binding ─────────────────────────────────── */}
 			<div className={styles.section}>
 				<p className={styles.sectionTitle}>Способы входа</p>
+				{shouldShowPaymentContactNotice && (
+					<div className={styles.paymentContactNotice}>
+						<p className={styles.paymentContactNoticeTitle}>
+							Для оплаты привяжите email или телефон
+						</p>
+						<p className={styles.paymentContactNoticeText}>
+							Telegram подходит для входа, но для создания платежа нужен
+							подтверждённый email или телефон в профиле.
+						</p>
+					</div>
+				)}
 				<div className={styles.identityGrid}>
 					{/* Email */}
 					<form
@@ -383,6 +432,75 @@ const CabinetProfile = () => {
 							</button>
 						)}
 					</form>
+
+					<div className={styles.identityCard}>
+						<p className={styles.identityTitle}>Telegram</p>
+						<p className={styles.identityDesc}>
+							{hasTelegram
+								? 'Telegram привязан. Можно входить через Auth_bot.'
+								: 'Привяжите Telegram, чтобы вход через Auth_bot открывал этот профиль.'}
+						</p>
+
+						{telegramBindingRequested && !hasTelegram && (
+							<p className={styles.hint}>
+								Откройте Auth_bot, нажмите Start и кнопку привязки. После
+								этого проверьте статус.
+							</p>
+						)}
+
+						<div className={styles.btnRow}>
+							{hasTelegram ? (
+								<button
+									type="button"
+									className={styles.btnOutline}
+									disabled
+								>
+									Привязан
+								</button>
+							) : (
+								<button
+									type="button"
+									className={styles.btn}
+									disabled={isStartingTelegramBinding}
+									onClick={handleTelegramBindingStart}
+								>
+									{isStartingTelegramBinding
+										? 'Открываем...'
+										: telegramBindingRequested
+											? 'Открыть Auth_bot ещё раз'
+											: 'Привязать Telegram'}
+								</button>
+							)}
+
+							{telegramBindingRequested && !hasTelegram && (
+								<button
+									type="button"
+									className={styles.btnOutline}
+									onClick={handleTelegramStatusCheck}
+								>
+									Проверить статус
+								</button>
+							)}
+						</div>
+
+						{telegramBindingUrl && !hasTelegram && (
+							<button
+								type="button"
+								className={styles.resetLink}
+								onClick={() => {
+									if (typeof window !== 'undefined') {
+										window.open(
+											telegramBindingUrl,
+											'_blank',
+											'noopener,noreferrer'
+										)
+									}
+								}}
+							>
+								Открыть ссылку вручную
+							</button>
+						)}
+					</div>
 				</div>
 			</div>
 

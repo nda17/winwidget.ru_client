@@ -19,6 +19,12 @@ export interface IProfileIdentityCodeInput {
 	code?: string
 }
 
+export interface IProfileTelegramBindingResponse {
+	requestId: string
+	botUrl: string
+	expiresAt: string
+}
+
 export interface IUserListResponse {
 	items: IUser[]
 	total: number
@@ -233,6 +239,15 @@ class UserService {
 				code: data.code
 			}
 		)
+	}
+
+	async startProfileTelegramBinding() {
+		const { data } =
+			await axiosInterceptorsRequest.post<IProfileTelegramBindingResponse>(
+				`${this._BASE_URL}/profile/bind/telegram/start`
+			)
+
+		return data
 	}
 }
 

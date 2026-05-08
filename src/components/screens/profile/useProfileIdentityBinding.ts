@@ -8,6 +8,8 @@ export const useProfileIdentityBinding = () => {
 	const queryClient = useQueryClient()
 	const [emailCodeRequested, setEmailCodeRequested] = useState(false)
 	const [phoneCodeRequested, setPhoneCodeRequested] = useState(false)
+	const [telegramBindingRequested, setTelegramBindingRequested] =
+		useState(false)
 
 	const {
 		mutateAsync: sendEmailCodeAsync,
@@ -89,6 +91,26 @@ export const useProfileIdentityBinding = () => {
 		}
 	})
 
+	const {
+		mutateAsync: startTelegramBindingAsync,
+		isPending: isStartingTelegramBinding
+	} = useMutation({
+		mutationKey: ['profile-start-telegram-binding'],
+		mutationFn: () => userService.startProfileTelegramBinding(),
+		onMutate: () => toast.loading('Готовим привязку Telegram...'),
+		onSuccess(_, __, toastId) {
+			setTelegramBindingRequested(true)
+			toast.success('Откройте Auth_bot и подтвердите привязку', {
+				id: toastId
+			})
+		},
+		onError(error, _, toastId) {
+			toast.error(`Привязка Telegram: ${errorCatch(error)}`, {
+				id: toastId
+			})
+		}
+	})
+
 	const requestEmailCode = async (email: string) => {
 		try {
 			await sendEmailCodeAsync(email)
@@ -131,22 +153,36 @@ export const useProfileIdentityBinding = () => {
 		}
 	}
 
+	const requestTelegramBinding = async () => {
+		try {
+			return await startTelegramBindingAsync()
+		} catch {
+			return null
+		}
+	}
+
 	return {
 		emailCodeRequested,
 		phoneCodeRequested,
+		telegramBindingRequested,
 		isSendingEmailCode,
 		isVerifyingEmailCode,
 		isSendingPhoneCode,
 		isVerifyingPhoneCode,
+		isStartingTelegramBinding,
 		requestEmailCode,
 		confirmEmailCode,
 		requestPhoneCode,
 		confirmPhoneCode,
+		requestTelegramBinding,
 		resetEmailBinding() {
 			setEmailCodeRequested(false)
 		},
 		resetPhoneBinding() {
 			setPhoneCodeRequested(false)
+		},
+		resetTelegramBinding() {
+			setTelegramBindingRequested(false)
 		}
 	}
 }

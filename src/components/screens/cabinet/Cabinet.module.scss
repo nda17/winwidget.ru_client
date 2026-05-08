@@ -85,6 +85,15 @@
 .sectionTitle {
 	@apply text-[0.8rem] font-semibold text-[#bbb] uppercase tracking-[0.06em] mb-4;
 }
+.paymentContactNotice {
+	@apply mb-4 rounded-xl border border-[#f5a623] bg-[#fff8f0] py-4 px-5;
+}
+.paymentContactNoticeTitle {
+	@apply m-0 mb-1 text-[0.95rem] font-bold text-[#b45309];
+}
+.paymentContactNoticeText {
+	@apply m-0 text-[0.85rem] leading-[1.55] text-[#92400e];
+}
 .field {
 	@apply flex flex-col gap-[6px] mb-4;
 }
