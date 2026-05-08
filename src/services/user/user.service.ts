@@ -25,6 +25,15 @@ export interface IProfileTelegramBindingResponse {
 	expiresAt: string
 }
 
+export interface IProfileTelegramNotificationsStatus {
+	connected: boolean
+	username: string | null
+	connectedAt: string | null
+	disabledAt: string | null
+	telegramBotTokenConfigured: boolean
+	telegramBotUsernameConfigured: boolean
+}
+
 export interface IUserListResponse {
 	items: IUser[]
 	total: number
@@ -245,6 +254,24 @@ class UserService {
 		const { data } =
 			await axiosInterceptorsRequest.post<IProfileTelegramBindingResponse>(
 				`${this._BASE_URL}/profile/bind/telegram/start`
+			)
+
+		return data
+	}
+
+	async fetchProfileTelegramNotifications() {
+		const { data } =
+			await axiosInterceptorsRequest.get<IProfileTelegramNotificationsStatus>(
+				`${this._BASE_URL}/profile/telegram-notifications`
+			)
+
+		return data
+	}
+
+	async startProfileTelegramNotifications() {
+		const { data } =
+			await axiosInterceptorsRequest.post<IProfileTelegramBindingResponse>(
+				`${this._BASE_URL}/profile/telegram-notifications/start`
 			)
 
 		return data

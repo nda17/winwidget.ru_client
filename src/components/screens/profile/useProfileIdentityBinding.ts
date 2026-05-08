@@ -10,6 +10,10 @@ export const useProfileIdentityBinding = () => {
 	const [phoneCodeRequested, setPhoneCodeRequested] = useState(false)
 	const [telegramBindingRequested, setTelegramBindingRequested] =
 		useState(false)
+	const [
+		telegramNotificationsBindingRequested,
+		setTelegramNotificationsBindingRequested
+	] = useState(false)
 
 	const {
 		mutateAsync: sendEmailCodeAsync,
@@ -111,6 +115,27 @@ export const useProfileIdentityBinding = () => {
 		}
 	})
 
+	const {
+		mutateAsync: startTelegramNotificationsAsync,
+		isPending: isStartingTelegramNotifications
+	} = useMutation({
+		mutationKey: ['profile-start-telegram-notifications'],
+		mutationFn: () => userService.startProfileTelegramNotifications(),
+		onMutate: () =>
+			toast.loading('Готовим подключение Telegram-уведомлений...'),
+		onSuccess(_, __, toastId) {
+			setTelegramNotificationsBindingRequested(true)
+			toast.success('Откройте Info_bot и нажмите Start', {
+				id: toastId
+			})
+		},
+		onError(error, _, toastId) {
+			toast.error(`Telegram-уведомления: ${errorCatch(error)}`, {
+				id: toastId
+			})
+		}
+	})
+
 	const requestEmailCode = async (email: string) => {
 		try {
 			await sendEmailCodeAsync(email)
@@ -161,20 +186,31 @@ export const useProfileIdentityBinding = () => {
 		}
 	}
 
+	const requestTelegramNotificationsBinding = async () => {
+		try {
+			return await startTelegramNotificationsAsync()
+		} catch {
+			return null
+		}
+	}
+
 	return {
 		emailCodeRequested,
 		phoneCodeRequested,
 		telegramBindingRequested,
+		telegramNotificationsBindingRequested,
 		isSendingEmailCode,
 		isVerifyingEmailCode,
 		isSendingPhoneCode,
 		isVerifyingPhoneCode,
 		isStartingTelegramBinding,
+		isStartingTelegramNotifications,
 		requestEmailCode,
 		confirmEmailCode,
 		requestPhoneCode,
 		confirmPhoneCode,
 		requestTelegramBinding,
+		requestTelegramNotificationsBinding,
 		resetEmailBinding() {
 			setEmailCodeRequested(false)
 		},
@@ -183,6 +219,9 @@ export const useProfileIdentityBinding = () => {
 		},
 		resetTelegramBinding() {
 			setTelegramBindingRequested(false)
+		},
+		resetTelegramNotificationsBinding() {
+			setTelegramNotificationsBindingRequested(false)
 		}
 	}
 }
