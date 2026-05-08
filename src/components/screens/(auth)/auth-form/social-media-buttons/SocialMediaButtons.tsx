@@ -5,7 +5,15 @@ import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 
-const SocialMediaButtons = () => {
+interface SocialMediaButtonsProps {
+	onTelegramAuthStart: () => void
+	isTelegramAuthLoading?: boolean
+}
+
+const SocialMediaButtons = ({
+	onTelegramAuthStart,
+	isTelegramAuthLoading = false
+}: SocialMediaButtonsProps) => {
 	const router = useRouter()
 	const { data: siteSettings } = useQuery({
 		queryKey: ['site-settings'],
@@ -21,34 +29,49 @@ const SocialMediaButtons = () => {
 
 	return (
 		<div className={styles.wrapper}>
-			{googleAuthEnabled && (
+			<div className={styles.buttonGroup}>
+				{googleAuthEnabled && (
+					<button
+						onClick={() => handleSocialAuth('/auth/google')}
+						className={styles.button}
+						type="button"
+					>
+						<AppIcon name="google" fill="currentColor" />
+						<span>Google</span>
+					</button>
+				)}
+				{yandexAuthEnabled && (
+					<button
+						onClick={() => handleSocialAuth('/auth/yandex')}
+						className={styles.button}
+						type="button"
+					>
+						<AppIcon name="yandex" fill="currentColor" />
+						<span>Яндекс</span>
+					</button>
+				)}
+			</div>
+			<div className={styles.buttonGroup}>
 				<button
-					onClick={() => handleSocialAuth('/auth/google')}
+					onClick={onTelegramAuthStart}
+					className={styles.button}
+					type="button"
+					disabled={isTelegramAuthLoading}
+				>
+					<AppIcon name="telegram" fill="currentColor" />
+					<span>
+						{isTelegramAuthLoading ? 'Открываем...' : 'Telegram'}
+					</span>
+				</button>
+				<button
+					onClick={() => handleSocialAuth('/auth/github')}
 					className={styles.button}
 					type="button"
 				>
-					<AppIcon name="google" fill="currentColor" />
-					<span>Google</span>
+					<AppIcon name="github" fill="currentColor" />
+					<span>GitHub</span>
 				</button>
-			)}
-			{yandexAuthEnabled && (
-				<button
-					onClick={() => handleSocialAuth('/auth/yandex')}
-					className={styles.button}
-					type="button"
-				>
-					<AppIcon name="yandex" fill="currentColor" />
-					<span>Яндекс</span>
-				</button>
-			)}
-			<button
-				onClick={() => handleSocialAuth('/auth/github')}
-				className={styles.button}
-				type="button"
-			>
-				<AppIcon name="github" fill="currentColor" />
-				<span>GitHub</span>
-			</button>
+			</div>
 		</div>
 	)
 }

@@ -33,9 +33,16 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin, authMessage }) => {
 		phoneInputRef,
 		phoneMask,
 		resendEmailCode,
+		startTelegramAuth,
+		verifyTelegramAuth,
+		telegramCode,
+		setTelegramCode,
+		isTelegramAuthLoading,
+		isTelegramCodeRequested,
 		authMessage: currentAuthMessage,
 		resetEmailCodeStep,
-		resetPhoneCodeStep
+		resetPhoneCodeStep,
+		resetTelegramCodeStep
 	} = useAuthForm(isLogin, authMessage)
 
 	return (
@@ -252,7 +259,44 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin, authMessage }) => {
 				<div className={styles['section-divider']}>
 					<span>или продолжить через</span>
 				</div>
-				<SocialMediaButtons />
+				<SocialMediaButtons
+					onTelegramAuthStart={startTelegramAuth}
+					isTelegramAuthLoading={isTelegramAuthLoading}
+				/>
+				{isTelegramCodeRequested && (
+					<div className={styles['telegram-auth-box']}>
+						<FieldSmsCode
+							name="telegramCode"
+							value={telegramCode}
+							onChange={event => setTelegramCode(event.target.value)}
+							placeholder="Код из Telegram:"
+							type="text"
+							disabled={isTelegramAuthLoading}
+						/>
+						<div className={styles['verification-hint']}>
+							В Auth_bot нажмите Start, затем кнопку получения кода.
+							Введите полученный код здесь.
+						</div>
+						<div className={styles['link-actions']}>
+							<button
+								type="button"
+								className={styles['link-button']}
+								onClick={verifyTelegramAuth}
+								disabled={isTelegramAuthLoading}
+							>
+								Подтвердить код
+							</button>
+							<button
+								type="button"
+								className={styles['link-button']}
+								onClick={resetTelegramCodeStep}
+								disabled={isTelegramAuthLoading}
+							>
+								Сбросить
+							</button>
+						</div>
+					</div>
+				)}
 			</div>
 
 			<AuthToggle isLogin={isLogin} />

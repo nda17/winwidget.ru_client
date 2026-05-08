@@ -118,7 +118,8 @@ const UserList: NextPage = () => {
 		PHONE: 'Телефон',
 		GOOGLE: 'Google',
 		GITHUB: 'GitHub',
-		YANDEX: 'Яндекс'
+		YANDEX: 'Яндекс',
+		TELEGRAM: 'Telegram'
 	}
 
 	const getLoginMethods = (user: (typeof activePage)[number]) => {

@@ -384,7 +384,8 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 		PHONE: 'Телефон',
 		GOOGLE: 'Google',
 		GITHUB: 'GitHub',
-		YANDEX: 'Яндекс'
+		YANDEX: 'Яндекс',
+		TELEGRAM: 'Telegram'
 	}
 
 	useEffect(() => {

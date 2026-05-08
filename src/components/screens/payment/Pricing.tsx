@@ -1,6 +1,8 @@
 'use client'
 
+import { useProfileIdentityBinding } from '@/components/screens/profile/useProfileIdentityBinding'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
+import useUser from '@/hooks/useUser'
 import subscriptionService, {
 	type IPendingPayment
 } from '@/services/subscription/subscription.service'
@@ -14,6 +16,7 @@ import {
 	type TariffPrice
 } from '@/services/tariff-prices/tariff-prices.types'
 import { BillingPeriod, Plan } from '@/services/widget/widget.types'
+import { validEmail, validPhoneCode } from '@/shared/regex'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { type ReactNode, useState } from 'react'
@@ -70,6 +73,17 @@ const PAYMENT_COPY = {
 		'Понижение недоступно, пока активен {currentPlan}',
 	paymentNote:
 		'После оплаты подписка активируется автоматически. Оплата через ЮKassa.',
+	contactRequiredTitle: 'Для оплаты подтвердите email',
+	contactRequiredText:
+		'Telegram не передаёт email или телефон. Для создания платежа ЮKassa нужен подтверждённый контакт в профиле.',
+	contactRequiredPendingText:
+		'После подтверждения email продолжим оплату тарифа {payment}.',
+	contactEmailPlaceholder: 'Email для оплаты',
+	contactEmailCodePlaceholder: 'Код из email',
+	contactEmailSendButtonText: 'Получить код',
+	contactEmailResendButtonText: 'Отправить повторно',
+	contactEmailVerifyButtonText: 'Подтвердить и оплатить',
+	contactEmailResetButtonText: 'Изменить email',
 	pendingPaymentNote:
 		'Пока есть незавершённый платёж, создание нового платежа недоступно.',
 	carryoverNote:
@@ -149,7 +163,22 @@ const Pricing = ({
 	tariffPrices = null
 }: PricingProps) => {
 	const auth = useAuthStore(state => state.auth)
+	const { user, isLoading: isUserLoading } = useUser()
 	const [period, setPeriod] = useState<BillingPeriod>('YEARLY')
+	const [paymentEmail, setPaymentEmail] = useState('')
+	const [paymentEmailCode, setPaymentEmailCode] = useState('')
+	const [pendingPaymentRequest, setPendingPaymentRequest] = useState<{
+		plan: PaidPlan
+		billingPeriod: BillingPeriod
+	} | null>(null)
+	const {
+		emailCodeRequested,
+		isSendingEmailCode,
+		isVerifyingEmailCode,
+		requestEmailCode,
+		confirmEmailCode,
+		resetEmailBinding
+	} = useProfileIdentityBinding()
 
 	const { data: actualTariffPrices = tariffPrices } = useQuery({
 		queryKey: ['tariff-prices'],
@@ -248,7 +277,65 @@ const Pricing = ({
 		!paymentEnabled ||
 		payMutation.isPending ||
 		cancelPendingMutation.isPending ||
-		pendingLoading
+		pendingLoading ||
+		isUserLoading
+	const hasPaymentContact = Boolean(user?.email || user?.phone)
+	const shouldShowPaymentContactPrompt = Boolean(
+		auth && user?.id && !hasPaymentContact
+	)
+
+	const handlePaymentClick = (
+		plan: PaidPlan,
+		billingPeriod: BillingPeriod
+	) => {
+		if (shouldShowPaymentContactPrompt) {
+			setPendingPaymentRequest({ plan, billingPeriod })
+			toast.error('Для оплаты сначала подтвердите email')
+			return
+		}
+
+		payMutation.mutate({ plan, billingPeriod })
+	}
+
+	const requestPaymentEmailCode = async () => {
+		const email = paymentEmail.trim()
+
+		if (!validEmail.test(email)) {
+			toast.error('Введите корректный email')
+			return
+		}
+
+		const sent = await requestEmailCode(email)
+		if (sent) setPaymentEmail(email)
+	}
+
+	const confirmPaymentEmailCode = async () => {
+		const email = paymentEmail.trim()
+		const code = paymentEmailCode.trim()
+
+		if (!validEmail.test(email)) {
+			toast.error('Введите корректный email')
+			return
+		}
+
+		if (!validPhoneCode.test(code)) {
+			toast.error('Введите корректный код из email')
+			return
+		}
+
+		const confirmed = await confirmEmailCode({ email, code })
+		if (!confirmed) return
+
+		const nextPayment = pendingPaymentRequest
+		setPaymentEmail('')
+		setPaymentEmailCode('')
+		setPendingPaymentRequest(null)
+		resetEmailBinding()
+
+		if (nextPayment) {
+			payMutation.mutate(nextPayment)
+		}
+	}
 
 	return (
 		<section className={styles.page} aria-labelledby="pricing-page-title">
@@ -394,6 +481,89 @@ const Pricing = ({
 				</div>
 			) : null}
 
+			{shouldShowPaymentContactPrompt && (
+				<div className={styles.contactRequiredNotice}>
+					<div className={styles.contactRequiredCopy}>
+						<p className={styles.contactRequiredTitle}>
+							{PAYMENT_COPY.contactRequiredTitle}
+						</p>
+						<p className={styles.contactRequiredText}>
+							{PAYMENT_COPY.contactRequiredText}
+						</p>
+						{pendingPaymentRequest && (
+							<p className={styles.contactRequiredText}>
+								{renderTemplate(PAYMENT_COPY.contactRequiredPendingText, {
+									payment: (
+										<strong key="payment">
+											{`${planLabel[pendingPaymentRequest.plan]} на ${BILLING_PERIOD_LABEL[pendingPaymentRequest.billingPeriod]}`}
+										</strong>
+									)
+								})}
+							</p>
+						)}
+					</div>
+					<div className={styles.contactRequiredForm}>
+						<input
+							className={styles.contactInput}
+							value={paymentEmail}
+							onChange={event => setPaymentEmail(event.target.value)}
+							placeholder={PAYMENT_COPY.contactEmailPlaceholder}
+							type="email"
+							disabled={emailCodeRequested || isSendingEmailCode}
+						/>
+						<button
+							type="button"
+							className={styles.contactBtn}
+							onClick={requestPaymentEmailCode}
+							disabled={isSendingEmailCode || isVerifyingEmailCode}
+						>
+							{isSendingEmailCode
+								? 'Отправляем...'
+								: emailCodeRequested
+									? PAYMENT_COPY.contactEmailResendButtonText
+									: PAYMENT_COPY.contactEmailSendButtonText}
+						</button>
+					</div>
+					{emailCodeRequested && (
+						<div className={styles.contactRequiredForm}>
+							<input
+								className={styles.contactInput}
+								value={paymentEmailCode}
+								onChange={event =>
+									setPaymentEmailCode(
+										event.target.value.replace(/\D/g, '').slice(0, 6)
+									)
+								}
+								placeholder={PAYMENT_COPY.contactEmailCodePlaceholder}
+								inputMode="numeric"
+								disabled={isVerifyingEmailCode}
+							/>
+							<button
+								type="button"
+								className={styles.contactBtn}
+								onClick={confirmPaymentEmailCode}
+								disabled={isSendingEmailCode || isVerifyingEmailCode}
+							>
+								{isVerifyingEmailCode
+									? 'Проверяем...'
+									: PAYMENT_COPY.contactEmailVerifyButtonText}
+							</button>
+							<button
+								type="button"
+								className={styles.contactSecondaryBtn}
+								onClick={() => {
+									resetEmailBinding()
+									setPaymentEmailCode('')
+								}}
+								disabled={isSendingEmailCode || isVerifyingEmailCode}
+							>
+								{PAYMENT_COPY.contactEmailResetButtonText}
+							</button>
+						</div>
+					)}
+				</div>
+			)}
+
 			{/* Period toggle */}
 			<fieldset className={styles.periodGroup}>
 				<legend className="srOnly">{PAYMENT_COPY.periodLegendText}</legend>
@@ -484,12 +654,7 @@ const Pricing = ({
 									hasPendingPayment ||
 									isDowngradeBlocked
 								}
-								onClick={() =>
-									payMutation.mutate({
-										plan: plan.key,
-										billingPeriod: period
-									})
-								}
+								onClick={() => handlePaymentClick(plan.key, period)}
 							>
 								{isDowngradeBlocked
 									? PAYMENT_COPY.unavailableButtonText

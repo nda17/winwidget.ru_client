@@ -100,11 +100,11 @@ const AdminTelegramBot: NextPage = () => {
 			<AdminNavigation />
 
 			<AdminSectionHeading
-				text="Telegram-бот"
+				text="Info_bot"
 				title="Ежедневная сводка"
 				description="Настраивает отправку ежедневной операционной сводки в Telegram-группу администраторов."
 				risk="medium"
-				riskText="Если указать неверный ID группы, сводка не уйдёт. Бот должен быть добавлен в группу, а токен должен быть настроен на сервере."
+				riskText="Если указать неверный ID группы, сводка не уйдёт. Info_bot должен быть добавлен в группу, а токен должен быть настроен на сервере."
 			/>
 
 			<div className={styles.card}>
@@ -122,7 +122,7 @@ const AdminTelegramBot: NextPage = () => {
 					<>
 						<div className={styles.statusGrid}>
 							<div className={styles.statusItem}>
-								<p className={styles.statusLabel}>Токен бота</p>
+								<p className={styles.statusLabel}>Токен Info_bot</p>
 								<span
 									className={`${styles.badge} ${
 										settings.telegramBotTokenConfigured
@@ -149,8 +149,8 @@ const AdminTelegramBot: NextPage = () => {
 							<div>
 								<p className={styles.label}>Отправка сводки</p>
 								<p className={styles.hint}>
-									Сводка уходит каждый день в 01:50 МСК и явно показывает
-									период отчёта
+									Info_bot отправляет сводку каждый день в 01:50 МСК и явно
+									показывает период отчёта
 								</p>
 							</div>
 							<button
@@ -181,7 +181,7 @@ const AdminTelegramBot: NextPage = () => {
 								maxLength={100}
 							/>
 							<p className={styles.hint}>
-								Укажите chat_id группы, куда бот будет отправлять
+								Укажите chat_id группы, куда Info_bot будет отправлять
 								ежедневную сводку
 							</p>
 						</div>

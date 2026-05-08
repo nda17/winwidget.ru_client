@@ -28,10 +28,21 @@ interface IEmailCodePayload {
 	code?: string
 }
 
+interface ITelegramAuthVerifyPayload {
+	requestId: string
+	code: string
+}
+
 export interface IEmailRegistrationResponse {
 	email: string
 	expiresAt: string
 	resendAvailableAt: string
+}
+
+export interface ITelegramAuthStartResponse {
+	requestId: string
+	botUrl: string
+	expiresAt: string
 }
 
 export enum EnumTokens {
@@ -207,6 +218,42 @@ class AuthService {
 			{
 				phone: data.phone,
 				password: data.password
+			},
+			{
+				headers: {
+					recaptcha: token
+				}
+			}
+		)
+
+		if (response.data.accessToken) {
+			saveTokenStorage(response.data.accessToken)
+		}
+
+		return response
+	}
+
+	async startTelegramAuth(token?: string | null) {
+		return axiosClassicRequest.post<ITelegramAuthStartResponse>(
+			'/auth/telegram/start',
+			{},
+			{
+				headers: {
+					recaptcha: token
+				}
+			}
+		)
+	}
+
+	async verifyTelegramAuth(
+		data: ITelegramAuthVerifyPayload,
+		token?: string | null
+	) {
+		const response = await axiosClassicRequest.post<IAuthResponse>(
+			'/auth/telegram/verify',
+			{
+				requestId: data.requestId,
+				code: data.code
 			},
 			{
 				headers: {

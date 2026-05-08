@@ -6,6 +6,7 @@ export type UserLoginMethod =
 	| 'GOOGLE'
 	| 'GITHUB'
 	| 'YANDEX'
+	| 'TELEGRAM'
 
 export type UserStatus = 'ACTIVE' | 'DEACTIVATED'
 
