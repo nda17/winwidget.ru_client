@@ -7,5 +7,7 @@ export interface SiteSettings {
 	recaptchaEnabled: boolean
 	googleAuthEnabled: boolean
 	yandexAuthEnabled: boolean
+	githubAuthEnabled: boolean
+	telegramAuthEnabled: boolean
 	updatedAt: string
 }

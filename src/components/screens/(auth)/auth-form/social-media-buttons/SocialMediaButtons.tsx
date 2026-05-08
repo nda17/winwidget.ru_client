@@ -21,6 +21,8 @@ const SocialMediaButtons = ({
 	})
 	const googleAuthEnabled = siteSettings?.googleAuthEnabled ?? true
 	const yandexAuthEnabled = siteSettings?.yandexAuthEnabled ?? true
+	const githubAuthEnabled = siteSettings?.githubAuthEnabled ?? true
+	const telegramAuthEnabled = siteSettings?.telegramAuthEnabled ?? true
 
 	const handleSocialAuth = (path: string) => {
 		toast.loading('Загрузка...', { id: 'social-auth' })
@@ -52,25 +54,29 @@ const SocialMediaButtons = ({
 				)}
 			</div>
 			<div className={styles.buttonGroup}>
-				<button
-					onClick={onTelegramAuthStart}
-					className={styles.button}
-					type="button"
-					disabled={isTelegramAuthLoading}
-				>
-					<AppIcon name="telegram" fill="currentColor" />
-					<span>
-						{isTelegramAuthLoading ? 'Открываем...' : 'Telegram'}
-					</span>
-				</button>
-				<button
-					onClick={() => handleSocialAuth('/auth/github')}
-					className={styles.button}
-					type="button"
-				>
-					<AppIcon name="github" fill="currentColor" />
-					<span>GitHub</span>
-				</button>
+				{telegramAuthEnabled && (
+					<button
+						onClick={onTelegramAuthStart}
+						className={styles.button}
+						type="button"
+						disabled={isTelegramAuthLoading}
+					>
+						<AppIcon name="telegram" fill="currentColor" />
+						<span>
+							{isTelegramAuthLoading ? 'Открываем...' : 'Telegram'}
+						</span>
+					</button>
+				)}
+				{githubAuthEnabled && (
+					<button
+						onClick={() => handleSocialAuth('/auth/github')}
+						className={styles.button}
+						type="button"
+					>
+						<AppIcon name="github" fill="currentColor" />
+						<span>GitHub</span>
+					</button>
+				)}
 			</div>
 		</div>
 	)

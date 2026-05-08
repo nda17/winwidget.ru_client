@@ -7,6 +7,7 @@ export type AdminEventLogSection =
 	| 'SUBSCRIPTIONS'
 	| 'USERS'
 	| 'BACKLOG'
+	| 'SITE_SETTINGS'
 	| 'TELEGRAM_BOT'
 
 export type AdminEventLogAction =
@@ -24,6 +25,7 @@ export type AdminEventLogAction =
 	| 'BACKLOG_TASK_CREATE'
 	| 'BACKLOG_TASK_UPDATE'
 	| 'BACKLOG_TASK_DELETE'
+	| 'SITE_SETTINGS_UPDATE'
 	| 'TELEGRAM_BOT_SETTINGS_UPDATE'
 
 export interface IAdminEventLogItem {

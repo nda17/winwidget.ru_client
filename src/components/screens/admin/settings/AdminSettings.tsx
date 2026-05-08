@@ -177,7 +177,7 @@ const AdminSettings: NextPage = () => {
 
 			<AdminSectionHeading
 				title="Авторизация и защита"
-				description="Здесь включаются и выключаются reCAPTCHA и социальный вход через Google или Яндекс."
+				description="Здесь включаются и выключаются reCAPTCHA и социальный вход через Google, Яндекс, GitHub или Telegram."
 				risk="high"
 				riskText="Отключение reCAPTCHA снижает защиту форм от спама. Отключение соцвхода может закрыть пользователям привычный способ входа."
 				text="Авторизация и защита"
@@ -186,7 +186,7 @@ const AdminSettings: NextPage = () => {
 			<div className={styles.section}>
 				{isLoading ? (
 					<>
-						{Array.from({ length: 3 }).map((_, index) => (
+						{Array.from({ length: 5 }).map((_, index) => (
 							<div key={index} className={styles.toggleRow}>
 								<div style={{ flex: 1 }}>
 									<SkeletonLoader
@@ -263,6 +263,54 @@ const AdminSettings: NextPage = () => {
 									saveWithToast(
 										{
 											yandexAuthEnabled: !settings?.yandexAuthEnabled
+										},
+										'Применяем настройку...'
+									)
+								}
+								disabled={mutation.isPending}
+							>
+								<span className={styles.toggleThumb} />
+							</button>
+						</div>
+
+						<div className={styles.toggleRow}>
+							<div>
+								<p className={styles.fieldLabel}>Вход через GitHub</p>
+								<p className={styles.fieldHint}>
+									Если выключено, кнопка GitHub скрывается, а прямой
+									переход на GitHub-авторизацию блокируется
+								</p>
+							</div>
+							<button
+								className={`${styles.toggle} ${settings?.githubAuthEnabled ? styles.toggleOn : ''}`}
+								onClick={() =>
+									saveWithToast(
+										{
+											githubAuthEnabled: !settings?.githubAuthEnabled
+										},
+										'Применяем настройку...'
+									)
+								}
+								disabled={mutation.isPending}
+							>
+								<span className={styles.toggleThumb} />
+							</button>
+						</div>
+
+						<div className={styles.toggleRow}>
+							<div>
+								<p className={styles.fieldLabel}>Вход через Telegram</p>
+								<p className={styles.fieldHint}>
+									Если выключено, кнопка Telegram скрывается, а запрос к
+									Auth_bot блокируется
+								</p>
+							</div>
+							<button
+								className={`${styles.toggle} ${settings?.telegramAuthEnabled ? styles.toggleOn : ''}`}
+								onClick={() =>
+									saveWithToast(
+										{
+											telegramAuthEnabled: !settings?.telegramAuthEnabled
 										},
 										'Применяем настройку...'
 									)

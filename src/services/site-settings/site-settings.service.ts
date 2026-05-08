@@ -18,6 +18,8 @@ const siteSettingsService = {
 				| 'recaptchaEnabled'
 				| 'googleAuthEnabled'
 				| 'yandexAuthEnabled'
+				| 'githubAuthEnabled'
+				| 'telegramAuthEnabled'
 			>
 		>
 	): Promise<SiteSettings> {

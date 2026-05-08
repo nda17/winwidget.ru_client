@@ -28,6 +28,7 @@ const SECTION_LABELS: Record<AdminEventLogSection, string> = {
 	SUBSCRIPTIONS: 'Подписки',
 	USERS: 'Пользователи',
 	BACKLOG: 'Бэклог',
+	SITE_SETTINGS: 'Настройки сайта',
 	TELEGRAM_BOT: 'Telegram-бот'
 }
 
@@ -46,6 +47,7 @@ const ACTION_LABELS: Record<AdminEventLogAction, string> = {
 	BACKLOG_TASK_CREATE: 'Создание задачи',
 	BACKLOG_TASK_UPDATE: 'Обновление задачи',
 	BACKLOG_TASK_DELETE: 'Удаление задачи',
+	SITE_SETTINGS_UPDATE: 'Настройки сайта',
 	TELEGRAM_BOT_SETTINGS_UPDATE: 'Настройки Telegram-бота'
 }
 
