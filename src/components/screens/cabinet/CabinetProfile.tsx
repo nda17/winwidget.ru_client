@@ -277,6 +277,93 @@ const CabinetProfile = () => {
 
 	return (
 		<div>
+			{/* ── Profile edit ──────────────────────────────────────── */}
+			<div className={styles.section}>
+				<p className={styles.sectionTitle}>Редактирование профиля</p>
+				<form onSubmit={handleProfileSubmit}>
+					<div className={styles.field}>
+						<p className={styles.label}>Фото профиля</p>
+						<Controller
+							control={control}
+							name="avatarPath"
+							render={({ field: { value, onChange } }) => (
+								<FieldUploadFile
+									onChange={onChange}
+									value={value}
+									currentFile={user?.avatarPath || DEFAULT_AVATAR}
+									folder="user-avatar"
+									placeholder="Фото профиля"
+									canDelete
+									onUploadComplete={handleUploadAvatar}
+									uploadSuccessMessage="Фото профиля обновлено"
+									onDelete={handleDeleteAvatar}
+								/>
+							)}
+						/>
+					</div>
+
+					<div className={styles.field}>
+						<label htmlFor="profile-name" className={styles.label}>
+							Имя
+						</label>
+						<input
+							id="profile-name"
+							className={`${styles.input} ${errors.name ? styles.inputError : ''}`}
+							placeholder="Имя"
+							defaultValue={user?.name || ''}
+							{...register('name', {
+								pattern: {
+									value: validName,
+									message: 'Мин. длина 2 символа'
+								}
+							})}
+							aria-describedby={
+								errors.name ? 'profile-name-error' : undefined
+							}
+						/>
+						{errors.name && (
+							<span id="profile-name-error" className={styles.errorMsg}>
+								{errors.name.message}
+							</span>
+						)}
+					</div>
+
+					<div className={styles.field}>
+						<label htmlFor="profile-password" className={styles.label}>
+							Новый пароль
+						</label>
+						<input
+							id="profile-password"
+							type="password"
+							className={`${styles.input} ${errors.password ? styles.inputError : ''}`}
+							placeholder="Введите новый пароль"
+							{...register('password', {
+								pattern: {
+									value: validPassword,
+									message:
+										'Мин. 6 символов: цифра, строчная и заглавная буква'
+								}
+							})}
+							aria-describedby={
+								errors.password ? 'profile-password-error' : undefined
+							}
+						/>
+						{errors.password && (
+							<span
+								id="profile-password-error"
+								className={styles.errorMsg}
+							>
+								{errors.password.message}
+							</span>
+						)}
+					</div>
+
+					<button type="submit" className={styles.btn} disabled={isSaving}>
+						{isSaving ? 'Сохранение...' : 'Сохранить'}
+					</button>
+				</form>
+			</div>
+
 			{/* ── Identity binding ─────────────────────────────────── */}
 			<div className={styles.section}>
 				<p className={styles.sectionTitle}>Способы входа</p>
@@ -486,8 +573,8 @@ const CabinetProfile = () => {
 						<p className={styles.identityTitle}>Telegram</p>
 						<p className={styles.identityDesc}>
 							{hasTelegram
-								? 'Telegram привязан. Можно входить через Auth_bot.'
-								: 'Привяжите Telegram, чтобы вход через Auth_bot открывал этот профиль.'}
+								? 'Telegram-аккаунт привязан.'
+								: 'Привяжите Telegram-аккаунт для быстрого входа'}
 						</p>
 
 						{telegramBindingRequested && !hasTelegram && (
@@ -550,176 +637,89 @@ const CabinetProfile = () => {
 							</button>
 						)}
 					</div>
+				</div>
+			</div>
 
-					<div className={styles.identityCard}>
-						<p className={styles.identityTitle}>Telegram-уведомления</p>
-						<p className={styles.identityDesc}>
-							{hasTelegramNotifications
-								? telegramNotifications?.username
-									? `Подключены: @${telegramNotifications.username}`
-									: 'Подключены через Info_bot.'
-								: 'Подключите Info_bot, чтобы получать сервисные уведомления аккаунта.'}
+			{/* ── Notifications ─────────────────────────────────── */}
+			<div className={styles.section}>
+				<p className={styles.sectionTitle}>Настройка уведомлений</p>
+				<div className={styles.identityCard}>
+					<p className={styles.identityTitle}>Telegram-уведомления</p>
+					<p className={styles.identityDesc}>
+						{hasTelegramNotifications
+							? telegramNotifications?.username
+								? `Подключены: @${telegramNotifications.username}`
+								: 'Подключены через инфо-бота.'
+							: 'Разрешите инфо-боту писать вам сообщения, чтобы получать заявки с виджетов и другие сервисные уведомления.'}
+					</p>
+
+					{!isTelegramNotificationsConfigured && (
+						<p className={styles.hint}>
+							Info_bot пока не настроен. Подключение временно недоступно.
 						</p>
+					)}
 
-						{!isTelegramNotificationsConfigured && (
+					{telegramNotificationsBindingRequested &&
+						!hasTelegramNotifications && (
 							<p className={styles.hint}>
-								Info_bot пока не настроен. Подключение временно недоступно.
+								Откройте Info_bot, нажмите Start и после этого проверьте
+								статус.
 							</p>
+						)}
+
+					<div className={styles.btnRow}>
+						{hasTelegramNotifications ? (
+							<button type="button" className={styles.btnOutline} disabled>
+								Подключены
+							</button>
+						) : (
+							<button
+								type="button"
+								className={styles.btn}
+								disabled={
+									isStartingTelegramNotifications ||
+									!isTelegramNotificationsConfigured
+								}
+								onClick={handleTelegramNotificationsStart}
+							>
+								{isStartingTelegramNotifications
+									? 'Открываем...'
+									: telegramNotificationsBindingRequested
+										? 'Открыть Info_bot ещё раз'
+										: 'Подключить уведомления'}
+							</button>
 						)}
 
 						{telegramNotificationsBindingRequested &&
 							!hasTelegramNotifications && (
-								<p className={styles.hint}>
-									Откройте Info_bot, нажмите Start и после этого проверьте
-									статус.
-								</p>
-							)}
-
-						<div className={styles.btnRow}>
-							{hasTelegramNotifications ? (
 								<button
 									type="button"
 									className={styles.btnOutline}
-									disabled
+									onClick={handleTelegramNotificationsStatusCheck}
 								>
-									Подключены
-								</button>
-							) : (
-								<button
-									type="button"
-									className={styles.btn}
-									disabled={
-										isStartingTelegramNotifications ||
-										!isTelegramNotificationsConfigured
-									}
-									onClick={handleTelegramNotificationsStart}
-								>
-									{isStartingTelegramNotifications
-										? 'Открываем...'
-										: telegramNotificationsBindingRequested
-											? 'Открыть Info_bot ещё раз'
-											: 'Подключить уведомления'}
+									Проверить статус
 								</button>
 							)}
-
-							{telegramNotificationsBindingRequested &&
-								!hasTelegramNotifications && (
-									<button
-										type="button"
-										className={styles.btnOutline}
-										onClick={handleTelegramNotificationsStatusCheck}
-									>
-										Проверить статус
-									</button>
-								)}
-						</div>
-
-						{telegramNotificationsUrl && !hasTelegramNotifications && (
-							<button
-								type="button"
-								className={styles.resetLink}
-								onClick={() => {
-									if (typeof window !== 'undefined') {
-										window.open(
-											telegramNotificationsUrl,
-											'_blank',
-											'noopener,noreferrer'
-										)
-									}
-								}}
-							>
-								Открыть ссылку вручную
-							</button>
-						)}
 					</div>
+
+					{telegramNotificationsUrl && !hasTelegramNotifications && (
+						<button
+							type="button"
+							className={styles.resetLink}
+							onClick={() => {
+								if (typeof window !== 'undefined') {
+									window.open(
+										telegramNotificationsUrl,
+										'_blank',
+										'noopener,noreferrer'
+									)
+								}
+							}}
+						>
+							Открыть ссылку вручную
+						</button>
+					)}
 				</div>
-			</div>
-
-			{/* ── Profile edit ──────────────────────────────────────── */}
-			<div className={styles.section}>
-				<p className={styles.sectionTitle}>Редактирование профиля</p>
-				<form onSubmit={handleProfileSubmit}>
-					<div className={styles.field}>
-						<p className={styles.label}>Фото профиля</p>
-						<Controller
-							control={control}
-							name="avatarPath"
-							render={({ field: { value, onChange } }) => (
-								<FieldUploadFile
-									onChange={onChange}
-									value={value}
-									currentFile={user?.avatarPath || DEFAULT_AVATAR}
-									folder="user-avatar"
-									placeholder="Фото профиля"
-									canDelete
-									onUploadComplete={handleUploadAvatar}
-									uploadSuccessMessage="Фото профиля обновлено"
-									onDelete={handleDeleteAvatar}
-								/>
-							)}
-						/>
-					</div>
-
-					<div className={styles.field}>
-						<label htmlFor="profile-name" className={styles.label}>
-							Имя
-						</label>
-						<input
-							id="profile-name"
-							className={`${styles.input} ${errors.name ? styles.inputError : ''}`}
-							placeholder="Имя"
-							defaultValue={user?.name || ''}
-							{...register('name', {
-								pattern: {
-									value: validName,
-									message: 'Мин. длина 2 символа'
-								}
-							})}
-							aria-describedby={
-								errors.name ? 'profile-name-error' : undefined
-							}
-						/>
-						{errors.name && (
-							<span id="profile-name-error" className={styles.errorMsg}>
-								{errors.name.message}
-							</span>
-						)}
-					</div>
-
-					<div className={styles.field}>
-						<label htmlFor="profile-password" className={styles.label}>
-							Новый пароль
-						</label>
-						<input
-							id="profile-password"
-							type="password"
-							className={`${styles.input} ${errors.password ? styles.inputError : ''}`}
-							placeholder="Введите новый пароль"
-							{...register('password', {
-								pattern: {
-									value: validPassword,
-									message:
-										'Мин. 6 символов: цифра, строчная и заглавная буква'
-								}
-							})}
-							aria-describedby={
-								errors.password ? 'profile-password-error' : undefined
-							}
-						/>
-						{errors.password && (
-							<span
-								id="profile-password-error"
-								className={styles.errorMsg}
-							>
-								{errors.password.message}
-							</span>
-						)}
-					</div>
-
-					<button type="submit" className={styles.btn} disabled={isSaving}>
-						{isSaving ? 'Сохранение...' : 'Сохранить'}
-					</button>
-				</form>
 			</div>
 		</div>
 	)
