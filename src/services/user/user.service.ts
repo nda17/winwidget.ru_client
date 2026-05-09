@@ -259,6 +259,14 @@ class UserService {
 		return data
 	}
 
+	async unlinkProfileTelegramBinding() {
+		const { data } = await axiosInterceptorsRequest.delete<IUser>(
+			`${this._BASE_URL}/profile/bind/telegram`
+		)
+
+		return data
+	}
+
 	async fetchProfileTelegramNotifications() {
 		const { data } =
 			await axiosInterceptorsRequest.get<IProfileTelegramNotificationsStatus>(

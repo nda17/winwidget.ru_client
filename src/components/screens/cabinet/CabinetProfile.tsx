@@ -52,6 +52,9 @@ const CabinetProfile = () => {
 	const { onSubmit, isLoading: isSaving } = useProfileEdit()
 	const hasPaymentContact = Boolean(user?.email || user?.phone)
 	const hasTelegram = Boolean(user?.loginMethods?.includes('TELEGRAM'))
+	const hasOtherLoginMethod = Boolean(
+		user?.loginMethods?.some(method => method !== 'TELEGRAM')
+	)
 	const shouldShowPaymentContactNotice = Boolean(
 		user && hasTelegram && !hasPaymentContact
 	)
@@ -106,6 +109,7 @@ const CabinetProfile = () => {
 		telegramBindingRequested,
 		telegramNotificationsBindingRequested,
 		isStartingTelegramBinding,
+		isUnlinkingTelegramBinding,
 		isStartingTelegramNotifications,
 		requestEmailCode,
 		confirmEmailCode,
@@ -113,6 +117,7 @@ const CabinetProfile = () => {
 		confirmPhoneCode,
 		requestTelegramBinding,
 		requestTelegramNotificationsBinding,
+		unlinkTelegramBinding,
 		resetEmailBinding,
 		resetPhoneBinding
 	} = useProfileIdentityBinding()
@@ -584,15 +589,36 @@ const CabinetProfile = () => {
 							</p>
 						)}
 
+						{hasTelegram && !hasOtherLoginMethod && (
+							<p className={styles.hint}>
+								Чтобы отключить Telegram, сначала привяжите другой способ
+								входа.
+							</p>
+						)}
+
 						<div className={styles.btnRow}>
 							{hasTelegram ? (
-								<button
-									type="button"
-									className={styles.btnOutline}
-									disabled
-								>
-									Привязан
-								</button>
+								<>
+									<button
+										type="button"
+										className={styles.btnOutline}
+										disabled
+									>
+										Привязан
+									</button>
+									<button
+										type="button"
+										className={styles.btnOutline}
+										disabled={
+											isUnlinkingTelegramBinding || !hasOtherLoginMethod
+										}
+										onClick={unlinkTelegramBinding}
+									>
+										{isUnlinkingTelegramBinding
+											? 'Отвязываем...'
+											: 'Отвязать'}
+									</button>
+								</>
 							) : (
 								<button
 									type="button"
