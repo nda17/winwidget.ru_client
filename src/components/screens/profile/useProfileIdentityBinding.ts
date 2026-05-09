@@ -101,17 +101,11 @@ export const useProfileIdentityBinding = () => {
 	} = useMutation({
 		mutationKey: ['profile-start-telegram-binding'],
 		mutationFn: () => userService.startProfileTelegramBinding(),
-		onMutate: () => toast.loading('Готовим привязку Telegram...'),
-		onSuccess(_, __, toastId) {
+		onSuccess() {
 			setTelegramBindingRequested(true)
-			toast.success('Откройте Auth_bot и подтвердите привязку', {
-				id: toastId
-			})
 		},
-		onError(error, _, toastId) {
-			toast.error(`Привязка Telegram: ${errorCatch(error)}`, {
-				id: toastId
-			})
+		onError(error) {
+			toast.error(`Привязка Telegram: ${errorCatch(error)}`)
 		}
 	})
 
@@ -142,18 +136,11 @@ export const useProfileIdentityBinding = () => {
 	} = useMutation({
 		mutationKey: ['profile-start-telegram-notifications'],
 		mutationFn: () => userService.startProfileTelegramNotifications(),
-		onMutate: () =>
-			toast.loading('Готовим подключение Telegram-уведомлений...'),
-		onSuccess(_, __, toastId) {
+		onSuccess() {
 			setTelegramNotificationsBindingRequested(true)
-			toast.success('Откройте Info_bot и нажмите Start', {
-				id: toastId
-			})
 		},
-		onError(error, _, toastId) {
-			toast.error(`Telegram-уведомления: ${errorCatch(error)}`, {
-				id: toastId
-			})
+		onError(error) {
+			toast.error(`Telegram-уведомления: ${errorCatch(error)}`)
 		}
 	})
 

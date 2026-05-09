@@ -17,7 +17,7 @@ import {
 	validPhoneCode
 } from '@/shared/regex'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import styles from './Cabinet.module.scss'
@@ -26,6 +26,8 @@ type EmailBindingForm = { email: string; code: string }
 type PhoneBindingForm = { phone: string; code: string }
 
 const DEFAULT_AVATAR = '/avatar-default.png'
+const TELEGRAM_STATUS_POLL_INTERVAL_MS = 2500
+const TELEGRAM_STATUS_POLL_TIMEOUT_MS = 120000
 
 const isManagedAvatarFile = (avatarPath?: string | null) => {
 	return Boolean(
@@ -61,6 +63,14 @@ const CabinetProfile = () => {
 	const [telegramBindingUrl, setTelegramBindingUrl] = useState('')
 	const [telegramNotificationsUrl, setTelegramNotificationsUrl] =
 		useState('')
+	const telegramBindingPollRef = useRef<ReturnType<
+		typeof setInterval
+	> | null>(null)
+	const telegramNotificationsPollRef = useRef<ReturnType<
+		typeof setInterval
+	> | null>(null)
+	const telegramBindingToastRef = useRef<string | null>(null)
+	const telegramNotificationsToastRef = useRef<string | null>(null)
 	const { data: telegramNotifications } = useQuery({
 		queryKey: ['profile-telegram-notifications'],
 		queryFn: () => userService.fetchProfileTelegramNotifications(),
@@ -217,6 +227,155 @@ const CabinetProfile = () => {
 		resetPhoneBinding()
 	}
 
+	const clearTelegramBindingPolling = (dismissToast = false) => {
+		if (telegramBindingPollRef.current) {
+			clearInterval(telegramBindingPollRef.current)
+			telegramBindingPollRef.current = null
+		}
+
+		if (dismissToast && telegramBindingToastRef.current) {
+			toast.dismiss(telegramBindingToastRef.current)
+			telegramBindingToastRef.current = null
+		}
+	}
+
+	const clearTelegramNotificationsPolling = (dismissToast = false) => {
+		if (telegramNotificationsPollRef.current) {
+			clearInterval(telegramNotificationsPollRef.current)
+			telegramNotificationsPollRef.current = null
+		}
+
+		if (dismissToast && telegramNotificationsToastRef.current) {
+			toast.dismiss(telegramNotificationsToastRef.current)
+			telegramNotificationsToastRef.current = null
+		}
+	}
+
+	const startTelegramBindingPolling = () => {
+		clearTelegramBindingPolling(true)
+
+		const startedAt = Date.now()
+		telegramBindingToastRef.current = toast.loading(
+			'Ждём подтверждения в Auth_bot...'
+		)
+
+		telegramBindingPollRef.current = setInterval(async () => {
+			try {
+				const { data } = await userService.fetchProfile()
+				const isConnected = Boolean(
+					data.loginMethods?.includes('TELEGRAM')
+				)
+
+				if (isConnected) {
+					clearTelegramBindingPolling()
+					const toastId = telegramBindingToastRef.current || undefined
+					telegramBindingToastRef.current = null
+					setTelegramBindingUrl('')
+					await queryClient.invalidateQueries({
+						queryKey: ['get-profile']
+					})
+					toast.success('Telegram привязан как способ входа', {
+						id: toastId
+					})
+					return
+				}
+
+				if (Date.now() - startedAt >= TELEGRAM_STATUS_POLL_TIMEOUT_MS) {
+					clearTelegramBindingPolling()
+					const toastId = telegramBindingToastRef.current || undefined
+					telegramBindingToastRef.current = null
+					toast.error(
+						'Не удалось подтвердить Telegram. Откройте Auth_bot ещё раз.',
+						{ id: toastId }
+					)
+				}
+			} catch {
+				if (Date.now() - startedAt >= TELEGRAM_STATUS_POLL_TIMEOUT_MS) {
+					clearTelegramBindingPolling()
+					const toastId = telegramBindingToastRef.current || undefined
+					telegramBindingToastRef.current = null
+					toast.error(
+						'Не удалось проверить статус Telegram. Попробуйте позже.',
+						{ id: toastId }
+					)
+				}
+			}
+		}, TELEGRAM_STATUS_POLL_INTERVAL_MS)
+	}
+
+	const startTelegramNotificationsPolling = () => {
+		clearTelegramNotificationsPolling(true)
+
+		const startedAt = Date.now()
+		telegramNotificationsToastRef.current = toast.loading(
+			'Ждём подтверждения в Info_bot...'
+		)
+
+		telegramNotificationsPollRef.current = setInterval(async () => {
+			try {
+				const status =
+					await userService.fetchProfileTelegramNotifications()
+
+				if (status.connected) {
+					clearTelegramNotificationsPolling()
+					const toastId =
+						telegramNotificationsToastRef.current || undefined
+					telegramNotificationsToastRef.current = null
+					setTelegramNotificationsUrl('')
+					await queryClient.invalidateQueries({
+						queryKey: ['profile-telegram-notifications']
+					})
+					toast.success('Telegram-уведомления подключены', {
+						id: toastId
+					})
+					return
+				}
+
+				if (Date.now() - startedAt >= TELEGRAM_STATUS_POLL_TIMEOUT_MS) {
+					clearTelegramNotificationsPolling()
+					const toastId =
+						telegramNotificationsToastRef.current || undefined
+					telegramNotificationsToastRef.current = null
+					toast.error(
+						'Не удалось подтвердить уведомления. Откройте Info_bot ещё раз.',
+						{ id: toastId }
+					)
+				}
+			} catch {
+				if (Date.now() - startedAt >= TELEGRAM_STATUS_POLL_TIMEOUT_MS) {
+					clearTelegramNotificationsPolling()
+					const toastId =
+						telegramNotificationsToastRef.current || undefined
+					telegramNotificationsToastRef.current = null
+					toast.error(
+						'Не удалось проверить статус уведомлений. Попробуйте позже.',
+						{ id: toastId }
+					)
+				}
+			}
+		}, TELEGRAM_STATUS_POLL_INTERVAL_MS)
+	}
+
+	useEffect(() => {
+		return () => {
+			if (telegramBindingPollRef.current) {
+				clearInterval(telegramBindingPollRef.current)
+			}
+
+			if (telegramNotificationsPollRef.current) {
+				clearInterval(telegramNotificationsPollRef.current)
+			}
+
+			if (telegramBindingToastRef.current) {
+				toast.dismiss(telegramBindingToastRef.current)
+			}
+
+			if (telegramNotificationsToastRef.current) {
+				toast.dismiss(telegramNotificationsToastRef.current)
+			}
+		}
+	}, [])
+
 	const handleTelegramBindingStart = async () => {
 		let telegramWindow: Window | null = null
 
@@ -232,17 +391,13 @@ const CabinetProfile = () => {
 		}
 
 		setTelegramBindingUrl(data.botUrl)
+		startTelegramBindingPolling()
 
 		if (telegramWindow) {
 			telegramWindow.location.href = data.botUrl
 		} else if (typeof window !== 'undefined') {
 			window.open(data.botUrl, '_blank', 'noopener,noreferrer')
 		}
-	}
-
-	const handleTelegramStatusCheck = async () => {
-		await queryClient.invalidateQueries({ queryKey: ['get-profile'] })
-		toast.success('Статус профиля обновлён')
 	}
 
 	const handleTelegramNotificationsStart = async () => {
@@ -260,19 +415,13 @@ const CabinetProfile = () => {
 		}
 
 		setTelegramNotificationsUrl(data.botUrl)
+		startTelegramNotificationsPolling()
 
 		if (telegramWindow) {
 			telegramWindow.location.href = data.botUrl
 		} else if (typeof window !== 'undefined') {
 			window.open(data.botUrl, '_blank', 'noopener,noreferrer')
 		}
-	}
-
-	const handleTelegramNotificationsStatusCheck = async () => {
-		await queryClient.invalidateQueries({
-			queryKey: ['profile-telegram-notifications']
-		})
-		toast.success('Статус Telegram-уведомлений обновлён')
 	}
 
 	const phoneRegistration = regPhone('phone', {
@@ -585,7 +734,7 @@ const CabinetProfile = () => {
 						{telegramBindingRequested && !hasTelegram && (
 							<p className={styles.hint}>
 								Откройте Auth_bot, нажмите Start и кнопку привязки. После
-								этого проверьте статус.
+								этого статус обновится автоматически.
 							</p>
 						)}
 
@@ -633,16 +782,6 @@ const CabinetProfile = () => {
 											: 'Привязать Telegram'}
 								</button>
 							)}
-
-							{telegramBindingRequested && !hasTelegram && (
-								<button
-									type="button"
-									className={styles.btnOutline}
-									onClick={handleTelegramStatusCheck}
-								>
-									Проверить статус
-								</button>
-							)}
 						</div>
 
 						{telegramBindingUrl && !hasTelegram && (
@@ -688,8 +827,8 @@ const CabinetProfile = () => {
 					{telegramNotificationsBindingRequested &&
 						!hasTelegramNotifications && (
 							<p className={styles.hint}>
-								Откройте Info_bot, нажмите Start и после этого проверьте
-								статус.
+								Откройте Info_bot и нажмите Start. После этого статус
+								обновится автоматически.
 							</p>
 						)}
 
@@ -715,17 +854,6 @@ const CabinetProfile = () => {
 										: 'Подключить уведомления'}
 							</button>
 						)}
-
-						{telegramNotificationsBindingRequested &&
-							!hasTelegramNotifications && (
-								<button
-									type="button"
-									className={styles.btnOutline}
-									onClick={handleTelegramNotificationsStatusCheck}
-								>
-									Проверить статус
-								</button>
-							)}
 					</div>
 
 					{telegramNotificationsUrl && !hasTelegramNotifications && (
