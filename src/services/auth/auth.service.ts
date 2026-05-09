@@ -33,6 +33,10 @@ interface ITelegramAuthVerifyPayload {
 	code: string
 }
 
+interface ITelegramAuthCompletePayload {
+	requestId: string
+}
+
 export interface IEmailRegistrationResponse {
 	email: string
 	expiresAt: string
@@ -44,6 +48,16 @@ export interface ITelegramAuthStartResponse {
 	botUrl: string
 	expiresAt: string
 }
+
+export type ITelegramAuthCompleteResponse =
+	| {
+			confirmed: false
+	  }
+	| {
+			confirmed: true
+			accessToken: string
+			user: IUser
+	  }
 
 export enum EnumTokens {
 	'ACCESS_TOKEN' = 'accessToken',
@@ -263,6 +277,22 @@ class AuthService {
 		)
 
 		if (response.data.accessToken) {
+			saveTokenStorage(response.data.accessToken)
+		}
+
+		return response
+	}
+
+	async completeTelegramAuth(data: ITelegramAuthCompletePayload) {
+		const response =
+			await axiosClassicRequest.post<ITelegramAuthCompleteResponse>(
+				'/auth/telegram/complete',
+				{
+					requestId: data.requestId
+				}
+			)
+
+		if (response.data.confirmed && response.data.accessToken) {
 			saveTokenStorage(response.data.accessToken)
 		}
 

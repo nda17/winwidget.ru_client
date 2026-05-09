@@ -34,15 +34,13 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin, authMessage }) => {
 		phoneMask,
 		resendEmailCode,
 		startTelegramAuth,
-		verifyTelegramAuth,
-		telegramCode,
-		setTelegramCode,
 		isTelegramAuthLoading,
-		isTelegramCodeRequested,
+		isTelegramAuthRequested,
+		telegramAuthUrl,
 		authMessage: currentAuthMessage,
 		resetEmailCodeStep,
 		resetPhoneCodeStep,
-		resetTelegramCodeStep
+		resetTelegramAuthStep
 	} = useAuthForm(isLogin, authMessage)
 
 	return (
@@ -263,34 +261,32 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin, authMessage }) => {
 					onTelegramAuthStart={startTelegramAuth}
 					isTelegramAuthLoading={isTelegramAuthLoading}
 				/>
-				{isTelegramCodeRequested && (
+				{isTelegramAuthRequested && (
 					<div className={styles['telegram-auth-box']}>
-						<FieldSmsCode
-							name="telegramCode"
-							value={telegramCode}
-							onChange={event => setTelegramCode(event.target.value)}
-							placeholder="Код из Telegram:"
-							type="text"
-							disabled={isTelegramAuthLoading}
-						/>
 						<div className={styles['verification-hint']}>
-							В Auth_bot нажмите Start, затем кнопку получения кода.
-							Введите полученный код здесь.
+							В Auth_bot нажмите Start, затем кнопку подтверждения входа.
+							Статус на сайте обновится автоматически.
 						</div>
 						<div className={styles['link-actions']}>
+							{telegramAuthUrl && (
+								<button
+									type="button"
+									className={styles['link-button']}
+									onClick={() => {
+										window.open(
+											telegramAuthUrl,
+											'_blank',
+											'noopener,noreferrer'
+										)
+									}}
+								>
+									Открыть Auth_bot ещё раз
+								</button>
+							)}
 							<button
 								type="button"
 								className={styles['link-button']}
-								onClick={verifyTelegramAuth}
-								disabled={isTelegramAuthLoading}
-							>
-								Подтвердить код
-							</button>
-							<button
-								type="button"
-								className={styles['link-button']}
-								onClick={resetTelegramCodeStep}
-								disabled={isTelegramAuthLoading}
+								onClick={resetTelegramAuthStep}
 							>
 								Сбросить
 							</button>

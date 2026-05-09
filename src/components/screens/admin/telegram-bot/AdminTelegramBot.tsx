@@ -5,7 +5,9 @@ import AdminNavigation from '@/components/ui/admin/admin-navigation/AdminNavigat
 import AdminSectionHeading from '@/components/ui/admin/admin-section-heading/AdminSectionHeading'
 import Heading from '@/components/ui/heading/Heading'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
-import adminTelegramBotService from '@/services/admin-telegram-bot/admin-telegram-bot.service'
+import adminTelegramBotService, {
+	type TelegramWebhookBot
+} from '@/services/admin-telegram-bot/admin-telegram-bot.service'
 import {
 	useMutation,
 	useQuery,
@@ -47,6 +49,14 @@ const AdminTelegramBot: NextPage = () => {
 		}
 	})
 
+	const webhookMutation = useMutation({
+		mutationFn: adminTelegramBotService.reinstallWebhook
+	})
+
+	const allWebhooksMutation = useMutation({
+		mutationFn: adminTelegramBotService.reinstallWebhooks
+	})
+
 	const saveWithToast = (
 		patch: Parameters<typeof adminTelegramBotService.update>[0],
 		loading: string
@@ -57,6 +67,29 @@ const AdminTelegramBot: NextPage = () => {
 			loading,
 			success: 'Настройки сохранены',
 			error: error => `Ошибка сохранения: ${errorCatch(error)}`
+		})
+	}
+
+	const handleReinstallWebhook = (bot: TelegramWebhookBot) => {
+		const promise = webhookMutation.mutateAsync(bot)
+
+		toast.promise(promise, {
+			loading:
+				bot === 'auth'
+					? 'Переустанавливаем webhook Auth_bot...'
+					: 'Переустанавливаем webhook Info_bot...',
+			success: result => `Webhook ${result.title} переустановлен`,
+			error: error => `Ошибка webhook: ${errorCatch(error)}`
+		})
+	}
+
+	const handleReinstallAllWebhooks = () => {
+		const promise = allWebhooksMutation.mutateAsync()
+
+		toast.promise(promise, {
+			loading: 'Переустанавливаем webhook обоих ботов...',
+			success: 'Webhook обоих ботов переустановлены',
+			error: error => `Ошибка webhook: ${errorCatch(error)}`
 		})
 	}
 
@@ -93,6 +126,8 @@ const AdminTelegramBot: NextPage = () => {
 	const lastSentText = settings?.dailySummaryLastSentAt
 		? formatDate(settings.dailySummaryLastSentAt)
 		: 'Ещё не отправлялась'
+	const isWebhookActionPending =
+		webhookMutation.isPending || allWebhooksMutation.isPending
 
 	return (
 		<section className={styles.wrapper}>
@@ -100,9 +135,9 @@ const AdminTelegramBot: NextPage = () => {
 			<AdminNavigation />
 
 			<AdminSectionHeading
-				text="Info_bot"
-				title="Ежедневная сводка"
-				description="Настраивает отправку ежедневной операционной сводки в Telegram-группу администраторов."
+				text="Telegram-боты"
+				title="Webhook и ежедневная сводка"
+				description="Настраивает webhook Auth_bot и Info_bot, а также отправку ежедневной операционной сводки в Telegram-группу администраторов."
 				risk="medium"
 				riskText="Если указать неверный ID группы, сводка не уйдёт. Info_bot должен быть добавлен в группу, а токен должен быть настроен на сервере."
 			/>
@@ -136,12 +171,117 @@ const AdminTelegramBot: NextPage = () => {
 								</span>
 							</div>
 							<div className={styles.statusItem}>
+								<p className={styles.statusLabel}>Username Info_bot</p>
+								<span
+									className={`${styles.badge} ${
+										settings.telegramBotUsernameConfigured
+											? styles.badgeOk
+											: styles.badgeWarning
+									}`}
+								>
+									{settings.telegramBotUsernameConfigured
+										? 'Настроен'
+										: 'Не настроен'}
+								</span>
+							</div>
+							<div className={styles.statusItem}>
+								<p className={styles.statusLabel}>Токен Auth_bot</p>
+								<span
+									className={`${styles.badge} ${
+										settings.authTelegramBotTokenConfigured
+											? styles.badgeOk
+											: styles.badgeWarning
+									}`}
+								>
+									{settings.authTelegramBotTokenConfigured
+										? 'Настроен'
+										: 'Не настроен'}
+								</span>
+							</div>
+							<div className={styles.statusItem}>
+								<p className={styles.statusLabel}>Username Auth_bot</p>
+								<span
+									className={`${styles.badge} ${
+										settings.authTelegramBotUsernameConfigured
+											? styles.badgeOk
+											: styles.badgeWarning
+									}`}
+								>
+									{settings.authTelegramBotUsernameConfigured
+										? 'Настроен'
+										: 'Не настроен'}
+								</span>
+							</div>
+							<div className={styles.statusItem}>
+								<p className={styles.statusLabel}>Webhook host</p>
+								<span
+									className={`${styles.badge} ${
+										settings.telegramWebhookHostConfigured
+											? styles.badgeOk
+											: styles.badgeWarning
+									}`}
+								>
+									{settings.telegramWebhookHostConfigured
+										? 'Настроен'
+										: 'Не настроен'}
+								</span>
+							</div>
+							<div className={styles.statusItem}>
 								<p className={styles.statusLabel}>Расписание</p>
 								<p className={styles.statusValue}>01:50 МСК</p>
 							</div>
 							<div className={styles.statusItem}>
 								<p className={styles.statusLabel}>Последняя отправка</p>
 								<p className={styles.statusValue}>{lastSentText}</p>
+							</div>
+						</div>
+
+						<div className={styles.webhookRow}>
+							<div>
+								<p className={styles.label}>Webhook ботов</p>
+								<p className={styles.hint}>
+									Переустанавливает webhook с секретом и очищает старую
+									очередь Telegram-обновлений
+								</p>
+							</div>
+							<div className={styles.webhookActions}>
+								<button
+									type="button"
+									className={styles.actionBtn}
+									onClick={() => handleReinstallWebhook('info')}
+									disabled={
+										isWebhookActionPending ||
+										!settings.telegramBotTokenConfigured ||
+										!settings.telegramWebhookHostConfigured
+									}
+								>
+									Info_bot
+								</button>
+								<button
+									type="button"
+									className={styles.actionBtn}
+									onClick={() => handleReinstallWebhook('auth')}
+									disabled={
+										isWebhookActionPending ||
+										!settings.authTelegramBotTokenConfigured ||
+										!settings.telegramWebhookHostConfigured
+									}
+								>
+									Auth_bot
+								</button>
+								<button
+									type="button"
+									className={styles.saveBtn}
+									onClick={handleReinstallAllWebhooks}
+									disabled={
+										isWebhookActionPending ||
+										!settings.telegramBotTokenConfigured ||
+										!settings.authTelegramBotTokenConfigured ||
+										!settings.telegramWebhookHostConfigured
+									}
+								>
+									Переустановить оба
+								</button>
 							</div>
 						</div>
 

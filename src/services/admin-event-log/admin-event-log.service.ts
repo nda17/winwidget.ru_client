@@ -27,6 +27,7 @@ export type AdminEventLogAction =
 	| 'BACKLOG_TASK_DELETE'
 	| 'SITE_SETTINGS_UPDATE'
 	| 'TELEGRAM_BOT_SETTINGS_UPDATE'
+	| 'TELEGRAM_BOT_WEBHOOK_REINSTALL'
 
 export interface IAdminEventLogItem {
 	id: string

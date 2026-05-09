@@ -62,9 +62,7 @@ const SocialMediaButtons = ({
 						disabled={isTelegramAuthLoading}
 					>
 						<AppIcon name="telegram" fill="currentColor" />
-						<span>
-							{isTelegramAuthLoading ? 'Открываем...' : 'Telegram'}
-						</span>
+						<span>{isTelegramAuthLoading ? 'Ждём...' : 'Telegram'}</span>
 					</button>
 				)}
 				{githubAuthEnabled && (

@@ -23,6 +23,8 @@ import { SubmitHandler, useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 
 const PENDING_EMAIL_REGISTRATION_STORAGE_KEY = 'pendingEmailRegistration'
+const TELEGRAM_AUTH_POLL_INTERVAL_MS = 2500
+const TELEGRAM_AUTH_POLL_TIMEOUT_MS = 120000
 
 type PendingEmailRegistrationState = {
 	email: string
@@ -83,7 +85,7 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 	const [isEmailCodeRequested, setIsEmailCodeRequested] = useState(false)
 	const [telegramRequest, setTelegramRequest] =
 		useState<ITelegramAuthStartResponse | null>(null)
-	const [telegramCode, setTelegramCode] = useState('')
+	const [isTelegramAuthPolling, setIsTelegramAuthPolling] = useState(false)
 	const [authMessage, setAuthMessage] = useState(initialAuthMessage)
 
 	const { register, handleSubmit, reset, formState, watch, setValue } =
@@ -99,6 +101,10 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 	const phoneValue = watch('phone')
 	const phoneMask = usePhoneMask(setValue, phoneInputRef)
 	const resetPhoneMask = phoneMask.reset
+	const telegramAuthPollRef = useRef<ReturnType<
+		typeof setInterval
+	> | null>(null)
+	const telegramAuthToastRef = useRef<string | null>(null)
 
 	const clearEmailCodeStep = useCallback(() => {
 		clearPendingEmailRegistrationState()
@@ -372,42 +378,94 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 			authService.startTelegramAuth(token)
 	})
 
-	const {
-		mutate: mutateTelegramVerify,
-		isPending: isTelegramVerifyPending
-	} = useMutation({
-		mutationKey: ['telegram-auth-verify'],
-		mutationFn: ({
-			requestId,
-			code,
-			token
-		}: {
-			requestId: string
-			code: string
-			token: string | null
-		}) => authService.verifyTelegramAuth({ requestId, code }, token),
-		onSuccess() {
-			startTransition(() => {
-				setTelegramRequest(null)
-				setTelegramCode('')
-				setAuth(true)
-				setAuthResolved(true)
-				toast.success('Успешный вход через Telegram')
-				reset()
-				router.replace(
-					previousRoute && whiteListRedirect.includes(previousRoute)
-						? previousRoute
-						: PUBLIC_PAGES.HOME
-				)
-				queryClient.invalidateQueries({ queryKey: ['get-profile'] })
-			})
-		},
-		onError(error) {
-			toast.error(
-				`Ошибка входа через Telegram: ${getErrorMessage(error, 'Не удалось войти через Telegram')}`
-			)
+	const clearTelegramAuthPolling = (dismissToast = false) => {
+		if (telegramAuthPollRef.current) {
+			clearInterval(telegramAuthPollRef.current)
+			telegramAuthPollRef.current = null
 		}
-	})
+
+		setIsTelegramAuthPolling(false)
+
+		if (dismissToast && telegramAuthToastRef.current) {
+			toast.dismiss(telegramAuthToastRef.current)
+			telegramAuthToastRef.current = null
+		}
+	}
+
+	const completeTelegramAuthFlow = (toastId?: string) => {
+		clearTelegramAuthPolling()
+		telegramAuthToastRef.current = null
+
+		startTransition(() => {
+			setTelegramRequest(null)
+			setAuth(true)
+			setAuthResolved(true)
+			toast.success('Успешный вход через Telegram', { id: toastId })
+			reset()
+			router.replace(
+				previousRoute && whiteListRedirect.includes(previousRoute)
+					? previousRoute
+					: PUBLIC_PAGES.HOME
+			)
+			queryClient.invalidateQueries({ queryKey: ['get-profile'] })
+		})
+	}
+
+	const startTelegramAuthPolling = (
+		requestId: string,
+		toastId: string
+	) => {
+		clearTelegramAuthPolling(true)
+		telegramAuthToastRef.current = toastId
+		setIsTelegramAuthPolling(true)
+
+		const startedAt = Date.now()
+
+		telegramAuthPollRef.current = setInterval(async () => {
+			try {
+				const { data } = await authService.completeTelegramAuth({
+					requestId
+				})
+
+				if (data.confirmed) {
+					completeTelegramAuthFlow(toastId)
+					return
+				}
+
+				if (Date.now() - startedAt >= TELEGRAM_AUTH_POLL_TIMEOUT_MS) {
+					clearTelegramAuthPolling()
+					telegramAuthToastRef.current = null
+					setTelegramRequest(null)
+					toast.error(
+						'Не удалось подтвердить вход. Откройте Auth_bot ещё раз.',
+						{ id: toastId }
+					)
+				}
+			} catch (error) {
+				if (Date.now() - startedAt >= TELEGRAM_AUTH_POLL_TIMEOUT_MS) {
+					clearTelegramAuthPolling()
+					telegramAuthToastRef.current = null
+					setTelegramRequest(null)
+					toast.error(
+						`Telegram: ${getErrorMessage(error, 'Не удалось проверить статус входа')}`,
+						{ id: toastId }
+					)
+				}
+			}
+		}, TELEGRAM_AUTH_POLL_INTERVAL_MS)
+	}
+
+	useEffect(() => {
+		return () => {
+			if (telegramAuthPollRef.current) {
+				clearInterval(telegramAuthPollRef.current)
+			}
+
+			if (telegramAuthToastRef.current) {
+				toast.dismiss(telegramAuthToastRef.current)
+			}
+		}
+	}, [])
 
 	useEffect(() => {
 		setAuthMessage(initialAuthMessage)
@@ -565,58 +623,22 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 
 			const { data } = await startTelegramAuthAsync(token)
 			setTelegramRequest(data)
-			setTelegramCode('')
+			toast.loading('Ждём подтверждения в Auth_bot...', { id: toastId })
+			startTelegramAuthPolling(data.requestId, toastId)
 
 			if (telegramWindow) {
 				telegramWindow.location.href = data.botUrl
 			} else if (typeof window !== 'undefined') {
 				window.open(data.botUrl, '_blank', 'noopener,noreferrer')
 			}
-
-			toast.success(
-				'Откройте Auth_bot, нажмите Start и кнопку получения кода',
-				{ id: toastId }
-			)
 		} catch (error) {
 			telegramWindow?.close()
+			clearTelegramAuthPolling()
 			toast.error(
 				`Telegram: ${getErrorMessage(error, 'Не удалось открыть Auth_bot')}`,
 				{ id: toastId }
 			)
 		}
-	}
-
-	const verifyTelegramAuth = async () => {
-		if (!telegramRequest) {
-			toast.error('Сначала откройте Auth_bot')
-			return
-		}
-
-		const code = telegramCode.trim()
-		if (!validPhoneCode.test(code)) {
-			toast.error('Введите корректный код из Telegram')
-			return
-		}
-
-		let token: string | null = null
-
-		try {
-			token = await executeRecaptcha('telegram_auth_verify')
-		} catch {
-			toast.error('Не удалось пройти проверку капчи')
-			return
-		}
-
-		if (isRecaptchaEnabled && !token) {
-			toast.error('Не удалось пройти проверку капчи')
-			return
-		}
-
-		mutateTelegramVerify({
-			requestId: telegramRequest.requestId,
-			code,
-			token
-		})
 	}
 
 	const isLoading =
@@ -628,8 +650,7 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 		isPhoneSendCodePending ||
 		isPhoneRegisterPending ||
 		isPhoneLoginPending ||
-		isTelegramStartPending ||
-		isTelegramVerifyPending
+		isTelegramStartPending
 
 	return {
 		register,
@@ -647,13 +668,9 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 		phoneMask,
 		resendEmailCode,
 		startTelegramAuth,
-		verifyTelegramAuth,
-		telegramCode,
-		setTelegramCode: (value: string) =>
-			setTelegramCode(value.replace(/\D/g, '').slice(0, 6)),
-		isTelegramAuthLoading:
-			isTelegramStartPending || isTelegramVerifyPending,
-		isTelegramCodeRequested: Boolean(telegramRequest),
+		isTelegramAuthLoading: isTelegramStartPending || isTelegramAuthPolling,
+		isTelegramAuthRequested: Boolean(telegramRequest),
+		telegramAuthUrl: telegramRequest?.botUrl ?? '',
 		authMessage,
 		resetEmailCodeStep: () => {
 			clearEmailCodeStep()
@@ -662,9 +679,9 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 			setIsPhoneCodeRequested(false)
 			setValue('code', '')
 		},
-		resetTelegramCodeStep: () => {
+		resetTelegramAuthStep: () => {
+			clearTelegramAuthPolling(true)
 			setTelegramRequest(null)
-			setTelegramCode('')
 		}
 	}
 }
