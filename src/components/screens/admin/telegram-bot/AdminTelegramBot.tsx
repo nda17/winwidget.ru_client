@@ -94,8 +94,8 @@ const AdminTelegramBot: NextPage = () => {
 				bot === 'auth'
 					? 'Переустанавливаем webhook Auth_bot...'
 					: bot === 'support'
-						? 'Переустанавливаем webhook Support_bot...'
-						: 'Переустанавливаем webhook Info_bot...',
+						? 'Переустанавливаем webhook @winwidget_support_bot...'
+						: 'Переустанавливаем webhook @winwidget_info_bot...',
 			success: result => `Webhook ${result.title} переустановлен`,
 			error: error => `Ошибка webhook: ${errorCatch(error)}`
 		})
@@ -172,9 +172,9 @@ const AdminTelegramBot: NextPage = () => {
 			<AdminSectionHeading
 				text="Telegram-боты"
 				title="Webhook и ежедневная сводка"
-				description="Настраивает webhook Auth_bot, Info_bot и Support_bot, а также отправку ежедневной операционной сводки в Telegram-группу администраторов."
+				description="Настраивает webhook Auth_bot, @winwidget_info_bot и @winwidget_support_bot, а также отправку ежедневной операционной сводки в Telegram-группу администраторов."
 				risk="medium"
-				riskText="Если указать неверный ID группы, сводка и обращения пользователей не уйдут. Info_bot и Support_bot должны быть добавлены в группу, а токены должны быть настроены на сервере."
+				riskText="Если указать неверный ID группы, сводка и обращения пользователей не уйдут. @winwidget_info_bot и @winwidget_support_bot должны быть добавлены в группу, а токены должны быть настроены на сервере."
 			/>
 
 			<div className={styles.card}>
@@ -192,7 +192,9 @@ const AdminTelegramBot: NextPage = () => {
 					<>
 						<div className={styles.statusGrid}>
 							<div className={styles.statusItem}>
-								<p className={styles.statusLabel}>Токен Info_bot</p>
+								<p className={styles.statusLabel}>
+									Токен @winwidget_info_bot
+								</p>
 								<span
 									className={`${styles.badge} ${
 										settings.telegramBotTokenConfigured
@@ -206,7 +208,9 @@ const AdminTelegramBot: NextPage = () => {
 								</span>
 							</div>
 							<div className={styles.statusItem}>
-								<p className={styles.statusLabel}>Username Info_bot</p>
+								<p className={styles.statusLabel}>
+									Username @winwidget_info_bot
+								</p>
 								<span
 									className={`${styles.badge} ${
 										settings.telegramBotUsernameConfigured
@@ -234,7 +238,9 @@ const AdminTelegramBot: NextPage = () => {
 								</span>
 							</div>
 							<div className={styles.statusItem}>
-								<p className={styles.statusLabel}>Токен Support_bot</p>
+								<p className={styles.statusLabel}>
+									Токен @winwidget_support_bot
+								</p>
 								<span
 									className={`${styles.badge} ${
 										settings.supportTelegramBotTokenConfigured
@@ -304,7 +310,7 @@ const AdminTelegramBot: NextPage = () => {
 										!settings.telegramWebhookHostConfigured
 									}
 								>
-									Info_bot
+									@winwidget_info_bot
 								</button>
 								<button
 									type="button"
@@ -328,7 +334,7 @@ const AdminTelegramBot: NextPage = () => {
 										!settings.telegramWebhookHostConfigured
 									}
 								>
-									Support_bot
+									@winwidget_support_bot
 								</button>
 								<button
 									type="button"
@@ -387,8 +393,8 @@ const AdminTelegramBot: NextPage = () => {
 														(bot === 'auth'
 															? 'Auth_bot'
 															: bot === 'support'
-																? 'Support_bot'
-																: 'Info_bot')}
+																? '@winwidget_support_bot'
+																: '@winwidget_info_bot')}
 												</p>
 												<span
 													className={`${styles.badge} ${
@@ -455,8 +461,8 @@ const AdminTelegramBot: NextPage = () => {
 							<div>
 								<p className={styles.label}>Отправка сводки</p>
 								<p className={styles.hint}>
-									Info_bot отправляет сводку каждый день в 01:50 МСК и явно
-									показывает период отчёта
+									@winwidget_info_bot отправляет сводку каждый день в 01:50
+									МСК и явно показывает период отчёта
 								</p>
 							</div>
 							<button
@@ -487,9 +493,9 @@ const AdminTelegramBot: NextPage = () => {
 								maxLength={100}
 							/>
 							<p className={styles.hint}>
-								Укажите chat_id группы, куда Info_bot будет отправлять
-								ежедневную сводку, а Support_bot будет пересылать обращения
-								пользователей
+								Укажите chat_id группы, куда @winwidget_info_bot будет
+								отправлять ежедневную сводку, а @winwidget_support_bot
+								будет пересылать обращения пользователей
 							</p>
 						</div>
 
