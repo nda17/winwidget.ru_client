@@ -23,7 +23,6 @@ import styles from './AdminTelegramBot.module.scss'
 const SETTINGS_QUERY_KEY = ['admin-telegram-bot-settings']
 const WEBHOOKS_QUERY_KEY = ['admin-telegram-bot-webhooks']
 const WEBHOOK_BOTS: TelegramWebhookBot[] = ['info', 'auth', 'support']
-const WEBHOOK_RECENT_ERROR_MS = 10 * 60 * 1000
 
 const formatDate = (value: string) =>
 	new Intl.DateTimeFormat('ru-RU', {
@@ -34,16 +33,6 @@ const formatDate = (value: string) =>
 const formatFileSize = (value: number) => {
 	if (value < 1024 * 1024) return `${Math.round(value / 1024)} КБ`
 	return `${(value / 1024 / 1024).toFixed(1)} МБ`
-}
-
-const hasRecentWebhookError = (lastErrorAt?: string | null) => {
-	if (!lastErrorAt) return false
-
-	const lastErrorTime = new Date(lastErrorAt).getTime()
-
-	if (Number.isNaN(lastErrorTime)) return false
-
-	return Date.now() - lastErrorTime < WEBHOOK_RECENT_ERROR_MS
 }
 
 const AdminTelegramBot: NextPage = () => {
@@ -474,16 +463,12 @@ const AdminTelegramBot: NextPage = () => {
 								{WEBHOOK_BOTS.map(bot => {
 									const status = statusByBot.get(bot)
 									const pendingCount = status?.pendingUpdateCount ?? null
-									const hasRecentError = hasRecentWebhookError(
-										status?.lastErrorAt
-									)
 									const hasProblem = Boolean(
 										status &&
 										(!status.ok ||
 											!status.webhookMatchesExpected ||
 											status.usernameMatchesConfigured === false ||
-											(pendingCount ?? 0) > 0 ||
-											(status.lastErrorMessage && hasRecentError))
+											(pendingCount ?? 0) > 0)
 									)
 
 									return (
@@ -527,12 +512,26 @@ const AdminTelegramBot: NextPage = () => {
 											</p>
 											<p className={styles.webhookStatusLine}>
 												URL:{' '}
-												{status?.webhookMatchesExpected
-													? 'актуальный'
-													: status?.webhookUrl
-														? 'отличается'
-														: 'не установлен'}
+												{status?.error
+													? 'проверить не удалось'
+													: status?.webhookMatchesExpected
+														? 'актуальный'
+														: status?.webhookUrl
+															? 'отличается'
+															: 'не установлен'}
 											</p>
+											{status &&
+												!status.error &&
+												!status.webhookMatchesExpected && (
+													<>
+														<p className={styles.webhookStatusLine}>
+															Ожидаемый: {status.expectedWebhookUrl ?? '—'}
+														</p>
+														<p className={styles.webhookStatusLine}>
+															Фактический: {status.webhookUrl ?? '—'}
+														</p>
+													</>
+												)}
 											{status?.lastErrorMessage && (
 												<p className={styles.webhookStatusError}>
 													Последняя ошибка
