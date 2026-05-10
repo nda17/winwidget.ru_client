@@ -858,7 +858,7 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 										<div>
 											<p className={styles.rightCardTitle}>DEV</p>
 											<p className={styles.rightCardDescription}>
-												Доступ к восстановлению БД и выдаче роли DEV.
+												Права разработчика с расширенными правами админа.
 												Включает ADMIN автоматически.
 											</p>
 										</div>
