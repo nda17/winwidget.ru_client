@@ -15,6 +15,8 @@ export interface AdminTelegramBotSettings {
 	authTelegramBotUsernameConfigured: boolean
 	supportTelegramBotTokenConfigured: boolean
 	telegramWebhookHostConfigured: boolean
+	telegramWebhookHost: string | null
+	telegramWebhookHealthUrl: string | null
 	updatedAt: string
 }
 

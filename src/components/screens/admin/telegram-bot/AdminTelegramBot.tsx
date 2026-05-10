@@ -23,6 +23,7 @@ import styles from './AdminTelegramBot.module.scss'
 const SETTINGS_QUERY_KEY = ['admin-telegram-bot-settings']
 const WEBHOOKS_QUERY_KEY = ['admin-telegram-bot-webhooks']
 const WEBHOOK_BOTS: TelegramWebhookBot[] = ['info', 'auth', 'support']
+const WEBHOOK_RECENT_ERROR_MS = 10 * 60 * 1000
 
 const formatDate = (value: string) =>
 	new Intl.DateTimeFormat('ru-RU', {
@@ -33,6 +34,16 @@ const formatDate = (value: string) =>
 const formatFileSize = (value: number) => {
 	if (value < 1024 * 1024) return `${Math.round(value / 1024)} КБ`
 	return `${(value / 1024 / 1024).toFixed(1)} МБ`
+}
+
+const hasRecentWebhookError = (lastErrorAt?: string | null) => {
+	if (!lastErrorAt) return false
+
+	const lastErrorTime = new Date(lastErrorAt).getTime()
+
+	if (Number.isNaN(lastErrorTime)) return false
+
+	return Date.now() - lastErrorTime < WEBHOOK_RECENT_ERROR_MS
 }
 
 const AdminTelegramBot: NextPage = () => {
@@ -354,10 +365,23 @@ const AdminTelegramBot: NextPage = () => {
 										? 'Настроен'
 										: 'Не настроен'}
 								</span>
+								<p className={styles.statusValue}>
+									{settings.telegramWebhookHost ?? '—'}
+								</p>
 							</div>
 							<div className={styles.statusItem}>
-								<p className={styles.statusLabel}>Расписание</p>
+								<p className={styles.statusLabel}>
+									Расписание отправки сводки
+								</p>
 								<p className={styles.statusValue}>01:50 МСК</p>
+							</div>
+							<div className={styles.statusItem}>
+								<p className={styles.statusLabel}>
+									Расписание отправки backup
+								</p>
+								<p className={styles.statusValue}>
+									{settings.databaseBackupTime}
+								</p>
 							</div>
 							<div className={styles.statusItem}>
 								<p className={styles.statusLabel}>Последняя отправка</p>
@@ -450,13 +474,16 @@ const AdminTelegramBot: NextPage = () => {
 								{WEBHOOK_BOTS.map(bot => {
 									const status = statusByBot.get(bot)
 									const pendingCount = status?.pendingUpdateCount ?? null
+									const hasRecentError = hasRecentWebhookError(
+										status?.lastErrorAt
+									)
 									const hasProblem = Boolean(
 										status &&
 										(!status.ok ||
 											!status.webhookMatchesExpected ||
 											status.usernameMatchesConfigured === false ||
 											(pendingCount ?? 0) > 0 ||
-											status.lastErrorMessage)
+											(status.lastErrorMessage && hasRecentError))
 									)
 
 									return (
@@ -508,7 +535,11 @@ const AdminTelegramBot: NextPage = () => {
 											</p>
 											{status?.lastErrorMessage && (
 												<p className={styles.webhookStatusError}>
-													{status.lastErrorMessage}
+													Последняя ошибка
+													{status.lastErrorAt
+														? ` ${formatDate(status.lastErrorAt)}`
+														: ''}
+													: {status.lastErrorMessage}
 												</p>
 											)}
 											{status?.error && (
