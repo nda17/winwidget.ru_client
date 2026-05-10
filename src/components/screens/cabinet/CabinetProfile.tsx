@@ -260,7 +260,7 @@ const CabinetProfile = () => {
 
 		const startedAt = Date.now()
 		telegramBindingToastRef.current = toast.loading(
-			'Ждём подтверждения в Auth_bot...'
+			'Ждём подтверждения в @auth_bot...'
 		)
 
 		telegramBindingPollRef.current = setInterval(async () => {
@@ -289,7 +289,7 @@ const CabinetProfile = () => {
 					const toastId = telegramBindingToastRef.current || undefined
 					telegramBindingToastRef.current = null
 					toast.error(
-						'Не удалось подтвердить Telegram. Откройте Auth_bot ещё раз.',
+						'Не удалось подтвердить Telegram. Откройте @auth_bot ещё раз.',
 						{ id: toastId }
 					)
 				}
@@ -312,7 +312,7 @@ const CabinetProfile = () => {
 
 		const startedAt = Date.now()
 		telegramNotificationsToastRef.current = toast.loading(
-			'Ждём подтверждения в Info_bot...'
+			'Ждём подтверждения в @winwidget_info_bot...'
 		)
 
 		telegramNotificationsPollRef.current = setInterval(async () => {
@@ -341,7 +341,7 @@ const CabinetProfile = () => {
 						telegramNotificationsToastRef.current || undefined
 					telegramNotificationsToastRef.current = null
 					toast.error(
-						'Не удалось подтвердить уведомления. Откройте Info_bot ещё раз.',
+						'Не удалось подтвердить уведомления. Откройте @winwidget_info_bot ещё раз.',
 						{ id: toastId }
 					)
 				}
@@ -757,7 +757,7 @@ const CabinetProfile = () => {
 
 						{telegramBindingRequested && !hasTelegram && (
 							<p className={styles.hint}>
-								Откройте Auth_bot, нажмите Start и кнопку привязки. После
+								Откройте @auth_bot, нажмите Start и кнопку привязки. После
 								этого статус обновится автоматически.
 							</p>
 						)}
@@ -805,7 +805,7 @@ const CabinetProfile = () => {
 									{isStartingTelegramBinding
 										? 'Открываем...'
 										: telegramBindingRequested
-											? 'Открыть Auth_bot ещё раз'
+											? 'Открыть @auth_bot ещё раз'
 											: 'Привязать Telegram'}
 								</button>
 							)}
@@ -859,15 +859,16 @@ const CabinetProfile = () => {
 
 					{!isTelegramNotificationsConfigured && (
 						<p className={styles.hint}>
-							Info_bot пока не настроен. Подключение временно недоступно.
+							@winwidget_info_bot пока не настроен. Подключение временно
+							недоступно.
 						</p>
 					)}
 
 					{telegramNotificationsBindingRequested &&
 						!hasTelegramNotifications && (
 							<p className={styles.hint}>
-								Откройте Info_bot и нажмите Start. После этого статус
-								обновится автоматически.
+								Откройте @winwidget_info_bot и нажмите Start. После этого
+								статус обновится автоматически.
 							</p>
 						)}
 
@@ -890,7 +891,7 @@ const CabinetProfile = () => {
 								{isStartingTelegramNotifications
 									? 'Открываем...'
 									: telegramNotificationsBindingRequested
-										? 'Открыть Info_bot ещё раз'
+										? 'Открыть @winwidget_info_bot ещё раз'
 										: 'Подключить уведомления'}
 							</button>
 						)}
