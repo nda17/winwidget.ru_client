@@ -131,6 +131,20 @@ export const useProfileIdentityBinding = () => {
 	})
 
 	const {
+		mutateAsync: cancelTelegramBindingAsync,
+		isPending: isCancellingTelegramBinding
+	} = useMutation({
+		mutationKey: ['profile-cancel-telegram-binding'],
+		mutationFn: () => userService.cancelProfileTelegramBinding(),
+		onSuccess() {
+			setTelegramBindingRequested(false)
+		},
+		onError(error) {
+			toast.error(`Отмена Telegram: ${errorCatch(error)}`)
+		}
+	})
+
+	const {
 		mutateAsync: startTelegramNotificationsAsync,
 		isPending: isStartingTelegramNotifications
 	} = useMutation({
@@ -141,6 +155,20 @@ export const useProfileIdentityBinding = () => {
 		},
 		onError(error) {
 			toast.error(`Telegram-уведомления: ${errorCatch(error)}`)
+		}
+	})
+
+	const {
+		mutateAsync: cancelTelegramNotificationsAsync,
+		isPending: isCancellingTelegramNotifications
+	} = useMutation({
+		mutationKey: ['profile-cancel-telegram-notifications'],
+		mutationFn: () => userService.cancelProfileTelegramNotifications(),
+		onSuccess() {
+			setTelegramNotificationsBindingRequested(false)
+		},
+		onError(error) {
+			toast.error(`Отмена Telegram-уведомлений: ${errorCatch(error)}`)
 		}
 	})
 
@@ -211,6 +239,24 @@ export const useProfileIdentityBinding = () => {
 		}
 	}
 
+	const cancelTelegramBinding = async () => {
+		try {
+			await cancelTelegramBindingAsync()
+			return true
+		} catch {
+			return false
+		}
+	}
+
+	const cancelTelegramNotificationsBinding = async () => {
+		try {
+			await cancelTelegramNotificationsAsync()
+			return true
+		} catch {
+			return false
+		}
+	}
+
 	return {
 		emailCodeRequested,
 		phoneCodeRequested,
@@ -222,7 +268,9 @@ export const useProfileIdentityBinding = () => {
 		isVerifyingPhoneCode,
 		isStartingTelegramBinding,
 		isUnlinkingTelegramBinding,
+		isCancellingTelegramBinding,
 		isStartingTelegramNotifications,
+		isCancellingTelegramNotifications,
 		requestEmailCode,
 		confirmEmailCode,
 		requestPhoneCode,
@@ -230,6 +278,8 @@ export const useProfileIdentityBinding = () => {
 		requestTelegramBinding,
 		requestTelegramNotificationsBinding,
 		unlinkTelegramBinding,
+		cancelTelegramBinding,
+		cancelTelegramNotificationsBinding,
 		resetEmailBinding() {
 			setEmailCodeRequested(false)
 		},

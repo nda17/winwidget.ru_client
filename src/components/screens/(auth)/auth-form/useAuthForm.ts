@@ -641,6 +641,27 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 		}
 	}
 
+	const cancelTelegramAuthStep = async () => {
+		const requestId = telegramRequest?.requestId
+
+		clearTelegramAuthPolling(true)
+		setTelegramRequest(null)
+
+		if (!requestId) return
+
+		const toastId = toast.loading('Отменяем ожидание Telegram...')
+
+		try {
+			await authService.cancelTelegramAuth({ requestId })
+			toast.success('Ожидание Telegram отменено', { id: toastId })
+		} catch (error) {
+			toast.error(
+				`Telegram: ${getErrorMessage(error, 'Не удалось отменить ожидание')}`,
+				{ id: toastId }
+			)
+		}
+	}
+
 	const isLoading =
 		isPending ||
 		isLoginPending ||
@@ -679,10 +700,7 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 			setIsPhoneCodeRequested(false)
 			setValue('code', '')
 		},
-		resetTelegramAuthStep: () => {
-			clearTelegramAuthPolling(true)
-			setTelegramRequest(null)
-		}
+		resetTelegramAuthStep: cancelTelegramAuthStep
 	}
 }
 

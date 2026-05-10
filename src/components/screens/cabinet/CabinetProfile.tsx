@@ -120,7 +120,9 @@ const CabinetProfile = () => {
 		telegramNotificationsBindingRequested,
 		isStartingTelegramBinding,
 		isUnlinkingTelegramBinding,
+		isCancellingTelegramBinding,
 		isStartingTelegramNotifications,
+		isCancellingTelegramNotifications,
 		requestEmailCode,
 		confirmEmailCode,
 		requestPhoneCode,
@@ -128,6 +130,8 @@ const CabinetProfile = () => {
 		requestTelegramBinding,
 		requestTelegramNotificationsBinding,
 		unlinkTelegramBinding,
+		cancelTelegramBinding,
+		cancelTelegramNotificationsBinding,
 		resetEmailBinding,
 		resetPhoneBinding
 	} = useProfileIdentityBinding()
@@ -422,6 +426,26 @@ const CabinetProfile = () => {
 		} else if (typeof window !== 'undefined') {
 			window.open(data.botUrl, '_blank', 'noopener,noreferrer')
 		}
+	}
+
+	const handleTelegramBindingCancel = async () => {
+		clearTelegramBindingPolling(true)
+		const cancelled = await cancelTelegramBinding()
+
+		if (!cancelled) return
+
+		setTelegramBindingUrl('')
+		toast.success('Ожидание привязки Telegram отменено')
+	}
+
+	const handleTelegramNotificationsCancel = async () => {
+		clearTelegramNotificationsPolling(true)
+		const cancelled = await cancelTelegramNotificationsBinding()
+
+		if (!cancelled) return
+
+		setTelegramNotificationsUrl('')
+		toast.success('Ожидание подключения уведомлений отменено')
 	}
 
 	const phoneRegistration = regPhone('phone', {
@@ -772,7 +796,10 @@ const CabinetProfile = () => {
 								<button
 									type="button"
 									className={styles.btn}
-									disabled={isStartingTelegramBinding}
+									disabled={
+										isStartingTelegramBinding ||
+										isCancellingTelegramBinding
+									}
 									onClick={handleTelegramBindingStart}
 								>
 									{isStartingTelegramBinding
@@ -785,21 +812,33 @@ const CabinetProfile = () => {
 						</div>
 
 						{telegramBindingUrl && !hasTelegram && (
-							<button
-								type="button"
-								className={styles.resetLink}
-								onClick={() => {
-									if (typeof window !== 'undefined') {
-										window.open(
-											telegramBindingUrl,
-											'_blank',
-											'noopener,noreferrer'
-										)
-									}
-								}}
-							>
-								Открыть ссылку вручную
-							</button>
+							<div className={styles.inlineActions}>
+								<button
+									type="button"
+									className={styles.resetLink}
+									onClick={() => {
+										if (typeof window !== 'undefined') {
+											window.open(
+												telegramBindingUrl,
+												'_blank',
+												'noopener,noreferrer'
+											)
+										}
+									}}
+								>
+									Открыть ссылку вручную
+								</button>
+								<button
+									type="button"
+									className={styles.resetLink}
+									disabled={isCancellingTelegramBinding}
+									onClick={handleTelegramBindingCancel}
+								>
+									{isCancellingTelegramBinding
+										? 'Отменяем...'
+										: 'Отменить ожидание'}
+								</button>
+							</div>
 						)}
 					</div>
 				</div>
@@ -843,6 +882,7 @@ const CabinetProfile = () => {
 								className={styles.btn}
 								disabled={
 									isStartingTelegramNotifications ||
+									isCancellingTelegramNotifications ||
 									!isTelegramNotificationsConfigured
 								}
 								onClick={handleTelegramNotificationsStart}
@@ -857,21 +897,33 @@ const CabinetProfile = () => {
 					</div>
 
 					{telegramNotificationsUrl && !hasTelegramNotifications && (
-						<button
-							type="button"
-							className={styles.resetLink}
-							onClick={() => {
-								if (typeof window !== 'undefined') {
-									window.open(
-										telegramNotificationsUrl,
-										'_blank',
-										'noopener,noreferrer'
-									)
-								}
-							}}
-						>
-							Открыть ссылку вручную
-						</button>
+						<div className={styles.inlineActions}>
+							<button
+								type="button"
+								className={styles.resetLink}
+								onClick={() => {
+									if (typeof window !== 'undefined') {
+										window.open(
+											telegramNotificationsUrl,
+											'_blank',
+											'noopener,noreferrer'
+										)
+									}
+								}}
+							>
+								Открыть ссылку вручную
+							</button>
+							<button
+								type="button"
+								className={styles.resetLink}
+								disabled={isCancellingTelegramNotifications}
+								onClick={handleTelegramNotificationsCancel}
+							>
+								{isCancellingTelegramNotifications
+									? 'Отменяем...'
+									: 'Отменить ожидание'}
+							</button>
+						</div>
 					)}
 				</div>
 			</div>

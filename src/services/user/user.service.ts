@@ -259,6 +259,12 @@ class UserService {
 		return data
 	}
 
+	async cancelProfileTelegramBinding() {
+		return axiosInterceptorsRequest.post(
+			`${this._BASE_URL}/profile/bind/telegram/cancel`
+		)
+	}
+
 	async unlinkProfileTelegramBinding() {
 		const { data } = await axiosInterceptorsRequest.delete<IUser>(
 			`${this._BASE_URL}/profile/bind/telegram`
@@ -283,6 +289,12 @@ class UserService {
 			)
 
 		return data
+	}
+
+	async cancelProfileTelegramNotifications() {
+		return axiosInterceptorsRequest.post(
+			`${this._BASE_URL}/profile/telegram-notifications/cancel`
+		)
 	}
 }
 

@@ -288,7 +288,7 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin, authMessage }) => {
 								className={styles['link-button']}
 								onClick={resetTelegramAuthStep}
 							>
-								Сбросить
+								Отменить ожидание
 							</button>
 						</div>
 					</div>

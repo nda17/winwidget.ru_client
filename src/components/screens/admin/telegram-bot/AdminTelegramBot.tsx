@@ -19,6 +19,8 @@ import toast from 'react-hot-toast'
 import styles from './AdminTelegramBot.module.scss'
 
 const SETTINGS_QUERY_KEY = ['admin-telegram-bot-settings']
+const WEBHOOKS_QUERY_KEY = ['admin-telegram-bot-webhooks']
+const WEBHOOK_BOTS: TelegramWebhookBot[] = ['info', 'auth', 'support']
 
 const formatDate = (value: string) =>
 	new Intl.DateTimeFormat('ru-RU', {
@@ -33,6 +35,15 @@ const AdminTelegramBot: NextPage = () => {
 	const { data: settings, isLoading } = useQuery({
 		queryKey: SETTINGS_QUERY_KEY,
 		queryFn: adminTelegramBotService.get
+	})
+
+	const {
+		data: webhookStatuses,
+		isLoading: isWebhookStatusesLoading,
+		refetch: refetchWebhookStatuses
+	} = useQuery({
+		queryKey: WEBHOOKS_QUERY_KEY,
+		queryFn: adminTelegramBotService.getWebhookStatuses
 	})
 
 	useEffect(() => {
@@ -71,24 +82,38 @@ const AdminTelegramBot: NextPage = () => {
 	}
 
 	const handleReinstallWebhook = (bot: TelegramWebhookBot) => {
-		const promise = webhookMutation.mutateAsync(bot)
+		const promise = webhookMutation.mutateAsync(bot).then(async result => {
+			await queryClient.invalidateQueries({
+				queryKey: WEBHOOKS_QUERY_KEY
+			})
+			return result
+		})
 
 		toast.promise(promise, {
 			loading:
 				bot === 'auth'
 					? 'Переустанавливаем webhook Auth_bot...'
-					: 'Переустанавливаем webhook Info_bot...',
+					: bot === 'support'
+						? 'Переустанавливаем webhook Support_bot...'
+						: 'Переустанавливаем webhook Info_bot...',
 			success: result => `Webhook ${result.title} переустановлен`,
 			error: error => `Ошибка webhook: ${errorCatch(error)}`
 		})
 	}
 
 	const handleReinstallAllWebhooks = () => {
-		const promise = allWebhooksMutation.mutateAsync()
+		const promise = allWebhooksMutation
+			.mutateAsync()
+			.then(async result => {
+				await queryClient.invalidateQueries({
+					queryKey: WEBHOOKS_QUERY_KEY
+				})
+				return result
+			})
 
 		toast.promise(promise, {
-			loading: 'Переустанавливаем webhook обоих ботов...',
-			success: 'Webhook обоих ботов переустановлены',
+			loading: 'Переустанавливаем webhook Telegram-ботов...',
+			success: 'Webhook Telegram-ботов переустановлены',
 			error: error => `Ошибка webhook: ${errorCatch(error)}`
 		})
 	}
@@ -128,6 +153,16 @@ const AdminTelegramBot: NextPage = () => {
 		: 'Ещё не отправлялась'
 	const isWebhookActionPending =
 		webhookMutation.isPending || allWebhooksMutation.isPending
+	const statusByBot = new Map(
+		webhookStatuses?.items.map(status => [status.bot, status]) ?? []
+	)
+	const isBotTokenConfigured = (bot: TelegramWebhookBot) => {
+		if (!settings) return false
+		if (bot === 'auth') return settings.authTelegramBotTokenConfigured
+		if (bot === 'support')
+			return settings.supportTelegramBotTokenConfigured
+		return settings.telegramBotTokenConfigured
+	}
 
 	return (
 		<section className={styles.wrapper}>
@@ -137,9 +172,9 @@ const AdminTelegramBot: NextPage = () => {
 			<AdminSectionHeading
 				text="Telegram-боты"
 				title="Webhook и ежедневная сводка"
-				description="Настраивает webhook Auth_bot и Info_bot, а также отправку ежедневной операционной сводки в Telegram-группу администраторов."
+				description="Настраивает webhook Auth_bot, Info_bot и Support_bot, а также отправку ежедневной операционной сводки в Telegram-группу администраторов."
 				risk="medium"
-				riskText="Если указать неверный ID группы, сводка не уйдёт. Info_bot должен быть добавлен в группу, а токен должен быть настроен на сервере."
+				riskText="Если указать неверный ID группы, сводка и обращения пользователей не уйдут. Info_bot и Support_bot должны быть добавлены в группу, а токены должны быть настроены на сервере."
 			/>
 
 			<div className={styles.card}>
@@ -194,6 +229,20 @@ const AdminTelegramBot: NextPage = () => {
 									}`}
 								>
 									{settings.authTelegramBotTokenConfigured
+										? 'Настроен'
+										: 'Не настроен'}
+								</span>
+							</div>
+							<div className={styles.statusItem}>
+								<p className={styles.statusLabel}>Токен Support_bot</p>
+								<span
+									className={`${styles.badge} ${
+										settings.supportTelegramBotTokenConfigured
+											? styles.badgeOk
+											: styles.badgeWarning
+									}`}
+								>
+									{settings.supportTelegramBotTokenConfigured
 										? 'Настроен'
 										: 'Не настроен'}
 								</span>
@@ -271,17 +320,134 @@ const AdminTelegramBot: NextPage = () => {
 								</button>
 								<button
 									type="button"
+									className={styles.actionBtn}
+									onClick={() => handleReinstallWebhook('support')}
+									disabled={
+										isWebhookActionPending ||
+										!settings.supportTelegramBotTokenConfigured ||
+										!settings.telegramWebhookHostConfigured
+									}
+								>
+									Support_bot
+								</button>
+								<button
+									type="button"
 									className={styles.saveBtn}
 									onClick={handleReinstallAllWebhooks}
 									disabled={
 										isWebhookActionPending ||
 										!settings.telegramBotTokenConfigured ||
 										!settings.authTelegramBotTokenConfigured ||
+										!settings.supportTelegramBotTokenConfigured ||
 										!settings.telegramWebhookHostConfigured
 									}
 								>
-									Переустановить оба
+									Переустановить все
 								</button>
+							</div>
+						</div>
+
+						<div className={styles.webhookStatusPanel}>
+							<div className={styles.webhookStatusHeader}>
+								<div>
+									<p className={styles.label}>Статус webhook</p>
+									<p className={styles.hint}>
+										Показывает текущую очередь Telegram и последнюю ошибку
+										доставки
+									</p>
+								</div>
+								<button
+									type="button"
+									className={styles.actionBtn}
+									onClick={() => refetchWebhookStatuses()}
+									disabled={isWebhookStatusesLoading}
+								>
+									Обновить
+								</button>
+							</div>
+
+							<div className={styles.webhookStatusGrid}>
+								{WEBHOOK_BOTS.map(bot => {
+									const status = statusByBot.get(bot)
+									const pendingCount = status?.pendingUpdateCount ?? null
+									const hasProblem = Boolean(
+										status &&
+										(!status.ok ||
+											!status.webhookMatchesExpected ||
+											status.usernameMatchesConfigured === false ||
+											(pendingCount ?? 0) > 0 ||
+											status.lastErrorMessage)
+									)
+
+									return (
+										<div key={bot} className={styles.webhookStatusItem}>
+											<div className={styles.webhookStatusTitleRow}>
+												<p className={styles.statusValue}>
+													{status?.title ??
+														(bot === 'auth'
+															? 'Auth_bot'
+															: bot === 'support'
+																? 'Support_bot'
+																: 'Info_bot')}
+												</p>
+												<span
+													className={`${styles.badge} ${
+														!status
+															? styles.badgeWarning
+															: hasProblem
+																? styles.badgeWarning
+																: styles.badgeOk
+													}`}
+												>
+													{!status
+														? 'Проверяем'
+														: hasProblem
+															? 'Внимание'
+															: 'OK'}
+												</span>
+											</div>
+											<p className={styles.webhookStatusLine}>
+												Очередь: {pendingCount ?? '—'}
+											</p>
+											<p className={styles.webhookStatusLine}>
+												Username: {status?.actualUsername ?? '—'}
+											</p>
+											{status?.configuredUsername && (
+												<p className={styles.webhookStatusLine}>
+													Env: @{status.configuredUsername}
+												</p>
+											)}
+											<p className={styles.webhookStatusLine}>
+												URL:{' '}
+												{status?.webhookMatchesExpected
+													? 'актуальный'
+													: status?.webhookUrl
+														? 'отличается'
+														: 'не установлен'}
+											</p>
+											{status?.lastErrorMessage && (
+												<p className={styles.webhookStatusError}>
+													{status.lastErrorMessage}
+												</p>
+											)}
+											{status?.error && (
+												<p className={styles.webhookStatusError}>
+													{status.error}
+												</p>
+											)}
+											{status?.usernameMatchesConfigured === false && (
+												<p className={styles.webhookStatusError}>
+													Username в env не совпадает с токеном
+												</p>
+											)}
+											{!isBotTokenConfigured(bot) && (
+												<p className={styles.webhookStatusError}>
+													Токен не настроен
+												</p>
+											)}
+										</div>
+									)
+								})}
 							</div>
 						</div>
 
@@ -322,7 +488,8 @@ const AdminTelegramBot: NextPage = () => {
 							/>
 							<p className={styles.hint}>
 								Укажите chat_id группы, куда Info_bot будет отправлять
-								ежедневную сводку
+								ежедневную сводку, а Support_bot будет пересылать обращения
+								пользователей
 							</p>
 						</div>
 

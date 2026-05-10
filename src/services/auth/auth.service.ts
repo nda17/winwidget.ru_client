@@ -37,6 +37,10 @@ interface ITelegramAuthCompletePayload {
 	requestId: string
 }
 
+interface ITelegramAuthCancelPayload {
+	requestId: string
+}
+
 export interface IEmailRegistrationResponse {
 	email: string
 	expiresAt: string
@@ -297,6 +301,12 @@ class AuthService {
 		}
 
 		return response
+	}
+
+	async cancelTelegramAuth(data: ITelegramAuthCancelPayload) {
+		return axiosClassicRequest.post('/auth/telegram/cancel', {
+			requestId: data.requestId
+		})
 	}
 }
 

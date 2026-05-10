@@ -9,6 +9,7 @@ export interface AdminTelegramBotSettings {
 	telegramBotUsernameConfigured: boolean
 	authTelegramBotTokenConfigured: boolean
 	authTelegramBotUsernameConfigured: boolean
+	supportTelegramBotTokenConfigured: boolean
 	telegramWebhookHostConfigured: boolean
 	updatedAt: string
 }
@@ -18,7 +19,7 @@ export interface UpdateAdminTelegramBotSettings {
 	dailySummaryChatId?: string
 }
 
-export type TelegramWebhookBot = 'info' | 'auth'
+export type TelegramWebhookBot = 'info' | 'auth' | 'support'
 
 export interface TelegramWebhookInstallResult {
 	bot: TelegramWebhookBot
@@ -32,6 +33,29 @@ export interface TelegramWebhookInstallResult {
 
 export interface TelegramWebhookInstallAllResult {
 	items: TelegramWebhookInstallResult[]
+}
+
+export interface TelegramWebhookStatus {
+	bot: TelegramWebhookBot
+	title: string
+	configured: boolean
+	ok: boolean
+	expectedWebhookUrl: string | null
+	webhookUrl: string | null
+	webhookMatchesExpected: boolean
+	pendingUpdateCount: number | null
+	lastErrorAt: string | null
+	lastErrorMessage: string | null
+	allowedUpdates: string[] | null
+	secretConfigured: boolean
+	configuredUsername: string | null
+	actualUsername: string | null
+	usernameMatchesConfigured: boolean | null
+	error: string | null
+}
+
+export interface TelegramWebhookStatusResponse {
+	items: TelegramWebhookStatus[]
 }
 
 const adminTelegramBotService = {
@@ -64,6 +88,13 @@ const adminTelegramBotService = {
 	async reinstallWebhooks(): Promise<TelegramWebhookInstallAllResult> {
 		const { data } = await axiosInterceptorsRequest.post(
 			'/telegram-bot/admin/webhooks/reinstall'
+		)
+		return data
+	},
+
+	async getWebhookStatuses(): Promise<TelegramWebhookStatusResponse> {
+		const { data } = await axiosInterceptorsRequest.get(
+			'/telegram-bot/admin/webhooks/status'
 		)
 		return data
 	}
