@@ -102,6 +102,22 @@
 	@apply text-[0.78rem] leading-[1.4] text-[#b45309] break-words;
 }
 
+.webhookStatusHistory {
+	@apply text-[0.78rem] leading-[1.4] text-[#999] break-words;
+}
+
+.schedulePanel {
+	@apply flex flex-col gap-2 border border-[#efe8fb] rounded-xl p-4 bg-[#fcfaff];
+}
+
+.scheduleGrid {
+	@apply grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-3 items-end;
+
+	@media (max-width: 760px) {
+		@apply grid-cols-1;
+	}
+}
+
 .backupPanel,
 .restorePanel {
 	@apply flex flex-col gap-3 border border-[#efe8fb] rounded-xl p-4 bg-[#fcfaff];

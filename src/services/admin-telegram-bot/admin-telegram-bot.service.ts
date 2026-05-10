@@ -3,11 +3,15 @@ import { axiosInterceptorsRequest } from '@/api/interceptors'
 export interface AdminTelegramBotSettings {
 	dailySummaryEnabled: boolean
 	dailySummaryChatId: string
+	dailySummaryTime: string
+	dailySummaryTimeLabel: string
 	dailySummaryLastSentPeriodStart: string | null
 	dailySummaryLastSentAt: string | null
+	databaseBackupEnabled: boolean
+	databaseBackupTime: string
+	databaseBackupTimeLabel: string
 	databaseBackupLastSentPeriodStart: string | null
 	databaseBackupLastSentAt: string | null
-	databaseBackupTime: string
 	databaseRestoreConfirmation: string
 	telegramBotTokenConfigured: boolean
 	telegramBotUsernameConfigured: boolean
@@ -23,6 +27,9 @@ export interface AdminTelegramBotSettings {
 export interface UpdateAdminTelegramBotSettings {
 	dailySummaryEnabled?: boolean
 	dailySummaryChatId?: string
+	dailySummaryTime?: string
+	databaseBackupEnabled?: boolean
+	databaseBackupTime?: string
 }
 
 export type TelegramWebhookBot = 'info' | 'auth' | 'support'

@@ -23,6 +23,7 @@ import styles from './AdminTelegramBot.module.scss'
 const SETTINGS_QUERY_KEY = ['admin-telegram-bot-settings']
 const WEBHOOKS_QUERY_KEY = ['admin-telegram-bot-webhooks']
 const WEBHOOK_BOTS: TelegramWebhookBot[] = ['info', 'auth', 'support']
+const MIN_TASK_TIME_GAP_MINUTES = 5
 
 const formatDate = (value: string) =>
 	new Intl.DateTimeFormat('ru-RU', {
@@ -35,11 +36,40 @@ const formatFileSize = (value: number) => {
 	return `${(value / 1024 / 1024).toFixed(1)} МБ`
 }
 
+const getTimeMinutes = (value: string) => {
+	const [hour, minute] = value.split(':').map(Number)
+
+	if (
+		!Number.isInteger(hour) ||
+		!Number.isInteger(minute) ||
+		hour < 0 ||
+		hour > 23 ||
+		minute < 0 ||
+		minute > 59
+	) {
+		return null
+	}
+
+	return hour * 60 + minute
+}
+
+const getTaskTimeGapMinutes = (first: string, second: string) => {
+	const firstMinutes = getTimeMinutes(first)
+	const secondMinutes = getTimeMinutes(second)
+
+	if (firstMinutes === null || secondMinutes === null) return null
+
+	const directGap = Math.abs(firstMinutes - secondMinutes)
+	return Math.min(directGap, 24 * 60 - directGap)
+}
+
 const AdminTelegramBot: NextPage = () => {
 	const queryClient = useQueryClient()
 	const { user } = useUser()
 	const canRestoreDatabase = Boolean(user?.rights?.includes(UserRole.DEV))
 	const [chatId, setChatId] = useState('')
+	const [summaryTime, setSummaryTime] = useState('')
+	const [backupTime, setBackupTime] = useState('')
 	const [restoreFile, setRestoreFile] = useState<File | null>(null)
 	const [restoreConfirmation, setRestoreConfirmation] = useState('')
 
@@ -58,13 +88,19 @@ const AdminTelegramBot: NextPage = () => {
 	})
 
 	useEffect(() => {
-		if (settings) setChatId(settings.dailySummaryChatId)
+		if (!settings) return
+
+		setChatId(settings.dailySummaryChatId)
+		setSummaryTime(settings.dailySummaryTime)
+		setBackupTime(settings.databaseBackupTime)
 	}, [settings])
 
 	const mutation = useMutation({
 		mutationFn: adminTelegramBotService.update,
 		onSuccess: async result => {
 			setChatId(result.dailySummaryChatId)
+			setSummaryTime(result.dailySummaryTime)
+			setBackupTime(result.databaseBackupTime)
 			await queryClient.invalidateQueries({
 				queryKey: SETTINGS_QUERY_KEY
 			})
@@ -153,7 +189,15 @@ const AdminTelegramBot: NextPage = () => {
 		})
 	}
 
-	const handleToggle = () => {
+	const getChatIdPatch = () => {
+		const normalizedChatId = chatId.trim()
+
+		return normalizedChatId === settings?.dailySummaryChatId
+			? {}
+			: { dailySummaryChatId: normalizedChatId }
+	}
+
+	const handleToggleSummary = () => {
 		if (!settings) return
 
 		if (!settings.dailySummaryEnabled && !chatId.trim()) {
@@ -162,8 +206,28 @@ const AdminTelegramBot: NextPage = () => {
 		}
 
 		saveWithToast(
-			{ dailySummaryEnabled: !settings.dailySummaryEnabled },
+			{
+				dailySummaryEnabled: !settings.dailySummaryEnabled,
+				...getChatIdPatch()
+			},
 			'Применяем настройку...'
+		)
+	}
+
+	const handleToggleDatabaseBackup = () => {
+		if (!settings) return
+
+		if (!settings.databaseBackupEnabled && !chatId.trim()) {
+			toast.error('Сначала укажите ID группы Telegram')
+			return
+		}
+
+		saveWithToast(
+			{
+				databaseBackupEnabled: !settings.databaseBackupEnabled,
+				...getChatIdPatch()
+			},
+			'Применяем настройку backup...'
 		)
 	}
 
@@ -180,6 +244,32 @@ const AdminTelegramBot: NextPage = () => {
 		saveWithToast(
 			{ dailySummaryChatId: normalizedChatId },
 			'Сохраняем ID группы...'
+		)
+	}
+
+	const handleSaveSchedule = () => {
+		if (!settings) return
+
+		if (!summaryTime || !backupTime) {
+			toast.error('Укажите время сводки и backup')
+			return
+		}
+
+		const taskTimeGap = getTaskTimeGapMinutes(summaryTime, backupTime)
+
+		if (taskTimeGap === null || taskTimeGap < MIN_TASK_TIME_GAP_MINUTES) {
+			toast.error(
+				`Разнесите сводку и backup минимум на ${MIN_TASK_TIME_GAP_MINUTES} минут`
+			)
+			return
+		}
+
+		saveWithToast(
+			{
+				dailySummaryTime: summaryTime,
+				databaseBackupTime: backupTime
+			},
+			'Сохраняем расписание...'
 		)
 	}
 
@@ -359,21 +449,7 @@ const AdminTelegramBot: NextPage = () => {
 								</p>
 							</div>
 							<div className={styles.statusItem}>
-								<p className={styles.statusLabel}>
-									Расписание отправки сводки
-								</p>
-								<p className={styles.statusValue}>01:50 МСК</p>
-							</div>
-							<div className={styles.statusItem}>
-								<p className={styles.statusLabel}>
-									Расписание отправки backup
-								</p>
-								<p className={styles.statusValue}>
-									{settings.databaseBackupTime}
-								</p>
-							</div>
-							<div className={styles.statusItem}>
-								<p className={styles.statusLabel}>Последняя отправка</p>
+								<p className={styles.statusLabel}>Последняя сводка</p>
 								<p className={styles.statusValue}>{lastSentText}</p>
 							</div>
 						</div>
@@ -533,8 +609,14 @@ const AdminTelegramBot: NextPage = () => {
 													</>
 												)}
 											{status?.lastErrorMessage && (
-												<p className={styles.webhookStatusError}>
-													Последняя ошибка
+												<p
+													className={
+														hasProblem
+															? styles.webhookStatusError
+															: styles.webhookStatusHistory
+													}
+												>
+													История последней ошибки
 													{status.lastErrorAt
 														? ` ${formatDate(status.lastErrorAt)}`
 														: ''}
@@ -566,14 +648,15 @@ const AdminTelegramBot: NextPage = () => {
 							<div>
 								<p className={styles.label}>Отправка сводки</p>
 								<p className={styles.hint}>
-									@winwidget_info_bot отправляет сводку каждый день в 01:50
-									МСК и явно показывает период отчёта
+									@winwidget_info_bot отправляет сводку каждый день в{' '}
+									{settings.dailySummaryTimeLabel} и явно показывает период
+									отчёта
 								</p>
 							</div>
 							<button
 								type="button"
 								className={`${styles.toggle} ${settings.dailySummaryEnabled ? styles.toggleOn : ''}`}
-								onClick={handleToggle}
+								onClick={handleToggleSummary}
 								disabled={mutation.isPending}
 								aria-label={
 									settings.dailySummaryEnabled
@@ -583,6 +666,69 @@ const AdminTelegramBot: NextPage = () => {
 							>
 								<span className={styles.toggleThumb} />
 							</button>
+						</div>
+
+						<div className={styles.toggleRow}>
+							<div>
+								<p className={styles.label}>Отправка backup</p>
+								<p className={styles.hint}>
+									@winwidget_info_bot отправляет backup базы каждый день в{' '}
+									{settings.databaseBackupTimeLabel}. Файл приходит в ту же
+									Telegram-группу, что и сводка.
+								</p>
+							</div>
+							<button
+								type="button"
+								className={`${styles.toggle} ${settings.databaseBackupEnabled ? styles.toggleOn : ''}`}
+								onClick={handleToggleDatabaseBackup}
+								disabled={mutation.isPending}
+								aria-label={
+									settings.databaseBackupEnabled
+										? 'Выключить отправку backup'
+										: 'Включить отправку backup'
+								}
+							>
+								<span className={styles.toggleThumb} />
+							</button>
+						</div>
+
+						<div className={styles.schedulePanel}>
+							<div className={styles.scheduleGrid}>
+								<label className={styles.field}>
+									<span className={styles.label}>Время сводки</span>
+									<input
+										type="time"
+										className={styles.input}
+										value={summaryTime}
+										onChange={event => setSummaryTime(event.target.value)}
+									/>
+								</label>
+								<label className={styles.field}>
+									<span className={styles.label}>Время backup</span>
+									<input
+										type="time"
+										className={styles.input}
+										value={backupTime}
+										onChange={event => setBackupTime(event.target.value)}
+									/>
+								</label>
+								<button
+									type="button"
+									className={styles.saveBtn}
+									onClick={handleSaveSchedule}
+									disabled={
+										mutation.isPending ||
+										(summaryTime === settings.dailySummaryTime &&
+											backupTime === settings.databaseBackupTime)
+									}
+								>
+									Сохранить расписание
+								</button>
+							</div>
+							<p className={styles.hint}>
+								Время указывается по Москве. Разница между задачами должна
+								быть минимум {MIN_TASK_TIME_GAP_MINUTES} минут.
+							</p>
 						</div>
 
 						<div className={styles.field}>
@@ -621,8 +767,7 @@ const AdminTelegramBot: NextPage = () => {
 								<div>
 									<p className={styles.label}>Backup базы данных</p>
 									<p className={styles.hint}>
-										@winwidget_info_bot отправляет backup каждый день в{' '}
-										{settings.databaseBackupTime}. Файл приходит в ту же
+										Можно отправить вне расписания. Файл приходит в ту же
 										Telegram-группу, что и сводка.
 									</p>
 								</div>
