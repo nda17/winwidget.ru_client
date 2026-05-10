@@ -40,7 +40,8 @@ const ROLE_FILTER_OPTIONS: Array<{
 }> = [
 	{ value: 'ALL', label: 'Все роли' },
 	{ value: 'USER', label: 'USER' },
-	{ value: 'ADMIN', label: 'ADMIN' }
+	{ value: 'ADMIN', label: 'ADMIN' },
+	{ value: 'DEV', label: 'DEV' }
 ]
 
 const SUBSCRIPTION_FILTER_OPTIONS: Array<{

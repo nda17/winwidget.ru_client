@@ -7,4 +7,5 @@ export interface IUserEditInput extends Omit<
 	isPhoneVerified?: boolean
 	isUser?: boolean
 	isAdmin?: boolean
+	isDev?: boolean
 }

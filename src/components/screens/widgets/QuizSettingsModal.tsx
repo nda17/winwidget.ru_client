@@ -2262,9 +2262,9 @@ const QuizSettingsModal = ({
 										placeholder="-123456789"
 									/>
 									<p className={styles.hint}>
-										Напишите боту <b>@winwidget_bot</b> команду /start,
-										затем укажите сюда ваш Telegram ID. Узнать ID можно
-										через бот <b>@getmyid_bot</b>
+										Напишите боту <b>@winwidget_info_bot</b> команду
+										/start, затем укажите сюда ваш Telegram ID. Узнать ID
+										можно через бот <b>@getmyid_bot</b>
 									</p>
 								</div>
 							</div>

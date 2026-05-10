@@ -49,7 +49,9 @@ const ACTION_LABELS: Record<AdminEventLogAction, string> = {
 	BACKLOG_TASK_DELETE: 'Удаление задачи',
 	SITE_SETTINGS_UPDATE: 'Настройки сайта',
 	TELEGRAM_BOT_SETTINGS_UPDATE: 'Настройки Telegram-бота',
-	TELEGRAM_BOT_WEBHOOK_REINSTALL: 'Webhook Telegram-бота'
+	TELEGRAM_BOT_WEBHOOK_REINSTALL: 'Webhook Telegram-бота',
+	TELEGRAM_DATABASE_BACKUP_CREATE: 'Backup базы данных',
+	TELEGRAM_DATABASE_RESTORE: 'Восстановление базы'
 }
 
 type EventLogSectionFilter = AdminEventLogSection | 'ALL'

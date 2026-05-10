@@ -45,7 +45,7 @@ export interface IUserListResponse {
 export type AdminUserSubscriptionFilter = 'HAS' | 'NONE'
 
 export interface IAdminUserListFilters {
-	role?: 'USER' | 'ADMIN'
+	role?: 'USER' | 'ADMIN' | 'DEV'
 	registeredFrom?: string
 	registeredTo?: string
 	subscription?: AdminUserSubscriptionFilter

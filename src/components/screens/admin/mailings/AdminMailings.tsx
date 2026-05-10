@@ -7,6 +7,7 @@ import ConfirmDialog from '@/components/ui/confirm-dialog/ConfirmDialog'
 import Heading from '@/components/ui/heading/Heading'
 import adminMailingsService, {
 	AdminMailingAudience,
+	AdminMailingChannel,
 	IAdminBroadcastResult
 } from '@/services/admin-mailings/admin-mailings.service'
 import { useMutation } from '@tanstack/react-query'
@@ -17,7 +18,20 @@ import styles from './AdminMailings.module.scss'
 
 const AUDIENCE_LABELS: Record<AdminMailingAudience, string> = {
 	ACTIVE_SUBSCRIPTION: 'только пользователям с активной подпиской',
-	ALL: 'всем пользователям с email'
+	ALL: 'всем подходящим пользователям'
+}
+
+const CHANNEL_LABELS: Record<AdminMailingChannel, string> = {
+	EMAIL: 'Email',
+	TELEGRAM: 'Telegram',
+	BOTH: 'Email + Telegram'
+}
+
+const CHANNEL_HINTS: Record<AdminMailingChannel, string> = {
+	EMAIL: 'Письмо уйдёт пользователям, у которых есть email.',
+	TELEGRAM:
+		'Сообщение уйдёт через @winwidget_info_bot пользователям с подключёнными Telegram-уведомлениями.',
+	BOTH: 'Отправим email и Telegram тем пользователям, у кого подключён соответствующий контакт.'
 }
 
 const formatExecutedAt = (value: string) =>
@@ -32,6 +46,7 @@ const AdminMailings: NextPage = () => {
 	const [audience, setAudience] = useState<AdminMailingAudience>(
 		'ACTIVE_SUBSCRIPTION'
 	)
+	const [channel, setChannel] = useState<AdminMailingChannel>('EMAIL')
 	const [confirmOpened, setConfirmOpened] = useState(false)
 	const [lastResult, setLastResult] =
 		useState<IAdminBroadcastResult | null>(null)
@@ -51,7 +66,7 @@ const AdminMailings: NextPage = () => {
 
 	const validate = () => {
 		if (trimmedSubject.length < 3) {
-			toast.error('Введите тему письма')
+			toast.error('Введите тему рассылки')
 			return false
 		}
 
@@ -76,7 +91,8 @@ const AdminMailings: NextPage = () => {
 		const promise = mailingMutation.mutateAsync({
 			subject: trimmedSubject,
 			message: trimmedMessage,
-			audience
+			audience,
+			channel
 		})
 
 		toast.promise(promise, {
@@ -92,7 +108,7 @@ const AdminMailings: NextPage = () => {
 			{confirmOpened && (
 				<ConfirmDialog
 					title="Отправить рассылку?"
-					message={`Письмо уйдёт ${AUDIENCE_LABELS[audience]}. Действие нельзя отменить после отправки.`}
+					message={`${CHANNEL_LABELS[channel]}-рассылка уйдёт ${AUDIENCE_LABELS[audience]}. Действие нельзя отменить после отправки.`}
 					confirmLabel="Отправить"
 					cancelLabel="Назад"
 					onConfirm={confirmSending}
@@ -106,15 +122,15 @@ const AdminMailings: NextPage = () => {
 			<AdminSectionHeading
 				text="Рассылки"
 				title="Массовая рассылка"
-				description="Отправляет email-оповещение пользователям, у которых в базе есть email."
+				description="Отправляет массовое оповещение пользователям по email, в Telegram через @winwidget_info_bot или сразу в оба канала."
 				risk="high"
-				riskText="Письмо отправляется сразу выбранной аудитории. Перед отправкой проверь тему, текст и режим аудитории."
+				riskText="Рассылка отправляется сразу выбранной аудитории. Перед отправкой проверь канал, тему, текст и режим аудитории."
 			/>
 
 			<form className={styles.card} onSubmit={handleSubmit}>
 				<div className={styles.field}>
 					<label htmlFor="mailing-subject" className={styles.label}>
-						Тема письма
+						Тема
 					</label>
 					<input
 						id="mailing-subject"
@@ -126,6 +142,31 @@ const AdminMailings: NextPage = () => {
 						maxLength={120}
 					/>
 					<p className={styles.counter}>{subject.length}/120</p>
+				</div>
+
+				<div className={styles.channelBlock}>
+					<div>
+						<p className={styles.label}>Канал</p>
+						<p className={styles.hint}>{CHANNEL_HINTS[channel]}</p>
+					</div>
+					<div className={styles.channelOptions}>
+						{(
+							[
+								['EMAIL', 'Email'],
+								['TELEGRAM', 'Telegram'],
+								['BOTH', 'Email + Telegram']
+							] as const
+						).map(([value, label]) => (
+							<button
+								key={value}
+								type="button"
+								className={`${styles.optionBtn} ${channel === value ? styles.optionBtnActive : ''}`}
+								onClick={() => setChannel(value)}
+							>
+								{label}
+							</button>
+						))}
+					</div>
 				</div>
 
 				<div className={styles.field}>
@@ -151,7 +192,7 @@ const AdminMailings: NextPage = () => {
 						<p className={styles.hint}>
 							{isActiveAudience
 								? 'Только пользователи с активной подпиской'
-								: 'Все пользователи, у которых есть email в базе'}
+								: 'Все активные пользователи с подходящим контактом'}
 						</p>
 					</div>
 					<button
@@ -179,7 +220,7 @@ const AdminMailings: NextPage = () => {
 						className={`${styles.optionBtn} ${!isActiveAudience ? styles.optionBtnActive : ''}`}
 						onClick={() => setAudience('ALL')}
 					>
-						Все с email
+						Все подходящие
 					</button>
 				</div>
 
@@ -201,7 +242,13 @@ const AdminMailings: NextPage = () => {
 							<span className={styles.resultValue}>
 								{lastResult.audience === 'ACTIVE_SUBSCRIPTION'
 									? 'Активная подписка'
-									: 'Все с email'}
+									: 'Все подходящие'}
+							</span>
+						</div>
+						<div>
+							<span className={styles.resultLabel}>Канал</span>
+							<span className={styles.resultValue}>
+								{CHANNEL_LABELS[lastResult.channel]}
 							</span>
 						</div>
 						<div>
@@ -220,6 +267,20 @@ const AdminMailings: NextPage = () => {
 							<span className={styles.resultLabel}>Ошибок</span>
 							<span className={styles.resultValue}>
 								{lastResult.failedCount}
+							</span>
+						</div>
+						<div>
+							<span className={styles.resultLabel}>Email</span>
+							<span className={styles.resultValue}>
+								{lastResult.emailSentCount}/
+								{lastResult.emailRecipientCount}
+							</span>
+						</div>
+						<div>
+							<span className={styles.resultLabel}>Telegram</span>
+							<span className={styles.resultValue}>
+								{lastResult.telegramSentCount}/
+								{lastResult.telegramRecipientCount}
 							</span>
 						</div>
 					</div>

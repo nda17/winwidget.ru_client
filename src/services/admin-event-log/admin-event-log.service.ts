@@ -28,6 +28,8 @@ export type AdminEventLogAction =
 	| 'SITE_SETTINGS_UPDATE'
 	| 'TELEGRAM_BOT_SETTINGS_UPDATE'
 	| 'TELEGRAM_BOT_WEBHOOK_REINSTALL'
+	| 'TELEGRAM_DATABASE_BACKUP_CREATE'
+	| 'TELEGRAM_DATABASE_RESTORE'
 
 export interface IAdminEventLogItem {
 	id: string

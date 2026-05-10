@@ -589,7 +589,7 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 			{
 				question: 'Как подключить уведомления в Telegram?',
 				answerHtml:
-					'Откройте нашего Telegram-бота <a href="https://t.me/winwidgetBot" target="_blank" rel="noopener noreferrer">@winwidget_bot</a> и нажмите «Старт» — бот пришлёт вам ваш Chat ID. Вставьте этот ID в поле «Telegram Chat ID» во вкладке «Интеграции». После этого каждая новая заявка будет моментально приходить в Telegram.'
+					'Откройте нашего Telegram-бота <a href="https://t.me/winwidget_info_bot" target="_blank" rel="noopener noreferrer">@winwidget_info_bot</a> и нажмите «Старт» — бот пришлёт вам ваш Chat ID. Вставьте этот ID в поле «Telegram Chat ID» во вкладке «Интеграции». После этого каждая новая заявка будет моментально приходить в Telegram.'
 			},
 			{
 				question: 'Как интегрировать виджет с Битрикс24?',

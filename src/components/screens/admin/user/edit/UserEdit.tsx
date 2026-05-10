@@ -16,6 +16,7 @@ import Heading from '@/components/ui/heading/Heading'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import UserInfo from '@/components/ui/user-info/UserInfo'
 import { ADMIN_PAGES } from '@/config/pages/admin.config'
+import useUser from '@/hooks/useUser'
 import { UserRole } from '@/services/auth/auth.types'
 import type { IAdminUserOverview } from '@/services/user/user.service'
 import { UserLoginMethod } from '@/shared/types/user.types'
@@ -359,6 +360,7 @@ const UserOverview360 = ({
 const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 	const [isActivationConfirmOpen, setIsActivationConfirmOpen] =
 		useState(false)
+	const { user: currentUser } = useUser()
 	const {
 		handleSubmit,
 		register,
@@ -395,6 +397,7 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 			avatarPath: '',
 			email: data.email ?? '',
 			isAdmin: data.rights.includes(UserRole.ADMIN),
+			isDev: data.rights.includes(UserRole.DEV),
 			isPhoneVerified: Boolean(data.isPhoneVerified),
 			name: data.name ?? '',
 			password: '',
@@ -421,10 +424,16 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 		: null
 	const isUserChecked = true
 	const isAdminChecked = Boolean(watch('isAdmin'))
+	const isDevChecked = Boolean(watch('isDev'))
+	const canManageDevRole = Boolean(
+		currentUser?.rights?.includes(UserRole.DEV)
+	)
 	const isPhoneVerifiedChecked = Boolean(watch('isPhoneVerified'))
 	const hasPhoneValue = Boolean(
 		(watch('phone') ?? data?.phone ?? '').trim()
 	)
+	const handleUserSubmit = (values: IUserEditInput) =>
+		onSubmit(canManageDevRole ? values : { ...values, isDev: undefined })
 
 	return (
 		<section className={styles.wrapper}>
@@ -756,7 +765,7 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 						</div>
 
 						<form
-							onSubmit={handleSubmit(onSubmit)}
+							onSubmit={handleSubmit(handleUserSubmit)}
 							className={styles.form}
 						>
 							<div className={styles.formSection}>
@@ -767,7 +776,7 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 											title="Фото и доступ"
 											description="Здесь меняется аватар, базовая роль пользователя, роль администратора и статус подтверждения телефона."
 											risk="high"
-											riskText="Роль ADMIN даёт доступ к панели администратора. Статус телефона лучше менять только после проверки номера."
+											riskText="Роль ADMIN даёт доступ к панели администратора. Роль DEV может выдавать только другой DEV. Статус телефона лучше менять только после проверки номера."
 										/>
 									</div>
 									<p className={styles.sectionHint}>
@@ -836,6 +845,28 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 											type="checkbox"
 											className={styles.rightCheckbox}
 											{...register('isAdmin')}
+										/>
+									</label>
+
+									<label
+										className={clsx(
+											styles.rightCard,
+											!canManageDevRole && styles.rightCardDisabled,
+											isDevChecked && styles.rightCardActive
+										)}
+									>
+										<div>
+											<p className={styles.rightCardTitle}>DEV</p>
+											<p className={styles.rightCardDescription}>
+												Доступ к восстановлению БД и выдаче роли DEV.
+												Включает ADMIN автоматически.
+											</p>
+										</div>
+										<input
+											type="checkbox"
+											className={styles.rightCheckbox}
+											disabled={!canManageDevRole}
+											{...register('isDev')}
 										/>
 									</label>
 

@@ -8,6 +8,8 @@ import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import adminTelegramBotService, {
 	type TelegramWebhookBot
 } from '@/services/admin-telegram-bot/admin-telegram-bot.service'
+import useUser from '@/hooks/useUser'
+import { UserRole } from '@/services/auth/auth.types'
 import {
 	useMutation,
 	useQuery,
@@ -28,9 +30,18 @@ const formatDate = (value: string) =>
 		timeStyle: 'medium'
 	}).format(new Date(value))
 
+const formatFileSize = (value: number) => {
+	if (value < 1024 * 1024) return `${Math.round(value / 1024)} КБ`
+	return `${(value / 1024 / 1024).toFixed(1)} МБ`
+}
+
 const AdminTelegramBot: NextPage = () => {
 	const queryClient = useQueryClient()
+	const { user } = useUser()
+	const canRestoreDatabase = Boolean(user?.rights?.includes(UserRole.DEV))
 	const [chatId, setChatId] = useState('')
+	const [restoreFile, setRestoreFile] = useState<File | null>(null)
+	const [restoreConfirmation, setRestoreConfirmation] = useState('')
 
 	const { data: settings, isLoading } = useQuery({
 		queryKey: SETTINGS_QUERY_KEY,
@@ -66,6 +77,30 @@ const AdminTelegramBot: NextPage = () => {
 
 	const allWebhooksMutation = useMutation({
 		mutationFn: adminTelegramBotService.reinstallWebhooks
+	})
+
+	const databaseBackupMutation = useMutation({
+		mutationFn: adminTelegramBotService.sendDatabaseBackup,
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({
+				queryKey: SETTINGS_QUERY_KEY
+			})
+		}
+	})
+
+	const databaseRestoreMutation = useMutation({
+		mutationFn: ({
+			file,
+			confirmation
+		}: {
+			file: File
+			confirmation: string
+		}) =>
+			adminTelegramBotService.restoreDatabaseBackup(file, confirmation),
+		onSuccess: () => {
+			setRestoreFile(null)
+			setRestoreConfirmation('')
+		}
 	})
 
 	const saveWithToast = (
@@ -148,9 +183,48 @@ const AdminTelegramBot: NextPage = () => {
 		)
 	}
 
+	const handleSendDatabaseBackup = () => {
+		const promise = databaseBackupMutation.mutateAsync()
+
+		toast.promise(promise, {
+			loading: 'Создаём backup базы данных...',
+			success: result =>
+				`Backup отправлен в Telegram: ${formatFileSize(result.fileSize)}`,
+			error: error => `Ошибка backup: ${errorCatch(error)}`
+		})
+	}
+
+	const handleRestoreDatabaseBackup = () => {
+		if (!canRestoreDatabase) {
+			toast.error('Восстановление БД доступно только роли DEV')
+			return
+		}
+
+		if (!restoreFile) {
+			toast.error('Выберите файл backup .dump')
+			return
+		}
+
+		if (!settings) return
+
+		const promise = databaseRestoreMutation.mutateAsync({
+			file: restoreFile,
+			confirmation: restoreConfirmation.trim()
+		})
+
+		toast.promise(promise, {
+			loading: 'Восстанавливаем базу данных...',
+			success: 'База данных восстановлена из backup',
+			error: error => `Ошибка восстановления: ${errorCatch(error)}`
+		})
+	}
+
 	const lastSentText = settings?.dailySummaryLastSentAt
 		? formatDate(settings.dailySummaryLastSentAt)
 		: 'Ещё не отправлялась'
+	const lastBackupText = settings?.databaseBackupLastSentAt
+		? formatDate(settings.databaseBackupLastSentAt)
+		: 'Ещё не отправлялся'
 	const isWebhookActionPending =
 		webhookMutation.isPending || allWebhooksMutation.isPending
 	const statusByBot = new Map(
@@ -418,11 +492,12 @@ const AdminTelegramBot: NextPage = () => {
 											<p className={styles.webhookStatusLine}>
 												Username: {status?.actualUsername ?? '—'}
 											</p>
-											{status?.configuredUsername && (
-												<p className={styles.webhookStatusLine}>
-													Env: @{status.configuredUsername}
-												</p>
-											)}
+											<p className={styles.webhookStatusLine}>
+												Env:{' '}
+												{status?.configuredUsername
+													? `@${status.configuredUsername}`
+													: '—'}
+											</p>
 											<p className={styles.webhookStatusLine}>
 												URL:{' '}
 												{status?.webhookMatchesExpected
@@ -510,6 +585,94 @@ const AdminTelegramBot: NextPage = () => {
 						>
 							Сохранить ID группы
 						</button>
+
+						<div className={styles.backupPanel}>
+							<div className={styles.backupHeader}>
+								<div>
+									<p className={styles.label}>Backup базы данных</p>
+									<p className={styles.hint}>
+										@winwidget_info_bot отправляет backup каждый день в{' '}
+										{settings.databaseBackupTime}. Файл приходит в ту же
+										Telegram-группу, что и сводка.
+									</p>
+								</div>
+								<button
+									type="button"
+									className={styles.actionBtn}
+									onClick={handleSendDatabaseBackup}
+									disabled={
+										databaseBackupMutation.isPending ||
+										!settings.telegramBotTokenConfigured ||
+										!settings.dailySummaryChatId.trim()
+									}
+								>
+									Отправить backup
+								</button>
+							</div>
+							<div className={styles.backupMetaGrid}>
+								<div className={styles.statusItem}>
+									<p className={styles.statusLabel}>Последний backup</p>
+									<p className={styles.statusValue}>{lastBackupText}</p>
+								</div>
+								<div className={styles.statusItem}>
+									<p className={styles.statusLabel}>Формат</p>
+									<p className={styles.statusValue}>PostgreSQL .dump</p>
+								</div>
+							</div>
+						</div>
+
+						<div className={styles.restorePanel}>
+							<div>
+								<p className={styles.label}>Восстановление из backup</p>
+								<p className={styles.hint}>
+									Операция заменяет текущие данные базы содержимым файла.
+									Перед восстановлением убедитесь, что выбран нужный
+									backup.
+								</p>
+							</div>
+							<div className={styles.restoreGrid}>
+								<label className={styles.fileInputLabel}>
+									<span>Файл .dump</span>
+									<input
+										type="file"
+										accept=".dump"
+										onChange={event =>
+											setRestoreFile(event.target.files?.[0] ?? null)
+										}
+									/>
+								</label>
+								<input
+									className={styles.input}
+									value={restoreConfirmation}
+									onChange={event =>
+										setRestoreConfirmation(event.target.value)
+									}
+									placeholder={settings.databaseRestoreConfirmation}
+								/>
+								<button
+									type="button"
+									className={styles.dangerBtn}
+									onClick={handleRestoreDatabaseBackup}
+									disabled={
+										databaseRestoreMutation.isPending ||
+										!canRestoreDatabase
+									}
+								>
+									Восстановить БД
+								</button>
+							</div>
+							<p className={styles.hint}>
+								Для подтверждения введите:{' '}
+								<b>{settings.databaseRestoreConfirmation}</b>
+								{restoreFile ? `; выбран файл ${restoreFile.name}` : ''}
+							</p>
+							{!canRestoreDatabase && (
+								<p className={styles.hint}>
+									Восстановление БД доступно только администратору с ролью
+									DEV.
+								</p>
+							)}
+						</div>
 					</>
 				) : (
 					<p className={styles.empty}>Не удалось загрузить настройки</p>

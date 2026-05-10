@@ -5,6 +5,10 @@ export interface AdminTelegramBotSettings {
 	dailySummaryChatId: string
 	dailySummaryLastSentPeriodStart: string | null
 	dailySummaryLastSentAt: string | null
+	databaseBackupLastSentPeriodStart: string | null
+	databaseBackupLastSentAt: string | null
+	databaseBackupTime: string
+	databaseRestoreConfirmation: string
 	telegramBotTokenConfigured: boolean
 	telegramBotUsernameConfigured: boolean
 	authTelegramBotTokenConfigured: boolean
@@ -58,6 +62,20 @@ export interface TelegramWebhookStatusResponse {
 	items: TelegramWebhookStatus[]
 }
 
+export interface TelegramDatabaseBackupResult {
+	fileName: string
+	fileSize: number
+	createdAt: string
+	sent: boolean
+}
+
+export interface TelegramDatabaseRestoreResult {
+	restored: boolean
+	fileName: string
+	fileSize: number
+	restoredAt: string
+}
+
 const adminTelegramBotService = {
 	async get(): Promise<AdminTelegramBotSettings> {
 		const { data } = await axiosInterceptorsRequest.get(
@@ -96,6 +114,32 @@ const adminTelegramBotService = {
 		const { data } = await axiosInterceptorsRequest.get(
 			'/telegram-bot/admin/webhooks/status'
 		)
+		return data
+	},
+
+	async sendDatabaseBackup(): Promise<TelegramDatabaseBackupResult> {
+		const { data } = await axiosInterceptorsRequest.post(
+			'/telegram-bot/admin/database-backup/send'
+		)
+		return data
+	},
+
+	async restoreDatabaseBackup(
+		file: File,
+		confirmation: string
+	): Promise<TelegramDatabaseRestoreResult> {
+		const formData = new FormData()
+		formData.append('file', file)
+		formData.append('confirmation', confirmation)
+
+		const { data } = await axiosInterceptorsRequest.post(
+			'/telegram-bot/admin/database-backup/restore',
+			formData,
+			{
+				headers: { 'Content-Type': 'multipart/form-data' }
+			}
+		)
+
 		return data
 	}
 }

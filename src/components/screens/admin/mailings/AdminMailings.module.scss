@@ -79,6 +79,18 @@
 	}
 }
 
+.channelBlock {
+	@apply flex flex-col gap-3 border border-[#efe8fb] rounded-xl p-4 bg-[#fcfaff];
+}
+
+.channelOptions {
+	@apply grid grid-cols-3 gap-3;
+
+	@media (max-width: 640px) {
+		@apply grid-cols-1;
+	}
+}
+
 .optionBtn {
 	@apply rounded-lg border border-[#d7c4ee] bg-white text-[#6b2d8f] text-sm font-semibold cursor-pointer transition-[opacity,border-color,background,color] duration-200 py-[10px] px-4;
 }
