@@ -1,5 +1,5 @@
 .preview {
-	@apply mb-5 rounded-xl border border-[#e0d6f0] bg-[#faf8ff] p-3;
+	@apply mb-5 rounded-lg border border-[#e0d6f0] bg-[#faf8ff] p-3;
 }
 
 .previewHeader {
@@ -15,39 +15,77 @@
 }
 
 .stage {
-	@apply relative h-[210px] overflow-hidden rounded-lg border border-[#e0d6f0] bg-[#0d0d1a];
+	@apply relative h-[270px] overflow-hidden rounded-lg border border-[#e0d6f0] bg-[#eef3f8];
 	background:
-		linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent 38%),
-		linear-gradient(180deg, rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0.24)),
-		var(--preview-bg);
+		linear-gradient(
+			180deg,
+			rgba(255, 255, 255, 0.9),
+			rgba(238, 243, 248, 0.94)
+		),
+		#eef3f8;
 }
 
-.mockPage {
-	@apply absolute inset-0 flex flex-col gap-3 p-4 opacity-45;
+.demoPage {
+	@apply absolute inset-3 overflow-hidden rounded-lg border border-[#d8e1ec] bg-white shadow-sm;
 }
 
-.mockPage span {
-	@apply block h-3 rounded-full bg-white/35;
+.browserBar {
+	@apply flex h-8 items-center gap-2 border-b border-[#e8edf4] bg-[#f8fafc] px-3;
 }
 
-.mockPage span:nth-child(1) {
-	@apply w-32;
+.browserBar span {
+	@apply h-2 w-2 rounded-full bg-[#d8e1ec];
 }
 
-.mockPage span:nth-child(2) {
-	@apply w-52 max-w-[70%];
+.browserBar b {
+	@apply ml-2 h-4 min-w-0 flex-1 rounded-full bg-white px-3 text-[10px] font-semibold leading-4 text-[#94a3b8];
 }
 
-.mockPage span:nth-child(3) {
-	@apply w-44 max-w-[62%];
+.demoContent {
+	@apply grid h-[calc(100%-2rem)] grid-cols-[1fr_11rem] gap-4 p-5;
 }
 
-.surface {
-	@apply absolute bottom-4 left-4 top-4 z-[1] flex w-[68%] max-w-[26rem] items-center;
+.demoText {
+	@apply flex min-w-0 flex-col gap-3 pt-2;
+}
+
+.demoText span,
+.demoGrid span {
+	@apply block rounded-lg bg-[#edf2f7];
+}
+
+.demoText span:nth-child(1) {
+	@apply h-8 w-48 max-w-[78%];
+}
+
+.demoText span:nth-child(2) {
+	@apply h-3 w-80 max-w-full;
+}
+
+.demoText span:nth-child(3) {
+	@apply h-3 w-64 max-w-[86%];
+}
+
+.demoGrid {
+	@apply grid grid-cols-2 gap-3;
+}
+
+.demoGrid span {
+	@apply min-h-16;
+}
+
+.widgetOverlay {
+	@apply absolute inset-0 z-[1] flex items-center justify-center px-16 py-12;
+	pointer-events: none;
+}
+
+.widgetWindow {
+	@apply w-full max-w-[28rem] rounded-lg border border-[#e0d6f0] shadow-xl;
 }
 
 .widgetPanel {
-	@apply flex w-full flex-col gap-3 rounded-xl border border-white/20 bg-white/95 p-3 text-[#1a1a1a] shadow-xl;
+	@apply flex w-full flex-col gap-3 rounded-lg p-4 text-[#1a1a1a];
+	background: var(--preview-widget-bg);
 }
 
 .panelHeader {
@@ -63,16 +101,16 @@
 }
 
 .wheelLayout {
-	@apply grid grid-cols-[5.5rem_1fr] items-center gap-3;
+	@apply grid grid-cols-[6rem_1fr] items-center gap-4;
 }
 
 .wheel {
-	@apply relative h-[5.5rem] w-[5.5rem] rounded-full border-[6px] border-white shadow-lg;
+	@apply relative h-24 w-24 rounded-full border-[6px] border-white shadow-lg;
 	background: var(--preview-wheel-gradient);
 }
 
 .wheelCenter {
-	@apply absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow;
+	@apply absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow;
 	background: var(--preview-wheel-center);
 }
 
@@ -91,7 +129,7 @@
 
 .primaryButton {
 	@apply inline-flex min-h-9 items-center justify-center rounded-lg px-3 py-2 text-center text-xs font-bold text-white shadow-sm;
-	background: var(--preview-button-color);
+	background: var(--preview-primary-button-color);
 }
 
 .quizQuestion {
@@ -135,18 +173,24 @@
 }
 
 .bubble {
-	@apply absolute top-1/2 z-[2] max-w-[10rem] -translate-y-1/2 rounded-xl border border-[#e0d6f0] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#1a1a1a] shadow-lg;
+	@apply absolute top-12 z-[2] max-w-[12rem] rounded-lg border border-[#e0d6f0] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#1a1a1a] shadow-lg;
 }
 
 .bubbleRight {
-	right: calc(
-		var(--preview-button-offset) + var(--preview-button-size) + 0.65rem
+	right: max(
+		1rem,
+		calc(
+			var(--preview-button-offset) + var(--preview-button-size) - 0.25rem
+		)
 	);
 }
 
 .bubbleLeft {
-	left: calc(
-		var(--preview-button-offset) + var(--preview-button-size) + 0.65rem
+	left: max(
+		1rem,
+		calc(
+			var(--preview-button-offset) + var(--preview-button-size) - 0.25rem
+		)
 	);
 }
 
@@ -197,11 +241,23 @@
 	}
 
 	.stage {
-		@apply h-[172px];
+		@apply h-[230px];
 	}
 
-	.surface {
-		@apply bottom-2 left-2 top-2 w-[74%];
+	.demoPage {
+		@apply inset-2;
+	}
+
+	.demoContent {
+		@apply grid-cols-1 gap-3 p-4;
+	}
+
+	.demoGrid {
+		@apply hidden;
+	}
+
+	.widgetOverlay {
+		@apply px-10 py-12;
 	}
 
 	.widgetPanel {
@@ -217,11 +273,11 @@
 	}
 
 	.wheelLayout {
-		@apply grid-cols-[4.25rem_1fr] gap-2;
+		@apply grid-cols-[4.5rem_1fr] gap-2;
 	}
 
 	.wheel {
-		@apply h-[4.25rem] w-[4.25rem] border-4;
+		@apply h-[4.5rem] w-[4.5rem] border-4;
 	}
 
 	.wheelCenter {
@@ -229,7 +285,7 @@
 	}
 
 	.bubble {
-		@apply hidden;
+		@apply top-10 max-w-[9rem] text-[11px] leading-4;
 	}
 
 	.floatingButtonIcon {
@@ -257,11 +313,11 @@
 
 @media (max-width: 420px) {
 	.stage {
-		@apply h-[156px];
+		@apply h-[218px];
 	}
 
-	.surface {
-		@apply w-[76%];
+	.widgetOverlay {
+		@apply px-8 py-11;
 	}
 
 	.previewBadge {

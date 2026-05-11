@@ -87,11 +87,15 @@ const getButtonColor = (config: CommonPreviewConfig) =>
 	config.buttonColor?.trim() ||
 	getAccent(config)
 
+const getPrimaryButtonColor = (config: CommonPreviewConfig) =>
+	config.buttonColor?.trim() || getAccent(config)
+
 const getStageStyle = (config: CommonPreviewConfig) =>
 	({
 		'--preview-accent': getAccent(config),
-		'--preview-bg': config.bgColor?.trim() || '#0d0d1a',
+		'--preview-widget-bg': config.bgColor?.trim() || '#ffffff',
 		'--preview-button-color': getButtonColor(config),
+		'--preview-primary-button-color': getPrimaryButtonColor(config),
 		'--preview-button-size': `${clampNumber(
 			config.buttonSize,
 			44,
@@ -381,18 +385,37 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 	return (
 		<section className={styles.preview} aria-label="Live preview виджета">
 			<div className={styles.previewHeader}>
-				<p className={styles.previewTitle}>Live preview</p>
+				<p className={styles.previewTitle}>Предпросмотр</p>
 				<span className={styles.previewBadge}>
 					{getTypeLabel(props.type)}
 				</span>
 			</div>
 			<div className={styles.stage} style={getStageStyle(commonConfig)}>
-				<div className={styles.mockPage} aria-hidden="true">
-					<span />
-					<span />
-					<span />
+				<div className={styles.demoPage} aria-hidden="true">
+					<div className={styles.browserBar}>
+						<span />
+						<span />
+						<span />
+						<b>site.ru</b>
+					</div>
+					<div className={styles.demoContent}>
+						<div className={styles.demoText}>
+							<span />
+							<span />
+							<span />
+						</div>
+						<div className={styles.demoGrid}>
+							<span />
+							<span />
+							<span />
+						</div>
+					</div>
 				</div>
-				<div className={styles.surface}>{renderPreviewContent(props)}</div>
+				<div className={styles.widgetOverlay}>
+					<div className={styles.widgetWindow}>
+						{renderPreviewContent(props)}
+					</div>
+				</div>
 				{renderBubble(commonConfig)}
 				{renderFloatingButton(commonConfig, props.buttonImageUrl)}
 			</div>
