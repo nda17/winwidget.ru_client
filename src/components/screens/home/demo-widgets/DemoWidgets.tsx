@@ -101,46 +101,27 @@ const DemoWidgets = ({ content }: Props) => {
 	const renderButtonContent = (demo: ActiveDemo) => {
 		if (demo === 'wheel') {
 			return (
-				<>
-					<Image
-						src="/images/tools/wheel-gift-button.png"
-						alt=""
-						width={64}
-						height={64}
-						className={styles.floatIcon}
-						aria-hidden="true"
-					/>
-					<span
-						className={`${styles.floatLabel} ${styles.floatLabelWheel}`}
-					>
-						{content.labels.wheel}
-					</span>
-				</>
+				<Image
+					src="/images/tools/wheel-gift-button.png"
+					alt=""
+					width={64}
+					height={64}
+					className={styles.floatIcon}
+					aria-hidden="true"
+				/>
 			)
 		}
 
 		if (demo === 'quiz') {
 			return (
-				<>
-					<Image
-						src="/images/tools/quiz-button.png"
-						alt=""
-						width={60}
-						height={60}
-						className={styles.floatIconQuiz}
-						aria-hidden="true"
-					/>
-					<span
-						className={`${styles.floatLabel} ${styles.floatLabelQuiz}`}
-					>
-						{content.labels.quiz.split('\n').map((line, index, lines) => (
-							<span key={`${line}-${index}`}>
-								{line}
-								{index < lines.length - 1 && <br />}
-							</span>
-						))}
-					</span>
-				</>
+				<Image
+					src="/images/tools/quiz-button.png"
+					alt=""
+					width={60}
+					height={60}
+					className={styles.floatIconQuiz}
+					aria-hidden="true"
+				/>
 			)
 		}
 
@@ -158,19 +139,14 @@ const DemoWidgets = ({ content }: Props) => {
 		}
 
 		return (
-			<>
-				<Image
-					src="/images/tools/timer-button.png"
-					alt=""
-					width={60}
-					height={60}
-					className={styles.floatIconTimer}
-					aria-hidden="true"
-				/>
-				<span className={`${styles.floatLabel} ${styles.floatLabelTimer}`}>
-					{content.labels.countdown}
-				</span>
-			</>
+			<Image
+				src="/images/tools/timer-button.png"
+				alt=""
+				width={60}
+				height={60}
+				className={styles.floatIconTimer}
+				aria-hidden="true"
+			/>
 		)
 	}
 

@@ -1174,62 +1174,6 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 							/>
 						))}
 					</div>
-					<div className={styles.gridThree}>
-						<TextAreaField
-							id="demo-label-wheel"
-							label="Надпись колеса"
-							value={draft.demoWidgets.labels.wheel}
-							onChange={value =>
-								updateDraft(prev => ({
-									...prev,
-									demoWidgets: {
-										...prev.demoWidgets,
-										labels: {
-											...prev.demoWidgets.labels,
-											wheel: value
-										}
-									}
-								}))
-							}
-							rows={2}
-						/>
-						<TextAreaField
-							id="demo-label-quiz"
-							label="Надпись квиза"
-							value={draft.demoWidgets.labels.quiz}
-							onChange={value =>
-								updateDraft(prev => ({
-									...prev,
-									demoWidgets: {
-										...prev.demoWidgets,
-										labels: {
-											...prev.demoWidgets.labels,
-											quiz: value
-										}
-									}
-								}))
-							}
-							rows={2}
-						/>
-						<TextAreaField
-							id="demo-label-countdown"
-							label="Надпись таймера"
-							value={draft.demoWidgets.labels.countdown}
-							onChange={value =>
-								updateDraft(prev => ({
-									...prev,
-									demoWidgets: {
-										...prev.demoWidgets,
-										labels: {
-											...prev.demoWidgets.labels,
-											countdown: value
-										}
-									}
-								}))
-							}
-							rows={2}
-						/>
-					</div>
 				</section>
 			)}
 

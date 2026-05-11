@@ -4,7 +4,7 @@
 }
 
 .floatBtn {
-	@apply flex flex-col items-center gap-[5px] bg-transparent border-none cursor-pointer p-0 select-none;
+	@apply flex items-center justify-center bg-transparent border-none cursor-pointer p-0 select-none;
 	animation: giftBounce 3s ease-in-out infinite 4s;
 
 	&:hover {
@@ -17,12 +17,6 @@
 		filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35))
 			drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 		transform-origin: 50% 100%;
-	}
-
-	.floatLabel {
-		@apply text-[#1a0600] text-[11px] font-black px-3 py-[3px] rounded-[20px] whitespace-nowrap uppercase tracking-[0.8px];
-		background: linear-gradient(135deg, #ffd700, #ff8c00);
-		box-shadow: 0 3px 10px rgba(255, 140, 0, 0.5);
 	}
 }
 

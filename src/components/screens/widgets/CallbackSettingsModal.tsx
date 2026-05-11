@@ -11,6 +11,7 @@ import { ChangeEvent, useId, useState } from 'react'
 import toast from 'react-hot-toast'
 import styles from './CallbackSettingsModal.module.scss'
 import DirectLinkQr from './DirectLinkQr'
+import WidgetLivePreview from './WidgetLivePreview'
 
 type Tab = 'main' | 'form' | 'integrations' | 'code' | 'info'
 const BUTTON_IMAGE_MAX_SIZE_BYTES = 200 * 1024
@@ -304,6 +305,12 @@ const CallbackSettingsModal = ({
 						</button>
 					))}
 				</div>
+
+				<WidgetLivePreview
+					type="callback"
+					config={cfg}
+					buttonImageUrl={buttonImagePreviewUrl}
+				/>
 
 				<div className={styles.tabContent}>
 					{/* ── Основное ── */}

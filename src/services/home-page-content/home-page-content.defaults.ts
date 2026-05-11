@@ -298,11 +298,6 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 			quiz: 'Поможем сделать выбор!',
 			callback: 'Перезвоним вам за 5 минут',
 			countdown: 'Супер-акция!'
-		},
-		labels: {
-			wheel: 'Приз!',
-			quiz: 'Квиз!\nПриз!',
-			countdown: 'Акция'
 		}
 	},
 	hero: {
@@ -686,12 +681,6 @@ export const normalizeHomePageContent = (
 				...defaultContent.demoWidgets.bubbleTexts,
 				...(isRecord(content.demoWidgets?.bubbleTexts)
 					? content.demoWidgets.bubbleTexts
-					: {})
-			},
-			labels: {
-				...defaultContent.demoWidgets.labels,
-				...(isRecord(content.demoWidgets?.labels)
-					? content.demoWidgets.labels
 					: {})
 			}
 		},

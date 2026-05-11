@@ -1,0 +1,275 @@
+.preview {
+	@apply mb-5 rounded-xl border border-[#e0d6f0] bg-[#faf8ff] p-3;
+}
+
+.previewHeader {
+	@apply mb-3 flex items-center justify-between gap-3;
+}
+
+.previewTitle {
+	@apply text-xs font-semibold uppercase tracking-[0.06em] text-[#7b3fa0];
+}
+
+.previewBadge {
+	@apply shrink-0 rounded-full bg-[#f3eeff] px-3 py-1 text-[11px] font-semibold text-[#7b3fa0];
+}
+
+.stage {
+	@apply relative h-[210px] overflow-hidden rounded-lg border border-[#e0d6f0] bg-[#0d0d1a];
+	background:
+		linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent 38%),
+		linear-gradient(180deg, rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0.24)),
+		var(--preview-bg);
+}
+
+.mockPage {
+	@apply absolute inset-0 flex flex-col gap-3 p-4 opacity-45;
+}
+
+.mockPage span {
+	@apply block h-3 rounded-full bg-white/35;
+}
+
+.mockPage span:nth-child(1) {
+	@apply w-32;
+}
+
+.mockPage span:nth-child(2) {
+	@apply w-52 max-w-[70%];
+}
+
+.mockPage span:nth-child(3) {
+	@apply w-44 max-w-[62%];
+}
+
+.surface {
+	@apply absolute bottom-4 left-4 top-4 z-[1] flex w-[68%] max-w-[26rem] items-center;
+}
+
+.widgetPanel {
+	@apply flex w-full flex-col gap-3 rounded-xl border border-white/20 bg-white/95 p-3 text-[#1a1a1a] shadow-xl;
+}
+
+.panelHeader {
+	@apply flex flex-col gap-1;
+}
+
+.panelTitle {
+	@apply line-clamp-2 text-sm font-bold leading-5 text-[#1a1a1a];
+}
+
+.panelText {
+	@apply line-clamp-2 text-xs leading-5 text-[#555];
+}
+
+.wheelLayout {
+	@apply grid grid-cols-[5.5rem_1fr] items-center gap-3;
+}
+
+.wheel {
+	@apply relative h-[5.5rem] w-[5.5rem] rounded-full border-[6px] border-white shadow-lg;
+	background: var(--preview-wheel-gradient);
+}
+
+.wheelCenter {
+	@apply absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow;
+	background: var(--preview-wheel-center);
+}
+
+.wheelArrow {
+	@apply absolute -right-2 top-1/2 h-0 w-0 -translate-y-1/2 border-y-[8px] border-l-[14px] border-y-transparent;
+	border-left-color: var(--preview-wheel-arrow);
+}
+
+.panelSide {
+	@apply flex min-w-0 flex-col gap-2;
+}
+
+.prizeBadge {
+	@apply line-clamp-1 rounded-full bg-[#f3eeff] px-3 py-1 text-xs font-semibold text-[#7b3fa0];
+}
+
+.primaryButton {
+	@apply inline-flex min-h-9 items-center justify-center rounded-lg px-3 py-2 text-center text-xs font-bold text-white shadow-sm;
+	background: var(--preview-button-color);
+}
+
+.quizQuestion {
+	@apply line-clamp-2 rounded-lg bg-[#f8f5ff] px-3 py-2 text-xs font-semibold leading-5 text-[#1a1a1a];
+}
+
+.optionList {
+	@apply flex flex-col gap-2;
+}
+
+.optionItem {
+	@apply line-clamp-1 rounded-lg border border-[#e0d6f0] bg-white px-3 py-2 text-xs text-[#555];
+}
+
+.inputPreview {
+	@apply rounded-lg border border-[#e0d6f0] bg-[#f8f5ff] px-3 py-2 text-xs font-medium text-[#aaa];
+}
+
+.slotList {
+	@apply flex flex-wrap gap-2;
+}
+
+.slotItem {
+	@apply rounded-full bg-[#f3eeff] px-3 py-1 text-[11px] font-semibold text-[#7b3fa0];
+}
+
+.timerGrid {
+	@apply grid grid-cols-4 gap-2;
+}
+
+.timerCell {
+	@apply flex min-w-0 flex-col items-center justify-center rounded-lg bg-[#f8f5ff] px-2 py-2 text-center;
+}
+
+.timerCell strong {
+	@apply text-sm font-bold leading-5 text-[#1a1a1a];
+}
+
+.timerCell small {
+	@apply text-[10px] font-semibold text-[#7b3fa0];
+}
+
+.bubble {
+	@apply absolute top-1/2 z-[2] max-w-[10rem] -translate-y-1/2 rounded-xl border border-[#e0d6f0] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#1a1a1a] shadow-lg;
+}
+
+.bubbleRight {
+	right: calc(
+		var(--preview-button-offset) + var(--preview-button-size) + 0.65rem
+	);
+}
+
+.bubbleLeft {
+	left: calc(
+		var(--preview-button-offset) + var(--preview-button-size) + 0.65rem
+	);
+}
+
+.floatingButton {
+	@apply absolute z-[3] flex flex-col items-center justify-center;
+	bottom: var(--preview-button-bottom);
+}
+
+.floatingButtonRight {
+	right: var(--preview-button-offset);
+}
+
+.floatingButtonLeft {
+	left: var(--preview-button-offset);
+}
+
+.floatingButtonPulse .floatingButtonIcon {
+	animation: preview-pulse 1.8s ease-in-out infinite;
+}
+
+.floatingButtonIcon {
+	@apply flex items-center justify-center rounded-full bg-white/95 p-1 shadow-xl;
+	height: var(--preview-button-size);
+	width: var(--preview-button-size);
+}
+
+.floatingButtonIcon img {
+	@apply h-full w-full object-contain;
+}
+
+@keyframes preview-pulse {
+	0%,
+	100% {
+		transform: translateY(0) scale(1);
+	}
+	50% {
+		transform: translateY(-4px) scale(1.05);
+	}
+}
+
+@media (max-width: 600px) {
+	.preview {
+		@apply mb-4 p-2;
+	}
+
+	.previewHeader {
+		@apply mb-2;
+	}
+
+	.stage {
+		@apply h-[172px];
+	}
+
+	.surface {
+		@apply bottom-2 left-2 top-2 w-[74%];
+	}
+
+	.widgetPanel {
+		@apply gap-2 p-2;
+	}
+
+	.panelTitle {
+		@apply text-xs leading-4;
+	}
+
+	.panelText {
+		@apply text-[11px] leading-4;
+	}
+
+	.wheelLayout {
+		@apply grid-cols-[4.25rem_1fr] gap-2;
+	}
+
+	.wheel {
+		@apply h-[4.25rem] w-[4.25rem] border-4;
+	}
+
+	.wheelCenter {
+		@apply h-5 w-5;
+	}
+
+	.bubble {
+		@apply hidden;
+	}
+
+	.floatingButtonIcon {
+		height: var(--preview-button-size);
+		max-height: 3rem;
+		max-width: 3rem;
+		width: var(--preview-button-size);
+	}
+
+	.primaryButton,
+	.inputPreview,
+	.optionItem,
+	.quizQuestion {
+		@apply px-2 py-1 text-[11px] leading-4;
+	}
+
+	.timerCell {
+		@apply px-1 py-1;
+	}
+
+	.timerCell strong {
+		@apply text-xs leading-4;
+	}
+}
+
+@media (max-width: 420px) {
+	.stage {
+		@apply h-[156px];
+	}
+
+	.surface {
+		@apply w-[76%];
+	}
+
+	.previewBadge {
+		@apply px-2;
+	}
+
+	.slotList,
+	.panelText {
+		@apply hidden;
+	}
+}

@@ -8,7 +8,7 @@
 .bubble {
 	@apply absolute;
 	top: 50%;
-	right: calc(100% - 12px);
+	right: calc(100% + 14px);
 	transform: translateY(-50%);
 	background: #fff;
 	border-radius: 18px;
@@ -89,7 +89,7 @@
 /* ── Float button ─────────────────────────────────────────── */
 
 .floatBtn {
-	@apply relative flex items-end justify-center w-[118px] h-[98px] overflow-visible bg-transparent border-none cursor-pointer p-0 select-none;
+	@apply relative flex items-center justify-center w-[78px] h-[78px] overflow-visible bg-transparent border-none cursor-pointer p-0 select-none;
 	animation:
 		giftBounce 3s ease-in-out infinite 4s,
 		demoGlow 2.5s ease-in-out infinite 4s;
@@ -102,7 +102,7 @@
 }
 
 .buttonLayer {
-	@apply absolute inset-x-0 bottom-0 flex flex-col items-center gap-[5px] pointer-events-none;
+	@apply absolute inset-0 flex items-center justify-center pointer-events-none;
 	transform-origin: 50% 100%;
 }
 
@@ -128,27 +128,7 @@
 	transform-origin: 50% 100%;
 }
 
-.floatLabel {
-	@apply text-[11px] font-black px-3 py-[3px] rounded-[20px] whitespace-nowrap uppercase tracking-[0.8px];
-	box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
-	white-space: normal;
-	text-align: center;
-	line-height: 1.3;
-}
-
-.floatLabelWheel {
-	@apply text-[#1a0600];
-	background: linear-gradient(135deg, #ffd700, #ff8c00);
-	box-shadow: 0 3px 10px rgba(255, 140, 0, 0.5);
-}
-
 /* Quiz */
-
-.floatLabelQuiz {
-	@apply text-white;
-	background: linear-gradient(135deg, #7c3aed, #4705fb);
-	box-shadow: 0 3px 10px rgba(124, 58, 237, 0.5);
-}
 
 .floatIconQuiz {
 	@apply block w-[60px] h-[60px] object-contain leading-none;
@@ -166,16 +146,6 @@
 
 /* Timer */
 
-.floatLabelTimer {
-	background: #fff;
-	color: #1a1a1a;
-	border: 1px solid rgba(71, 5, 251, 0.12);
-	box-shadow: 0 8px 24px rgba(71, 5, 251, 0.14);
-	text-transform: none;
-	letter-spacing: 0;
-	padding: 5px 10px;
-}
-
 .floatIconTimer {
 	@apply block w-[60px] h-[60px] object-contain leading-none;
 	filter: drop-shadow(0 6px 24px rgba(71, 5, 251, 0.45))
@@ -189,7 +159,7 @@
 	}
 
 	.bubble {
-		right: calc(100% - 10px);
+		right: calc(100% + 10px);
 		width: min(172px, calc(100vw - 94px));
 		padding: 10px 30px 10px 12px;
 	}
@@ -217,7 +187,7 @@
 	}
 
 	.floatBtn {
-		@apply w-[86px] h-[76px];
+		@apply w-[58px] h-[58px];
 	}
 
 	.floatIcon {
@@ -229,15 +199,6 @@
 	.floatIconTimer {
 		@apply w-12 h-12;
 	}
-
-	.floatLabel {
-		@apply text-[9px] px-2 py-[2px];
-		letter-spacing: 0.4px;
-	}
-
-	.floatLabelTimer {
-		padding: 4px 8px;
-	}
 }
 
 @media (max-width: 360px) {
@@ -247,7 +208,7 @@
 	}
 
 	.floatBtn {
-		@apply w-[78px] h-[70px];
+		@apply w-[52px] h-[52px];
 	}
 
 	.floatIcon,
@@ -255,10 +216,6 @@
 	.floatIconCallback,
 	.floatIconTimer {
 		@apply w-11 h-11;
-	}
-
-	.floatLabel {
-		@apply text-[8px] px-[7px];
 	}
 }
 

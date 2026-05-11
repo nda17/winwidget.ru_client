@@ -77,11 +77,6 @@ export interface HomePageDemoWidgetsContent {
 		callback: string
 		countdown: string
 	}
-	labels: {
-		wheel: string
-		quiz: string
-		countdown: string
-	}
 }
 
 export interface HomePageHeroContent {

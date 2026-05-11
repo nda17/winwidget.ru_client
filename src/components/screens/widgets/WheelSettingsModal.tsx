@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { ChangeEvent, useId, useState } from 'react'
 import toast from 'react-hot-toast'
 import DirectLinkQr from './DirectLinkQr'
+import WidgetLivePreview from './WidgetLivePreview'
 import styles from './WheelSettingsModal.module.scss'
 
 type Tab = 'main' | 'bonuses' | 'integrations' | 'code' | 'info'
@@ -381,6 +382,12 @@ const WheelSettingsModal = ({
 						</button>
 					))}
 				</div>
+
+				<WidgetLivePreview
+					type="wheel"
+					config={config}
+					buttonImageUrl={buttonImagePreviewUrl}
+				/>
 
 				<div className={styles.tabContent}>
 					{tab === 'main' && (

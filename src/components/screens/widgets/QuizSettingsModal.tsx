@@ -13,6 +13,7 @@ import Image from 'next/image'
 import { ChangeEvent, useId, useState } from 'react'
 import toast from 'react-hot-toast'
 import DirectLinkQr from './DirectLinkQr'
+import WidgetLivePreview from './WidgetLivePreview'
 import styles from './QuizSettingsModal.module.scss'
 
 type Tab =
@@ -931,6 +932,12 @@ const QuizSettingsModal = ({
 						</button>
 					))}
 				</div>
+
+				<WidgetLivePreview
+					type="quiz"
+					config={config}
+					buttonImageUrl={buttonImagePreviewUrl}
+				/>
 
 				<div className={styles.tabContent}>
 					{/* ===== ГЛАВНЫЕ ===== */}

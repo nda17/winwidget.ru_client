@@ -380,7 +380,7 @@ const DemoWheel = ({
 						type="button"
 						className={styles.floatBtn}
 						onClick={() => setInternalOpen(true)}
-						aria-label="Приз! Открыть демо-виджет"
+						aria-label="Открыть демо-виджет"
 					>
 						<Image
 							src="/images/tools/wheel-gift-button.png"
@@ -390,7 +390,6 @@ const DemoWheel = ({
 							className={styles.floatIcon}
 							aria-hidden="true"
 						/>
-						<span className={styles.floatLabel}>Приз!</span>
 					</button>
 				</div>
 			)}

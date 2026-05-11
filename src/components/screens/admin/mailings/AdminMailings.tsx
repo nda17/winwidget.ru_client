@@ -28,7 +28,7 @@ import styles from './AdminMailings.module.scss'
 const AUDIENCE_LABELS: Record<AdminMailingAudience, string> = {
 	ACTIVE_SUBSCRIPTION:
 		'активным подписчикам с контактом для выбранного канала',
-	ALL: 'всем активным пользователям с контактом для выбранного канала'
+	ALL: 'всем пользователям с контактом для выбранного канала, без фильтра по подписке'
 }
 
 const CHANNEL_LABELS: Record<AdminMailingChannel, string> = {
@@ -57,7 +57,7 @@ const getAudienceHint = (
 
 	return isActiveAudience
 		? `Получат только активные пользователи с действующей подпиской, у которых есть ${contactText}.`
-		: `Получат все активные пользователи, у которых есть ${contactText}. Подписка не учитывается.`
+		: `Получат все активные аккаунты, у которых есть ${contactText}. Активность подписки не учитывается.`
 }
 
 const formatExecutedAt = (value: string) =>
@@ -83,7 +83,7 @@ const getMetadataValue = (item: IAdminEventLogItem, key: string) => {
 const formatHistoryAudience = (item: IAdminEventLogItem) =>
 	getMetadataValue(item, 'audience') === 'ACTIVE_SUBSCRIPTION'
 		? 'Активные подписчики'
-		: 'Все активные с контактом'
+		: 'Все без фильтра подписки'
 
 const formatHistoryChannel = (item: IAdminEventLogItem) => {
 	const channel = getMetadataValue(item, 'channel')
@@ -306,7 +306,7 @@ const AdminMailings: NextPage = () => {
 						className={`${styles.optionBtn} ${!isActiveAudience ? styles.optionBtnActive : ''}`}
 						onClick={() => setAudience('ALL')}
 					>
-						Все активные с контактом
+						Все без фильтра подписки
 					</button>
 				</div>
 
@@ -328,7 +328,7 @@ const AdminMailings: NextPage = () => {
 							<span className={styles.resultValue}>
 								{lastResult.audience === 'ACTIVE_SUBSCRIPTION'
 									? 'Активные подписчики'
-									: 'Все активные с контактом'}
+									: 'Все без фильтра подписки'}
 							</span>
 						</div>
 						<div>

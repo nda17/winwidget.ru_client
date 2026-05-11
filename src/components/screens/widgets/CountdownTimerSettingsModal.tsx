@@ -11,6 +11,7 @@ import { ChangeEvent, useId, useState } from 'react'
 import toast from 'react-hot-toast'
 import styles from './CountdownTimerSettingsModal.module.scss'
 import DirectLinkQr from './DirectLinkQr'
+import WidgetLivePreview from './WidgetLivePreview'
 
 type Tab = 'main' | 'timer' | 'form' | 'integrations' | 'code' | 'info'
 const BUTTON_IMAGE_MAX_SIZE_BYTES = 200 * 1024
@@ -384,6 +385,12 @@ const CountdownTimerSettingsModal = ({
 						</button>
 					))}
 				</div>
+
+				<WidgetLivePreview
+					type="timer"
+					config={cfg}
+					buttonImageUrl={buttonImagePreviewUrl}
+				/>
 
 				<div className={styles.tabContent}>
 					{tab === 'main' && (
