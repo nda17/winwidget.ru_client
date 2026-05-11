@@ -933,11 +933,7 @@ const QuizSettingsModal = ({
 					))}
 				</div>
 
-				<WidgetLivePreview
-					type="quiz"
-					config={config}
-					buttonImageUrl={buttonImagePreviewUrl}
-				/>
+				<WidgetLivePreview type="quiz" config={config} />
 
 				<div className={styles.tabContent}>
 					{/* ===== ГЛАВНЫЕ ===== */}

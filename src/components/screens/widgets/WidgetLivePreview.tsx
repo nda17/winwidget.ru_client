@@ -4,7 +4,6 @@ import { CallbackConfig } from '@/services/callback/callback.types'
 import { CountdownTimerConfig } from '@/services/countdown-timer/countdown-timer.types'
 import { QuizConfig } from '@/services/quiz/quiz.types'
 import { WidgetConfig } from '@/services/widget/widget.types'
-import Image from 'next/image'
 import type { CSSProperties } from 'react'
 import styles from './WidgetLivePreview.module.scss'
 
@@ -14,39 +13,28 @@ type CommonPreviewConfig = {
 	color?: string
 	bgColor?: string
 	buttonColor?: string
-	openButtonColor?: string
-	buttonSide?: 'left' | 'right'
-	buttonPulse?: boolean
-	buttonBottom?: number
-	buttonOffset?: number
-	buttonSize?: number
-	buttonImageUrl?: string
-	bubbleEnabled?: boolean
-	bubbleText?: string
 	title?: string
 	subtitle?: string
 }
+
+type ContactDataType = 'PHONE' | 'EMAIL' | 'PHONE_AND_EMAIL' | 'NONE'
 
 type WidgetLivePreviewProps =
 	| {
 			type: 'wheel'
 			config: WidgetConfig
-			buttonImageUrl: string
 	  }
 	| {
 			type: 'quiz'
 			config: QuizConfig
-			buttonImageUrl: string
 	  }
 	| {
 			type: 'callback'
 			config: CallbackConfig
-			buttonImageUrl: string
 	  }
 	| {
 			type: 'timer'
 			config: CountdownTimerConfig
-			buttonImageUrl: string
 	  }
 
 const DEFAULT_ACCENT = '#4705fb'
@@ -61,19 +49,6 @@ const WHEEL_COLORS = [
 	'#a855f7'
 ]
 
-const clampNumber = (
-	value: number | undefined,
-	min: number,
-	max: number,
-	fallback: number
-) => {
-	const numericValue = Number(value)
-
-	if (Number.isNaN(numericValue)) return fallback
-
-	return Math.min(max, Math.max(min, numericValue))
-}
-
 const safeText = (value: string | undefined, fallback: string) => {
 	const text = value?.trim()
 	return text || fallback
@@ -82,11 +57,6 @@ const safeText = (value: string | undefined, fallback: string) => {
 const getAccent = (config: CommonPreviewConfig) =>
 	config.color?.trim() || DEFAULT_ACCENT
 
-const getButtonColor = (config: CommonPreviewConfig) =>
-	config.openButtonColor?.trim() ||
-	config.buttonColor?.trim() ||
-	getAccent(config)
-
 const getPrimaryButtonColor = (config: CommonPreviewConfig) =>
 	config.buttonColor?.trim() || getAccent(config)
 
@@ -94,46 +64,23 @@ const getStageStyle = (config: CommonPreviewConfig) =>
 	({
 		'--preview-accent': getAccent(config),
 		'--preview-widget-bg': config.bgColor?.trim() || '#ffffff',
-		'--preview-button-color': getButtonColor(config),
-		'--preview-primary-button-color': getPrimaryButtonColor(config),
-		'--preview-button-size': `${clampNumber(
-			config.buttonSize,
-			44,
-			76,
-			60
-		)}px`,
-		'--preview-button-offset': `${clampNumber(
-			config.buttonOffset,
-			1,
-			14,
-			3
-		)}%`,
-		'--preview-button-bottom': `${clampNumber(
-			config.buttonBottom,
-			2,
-			18,
-			3
-		)}%`
+		'--preview-primary-button-color': getPrimaryButtonColor(config)
 	}) as CSSProperties
 
-const getButtonClassName = (config: CommonPreviewConfig) =>
-	[
-		styles.floatingButton,
-		config.buttonSide === 'left'
-			? styles.floatingButtonLeft
-			: styles.floatingButtonRight,
-		config.buttonPulse !== false ? styles.floatingButtonPulse : ''
-	]
-		.filter(Boolean)
-		.join(' ')
+const renderContactFields = (dataType: ContactDataType) => {
+	if (dataType === 'NONE') return null
 
-const getBubbleClassName = (config: CommonPreviewConfig) =>
-	[
-		styles.bubble,
-		config.buttonSide === 'left' ? styles.bubbleLeft : styles.bubbleRight
-	]
-		.filter(Boolean)
-		.join(' ')
+	return (
+		<div className={styles.contactFields}>
+			{(dataType === 'PHONE' || dataType === 'PHONE_AND_EMAIL') && (
+				<div className={styles.inputPreview}>+7 (___) ___-__-__</div>
+			)}
+			{(dataType === 'EMAIL' || dataType === 'PHONE_AND_EMAIL') && (
+				<div className={styles.inputPreview}>email@example.ru</div>
+			)}
+		</div>
+	)
+}
 
 const buildWheelGradient = (config: WidgetConfig) => {
 	const bonuses = (config.bonuses || [])
@@ -191,33 +138,6 @@ const getTimerParts = (config: CountdownTimerConfig) => {
 	]
 }
 
-const renderFloatingButton = (
-	config: CommonPreviewConfig,
-	buttonImageUrl: string
-) => (
-	<div className={getButtonClassName(config)}>
-		<div className={styles.floatingButtonIcon}>
-			<Image
-				src={buttonImageUrl}
-				alt=""
-				width={76}
-				height={76}
-				unoptimized
-			/>
-		</div>
-	</div>
-)
-
-const renderBubble = (config: CommonPreviewConfig) => {
-	if (config.bubbleEnabled === false) return null
-
-	return (
-		<div className={getBubbleClassName(config)}>
-			{safeText(config.bubbleText, safeText(config.title, 'Виджет'))}
-		</div>
-	)
-}
-
 const WheelPreview = ({ config }: { config: WidgetConfig }) => {
 	const activeBonuses = (config.bonuses || []).filter(
 		bonus => bonus.active !== false
@@ -255,6 +175,7 @@ const WheelPreview = ({ config }: { config: WidgetConfig }) => {
 					<span className={styles.primaryButton}>
 						{safeText(config.buttonText, 'Крутить!')}
 					</span>
+					{renderContactFields(config.dataType)}
 				</div>
 			</div>
 		</div>
@@ -291,6 +212,7 @@ const QuizPreview = ({ config }: { config: QuizConfig }) => {
 					</span>
 				))}
 			</div>
+			{renderContactFields(config.dataType)}
 		</div>
 	)
 }
@@ -351,11 +273,7 @@ const TimerPreview = ({ config }: { config: CountdownTimerConfig }) => {
 					{safeText(config.actionButtonText, 'Перейти к акции')}
 				</span>
 			) : (
-				<div className={styles.inputPreview}>
-					{config.dataType === 'EMAIL'
-						? 'email@example.ru'
-						: '+7 (___) ___-__-__'}
-				</div>
+				renderContactFields(config.dataType)
 			)}
 		</div>
 	)
@@ -391,33 +309,7 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 				</span>
 			</div>
 			<div className={styles.stage} style={getStageStyle(commonConfig)}>
-				<div className={styles.demoPage} aria-hidden="true">
-					<div className={styles.browserBar}>
-						<span />
-						<span />
-						<span />
-						<b>site.ru</b>
-					</div>
-					<div className={styles.demoContent}>
-						<div className={styles.demoText}>
-							<span />
-							<span />
-							<span />
-						</div>
-						<div className={styles.demoGrid}>
-							<span />
-							<span />
-							<span />
-						</div>
-					</div>
-				</div>
-				<div className={styles.widgetOverlay}>
-					<div className={styles.widgetWindow}>
-						{renderPreviewContent(props)}
-					</div>
-				</div>
-				{renderBubble(commonConfig)}
-				{renderFloatingButton(commonConfig, props.buttonImageUrl)}
+				{renderPreviewContent(props)}
 			</div>
 		</section>
 	)

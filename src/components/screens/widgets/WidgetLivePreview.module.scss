@@ -15,76 +15,11 @@
 }
 
 .stage {
-	@apply relative h-[270px] overflow-hidden rounded-lg border border-[#e0d6f0] bg-[#eef3f8];
-	background:
-		linear-gradient(
-			180deg,
-			rgba(255, 255, 255, 0.9),
-			rgba(238, 243, 248, 0.94)
-		),
-		#eef3f8;
-}
-
-.demoPage {
-	@apply absolute inset-3 overflow-hidden rounded-lg border border-[#d8e1ec] bg-white shadow-sm;
-}
-
-.browserBar {
-	@apply flex h-8 items-center gap-2 border-b border-[#e8edf4] bg-[#f8fafc] px-3;
-}
-
-.browserBar span {
-	@apply h-2 w-2 rounded-full bg-[#d8e1ec];
-}
-
-.browserBar b {
-	@apply ml-2 h-4 min-w-0 flex-1 rounded-full bg-white px-3 text-[10px] font-semibold leading-4 text-[#94a3b8];
-}
-
-.demoContent {
-	@apply grid h-[calc(100%-2rem)] grid-cols-[1fr_11rem] gap-4 p-5;
-}
-
-.demoText {
-	@apply flex min-w-0 flex-col gap-3 pt-2;
-}
-
-.demoText span,
-.demoGrid span {
-	@apply block rounded-lg bg-[#edf2f7];
-}
-
-.demoText span:nth-child(1) {
-	@apply h-8 w-48 max-w-[78%];
-}
-
-.demoText span:nth-child(2) {
-	@apply h-3 w-80 max-w-full;
-}
-
-.demoText span:nth-child(3) {
-	@apply h-3 w-64 max-w-[86%];
-}
-
-.demoGrid {
-	@apply grid grid-cols-2 gap-3;
-}
-
-.demoGrid span {
-	@apply min-h-16;
-}
-
-.widgetOverlay {
-	@apply absolute inset-0 z-[1] flex items-center justify-center px-16 py-12;
-	pointer-events: none;
-}
-
-.widgetWindow {
-	@apply w-full max-w-[28rem] rounded-lg border border-[#e0d6f0] shadow-xl;
+	@apply overflow-hidden rounded-lg border border-[#e0d6f0] bg-white;
 }
 
 .widgetPanel {
-	@apply flex w-full flex-col gap-3 rounded-lg p-4 text-[#1a1a1a];
+	@apply flex w-full flex-col gap-4 p-6 text-[#1a1a1a];
 	background: var(--preview-widget-bg);
 }
 
@@ -93,29 +28,29 @@
 }
 
 .panelTitle {
-	@apply line-clamp-2 text-sm font-bold leading-5 text-[#1a1a1a];
+	@apply line-clamp-2 text-2xl font-bold leading-8 text-[#1a1a1a];
 }
 
 .panelText {
-	@apply line-clamp-2 text-xs leading-5 text-[#555];
+	@apply line-clamp-2 text-base leading-6 text-[#555];
 }
 
 .wheelLayout {
-	@apply grid grid-cols-[6rem_1fr] items-center gap-4;
+	@apply grid grid-cols-[13rem_1fr] items-center gap-7;
 }
 
 .wheel {
-	@apply relative h-24 w-24 rounded-full border-[6px] border-white shadow-lg;
+	@apply relative h-52 w-52 rounded-full border-[10px] border-white shadow-xl;
 	background: var(--preview-wheel-gradient);
 }
 
 .wheelCenter {
-	@apply absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow;
+	@apply absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white shadow;
 	background: var(--preview-wheel-center);
 }
 
 .wheelArrow {
-	@apply absolute -right-2 top-1/2 h-0 w-0 -translate-y-1/2 border-y-[8px] border-l-[14px] border-y-transparent;
+	@apply absolute -right-4 top-1/2 h-0 w-0 -translate-y-1/2 border-y-[18px] border-l-[32px] border-y-transparent;
 	border-left-color: var(--preview-wheel-arrow);
 }
 
@@ -123,17 +58,21 @@
 	@apply flex min-w-0 flex-col gap-2;
 }
 
+.contactFields {
+	@apply flex flex-col gap-2;
+}
+
 .prizeBadge {
-	@apply line-clamp-1 rounded-full bg-[#f3eeff] px-3 py-1 text-xs font-semibold text-[#7b3fa0];
+	@apply line-clamp-1 rounded-full bg-[#f3eeff] px-5 py-3 text-base font-semibold text-[#7b3fa0];
 }
 
 .primaryButton {
-	@apply inline-flex min-h-9 items-center justify-center rounded-lg px-3 py-2 text-center text-xs font-bold text-white shadow-sm;
+	@apply inline-flex min-h-12 items-center justify-center rounded-lg px-5 py-3 text-center text-base font-bold text-white shadow-sm;
 	background: var(--preview-primary-button-color);
 }
 
 .quizQuestion {
-	@apply line-clamp-2 rounded-lg bg-[#f8f5ff] px-3 py-2 text-xs font-semibold leading-5 text-[#1a1a1a];
+	@apply line-clamp-3 rounded-lg bg-[#f8f5ff] px-4 py-3 text-base font-semibold leading-6 text-[#1a1a1a];
 }
 
 .optionList {
@@ -141,11 +80,11 @@
 }
 
 .optionItem {
-	@apply line-clamp-1 rounded-lg border border-[#e0d6f0] bg-white px-3 py-2 text-xs text-[#555];
+	@apply line-clamp-1 rounded-lg border border-[#e0d6f0] bg-white px-4 py-3 text-sm text-[#555];
 }
 
 .inputPreview {
-	@apply rounded-lg border border-[#e0d6f0] bg-[#f8f5ff] px-3 py-2 text-xs font-medium text-[#aaa];
+	@apply rounded-lg border border-[#e0d6f0] bg-[#f8f5ff] px-4 py-3 text-sm font-medium text-[#aaa];
 }
 
 .slotList {
@@ -153,7 +92,7 @@
 }
 
 .slotItem {
-	@apply rounded-full bg-[#f3eeff] px-3 py-1 text-[11px] font-semibold text-[#7b3fa0];
+	@apply rounded-full bg-[#f3eeff] px-4 py-2 text-xs font-semibold text-[#7b3fa0];
 }
 
 .timerGrid {
@@ -161,74 +100,15 @@
 }
 
 .timerCell {
-	@apply flex min-w-0 flex-col items-center justify-center rounded-lg bg-[#f8f5ff] px-2 py-2 text-center;
+	@apply flex min-w-0 flex-col items-center justify-center rounded-lg bg-[#f8f5ff] px-3 py-4 text-center;
 }
 
 .timerCell strong {
-	@apply text-sm font-bold leading-5 text-[#1a1a1a];
+	@apply text-2xl font-bold leading-8 text-[#1a1a1a];
 }
 
 .timerCell small {
-	@apply text-[10px] font-semibold text-[#7b3fa0];
-}
-
-.bubble {
-	@apply absolute top-12 z-[2] max-w-[12rem] rounded-lg border border-[#e0d6f0] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#1a1a1a] shadow-lg;
-}
-
-.bubbleRight {
-	right: max(
-		1rem,
-		calc(
-			var(--preview-button-offset) + var(--preview-button-size) - 0.25rem
-		)
-	);
-}
-
-.bubbleLeft {
-	left: max(
-		1rem,
-		calc(
-			var(--preview-button-offset) + var(--preview-button-size) - 0.25rem
-		)
-	);
-}
-
-.floatingButton {
-	@apply absolute z-[3] flex flex-col items-center justify-center;
-	bottom: var(--preview-button-bottom);
-}
-
-.floatingButtonRight {
-	right: var(--preview-button-offset);
-}
-
-.floatingButtonLeft {
-	left: var(--preview-button-offset);
-}
-
-.floatingButtonPulse .floatingButtonIcon {
-	animation: preview-pulse 1.8s ease-in-out infinite;
-}
-
-.floatingButtonIcon {
-	@apply flex items-center justify-center rounded-full bg-white/95 p-1 shadow-xl;
-	height: var(--preview-button-size);
-	width: var(--preview-button-size);
-}
-
-.floatingButtonIcon img {
-	@apply h-full w-full object-contain;
-}
-
-@keyframes preview-pulse {
-	0%,
-	100% {
-		transform: translateY(0) scale(1);
-	}
-	50% {
-		transform: translateY(-4px) scale(1.05);
-	}
+	@apply text-xs font-semibold text-[#7b3fa0];
 }
 
 @media (max-width: 600px) {
@@ -241,65 +121,38 @@
 	}
 
 	.stage {
-		@apply h-[230px];
-	}
-
-	.demoPage {
-		@apply inset-2;
-	}
-
-	.demoContent {
-		@apply grid-cols-1 gap-3 p-4;
-	}
-
-	.demoGrid {
-		@apply hidden;
-	}
-
-	.widgetOverlay {
-		@apply px-10 py-12;
+		@apply overflow-x-auto;
 	}
 
 	.widgetPanel {
-		@apply gap-2 p-2;
+		@apply min-w-[28rem] gap-3 p-4;
 	}
 
 	.panelTitle {
-		@apply text-xs leading-4;
+		@apply text-lg leading-6;
 	}
 
 	.panelText {
-		@apply text-[11px] leading-4;
+		@apply text-sm leading-5;
 	}
 
 	.wheelLayout {
-		@apply grid-cols-[4.5rem_1fr] gap-2;
+		@apply grid-cols-[8rem_1fr] gap-4;
 	}
 
 	.wheel {
-		@apply h-[4.5rem] w-[4.5rem] border-4;
+		@apply h-32 w-32 border-[7px];
 	}
 
 	.wheelCenter {
-		@apply h-5 w-5;
-	}
-
-	.bubble {
-		@apply top-10 max-w-[9rem] text-[11px] leading-4;
-	}
-
-	.floatingButtonIcon {
-		height: var(--preview-button-size);
-		max-height: 3rem;
-		max-width: 3rem;
-		width: var(--preview-button-size);
+		@apply h-10 w-10;
 	}
 
 	.primaryButton,
 	.inputPreview,
 	.optionItem,
 	.quizQuestion {
-		@apply px-2 py-1 text-[11px] leading-4;
+		@apply px-3 py-2 text-xs leading-5;
 	}
 
 	.timerCell {
@@ -312,14 +165,6 @@
 }
 
 @media (max-width: 420px) {
-	.stage {
-		@apply h-[218px];
-	}
-
-	.widgetOverlay {
-		@apply px-8 py-11;
-	}
-
 	.previewBadge {
 		@apply px-2;
 	}

@@ -386,11 +386,7 @@ const CountdownTimerSettingsModal = ({
 					))}
 				</div>
 
-				<WidgetLivePreview
-					type="timer"
-					config={cfg}
-					buttonImageUrl={buttonImagePreviewUrl}
-				/>
+				<WidgetLivePreview type="timer" config={cfg} />
 
 				<div className={styles.tabContent}>
 					{tab === 'main' && (

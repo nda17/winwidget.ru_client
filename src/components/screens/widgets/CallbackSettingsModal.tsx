@@ -306,11 +306,7 @@ const CallbackSettingsModal = ({
 					))}
 				</div>
 
-				<WidgetLivePreview
-					type="callback"
-					config={cfg}
-					buttonImageUrl={buttonImagePreviewUrl}
-				/>
+				<WidgetLivePreview type="callback" config={cfg} />
 
 				<div className={styles.tabContent}>
 					{/* ── Основное ── */}
