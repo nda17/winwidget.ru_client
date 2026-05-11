@@ -383,7 +383,11 @@ const WheelSettingsModal = ({
 					))}
 				</div>
 
-				<WidgetLivePreview type="wheel" config={config} />
+				<WidgetLivePreview
+					type="wheel"
+					config={config}
+					isHardPlan={canUseCustomButtonImage}
+				/>
 
 				<div className={styles.tabContent}>
 					{tab === 'main' && (

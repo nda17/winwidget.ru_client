@@ -386,7 +386,11 @@ const CountdownTimerSettingsModal = ({
 					))}
 				</div>
 
-				<WidgetLivePreview type="timer" config={cfg} />
+				<WidgetLivePreview
+					type="timer"
+					config={cfg}
+					isHardPlan={canUseCustomButtonImage}
+				/>
 
 				<div className={styles.tabContent}>
 					{tab === 'main' && (

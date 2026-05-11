@@ -14,101 +14,32 @@
 	@apply shrink-0 rounded-full bg-[#f3eeff] px-3 py-1 text-[11px] font-semibold text-[#7b3fa0];
 }
 
-.stage {
-	@apply overflow-hidden rounded-lg border border-[#e0d6f0] bg-white;
+.previewViewport {
+	@apply flex items-start justify-center overflow-hidden rounded-lg border border-[#e0d6f0] bg-[#0d0d1a] relative;
 }
 
-.widgetPanel {
-	@apply flex w-full flex-col gap-4 p-6 text-[#1a1a1a];
-	background: var(--preview-widget-bg);
+.previewRestart {
+	@apply absolute bottom-[10px] z-10 rounded-xl font-bold text-sm tracking-[0.05em] cursor-pointer border-none text-white transition-[opacity,transform] duration-200 py-[0.1rem] px-[0.7rem];
+	background: linear-gradient(
+		87.12deg,
+		#470b58 1.98%,
+		#c21b84 50.27%,
+		#fa595e 74.42%,
+		#f8bd31 98.56%
+	);
 }
 
-.panelHeader {
-	@apply flex flex-col gap-1;
+.previewRestart:hover {
+	@apply opacity-90;
 }
 
-.panelTitle {
-	@apply line-clamp-2 text-2xl font-bold leading-8 text-[#1a1a1a];
+.previewCrop {
+	@apply relative max-w-full overflow-hidden;
 }
 
-.panelText {
-	@apply line-clamp-2 text-base leading-6 text-[#555];
-}
-
-.wheelLayout {
-	@apply grid grid-cols-[13rem_1fr] items-center gap-7;
-}
-
-.wheel {
-	@apply relative h-52 w-52 rounded-full border-[10px] border-white shadow-xl;
-	background: var(--preview-wheel-gradient);
-}
-
-.wheelCenter {
-	@apply absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white shadow;
-	background: var(--preview-wheel-center);
-}
-
-.wheelArrow {
-	@apply absolute -right-4 top-1/2 h-0 w-0 -translate-y-1/2 border-y-[18px] border-l-[32px] border-y-transparent;
-	border-left-color: var(--preview-wheel-arrow);
-}
-
-.panelSide {
-	@apply flex min-w-0 flex-col gap-2;
-}
-
-.contactFields {
-	@apply flex flex-col gap-2;
-}
-
-.prizeBadge {
-	@apply line-clamp-1 rounded-full bg-[#f3eeff] px-5 py-3 text-base font-semibold text-[#7b3fa0];
-}
-
-.primaryButton {
-	@apply inline-flex min-h-12 items-center justify-center rounded-lg px-5 py-3 text-center text-base font-bold text-white shadow-sm;
-	background: var(--preview-primary-button-color);
-}
-
-.quizQuestion {
-	@apply line-clamp-3 rounded-lg bg-[#f8f5ff] px-4 py-3 text-base font-semibold leading-6 text-[#1a1a1a];
-}
-
-.optionList {
-	@apply flex flex-col gap-2;
-}
-
-.optionItem {
-	@apply line-clamp-1 rounded-lg border border-[#e0d6f0] bg-white px-4 py-3 text-sm text-[#555];
-}
-
-.inputPreview {
-	@apply rounded-lg border border-[#e0d6f0] bg-[#f8f5ff] px-4 py-3 text-sm font-medium text-[#aaa];
-}
-
-.slotList {
-	@apply flex flex-wrap gap-2;
-}
-
-.slotItem {
-	@apply rounded-full bg-[#f3eeff] px-4 py-2 text-xs font-semibold text-[#7b3fa0];
-}
-
-.timerGrid {
-	@apply grid grid-cols-4 gap-2;
-}
-
-.timerCell {
-	@apply flex min-w-0 flex-col items-center justify-center rounded-lg bg-[#f8f5ff] px-3 py-4 text-center;
-}
-
-.timerCell strong {
-	@apply text-2xl font-bold leading-8 text-[#1a1a1a];
-}
-
-.timerCell small {
-	@apply text-xs font-semibold text-[#7b3fa0];
+.previewFrame {
+	@apply absolute left-[-18px] top-0 block shrink-0 border-0 bg-transparent;
+	transform-origin: top left;
 }
 
 @media (max-width: 600px) {
@@ -118,59 +49,5 @@
 
 	.previewHeader {
 		@apply mb-2;
-	}
-
-	.stage {
-		@apply overflow-x-auto;
-	}
-
-	.widgetPanel {
-		@apply min-w-[28rem] gap-3 p-4;
-	}
-
-	.panelTitle {
-		@apply text-lg leading-6;
-	}
-
-	.panelText {
-		@apply text-sm leading-5;
-	}
-
-	.wheelLayout {
-		@apply grid-cols-[8rem_1fr] gap-4;
-	}
-
-	.wheel {
-		@apply h-32 w-32 border-[7px];
-	}
-
-	.wheelCenter {
-		@apply h-10 w-10;
-	}
-
-	.primaryButton,
-	.inputPreview,
-	.optionItem,
-	.quizQuestion {
-		@apply px-3 py-2 text-xs leading-5;
-	}
-
-	.timerCell {
-		@apply px-1 py-1;
-	}
-
-	.timerCell strong {
-		@apply text-xs leading-4;
-	}
-}
-
-@media (max-width: 420px) {
-	.previewBadge {
-		@apply px-2;
-	}
-
-	.slotList,
-	.panelText {
-		@apply hidden;
 	}
 }
