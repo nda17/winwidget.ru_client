@@ -1,18 +1,20 @@
 'use client'
 
 import styles from '@/components/screens/cabinet/Cabinet.module.scss'
+import CabinetAffiliate from '@/components/screens/cabinet/CabinetAffiliate'
 import CabinetProfile from '@/components/screens/cabinet/CabinetProfile'
 import CabinetWidgets from '@/components/screens/cabinet/CabinetWidgets'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import useUser from '@/hooks/useUser'
+import affiliateService from '@/services/affiliate/affiliate.service'
 import widgetService from '@/services/widget/widget.service'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import { useQuery } from '@tanstack/react-query'
 import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
-import { FC, useState } from 'react'
+import { FC, useEffect, useState } from 'react'
 
-type Tab = 'widgets' | 'profile'
+type Tab = 'widgets' | 'profile' | 'affiliate'
 
 const planLabel: Record<string, string> = {
 	TRIAL: 'Тест-драйв',
@@ -33,14 +35,26 @@ const Cabinet: FC = () => {
 		queryFn: widgetService.getMyWidgets,
 		enabled: auth
 	})
+	const { data: affiliateSettings } = useQuery({
+		queryKey: ['affiliate-public-settings'],
+		queryFn: affiliateService.getPublicSettings,
+		enabled: auth
+	})
 
 	const subscription = data?.subscription
+	const isAffiliateEnabled = Boolean(affiliateSettings?.enabled)
 	const planName = subscription
 		? planLabel[subscription.plan] || subscription.plan
 		: null
 
 	const displayName = user?.name || 'Пользователь'
 	const displaySub = user?.email || user?.phone || ''
+
+	useEffect(() => {
+		if (tab === 'affiliate' && !isAffiliateEnabled) {
+			setTab('widgets')
+		}
+	}, [isAffiliateEnabled, tab])
 
 	return (
 		<div className={styles.cabinet}>
@@ -117,11 +131,21 @@ const Cabinet: FC = () => {
 				>
 					Профиль
 				</button>
+				{isAffiliateEnabled && (
+					<button
+						className={`${styles.tab} ${tab === 'affiliate' ? styles.tabActive : ''}`}
+						onClick={() => setTab('affiliate')}
+					>
+						Партнёрская программа
+					</button>
+				)}
 			</div>
 
 			{/* ── Content ─────────────────────────────────────────── */}
 			<div className={styles.content}>
-				{tab === 'widgets' ? <CabinetWidgets /> : <CabinetProfile />}
+				{tab === 'widgets' && <CabinetWidgets />}
+				{tab === 'profile' && <CabinetProfile />}
+				{tab === 'affiliate' && isAffiliateEnabled && <CabinetAffiliate />}
 			</div>
 		</div>
 	)

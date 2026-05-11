@@ -1,5 +1,6 @@
 import CurvedCarousel from '@/components/ui/сurved-сarousel/CurvedCarousel'
 import Analysis from '@/components/screens/home/analysis/Analysis'
+import HomeAffiliate from '@/components/screens/home/affiliate/HomeAffiliate'
 import CtaBanner from '@/components/screens/home/cta-banner/CtaBanner'
 import LazyDemoWidgets from '@/components/screens/home/demo-widgets/LazyDemoWidgets'
 import HomeFaq from '@/components/screens/home/faq/HomeFaq'
@@ -8,15 +9,21 @@ import HomePricing from '@/components/screens/home/pricing/HomePricing'
 import HomeSteps from '@/components/screens/home/steps/HomeSteps'
 import HomeTools from '@/components/screens/home/tools/HomeTools'
 import type { HomePageContent } from '@/services/home-page-content/home-page-content.types'
+import type { AffiliateSettings } from '@/services/affiliate/affiliate.service'
 import type { TariffPrice } from '@/services/tariff-prices/tariff-prices.types'
 import styles from './Home.module.scss'
 
 interface Props {
 	content: HomePageContent
 	tariffPrices?: TariffPrice[] | null
+	affiliateSettings?: AffiliateSettings | null
 }
 
-const Home = ({ content, tariffPrices = null }: Props) => {
+const Home = ({
+	content,
+	tariffPrices = null,
+	affiliateSettings = null
+}: Props) => {
 	return (
 		<div className={styles.page}>
 			{content.demoWidgets.enabled && (
@@ -29,6 +36,11 @@ const Home = ({ content, tariffPrices = null }: Props) => {
 			{content.analysis.enabled && <Analysis content={content.analysis} />}
 			{content.tools.enabled && <HomeTools content={content.tools} />}
 			{content.steps.enabled && <HomeSteps content={content.steps} />}
+			{affiliateSettings?.enabled && (
+				<HomeAffiliate
+					cashbackPercent={affiliateSettings.cashbackPercent}
+				/>
+			)}
 			{content.pricing.enabled && (
 				<HomePricing
 					content={content.pricing}

@@ -1,4 +1,5 @@
 import Home from '@/components/screens/home/Home'
+import { getAffiliatePublicSettings } from '@/services/affiliate/affiliate.server'
 import { getHomePageContent } from '@/services/home-page-content/home-page-content.server'
 import { getTariffPrices } from '@/services/tariff-prices/tariff-prices.server'
 import { Metadata } from 'next'
@@ -31,12 +32,19 @@ export const generateMetadata = async (): Promise<Metadata> => {
 }
 
 const HomePage = async () => {
-	const [content, tariffPrices] = await Promise.all([
+	const [content, tariffPrices, affiliateSettings] = await Promise.all([
 		getHomePageContent(),
-		getTariffPrices()
+		getTariffPrices(),
+		getAffiliatePublicSettings()
 	])
 
-	return <Home content={content} tariffPrices={tariffPrices} />
+	return (
+		<Home
+			content={content}
+			tariffPrices={tariffPrices}
+			affiliateSettings={affiliateSettings}
+		/>
+	)
 }
 
 export default HomePage

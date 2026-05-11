@@ -78,13 +78,6 @@ export interface TelegramDatabaseBackupResult {
 	sent: boolean
 }
 
-export interface TelegramDatabaseRestoreResult {
-	restored: boolean
-	fileName: string
-	fileSize: number
-	restoredAt: string
-}
-
 const adminTelegramBotService = {
 	async get(): Promise<AdminTelegramBotSettings> {
 		const { data } = await axiosInterceptorsRequest.get(
@@ -130,25 +123,6 @@ const adminTelegramBotService = {
 		const { data } = await axiosInterceptorsRequest.post(
 			'/telegram-bot/admin/database-backup/send'
 		)
-		return data
-	},
-
-	async restoreDatabaseBackup(
-		file: File,
-		confirmation: string
-	): Promise<TelegramDatabaseRestoreResult> {
-		const formData = new FormData()
-		formData.append('file', file)
-		formData.append('confirmation', confirmation)
-
-		const { data } = await axiosInterceptorsRequest.post(
-			'/telegram-bot/admin/database-backup/restore',
-			formData,
-			{
-				headers: { 'Content-Type': 'multipart/form-data' }
-			}
-		)
-
 		return data
 	}
 }

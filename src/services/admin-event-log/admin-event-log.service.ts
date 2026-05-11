@@ -9,6 +9,8 @@ export type AdminEventLogSection =
 	| 'BACKLOG'
 	| 'SITE_SETTINGS'
 	| 'TELEGRAM_BOT'
+	| 'AFFILIATE'
+	| 'DEV_TOOLS'
 
 export type AdminEventLogAction =
 	| 'PAYMENT_MANUAL_CHECK'
@@ -26,10 +28,12 @@ export type AdminEventLogAction =
 	| 'BACKLOG_TASK_UPDATE'
 	| 'BACKLOG_TASK_DELETE'
 	| 'SITE_SETTINGS_UPDATE'
+	| 'AFFILIATE_SETTINGS_UPDATE'
 	| 'TELEGRAM_BOT_SETTINGS_UPDATE'
 	| 'TELEGRAM_BOT_WEBHOOK_REINSTALL'
 	| 'TELEGRAM_DATABASE_BACKUP_CREATE'
 	| 'TELEGRAM_DATABASE_RESTORE'
+	| 'DEV_DATABASE_RESTORE'
 
 export interface IAdminEventLogItem {
 	id: string

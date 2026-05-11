@@ -9,5 +9,7 @@ export interface SiteSettings {
 	yandexAuthEnabled: boolean
 	githubAuthEnabled: boolean
 	telegramAuthEnabled: boolean
+	affiliateProgramEnabled: boolean
+	affiliateCashbackPercent: number
 	updatedAt: string
 }

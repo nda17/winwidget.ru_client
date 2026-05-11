@@ -16,6 +16,18 @@ export const navItems: INavItem[] = [
 		link: ADMIN_PAGES.SUBSCRIPTIONS
 	},
 	{
+		title: 'Виджеты',
+		link: ADMIN_PAGES.WIDGETS
+	},
+	{
+		title: 'Предупреждения',
+		link: ADMIN_PAGES.ALERTS
+	},
+	{
+		title: 'Партнёрка',
+		link: ADMIN_PAGES.AFFILIATE
+	},
+	{
 		title: 'Платежи',
 		link: ADMIN_PAGES.PAYMENTS
 	},
@@ -46,6 +58,11 @@ export const navItems: INavItem[] = [
 	{
 		title: 'Система',
 		link: ADMIN_PAGES.SYSTEM
+	},
+	{
+		title: 'DEV',
+		link: ADMIN_PAGES.DEV_TOOLS,
+		devOnly: true
 	},
 	{
 		title: 'Бэклог',

@@ -8,8 +8,6 @@ import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import adminTelegramBotService, {
 	type TelegramWebhookBot
 } from '@/services/admin-telegram-bot/admin-telegram-bot.service'
-import useUser from '@/hooks/useUser'
-import { UserRole } from '@/services/auth/auth.types'
 import {
 	useMutation,
 	useQuery,
@@ -65,13 +63,9 @@ const getTaskTimeGapMinutes = (first: string, second: string) => {
 
 const AdminTelegramBot: NextPage = () => {
 	const queryClient = useQueryClient()
-	const { user } = useUser()
-	const canRestoreDatabase = Boolean(user?.rights?.includes(UserRole.DEV))
 	const [chatId, setChatId] = useState('')
 	const [summaryTime, setSummaryTime] = useState('')
 	const [backupTime, setBackupTime] = useState('')
-	const [restoreFile, setRestoreFile] = useState<File | null>(null)
-	const [restoreConfirmation, setRestoreConfirmation] = useState('')
 
 	const { data: settings, isLoading } = useQuery({
 		queryKey: SETTINGS_QUERY_KEY,
@@ -121,21 +115,6 @@ const AdminTelegramBot: NextPage = () => {
 			await queryClient.invalidateQueries({
 				queryKey: SETTINGS_QUERY_KEY
 			})
-		}
-	})
-
-	const databaseRestoreMutation = useMutation({
-		mutationFn: ({
-			file,
-			confirmation
-		}: {
-			file: File
-			confirmation: string
-		}) =>
-			adminTelegramBotService.restoreDatabaseBackup(file, confirmation),
-		onSuccess: () => {
-			setRestoreFile(null)
-			setRestoreConfirmation('')
 		}
 	})
 
@@ -281,31 +260,6 @@ const AdminTelegramBot: NextPage = () => {
 			success: result =>
 				`Backup отправлен в Telegram: ${formatFileSize(result.fileSize)}`,
 			error: error => `Ошибка backup: ${errorCatch(error)}`
-		})
-	}
-
-	const handleRestoreDatabaseBackup = () => {
-		if (!canRestoreDatabase) {
-			toast.error('Восстановление БД доступно только роли DEV')
-			return
-		}
-
-		if (!restoreFile) {
-			toast.error('Выберите файл backup .dump')
-			return
-		}
-
-		if (!settings) return
-
-		const promise = databaseRestoreMutation.mutateAsync({
-			file: restoreFile,
-			confirmation: restoreConfirmation.trim()
-		})
-
-		toast.promise(promise, {
-			loading: 'Восстанавливаем базу данных...',
-			success: 'База данных восстановлена из backup',
-			error: error => `Ошибка восстановления: ${errorCatch(error)}`
 		})
 	}
 
@@ -794,59 +748,6 @@ const AdminTelegramBot: NextPage = () => {
 									<p className={styles.statusValue}>PostgreSQL .dump</p>
 								</div>
 							</div>
-						</div>
-
-						<div className={styles.restorePanel}>
-							<div>
-								<p className={styles.label}>Восстановление из backup</p>
-								<p className={styles.hint}>
-									Операция заменяет текущие данные базы содержимым файла.
-									Перед восстановлением убедитесь, что выбран нужный
-									backup.
-								</p>
-							</div>
-							<div className={styles.restoreGrid}>
-								<label className={styles.fileInputLabel}>
-									<span>Файл .dump</span>
-									<input
-										type="file"
-										accept=".dump"
-										onChange={event =>
-											setRestoreFile(event.target.files?.[0] ?? null)
-										}
-									/>
-								</label>
-								<input
-									className={styles.input}
-									value={restoreConfirmation}
-									onChange={event =>
-										setRestoreConfirmation(event.target.value)
-									}
-									placeholder={settings.databaseRestoreConfirmation}
-								/>
-								<button
-									type="button"
-									className={styles.dangerBtn}
-									onClick={handleRestoreDatabaseBackup}
-									disabled={
-										databaseRestoreMutation.isPending ||
-										!canRestoreDatabase
-									}
-								>
-									Восстановить БД
-								</button>
-							</div>
-							<p className={styles.hint}>
-								Для подтверждения введите:{' '}
-								<b>{settings.databaseRestoreConfirmation}</b>
-								{restoreFile ? `; выбран файл ${restoreFile.name}` : ''}
-							</p>
-							{!canRestoreDatabase && (
-								<p className={styles.hint}>
-									Восстановление БД доступно только администратору с ролью
-									DEV.
-								</p>
-							)}
 						</div>
 					</>
 				) : (

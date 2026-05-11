@@ -8,6 +8,7 @@ export type TUserDataState = {
 	rights: UserRole[]
 	isLoggedIn: boolean
 	isAdmin: boolean
+	isDev: boolean
 }
 
 export const transformUserToState = (
@@ -16,6 +17,7 @@ export const transformUserToState = (
 	return {
 		...user,
 		isLoggedIn: true,
-		isAdmin: user.rights.includes(UserRole.ADMIN)
+		isAdmin: user.rights.includes(UserRole.ADMIN),
+		isDev: user.rights.includes(UserRole.DEV)
 	}
 }

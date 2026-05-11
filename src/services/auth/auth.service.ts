@@ -20,12 +20,14 @@ interface IPhonePayload {
 	phone: string
 	password?: string
 	code?: string
+	referrerId?: string
 }
 
 interface IEmailCodePayload {
 	email: string
 	password?: string
 	code?: string
+	referrerId?: string
 }
 
 interface ITelegramAuthVerifyPayload {
@@ -166,7 +168,8 @@ class AuthService {
 			'/auth/email/register',
 			{
 				email: data.email,
-				code: data.code
+				code: data.code,
+				referrerId: data.referrerId
 			},
 			{
 				headers: {
@@ -214,7 +217,8 @@ class AuthService {
 			{
 				phone: data.phone,
 				password: data.password,
-				code: data.code
+				code: data.code,
+				referrerId: data.referrerId
 			},
 			{
 				headers: {

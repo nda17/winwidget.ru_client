@@ -6,7 +6,10 @@ import { NavigationProvider } from '@/providers/navigation-provider/NavigationPr
 import NetworkStatusProvider from '@/providers/network-status-provider/NetworkStatusProvider'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { NextPage } from 'next'
+import { useEffect } from 'react'
 import { Toaster } from 'react-hot-toast'
+
+const AFFILIATE_REFERRER_STORAGE_KEY = 'affiliateReferrerId'
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -24,6 +27,7 @@ const MainProvider: NextPage<IMainProvider> = ({
 		<QueryClientProvider client={queryClient}>
 			<Toaster />
 			<NetworkStatusProvider />
+			<AffiliateReferralTracker />
 			<CookieConsentProvider />
 			<AuthProvider hasSessionHint={hasSessionHint}>
 				<NavigationProvider>{children}</NavigationProvider>
@@ -33,3 +37,19 @@ const MainProvider: NextPage<IMainProvider> = ({
 }
 
 export default MainProvider
+
+const AffiliateReferralTracker = () => {
+	useEffect(() => {
+		const params = new URLSearchParams(window.location.search)
+		const referrerId = params.get('ref')?.trim()
+
+		if (referrerId) {
+			window.localStorage.setItem(
+				AFFILIATE_REFERRER_STORAGE_KEY,
+				referrerId
+			)
+		}
+	}, [])
+
+	return null
+}

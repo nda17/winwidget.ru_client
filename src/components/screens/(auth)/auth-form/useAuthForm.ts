@@ -23,6 +23,7 @@ import { SubmitHandler, useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 
 const PENDING_EMAIL_REGISTRATION_STORAGE_KEY = 'pendingEmailRegistration'
+const AFFILIATE_REFERRER_STORAGE_KEY = 'affiliateReferrerId'
 const TELEGRAM_AUTH_POLL_INTERVAL_MS = 2500
 const TELEGRAM_AUTH_POLL_TIMEOUT_MS = 120000
 
@@ -72,6 +73,25 @@ const clearPendingEmailRegistrationState = () => {
 	}
 
 	window.localStorage.removeItem(PENDING_EMAIL_REGISTRATION_STORAGE_KEY)
+}
+
+const getAffiliateReferrerId = () => {
+	if (typeof window === 'undefined') {
+		return undefined
+	}
+
+	return (
+		window.localStorage.getItem(AFFILIATE_REFERRER_STORAGE_KEY)?.trim() ||
+		undefined
+	)
+}
+
+const clearAffiliateReferrerId = () => {
+	if (typeof window === 'undefined') {
+		return
+	}
+
+	window.localStorage.removeItem(AFFILIATE_REFERRER_STORAGE_KEY)
 }
 
 const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
@@ -229,13 +249,15 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 			authService.registerByEmail(
 				{
 					email: data.email || '',
-					code: data.code
+					code: data.code,
+					referrerId: getAffiliateReferrerId()
 				},
 				token
 			),
 		onSuccess() {
 			startTransition(() => {
 				clearEmailCodeStep()
+				clearAffiliateReferrerId()
 				setAuth(true)
 				setAuthResolved(true)
 				toast.success('Email подтвержден. Регистрация завершена')
@@ -311,7 +333,8 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 				{
 					phone: data.phone || '',
 					password: data.password,
-					code: data.code
+					code: data.code,
+					referrerId: getAffiliateReferrerId()
 				},
 				token
 			),
@@ -320,6 +343,7 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 				setAuth(true)
 				setAuthResolved(true)
 				toast.success('Регистрация по номеру телефона прошла успешно')
+				clearAffiliateReferrerId()
 				reset()
 				setIsPhoneCodeRequested(false)
 				queryClient.invalidateQueries({ queryKey: ['get-profile'] })
