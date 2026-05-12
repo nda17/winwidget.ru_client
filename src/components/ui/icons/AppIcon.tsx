@@ -1,6 +1,7 @@
 import type { AppIconName } from '@/shared/types/icon.types'
 import {
 	AppsIcon,
+	ClockIcon,
 	CloseIcon,
 	CookieIcon,
 	DiamondIcon,
@@ -18,8 +19,11 @@ import {
 	NavigateNextIcon,
 	PaymentIcon,
 	PersonAddIcon,
+	RefreshIcon,
 	SearchIcon,
+	SettingsIcon,
 	SpaceDashboardIcon,
+	StarIcon,
 	type ActionIconProps
 } from '@/components/ui/icons/ActionIcons'
 import {
@@ -45,6 +49,7 @@ const actionIconRegistry: Partial<
 	Record<AppIconName, ActionIconComponent>
 > = {
 	apps: AppsIcon,
+	clock: ClockIcon,
 	close: CloseIcon,
 	cookie: CookieIcon,
 	diamond: DiamondIcon,
@@ -61,7 +66,10 @@ const actionIconRegistry: Partial<
 	'navigate-next': NavigateNextIcon,
 	payment: PaymentIcon,
 	'person-add': PersonAddIcon,
+	refresh: RefreshIcon,
 	search: SearchIcon,
+	settings: SettingsIcon,
+	star: StarIcon,
 	dashboard: SpaceDashboardIcon
 }
 

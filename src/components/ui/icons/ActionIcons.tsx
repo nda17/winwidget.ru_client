@@ -56,6 +56,12 @@ export const SettingsIcon = (props: ActionIconProps) => (
 	</ActionIcon>
 )
 
+export const StarIcon = (props: ActionIconProps) => (
+	<ActionIcon {...props}>
+		<path d="m12 3.9 2.3 4.65 5.15.75-3.73 3.63.88 5.12L12 15.63l-4.6 2.42.88-5.12L4.55 9.3l5.15-.75z" />
+	</ActionIcon>
+)
+
 export const DeleteIcon = (props: ActionIconProps) => (
 	<ActionIcon {...props}>
 		<path d="M4.5 7h15" />
@@ -78,6 +84,13 @@ export const AppsIcon = (props: ActionIconProps) => (
 		<rect x="13.75" y="4" width="6.25" height="6.25" rx="1.55" />
 		<rect x="4" y="13.75" width="6.25" height="6.25" rx="1.55" />
 		<rect x="13.75" y="13.75" width="6.25" height="6.25" rx="1.55" />
+	</ActionIcon>
+)
+
+export const ClockIcon = (props: ActionIconProps) => (
+	<ActionIcon {...props}>
+		<circle cx="12" cy="12" r="8.75" />
+		<path d="M12 7.4V12l3.3 2.1" />
 	</ActionIcon>
 )
 
@@ -238,6 +251,15 @@ export const PersonAddIcon = (props: ActionIconProps) => (
 		<path d="M3.25 20.25v-.95a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v.95" />
 		<path d="M18.5 8.25v5.5" />
 		<path d="M21.25 11h-5.5" />
+	</ActionIcon>
+)
+
+export const RefreshIcon = (props: ActionIconProps) => (
+	<ActionIcon {...props}>
+		<path d="M19.5 7.35A8.2 8.2 0 0 0 5.1 6.2L4 8.1" />
+		<path d="M4.45 4.15 4 8.1l3.95.45" />
+		<path d="M4.5 16.65a8.2 8.2 0 0 0 14.4 1.15l1.1-1.9" />
+		<path d="m19.55 19.85.45-3.95-3.95-.45" />
 	</ActionIcon>
 )
 

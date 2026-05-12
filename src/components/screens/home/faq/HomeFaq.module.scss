@@ -1,10 +1,26 @@
 .section {
-	@apply max-w-[860px] mx-auto px-4 pt-[3rem] pb-[2rem] md:pt-[4rem] md:pb-[3rem] lg:py-[8rem];
+	@apply max-w-[860px] mx-auto px-4 py-[4rem] relative;
+
+	&::before {
+		content: '';
+		@apply absolute inset-x-0 top-[1rem] mx-auto h-px max-w-[960px] opacity-70;
+		background: linear-gradient(
+			90deg,
+			transparent,
+			rgb(123 92 229 / 0.24),
+			rgb(224 90 138 / 0.2),
+			transparent
+		);
+	}
 }
 
 .title {
-	@apply text-[32px] font-semibold text-center mb-[2.5rem] text-[#1a1a1a];
+	@apply text-[32px] font-semibold text-center mb-[2.5rem] text-[#22155c];
 	font-family: var(--font-family);
+
+	@media (max-width: 640px) {
+		@apply text-2xl mb-[1.8rem];
+	}
 }
 
 .list {
@@ -12,15 +28,23 @@
 }
 
 .item {
-	@apply rounded-[16px] border border-[#e0d6f0] bg-white overflow-hidden transition-[border-color,box-shadow] duration-200;
+	@apply rounded-[20px] border border-white/80 bg-white/[0.78] overflow-hidden transition-[border-color,box-shadow,transform] duration-200;
+	box-shadow:
+		0 14px 34px rgb(123 63 160 / 0.08),
+		inset 0 1px 0 rgb(255 255 255 / 0.9);
+	backdrop-filter: blur(14px);
 
 	&.itemOpen {
-		@apply border-[#c4a8e8] shadow-[0_4px_20px_rgb(100_60_180/0.08)];
+		@apply border-[#d7bef7] shadow-[0_18px_44px_rgb(123_63_160/0.12)];
+	}
+
+	&:hover {
+		@apply -translate-y-px;
 	}
 }
 
 .question {
-	@apply w-full flex items-center justify-between gap-4 px-6 py-5 text-left cursor-pointer bg-transparent border-none outline-none text-[16px] font-medium text-[#1a1a1a] transition-colors duration-200;
+	@apply w-full flex items-center justify-between gap-4 px-6 py-5 text-left cursor-pointer bg-transparent border-none outline-none text-[16px] font-medium text-[#22155c] transition-colors duration-200;
 	font-family: var(--font-family);
 
 	&:hover {
@@ -53,7 +77,7 @@
 }
 
 .answer {
-	@apply px-6 pb-5 text-[15px] leading-relaxed text-[#555];
+	@apply px-6 pb-5 text-[15px] leading-relaxed text-[#4f4864];
 	font-family: var(--second-family);
 	white-space: pre-line;
 

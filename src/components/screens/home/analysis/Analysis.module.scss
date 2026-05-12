@@ -1,10 +1,22 @@
 .section {
-	@apply max-w-[1100px] mx-auto px-4 mt-[-6rem] lg:mt-0 lg:py-[3rem];
+	@apply max-w-[1100px] mx-auto mt-[-6rem] lg:mt-0 px-4 py-[4rem] relative;
+
+	&::before {
+		content: '';
+		@apply absolute inset-x-0 top-[1rem] mx-auto h-px max-w-[960px] opacity-70;
+		background: linear-gradient(
+			90deg,
+			transparent,
+			rgb(123 92 229 / 0.24),
+			rgb(224 90 138 / 0.2),
+			transparent
+		);
+	}
 
 	.titleWrapper {
 		@apply flex flex-col gap-4 items-center;
 		.title {
-			@apply text-[28px] md:text-[30px] lg:text-[32px] font-semibold text-center mb-[2.5rem] text-[#1a1a1a];
+			@apply text-[28px] md:text-[30px] lg:text-[32px] font-semibold text-center mb-[2.5rem] text-[#22155c];
 			font-family: var(--font-family);
 		}
 		.subtitle {
@@ -71,6 +83,14 @@
 
 .cardTop {
 	@apply flex items-start justify-between gap-4 mb-[0.6rem];
+
+	@media (min-width: 901px) {
+		@apply flex-col items-center;
+	}
+
+	@media (min-width: 1033px) {
+		@apply flex-row items-start;
+	}
 }
 
 .iconShell {
@@ -127,7 +147,7 @@
 }
 
 .text {
-	@apply flex-1 text-[20px] leading-[1.28] text-[#231f2f] max-w-[15ch] z-1;
+	@apply flex-1 text-[18px] font-medium text-[#4d466c] max-w-[15ch] z-1;
 	font-family: var(--second-family);
 	font-weight: 500;
 	letter-spacing: -0.015em;

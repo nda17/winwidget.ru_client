@@ -6,6 +6,7 @@ import { normalizeHomePageContent } from '@/services/home-page-content/home-page
 import homePageContentService from '@/services/home-page-content/home-page-content.service'
 import type {
 	HomePageContent,
+	HomePageFeatureCard,
 	HomePageIntegrationIconKey,
 	HomePageIntegrationItem,
 	HomePagePricingPlan,
@@ -306,6 +307,22 @@ const textToFeatures = (value: string) => value.split('\n')
 const cleanStringList = (items: string[]) =>
 	items.map(item => item.trim()).filter(Boolean)
 
+const cleanTextCards = (items: HomePageTextCard[]): HomePageTextCard[] =>
+	items
+		.map(item => ({ ...item, text: item.text.trim() }))
+		.filter(item => item.text)
+
+const cleanFeatureCards = (
+	items: HomePageFeatureCard[]
+): HomePageFeatureCard[] =>
+	items
+		.map(item => ({
+			...item,
+			title: item.title.trim(),
+			text: item.text.trim()
+		}))
+		.filter(item => item.title || item.text)
+
 const prepareContentForSave = (
 	content: HomePageContent
 ): HomePageContent => ({
@@ -318,6 +335,15 @@ const prepareContentForSave = (
 		...content.technicalSeo,
 		robotsDisallow: cleanStringList(content.technicalSeo.robotsDisallow)
 	},
+	subscriptionBundle: {
+		...content.subscriptionBundle,
+		items: cleanTextCards(content.subscriptionBundle.items)
+	},
+	customization: {
+		...content.customization,
+		cards: cleanFeatureCards(content.customization.cards),
+		features: cleanTextCards(content.customization.features)
+	},
 	pricing: {
 		...content.pricing,
 		plans: content.pricing.plans.map(plan => ({
@@ -328,6 +354,10 @@ const prepareContentForSave = (
 	footer: {
 		...content.footer,
 		infoLines: cleanStringList(content.footer.infoLines)
+	},
+	cta: {
+		...content.cta,
+		benefits: cleanTextCards(content.cta.benefits)
 	}
 })
 
@@ -528,6 +558,8 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 			integrations: defaultHomeContent.integrations,
 			tools: defaultHomeContent.tools,
 			steps: defaultHomeContent.steps,
+			customization: defaultHomeContent.customization,
+			subscriptionBundle: defaultHomeContent.subscriptionBundle,
 			pricing: defaultHomeContent.pricing,
 			faq: defaultHomeContent.faq,
 			cta: defaultHomeContent.cta
@@ -588,6 +620,15 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 			}
 		}))
 
+	const updateSubscriptionBundleItems = (items: HomePageTextCard[]) =>
+		updateDraft(prev => ({
+			...prev,
+			subscriptionBundle: {
+				...prev.subscriptionBundle,
+				items
+			}
+		}))
+
 	const updateIntegrationItems = (items: HomePageIntegrationItem[]) =>
 		updateDraft(prev => ({
 			...prev,
@@ -600,10 +641,28 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 			tools: { ...prev.tools, items }
 		}))
 
+	const updateCustomizationCards = (cards: HomePageFeatureCard[]) =>
+		updateDraft(prev => ({
+			...prev,
+			customization: { ...prev.customization, cards }
+		}))
+
+	const updateCustomizationFeatures = (features: HomePageTextCard[]) =>
+		updateDraft(prev => ({
+			...prev,
+			customization: { ...prev.customization, features }
+		}))
+
 	const updatePricingPlans = (plans: HomePagePricingPlan[]) =>
 		updateDraft(prev => ({
 			...prev,
 			pricing: { ...prev.pricing, plans }
+		}))
+
+	const updateCtaBenefits = (benefits: HomePageTextCard[]) =>
+		updateDraft(prev => ({
+			...prev,
+			cta: { ...prev.cta, benefits }
 		}))
 
 	const updatePaymentField = <K extends keyof HomePageContent['payment']>(
@@ -1778,6 +1837,217 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 					<section className={styles.panel}>
 						<div className={styles.panelHeader}>
 							<SectionTitle
+								title="Блок кастомизации"
+								description="Редактирует блок главной про настройку цветов, текстов, бонусов, превью и единый стиль сайта."
+								risk="medium"
+								riskText="Это визуальный блок с карточками. Длинные заголовки и описания могут ухудшить сетку на мобильном экране."
+							>
+								Кастомизация
+							</SectionTitle>
+							<ToggleField
+								label="Показывать"
+								checked={draft.customization.enabled}
+								onChange={checked =>
+									updateDraft(prev => ({
+										...prev,
+										customization: {
+											...prev.customization,
+											enabled: checked
+										}
+									}))
+								}
+							/>
+						</div>
+						<div className={styles.gridTwo}>
+							<TextAreaField
+								id="customization-title"
+								label="Заголовок"
+								value={draft.customization.title}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										customization: {
+											...prev.customization,
+											title: value
+										}
+									}))
+								}
+								hint="Переносы строк сохраняются."
+							/>
+							<TextAreaField
+								id="customization-subtitle"
+								label="Подзаголовок"
+								value={draft.customization.subtitle}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										customization: {
+											...prev.customization,
+											subtitle: value
+										}
+									}))
+								}
+								hint="Переносы строк сохраняются."
+							/>
+						</div>
+						<div className={styles.list}>
+							{draft.customization.cards.map((card, index) => (
+								<div
+									key={`customization-card-${index}`}
+									className={styles.itemCard}
+								>
+									<div className={styles.itemHeader}>
+										<span className={styles.itemTitle}>
+											Карточка {index + 1}
+										</span>
+										<ListActions
+											onMoveUp={() =>
+												updateCustomizationCards(
+													moveItem(draft.customization.cards, index, -1)
+												)
+											}
+											onMoveDown={() =>
+												updateCustomizationCards(
+													moveItem(draft.customization.cards, index, 1)
+												)
+											}
+											onRemove={() =>
+												updateCustomizationCards(
+													removeItem(draft.customization.cards, index)
+												)
+											}
+											disableUp={index === 0}
+											disableDown={
+												index === draft.customization.cards.length - 1
+											}
+										/>
+									</div>
+									<div className={styles.gridTwo}>
+										<TextField
+											id={`customization-card-title-${index}`}
+											label="Заголовок"
+											value={card.title}
+											onChange={value =>
+												updateCustomizationCards(
+													updateItem(draft.customization.cards, index, {
+														title: value
+													})
+												)
+											}
+										/>
+										<TextAreaField
+											id={`customization-card-text-${index}`}
+											label="Описание"
+											value={card.text}
+											onChange={value =>
+												updateCustomizationCards(
+													updateItem(draft.customization.cards, index, {
+														text: value
+													})
+												)
+											}
+											hint="Переносы строк сохраняются."
+										/>
+									</div>
+								</div>
+							))}
+						</div>
+						<button
+							type="button"
+							className={styles.addBtn}
+							onClick={() =>
+								updateCustomizationCards([
+									...draft.customization.cards,
+									{
+										title: 'Новая карточка',
+										text: 'Описание карточки'
+									}
+								])
+							}
+						>
+							Добавить карточку
+						</button>
+
+						<div className={styles.list}>
+							{draft.customization.features.map((feature, index) => (
+								<div
+									key={`customization-feature-${index}`}
+									className={styles.itemCard}
+								>
+									<div className={styles.itemHeader}>
+										<span className={styles.itemTitle}>
+											Преимущество {index + 1}
+										</span>
+										<ListActions
+											onMoveUp={() =>
+												updateCustomizationFeatures(
+													moveItem(draft.customization.features, index, -1)
+												)
+											}
+											onMoveDown={() =>
+												updateCustomizationFeatures(
+													moveItem(draft.customization.features, index, 1)
+												)
+											}
+											onRemove={() =>
+												updateCustomizationFeatures(
+													removeItem(draft.customization.features, index)
+												)
+											}
+											disableUp={index === 0}
+											disableDown={
+												index === draft.customization.features.length - 1
+											}
+										/>
+									</div>
+									<TextField
+										id={`customization-feature-text-${index}`}
+										label="Текст"
+										value={feature.text}
+										onChange={value =>
+											updateCustomizationFeatures(
+												updateItem(draft.customization.features, index, {
+													text: value
+												})
+											)
+										}
+									/>
+								</div>
+							))}
+						</div>
+						<button
+							type="button"
+							className={styles.addBtn}
+							onClick={() =>
+								updateCustomizationFeatures([
+									...draft.customization.features,
+									{ text: 'Новое преимущество' }
+								])
+							}
+						>
+							Добавить преимущество
+						</button>
+
+						<TextAreaField
+							id="customization-bottom-text"
+							label="Нижняя подпись"
+							value={draft.customization.bottomText}
+							onChange={value =>
+								updateDraft(prev => ({
+									...prev,
+									customization: {
+										...prev.customization,
+										bottomText: value
+									}
+								}))
+							}
+							hint="Переносы строк сохраняются."
+						/>
+					</section>
+
+					<section className={styles.panel}>
+						<div className={styles.panelHeader}>
+							<SectionTitle
 								title="Шаги установки"
 								description="Короткая инструкция, которая объясняет посетителю, насколько просто подключить виджет."
 								risk="low"
@@ -1878,6 +2148,146 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 							}
 						>
 							Добавить шаг
+						</button>
+					</section>
+
+					<section className={styles.panel}>
+						<div className={styles.panelHeader}>
+							<SectionTitle
+								title="Блок единой подписки"
+								description="Редактирует новый блок главной с объяснением, что в одной подписке доступны виджеты, интеграции, заявки и аналитика."
+								risk="medium"
+								riskText="Это маркетинговый блок рядом с тарифами. Слишком длинные подписи могут сломать карточки на мобильном экране."
+							>
+								Единая подписка
+							</SectionTitle>
+							<ToggleField
+								label="Показывать"
+								checked={draft.subscriptionBundle.enabled}
+								onChange={checked =>
+									updateDraft(prev => ({
+										...prev,
+										subscriptionBundle: {
+											...prev.subscriptionBundle,
+											enabled: checked
+										}
+									}))
+								}
+							/>
+						</div>
+						<div className={styles.gridTwo}>
+							<TextAreaField
+								id="subscription-bundle-title"
+								label="Заголовок"
+								value={draft.subscriptionBundle.title}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										subscriptionBundle: {
+											...prev.subscriptionBundle,
+											title: value
+										}
+									}))
+								}
+								hint="Переносы строк сохраняются."
+							/>
+							<TextAreaField
+								id="subscription-bundle-subtitle"
+								label="Подзаголовок"
+								value={draft.subscriptionBundle.subtitle}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										subscriptionBundle: {
+											...prev.subscriptionBundle,
+											subtitle: value
+										}
+									}))
+								}
+								hint="Переносы строк сохраняются."
+							/>
+						</div>
+						<TextAreaField
+							id="subscription-bundle-card-title"
+							label="Текст внутри карточки"
+							value={draft.subscriptionBundle.cardTitle}
+							onChange={value =>
+								updateDraft(prev => ({
+									...prev,
+									subscriptionBundle: {
+										...prev.subscriptionBundle,
+										cardTitle: value
+									}
+								}))
+							}
+							hint="Переносы строк сохраняются."
+						/>
+						<div className={styles.list}>
+							{draft.subscriptionBundle.items.map((item, index) => (
+								<div
+									key={`subscription-bundle-item-${index}`}
+									className={styles.itemCard}
+								>
+									<div className={styles.itemHeader}>
+										<span className={styles.itemTitle}>
+											Элемент {index + 1}
+										</span>
+										<ListActions
+											onMoveUp={() =>
+												updateSubscriptionBundleItems(
+													moveItem(
+														draft.subscriptionBundle.items,
+														index,
+														-1
+													)
+												)
+											}
+											onMoveDown={() =>
+												updateSubscriptionBundleItems(
+													moveItem(
+														draft.subscriptionBundle.items,
+														index,
+														1
+													)
+												)
+											}
+											onRemove={() =>
+												updateSubscriptionBundleItems(
+													removeItem(draft.subscriptionBundle.items, index)
+												)
+											}
+											disableUp={index === 0}
+											disableDown={
+												index === draft.subscriptionBundle.items.length - 1
+											}
+										/>
+									</div>
+									<TextField
+										id={`subscription-bundle-item-text-${index}`}
+										label="Подпись"
+										value={item.text}
+										onChange={value =>
+											updateSubscriptionBundleItems(
+												updateItem(draft.subscriptionBundle.items, index, {
+													text: value
+												})
+											)
+										}
+									/>
+								</div>
+							))}
+						</div>
+						<button
+							type="button"
+							className={styles.addBtn}
+							onClick={() =>
+								updateSubscriptionBundleItems([
+									...draft.subscriptionBundle.items,
+									{ text: 'Новый элемент' }
+								])
+							}
+						>
+							Добавить элемент
 						</button>
 					</section>
 
@@ -2256,6 +2666,64 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 								}
 							/>
 						</div>
+						<div className={styles.list}>
+							{draft.cta.benefits.map((benefit, index) => (
+								<div
+									key={`cta-benefit-${index}`}
+									className={styles.itemCard}
+								>
+									<div className={styles.itemHeader}>
+										<span className={styles.itemTitle}>
+											Преимущество {index + 1}
+										</span>
+										<ListActions
+											onMoveUp={() =>
+												updateCtaBenefits(
+													moveItem(draft.cta.benefits, index, -1)
+												)
+											}
+											onMoveDown={() =>
+												updateCtaBenefits(
+													moveItem(draft.cta.benefits, index, 1)
+												)
+											}
+											onRemove={() =>
+												updateCtaBenefits(
+													removeItem(draft.cta.benefits, index)
+												)
+											}
+											disableUp={index === 0}
+											disableDown={index === draft.cta.benefits.length - 1}
+										/>
+									</div>
+									<TextAreaField
+										id={`cta-benefit-text-${index}`}
+										label="Текст"
+										value={benefit.text}
+										onChange={value =>
+											updateCtaBenefits(
+												updateItem(draft.cta.benefits, index, {
+													text: value
+												})
+											)
+										}
+										hint="Переносы строк сохраняются."
+									/>
+								</div>
+							))}
+						</div>
+						<button
+							type="button"
+							className={styles.addBtn}
+							onClick={() =>
+								updateCtaBenefits([
+									...draft.cta.benefits,
+									{ text: 'Новое преимущество' }
+								])
+							}
+						>
+							Добавить преимущество
+						</button>
 					</section>
 				</>
 			)}

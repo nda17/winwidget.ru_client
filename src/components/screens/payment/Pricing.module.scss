@@ -1,16 +1,24 @@
 .page {
-	@apply pt-[5rem] px-4 pb-[8rem] min-h-screen flex flex-col items-center w-full text-[#1a1a1a];
+	@apply relative overflow-hidden pt-[5rem] px-4 pb-[8rem] min-h-screen flex flex-col items-center w-full text-[#14132d];
 }
 .title {
-	@apply text-[1.875rem] font-bold mb-6 text-center text-[#1a1a1a];
+	@apply relative z-[1] text-[2rem] font-bold mb-6 text-center text-[#22155c];
+	font-family: var(--font-family);
 }
 .currentPlan {
-	@apply flex items-center gap-4 mb-6 px-5 py-3 rounded-xl text-sm bg-white border border-[#e0d6f0] text-[#555];
+	@apply relative z-[1] flex items-center gap-4 mb-6 px-5 py-3 rounded-2xl text-sm bg-white/[0.76] border border-white/80 text-[#3b3354];
+	box-shadow:
+		0 12px 28px rgb(123 63 160 / 0.1),
+		inset 0 1px 0 rgb(255 255 255 / 0.9);
+	backdrop-filter: blur(14px);
 }
 
 .pendingNotice {
-	@apply w-full max-w-[760px] mb-6 px-5 py-4 rounded-2xl bg-white border border-[#eadcf7] flex items-center justify-between gap-5;
-	box-shadow: 0 8px 28px rgb(123 63 160 / 0.08);
+	@apply relative z-[1] w-full max-w-[760px] mb-6 px-5 py-4 rounded-2xl bg-white/[0.76] border border-white/80 flex items-center justify-between gap-5;
+	box-shadow:
+		0 16px 38px rgb(123 63 160 / 0.1),
+		inset 0 1px 0 rgb(255 255 255 / 0.9);
+	backdrop-filter: blur(14px);
 }
 
 .pendingNoticeSkeleton {
@@ -83,13 +91,17 @@
 	@apply px-2 py-[2px] rounded text-xs font-semibold bg-[#fde8e8] text-[#c0392b];
 }
 .periodGroup {
-	@apply border-none p-0 m-0 mb-8;
+	@apply relative z-[1] border-none p-0 m-0 mb-8;
 }
 .periodToggle {
-	@apply flex gap-2 p-1 rounded-xl bg-white border border-[#e0d6f0];
+	@apply flex gap-2 p-1 rounded-full bg-white/[0.76] border border-white/80;
+	box-shadow:
+		0 12px 28px rgb(123 63 160 / 0.1),
+		inset 0 1px 0 rgb(255 255 255 / 0.9);
+	backdrop-filter: blur(14px);
 }
 .periodBtn {
-	@apply px-5 py-2 rounded-lg text-sm font-medium cursor-pointer border-none bg-transparent text-[#888] flex items-center gap-2 transition-all duration-200;
+	@apply px-5 py-2 rounded-full text-sm font-medium cursor-pointer border-none bg-transparent text-[#7d7194] flex items-center gap-2 transition-all duration-200;
 }
 .periodBtn:hover {
 	@apply text-[#7b3fa0];
@@ -108,14 +120,20 @@
 	@apply text-xs px-[6px] py-[2px] rounded font-bold bg-[#d1fae5] text-[#065f46];
 }
 .plans {
-	@apply flex gap-6 flex-wrap justify-center mb-8;
+	@apply relative z-[1] flex gap-6 flex-wrap justify-center mb-8;
 }
 .planCard {
-	@apply flex flex-col items-center p-8 rounded-[1rem] w-full max-w-[35rem] sm:w-[28rem] bg-white border border-[#e0d6f0] transition-[border-color,box-shadow,transform] duration-200;
+	@apply flex flex-col items-center p-8 rounded-[26px] w-full max-w-[35rem] sm:w-[28rem] bg-white/[0.78] border border-white/80 transition-[border-color,box-shadow,transform] duration-200;
+	box-shadow:
+		0 18px 48px rgb(123 63 160 / 0.11),
+		inset 0 1px 0 rgb(255 255 255 / 0.92);
+	backdrop-filter: blur(16px);
 }
 .planCard:hover {
-	@apply border-[#c4a8e8] -translate-y-1;
-	box-shadow: 0 8px 32px rgb(100 60 180 / 0.1);
+	@apply border-[#d7bef7] -translate-y-1;
+	box-shadow:
+		0 24px 64px rgb(194 27 132 / 0.16),
+		0 10px 26px rgb(248 189 49 / 0.12);
 }
 .planName {
 	@apply text-2xl font-bold mb-2 text-[#7b3fa0];
@@ -143,10 +161,10 @@
 }
 .features li::before {
 	content: '✓';
-	@apply text-[#7b3fa0] font-bold leading-[1.45];
+	@apply mt-[1px] flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-[#7b3fa0] text-[11px] font-bold leading-none text-white;
 }
 .buyBtn {
-	@apply mt-auto w-full py-3 rounded-xl font-bold text-sm cursor-pointer border-none text-white transition-[opacity,transform] duration-200;
+	@apply mt-auto w-full py-3 rounded-[16px] font-bold text-sm cursor-pointer border-none text-white transition-[opacity,transform,box-shadow] duration-200;
 	background: linear-gradient(
 		87.12deg,
 		#470b58 1.98%,
@@ -165,12 +183,15 @@
 	@apply mt-3 text-center text-xs leading-[1.5] text-[#9d6d73];
 }
 .paymentDisabledNotice {
-	@apply w-full max-w-[760px] mb-6 px-5 py-4 rounded-2xl text-sm text-center font-medium text-[#7b3f00] bg-[#fff7e6] border border-[#ffd591];
+	@apply relative z-[1] w-full max-w-[760px] mb-6 px-5 py-4 rounded-2xl text-sm text-center font-medium text-[#7b3f00] bg-[#fff7e6] border border-[#ffd591];
 }
 
 .contactRequiredNotice {
-	@apply w-full max-w-[760px] mb-6 px-5 py-4 rounded-2xl bg-white border border-[#eadcf7] flex flex-col gap-4;
-	box-shadow: 0 8px 28px rgb(123 63 160 / 0.08);
+	@apply relative z-[1] w-full max-w-[760px] mb-6 px-5 py-4 rounded-2xl bg-white/[0.76] border border-white/80 flex flex-col gap-4;
+	box-shadow:
+		0 16px 38px rgb(123 63 160 / 0.1),
+		inset 0 1px 0 rgb(255 255 255 / 0.9);
+	backdrop-filter: blur(14px);
 }
 
 .contactRequiredCopy {
@@ -238,15 +259,15 @@
 }
 
 .note {
-	@apply text-xs text-center text-[#bbb];
+	@apply relative z-[1] text-xs text-center text-[#a78bc4];
 }
 
 .notePending {
-	@apply mt-3 text-xs text-center text-[#a5666c];
+	@apply relative z-[1] mt-3 text-xs text-center text-[#a5666c];
 }
 
 .noteCarryover {
-	@apply mt-3 text-xs text-center text-[#a78bc4];
+	@apply relative z-[1] mt-3 text-xs text-center text-[#a78bc4];
 }
 
 @media (max-width: 768px) {

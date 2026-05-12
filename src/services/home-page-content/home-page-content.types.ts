@@ -30,6 +30,8 @@ export interface HomePageContent {
 	integrations: HomePageIntegrationsContent
 	tools: HomePageToolsContent
 	steps: HomePageStepsContent
+	customization: HomePageCustomizationContent
+	subscriptionBundle: HomePageSubscriptionBundleContent
 	pricing: HomePagePricingContent
 	payment: HomePagePaymentContent
 	faq: HomePageFaqContent
@@ -133,6 +135,28 @@ export interface HomePageTextCard {
 	text: string
 }
 
+export interface HomePageFeatureCard {
+	title: string
+	text: string
+}
+
+export interface HomePageCustomizationContent {
+	enabled: boolean
+	title: string
+	subtitle: string
+	cards: HomePageFeatureCard[]
+	features: HomePageTextCard[]
+	bottomText: string
+}
+
+export interface HomePageSubscriptionBundleContent {
+	enabled: boolean
+	title: string
+	subtitle: string
+	cardTitle: string
+	items: HomePageTextCard[]
+}
+
 export interface HomePagePricingContent {
 	enabled: boolean
 	title: string
@@ -181,6 +205,7 @@ export interface HomePageCtaContent {
 	enabled: boolean
 	text: string
 	buttonText: string
+	benefits: HomePageTextCard[]
 }
 
 export interface HomePageFooterContent {

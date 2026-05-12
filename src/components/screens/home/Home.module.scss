@@ -3,7 +3,19 @@
 }
 
 .offerWrapper {
-	@apply relative;
+	@apply relative px-4 py-[4rem];
+
+	&::before {
+		content: '';
+		@apply absolute inset-x-0 top-[1rem] mx-auto h-px max-w-[960px] opacity-70;
+		background: linear-gradient(
+			90deg,
+			transparent,
+			rgb(123 92 229 / 0.24),
+			rgb(224 90 138 / 0.2),
+			transparent
+		);
+	}
 
 	.circleOrange,
 	.circleYellow,

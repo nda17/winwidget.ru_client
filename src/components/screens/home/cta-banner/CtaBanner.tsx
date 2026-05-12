@@ -1,10 +1,14 @@
 import HomeStartTrialLink from '@/components/screens/home/_components/HomeStartTrialLink'
+import AppIcon from '@/components/ui/icons/AppIcon'
 import type { HomePageCtaContent } from '@/services/home-page-content/home-page-content.types'
+import type { AppIconName } from '@/shared/types/icon.types'
 import styles from './CtaBanner.module.scss'
 
 interface Props {
 	content: HomePageCtaContent
 }
+
+const BENEFIT_ICONS: AppIconName[] = ['lock', 'clock', 'refresh']
 
 const CtaBanner = ({ content }: Props) => {
 	return (
@@ -38,6 +42,33 @@ const CtaBanner = ({ content }: Props) => {
 						</svg>
 					</span>
 				</HomeStartTrialLink>
+				{content.benefits.length > 0 && (
+					<div className={styles.benefits}>
+						{content.benefits.map((benefit, index) => (
+							<div
+								key={`${benefit.text}-${index}`}
+								className={styles.benefit}
+							>
+								<span className={styles.benefitIcon}>
+									<AppIcon
+										name={BENEFIT_ICONS[index % BENEFIT_ICONS.length]}
+										size={22}
+									/>
+								</span>
+								<span className={styles.benefitText}>
+									{benefit.text
+										.split('\n')
+										.map((line, lineIndex, lines) => (
+											<span key={`${line}-${lineIndex}`}>
+												{line}
+												{lineIndex < lines.length - 1 && <br />}
+											</span>
+										))}
+								</span>
+							</div>
+						))}
+					</div>
+				)}
 			</div>
 		</section>
 	)

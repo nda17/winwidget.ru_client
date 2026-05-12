@@ -1,5 +1,6 @@
 export type AppIconName =
 	| 'apps'
+	| 'clock'
 	| 'close'
 	| 'cookie'
 	| 'dashboard'
@@ -19,7 +20,10 @@ export type AppIconName =
 	| 'navigate-next'
 	| 'payment'
 	| 'person-add'
+	| 'refresh'
 	| 'search'
+	| 'settings'
+	| 'star'
 	| 'telegram'
 	| 'vk'
 	| 'yandex'

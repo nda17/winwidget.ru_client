@@ -1,9 +1,21 @@
 .section {
-	@apply max-w-[1100px] mx-auto px-4 py-[2rem] lg:py-[8rem];
+	@apply max-w-[1100px] mx-auto px-4 py-[4rem] relative;
+
+	&::before {
+		content: '';
+		@apply absolute inset-x-0 top-[1rem] mx-auto h-px max-w-[960px] opacity-70;
+		background: linear-gradient(
+			90deg,
+			transparent,
+			rgb(123 92 229 / 0.24),
+			rgb(224 90 138 / 0.2),
+			transparent
+		);
+	}
 }
 
 .title {
-	@apply text-[32px] font-semibold text-center mb-[2.5rem] text-[#1a1a1a];
+	@apply text-[32px] font-semibold text-center mb-[2.5rem] text-[#22155c];
 	font-family: var(--font-family);
 
 	@media (max-width: 640px) {

@@ -441,10 +441,54 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 		resultText: 'Ловите\nгорячие\nлиды!',
 		items: [
 			{
-				text: 'Настройте дизайн и логику виджета в личном кабинете'
+				text: 'Настройте дизайн и логику виджета'
 			},
 			{ text: 'Скопируйте одну строчку кода' },
 			{ text: 'Вставьте в код своего сайта' }
+		]
+	},
+	customization: {
+		enabled: true,
+		title: 'Полная кастомизация под ваш бренд',
+		subtitle:
+			'Настраивайте цвета, тексты, бонусы и внешний вид виджета под стиль вашей компании',
+		cards: [
+			{
+				title: 'Цвета и стиль',
+				text: 'Подберите идеальные цвета под айдентику вашего бренда'
+			},
+			{
+				title: 'Тексты и кнопки',
+				text: 'Изменяйте заголовки, подписи и тексты под свой бренд'
+			},
+			{
+				title: 'Бонусы и логика',
+				text: 'Настраивайте бонусы, секторы и вероятность выигрыша'
+			},
+			{
+				title: 'Live превью',
+				text: 'Настраивайте виджеты реактивно'
+			}
+		],
+		features: [
+			{ text: 'Свой бренд' },
+			{ text: 'Гибкие настройки' },
+			{ text: 'Единый стиль сайта' }
+		],
+		bottomText: 'Виджет выглядит так, как нужно именно вашему бизнесу'
+	},
+	subscriptionBundle: {
+		enabled: true,
+		title: 'Одна подписка — все решения сразу',
+		subtitle:
+			'Подключили winwidget — получили виджеты,\nинтеграции и сбор заявок в одном сервисе.',
+		cardTitle:
+			'Оплатили подписку — получили полный набор инструментов для роста конверсии',
+		items: [
+			{ text: 'Виджеты' },
+			{ text: 'Интеграции' },
+			{ text: 'Заявки' },
+			{ text: 'Аналитика' }
 		]
 	},
 	pricing: {
@@ -616,7 +660,12 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 	cta: {
 		enabled: true,
 		text: 'Попробуйте сейчас\nи начните получать больше заявок уже через 10 минут',
-		buttonText: 'Начать бесплатный период'
+		buttonText: 'Начать бесплатный период',
+		benefits: [
+			{ text: 'Без привязки\nбанковской карты' },
+			{ text: '7 дней полного\nдоступа' },
+			{ text: 'Работа в интересах\nбизнеса' }
+		]
 	},
 	footer: DEFAULT_HOME_PAGE_FOOTER_CONTENT,
 	head: DEFAULT_HOME_PAGE_HEAD_CONTENT,
@@ -713,6 +762,34 @@ export const normalizeHomePageContent = (
 				defaultContent.steps.items
 			)
 		},
+		customization: {
+			...defaultContent.customization,
+			...(isRecord(content.customization) ? content.customization : {}),
+			cards: mergeSimpleArray(
+				isRecord(content.customization)
+					? content.customization.cards
+					: undefined,
+				defaultContent.customization.cards
+			),
+			features: mergeSimpleArray(
+				isRecord(content.customization)
+					? content.customization.features
+					: undefined,
+				defaultContent.customization.features
+			)
+		},
+		subscriptionBundle: {
+			...defaultContent.subscriptionBundle,
+			...(isRecord(content.subscriptionBundle)
+				? content.subscriptionBundle
+				: {}),
+			items: mergeSimpleArray(
+				isRecord(content.subscriptionBundle)
+					? content.subscriptionBundle.items
+					: undefined,
+				defaultContent.subscriptionBundle.items
+			)
+		},
 		pricing: {
 			...defaultContent.pricing,
 			...(isRecord(content.pricing) ? content.pricing : {}),
@@ -730,7 +807,13 @@ export const normalizeHomePageContent = (
 				defaultContent.faq.items
 			)
 		},
-		cta: mergeObject(defaultContent.cta, content.cta),
+		cta: {
+			...mergeObject(defaultContent.cta, content.cta),
+			benefits: mergeSimpleArray(
+				isRecord(content.cta) ? content.cta.benefits : undefined,
+				defaultContent.cta.benefits
+			)
+		},
 		footer: {
 			...mergeObject(defaultContent.footer, content.footer),
 			infoLines: mergeStringArray(

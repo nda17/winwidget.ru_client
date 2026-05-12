@@ -11,6 +11,7 @@ import {
 } from '@/services/widget/widget.types'
 import Pagination from '@/components/ui/pagination/Pagination'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
+import AppIcon from '@/components/ui/icons/AppIcon'
 import styles from './WidgetLeads.module.scss'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
@@ -205,6 +206,54 @@ const WidgetLeads = ({ widgetId }: Props) => {
 
 			<h1 className={styles.title}>Заявки</h1>
 
+			<div className={styles.metricsGrid}>
+				<div className={styles.metricCard}>
+					<span className={styles.metricIcon}>
+						<AppIcon name="payment" size={24} />
+					</span>
+					<span className={styles.metricCopy}>
+						<span className={styles.metricLabel}>Всего заявок</span>
+						{isPending ? (
+							<SkeletonLoader height={28} width={64} />
+						) : (
+							<strong className={styles.metricValue}>
+								{data?.total ?? 0}
+							</strong>
+						)}
+					</span>
+				</div>
+				<div className={styles.metricCard}>
+					<span className={styles.metricIcon}>
+						<AppIcon name="dashboard" size={24} />
+					</span>
+					<span className={styles.metricCopy}>
+						<span className={styles.metricLabel}>На странице</span>
+						{isPending ? (
+							<SkeletonLoader height={28} width={64} />
+						) : (
+							<strong className={styles.metricValue}>
+								{data?.leads.length ?? 0}
+							</strong>
+						)}
+					</span>
+				</div>
+				<div className={styles.metricCard}>
+					<span className={styles.metricIcon}>
+						<AppIcon name="diamond" size={24} />
+					</span>
+					<span className={styles.metricCopy}>
+						<span className={styles.metricLabel}>Бонусов в аналитике</span>
+						{isPending ? (
+							<SkeletonLoader height={28} width={64} />
+						) : (
+							<strong className={styles.metricValue}>
+								{canAccess ? (statsData?.stats.length ?? 0) : '—'}
+							</strong>
+						)}
+					</span>
+				</div>
+			</div>
+
 			{canAccess && statsData && statsData.stats.length > 0 && (
 				<div className={styles.statsBlock}>
 					<p className={styles.statsTitle}>Аналитика бонусов</p>
@@ -279,6 +328,7 @@ const WidgetLeads = ({ widgetId }: Props) => {
 								!canAccess ? 'Недоступно на тарифе Easy' : 'Скачать CSV'
 							}
 						>
+							<AppIcon name="payment" size={17} />
 							{exporting === 'csv' ? '…' : 'CSV'}
 							{!canAccess && <span className={styles.lockIcon}>🔒</span>}
 						</button>
@@ -290,6 +340,7 @@ const WidgetLeads = ({ widgetId }: Props) => {
 								!canAccess ? 'Недоступно на тарифе Easy' : 'Скачать Excel'
 							}
 						>
+							<AppIcon name="dashboard" size={17} />
 							{exporting === 'xlsx' ? '…' : 'Excel'}
 							{!canAccess && <span className={styles.lockIcon}>🔒</span>}
 						</button>
@@ -303,6 +354,7 @@ const WidgetLeads = ({ widgetId }: Props) => {
 									: 'Открыть PDF для печати'
 							}
 						>
+							<AppIcon name="apps" size={17} />
 							{exporting === 'pdf' ? '…' : 'PDF'}
 							{!canAccess && <span className={styles.lockIcon}>🔒</span>}
 						</button>
