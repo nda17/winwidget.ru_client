@@ -5,7 +5,7 @@ import { CountdownTimerConfig } from '@/services/countdown-timer/countdown-timer
 import { QuizConfig } from '@/services/quiz/quiz.types'
 import { WidgetConfig } from '@/services/widget/widget.types'
 import type { CSSProperties } from 'react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import styles from './WidgetLivePreview.module.scss'
 
 type PreviewType = 'wheel' | 'quiz' | 'callback' | 'timer'
@@ -51,9 +51,21 @@ const CONFIG_PATH_BY_TYPE: Record<PreviewType, string> = {
 	timer: 'countdown-timer'
 }
 
-const PREVIEW_FRAME_WIDTH = 940
-const PREVIEW_FRAME_HEIGHT = 520
+const DESKTOP_PREVIEW_FRAME = {
+	width: 940,
+	height: 520
+}
+const MOBILE_PREVIEW_FRAME = {
+	width: 390,
+	height: 680
+}
+const MOBILE_PREVIEW_BREAKPOINT = 600
 const DEFAULT_PREVIEW_SCALE = 0.62
+const DEFAULT_PREVIEW_LAYOUT = {
+	frameWidth: DESKTOP_PREVIEW_FRAME.width,
+	frameHeight: DESKTOP_PREVIEW_FRAME.height,
+	scale: DEFAULT_PREVIEW_SCALE
+}
 
 const escapeScriptJson = (value: unknown) =>
 	JSON.stringify(value).replace(/</g, '\\u003c')
@@ -69,13 +81,43 @@ const hashString = (value: string) => {
 	return Math.abs(hash).toString(36)
 }
 
-const getPreviewScale = () => {
-	if (typeof window === 'undefined') return DEFAULT_PREVIEW_SCALE
-	if (window.matchMedia('(max-width: 420px)').matches) return 0.35
-	if (window.matchMedia('(max-width: 480px)').matches) return 0.39
-	if (window.matchMedia('(max-width: 600px)').matches) return 0.46
+const getPreviewLayout = (containerWidth: number) => {
+	const frame =
+		containerWidth <= MOBILE_PREVIEW_BREAKPOINT
+			? MOBILE_PREVIEW_FRAME
+			: DESKTOP_PREVIEW_FRAME
+	const scale = Math.min(1, containerWidth / frame.width)
 
-	return DEFAULT_PREVIEW_SCALE
+	return {
+		frameWidth: frame.width,
+		frameHeight: frame.height,
+		scale
+	}
+}
+
+const scrollNearestScrollableParent = (
+	element: HTMLElement | null,
+	deltaY: number
+) => {
+	if (!element || !Number.isFinite(deltaY) || Math.abs(deltaY) < 1) return
+
+	let parent = element.parentElement
+
+	while (parent) {
+		const style = window.getComputedStyle(parent)
+		const canScroll =
+			/(auto|scroll)/.test(style.overflowY) &&
+			parent.scrollHeight > parent.clientHeight
+
+		if (canScroll) {
+			parent.scrollBy({ top: deltaY, behavior: 'auto' })
+			return
+		}
+
+		parent = parent.parentElement
+	}
+
+	window.scrollBy({ top: deltaY, behavior: 'auto' })
 }
 
 const getDataType = (dataType: string | undefined, fallback = 'PHONE') =>
@@ -265,6 +307,11 @@ const buildPreviewSandboxDocument = (
 			margin: 0;
 			background: #0d0d1a;
 			overflow: hidden;
+			overscroll-behavior: none;
+		}
+
+		body::-webkit-scrollbar {
+			display: none;
 		}
 	</style>
 	<script>
@@ -275,6 +322,7 @@ const buildPreviewSandboxDocument = (
 			var publicConfig = ${escapeScriptJson(publicConfig)};
 			var nativeFetch = window.fetch.bind(window);
 			var restartNoticeSent = false;
+			var previewTouchLastY = null;
 			var previewStoragePrefixes = [
 				'winwidget_played_',
 				'wintimer_submitted_'
@@ -282,21 +330,87 @@ const buildPreviewSandboxDocument = (
 			var sandboxStageLayouts = {
 				wheel: {
 					host: 'wheel-widget-host',
-					css: '#main-wrapper{align-items:center!important;justify-content:center!important;padding-left:52px!important;padding-right:52px!important}#banner-wrapper{max-width:calc(100vw - 104px)!important}'
+					css: '#main-wrapper{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:clamp(16px,8vw,52px)!important;padding-right:clamp(16px,8vw,52px)!important}#main-wrapper::-webkit-scrollbar{display:none!important}#banner-wrapper{max-width:calc(100vw - 32px)!important;max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
 				},
 				quiz: {
 					host: 'quiz-widget-host',
-					css: '#wq-wrap{align-items:center!important;justify-content:center!important;padding-left:52px!important;padding-right:52px!important}#wq-card{max-width:min(520px, calc(100vw - 104px))!important}'
+					css: '#wq-wrap{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:clamp(16px,8vw,52px)!important;padding-right:clamp(16px,8vw,52px)!important}#wq-wrap::-webkit-scrollbar{display:none!important}#wq-card{max-width:min(520px, calc(100vw - 32px))!important;max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
 				},
 				callback: {
 					host: 'callback-widget-host',
-					css: '#callback-widget-overlay{align-items:center!important;justify-content:center!important;padding-left:52px!important;padding-right:52px!important}'
+					css: '#callback-widget-overlay{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:clamp(16px,8vw,52px)!important;padding-right:clamp(16px,8vw,52px)!important}#callback-widget-overlay::-webkit-scrollbar{display:none!important}#wcb-modal{max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
 				},
 				timer: {
 					host: 'timer-widget-host',
-					css: '#timer-widget-overlay{align-items:center!important;justify-content:center!important;padding-left:52px!important;padding-right:52px!important}'
+					css: '#timer-widget-overlay{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:clamp(16px,8vw,52px)!important;padding-right:clamp(16px,8vw,52px)!important}#wt-modal{max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
 				}
 			};
+
+			function sendParentScroll(deltaY) {
+				if (!deltaY || Math.abs(deltaY) < 1) return;
+
+				window.parent.postMessage(
+					{
+						source: 'winwidget-live-preview',
+						previewKey: previewKey,
+						event: 'scroll-parent',
+						deltaY: deltaY
+					},
+					'*'
+				);
+			}
+
+			window.addEventListener(
+				'wheel',
+				function (event) {
+					sendParentScroll(event.deltaY);
+				},
+				{ passive: true }
+			);
+
+			window.addEventListener(
+				'touchstart',
+				function (event) {
+					if (!event.touches || !event.touches.length) return;
+
+					previewTouchLastY = event.touches[0].clientY;
+				},
+				{ passive: true }
+			);
+
+			window.addEventListener(
+				'touchmove',
+				function (event) {
+					if (
+						!event.touches ||
+						!event.touches.length ||
+						previewTouchLastY === null
+					) {
+						return;
+					}
+
+					var nextY = event.touches[0].clientY;
+					sendParentScroll(previewTouchLastY - nextY);
+					previewTouchLastY = nextY;
+				},
+				{ passive: true }
+			);
+
+			window.addEventListener(
+				'touchend',
+				function () {
+					previewTouchLastY = null;
+				},
+				{ passive: true }
+			);
+
+			window.addEventListener(
+				'touchcancel',
+				function () {
+					previewTouchLastY = null;
+				},
+				{ passive: true }
+			);
 
 			function isPreviewStorageKey(key) {
 				var text = String(key || '');
@@ -486,30 +600,63 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 	const serializedConfig = JSON.stringify(props.config)
 	const [previewRunId, setPreviewRunId] = useState(0)
 	const [canRestartPreview, setCanRestartPreview] = useState(false)
+	const previewViewportRef = useRef<HTMLDivElement | null>(null)
 	const previewKey = `live-preview-${props.type}-${hashString(serializedConfig)}-${props.isHardPlan ? 'hard' : 'base'}-${previewRunId}`
-	const [previewScale, setPreviewScale] = useState(DEFAULT_PREVIEW_SCALE)
+	const [previewLayout, setPreviewLayout] = useState(
+		DEFAULT_PREVIEW_LAYOUT
+	)
 	const previewDocument = buildPreviewSandboxDocument(
 		props.type,
 		buildPreviewPublicConfig(props),
 		previewKey
 	)
 	const cropStyle = {
-		width: `${Math.ceil(PREVIEW_FRAME_WIDTH * previewScale)}px`,
-		height: `${Math.ceil(PREVIEW_FRAME_HEIGHT * previewScale)}px`
+		width: `${Math.ceil(previewLayout.frameWidth * previewLayout.scale)}px`,
+		height: `${Math.ceil(previewLayout.frameHeight * previewLayout.scale)}px`
 	} as CSSProperties
 	const frameStyle = {
-		width: `${PREVIEW_FRAME_WIDTH}px`,
-		height: `${PREVIEW_FRAME_HEIGHT}px`,
-		transform: `scale(${previewScale})`
+		width: `${previewLayout.frameWidth}px`,
+		height: `${previewLayout.frameHeight}px`,
+		transform: `scale(${previewLayout.scale})`
 	} as CSSProperties
 
 	useEffect(() => {
-		const updateScale = () => setPreviewScale(getPreviewScale())
+		const updateLayout = () => {
+			const containerWidth = previewViewportRef.current?.clientWidth
 
-		updateScale()
-		window.addEventListener('resize', updateScale)
+			if (!containerWidth) return
 
-		return () => window.removeEventListener('resize', updateScale)
+			const nextLayout = getPreviewLayout(containerWidth)
+
+			setPreviewLayout(currentLayout => {
+				if (
+					currentLayout.frameWidth === nextLayout.frameWidth &&
+					currentLayout.frameHeight === nextLayout.frameHeight &&
+					currentLayout.scale === nextLayout.scale
+				) {
+					return currentLayout
+				}
+
+				return nextLayout
+			})
+		}
+
+		updateLayout()
+		window.addEventListener('resize', updateLayout)
+
+		const resizeObserver =
+			typeof ResizeObserver === 'undefined'
+				? null
+				: new ResizeObserver(updateLayout)
+
+		if (previewViewportRef.current) {
+			resizeObserver?.observe(previewViewportRef.current)
+		}
+
+		return () => {
+			window.removeEventListener('resize', updateLayout)
+			resizeObserver?.disconnect()
+		}
 	}, [])
 
 	useEffect(() => {
@@ -521,17 +668,27 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 						source?: string
 						previewKey?: string
 						event?: string
+						deltaY?: number
 				  }
 				| undefined
 
 			if (
 				!data ||
 				data.source !== 'winwidget-live-preview' ||
-				data.previewKey !== previewKey ||
-				data.event !== 'ready-to-restart'
+				data.previewKey !== previewKey
 			) {
 				return
 			}
+
+			if (data.event === 'scroll-parent') {
+				scrollNearestScrollableParent(
+					previewViewportRef.current,
+					data.deltaY || 0
+				)
+				return
+			}
+
+			if (data.event !== 'ready-to-restart') return
 
 			setCanRestartPreview(true)
 		}
@@ -554,7 +711,7 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 					{getTypeLabel(props.type)}
 				</span>
 			</div>
-			<div className={styles.previewViewport}>
+			<div className={styles.previewViewport} ref={previewViewportRef}>
 				{canRestartPreview && (
 					<button
 						type="button"
@@ -571,6 +728,7 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 						title={`Предпросмотр: ${getTypeLabel(props.type)}`}
 						srcDoc={previewDocument}
 						sandbox="allow-scripts"
+						scrolling="no"
 						style={frameStyle}
 					/>
 				</div>

@@ -7,7 +7,7 @@
 }
 
 .modal {
-	@apply relative z-[1] flex flex-col rounded-[1rem] p-8 w-full max-w-[40rem] bg-white border border-[#e0d6f0] max-h-[90vh] overflow-y-auto;
+	@apply relative z-[1] flex flex-col rounded-[1rem] p-8 w-full max-w-[56rem] bg-white border border-[#e0d6f0] max-h-[90vh] overflow-y-auto;
 	box-shadow: 0 20px 60px rgb(100 60 180 / 0.12);
 	padding-bottom: 0;
 }
@@ -319,11 +319,12 @@ select.input {
 
 @media (max-width: 600px) {
 	.overlay {
-		@apply items-end;
+		@apply items-stretch;
 	}
 
 	.modal {
-		@apply rounded-t-[1.25rem] rounded-b-none px-5 py-6 max-h-[92vh] max-w-none;
+		@apply h-screen max-h-none rounded-none px-5 py-6 max-w-none;
+		height: 100dvh;
 		padding-bottom: 0;
 	}
 

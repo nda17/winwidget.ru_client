@@ -38,7 +38,7 @@
 }
 
 .previewFrame {
-	@apply absolute left-[-18px] top-0 block shrink-0 border-0 bg-transparent;
+	@apply absolute left-0 top-0 block shrink-0 border-0 bg-transparent;
 	transform-origin: top left;
 }
 

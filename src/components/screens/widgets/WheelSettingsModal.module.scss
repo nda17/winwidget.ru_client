@@ -6,7 +6,7 @@
 	@apply absolute inset-0 border-none bg-transparent p-0;
 }
 .modal {
-	@apply relative z-[1] flex flex-col rounded-[1rem] p-8 w-full max-w-[40rem] bg-white border border-[#e0d6f0] max-h-[90vh] overflow-y-auto;
+	@apply relative z-[1] flex flex-col rounded-[1rem] p-8 w-full max-w-[56rem] bg-white border border-[#e0d6f0] max-h-[90vh] overflow-y-auto;
 	box-shadow: 0 20px 60px rgb(100 60 180 / 0.12);
 	padding-bottom: 0;
 }
@@ -227,10 +227,11 @@ select.input {
 
 @media (max-width: 600px) {
 	.overlay {
-		@apply items-end;
+		@apply items-stretch;
 	}
 	.modal {
-		@apply rounded-t-[1.25rem] rounded-b-none px-5 py-6 max-h-[92vh] max-w-none;
+		@apply h-screen max-h-none rounded-none px-5 py-6 max-w-none;
+		height: 100dvh;
 		padding-bottom: 0;
 	}
 	.tabs {
@@ -251,7 +252,7 @@ select.input {
 		padding-bottom: 0;
 	}
 	.modalTitle {
-		@apply text-xl mb-5 pr-8;
+		@apply text-xl mb-5;
 	}
 	.tabs {
 		@apply gap-x-3 gap-y-2;
