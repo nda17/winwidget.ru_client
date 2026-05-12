@@ -1,5 +1,17 @@
 .section {
-	@apply w-full py-[4.5rem] px-4;
+	@apply w-full px-4 py-[4rem] relative;
+
+	&::before {
+		content: '';
+		@apply absolute inset-x-0 top-[1rem] mx-auto h-px max-w-[960px] opacity-70;
+		background: linear-gradient(
+			90deg,
+			transparent,
+			rgb(123 92 229 / 0.24),
+			rgb(224 90 138 / 0.2),
+			transparent
+		);
+	}
 }
 
 .inner {
@@ -19,7 +31,7 @@
 }
 
 .title {
-	@apply text-[2rem] leading-tight font-bold text-[#22155c] mb-4;
+	@apply text-[2rem] leading-tight font-bold text-[#22155c] mb-4 text-center;
 
 	@media (max-width: 760px) {
 		@apply text-[1.55rem];
@@ -27,11 +39,11 @@
 }
 
 .text {
-	@apply text-[1rem] leading-[1.7] text-[#666];
+	@apply text-[1rem] leading-[1.7] text-[#666] text-center;
 }
 
 .link {
-	@apply shrink-0 rounded-[10px] text-white font-bold text-sm no-underline transition-opacity duration-200 py-[13px] px-6;
+	@apply shrink-0 rounded-[10px] text-white font-bold text-sm no-underline transition-opacity duration-200 py-[13px] px-6 m-0auto;
 	background: linear-gradient(
 		87.12deg,
 		#470b58 1.98%,
