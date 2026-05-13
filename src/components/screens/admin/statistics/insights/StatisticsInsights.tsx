@@ -1,23 +1,23 @@
 import styles from '@/components/screens/admin/statistics/insights/StatisticsInsights.module.scss'
 import { useStatisticsOverview } from '@/components/screens/admin/statistics/hooks/useStatisticsOverview'
-import { useRegistrationsByMonth } from '@/components/screens/admin/statistics/hooks/useRegistrationsByMonth'
 import {
 	formatPercentage,
-	formatStatValue,
-	getSortedRegistrations
+	formatMoney,
+	formatStatValue
 } from '@/components/screens/admin/statistics/statistics.utils'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import { FC } from 'react'
 
 const StatisticsInsights: FC = () => {
-	const { data: overview, isPending: isOverviewPending } =
-		useStatisticsOverview()
-	const { data: registrations, isPending: isRegistrationsPending } =
-		useRegistrationsByMonth()
+	const { data: dashboard, isPending } = useStatisticsOverview()
 
-	if (isOverviewPending || isRegistrationsPending) {
+	if (isPending) {
 		return (
 			<div className={styles.wrapper}>
+				<SkeletonLoader count={1} className="h-[130px]" />
+				<SkeletonLoader count={1} className="h-[130px]" />
+				<SkeletonLoader count={1} className="h-[130px]" />
+				<SkeletonLoader count={1} className="h-[130px]" />
 				<SkeletonLoader count={1} className="h-[130px]" />
 				<SkeletonLoader count={1} className="h-[130px]" />
 				<SkeletonLoader count={1} className="h-[130px]" />
@@ -30,125 +30,124 @@ const StatisticsInsights: FC = () => {
 		)
 	}
 
-	const sortedRegistrations = getSortedRegistrations(registrations)
-	const totalRegistrations = sortedRegistrations.reduce(
-		(sum, item) => sum + item.count,
-		0
-	)
-	const averageRegistrations = sortedRegistrations.length
-		? totalRegistrations / sortedRegistrations.length
-		: 0
-	const latestMonth = sortedRegistrations.at(-1)
-	const previousMonth = sortedRegistrations.at(-2)
-	const peakMonth = sortedRegistrations.reduce(
-		(topItem, currentItem) =>
-			!topItem || currentItem.count > topItem.count
-				? currentItem
-				: topItem,
-		undefined as (typeof sortedRegistrations)[number] | undefined
-	)
-	const monthOverMonthGrowth =
-		latestMonth && previousMonth && previousMonth.count > 0
-			? ((latestMonth.count - previousMonth.count) / previousMonth.count) *
-				100
-			: 0
-	const publicRegistrations = Math.max(
-		(overview?.totalUsers ?? 0) - (overview?.adminUsers ?? 0),
-		0
-	)
+	if (!dashboard) {
+		return null
+	}
 
 	return (
 		<div className={styles.wrapper}>
 			<div className={styles.card}>
-				<p className={styles.label}>Регистрации за весь период</p>
+				<p className={styles.label}>Выручка за 30 дней</p>
 				<p className={styles.value}>
-					{formatStatValue(publicRegistrations)}
-				</p>
-				<p className={styles.caption}>Без учёта администраторов</p>
-			</div>
-			<div className={styles.card}>
-				<p className={styles.label}>Последний месяц</p>
-				<p className={styles.value}>
-					{formatStatValue(latestMonth?.count ?? 0)}
+					{formatMoney(dashboard.finance.revenue30d)}
 				</p>
 				<p className={styles.caption}>
-					{latestMonth
-						? `${latestMonth.month} ${latestMonth.year}`
-						: 'Данные недоступны'}
+					Текущий месяц:{' '}
+					{formatMoney(dashboard.finance.revenueCurrentMonth)}, всего:{' '}
+					{formatMoney(dashboard.finance.revenueAllTime)}
 				</p>
 			</div>
 			<div className={styles.card}>
-				<p className={styles.label}>Среднее в месяц</p>
+				<p className={styles.label}>Успешные оплаты</p>
 				<p className={styles.value}>
-					{formatStatValue(Math.round(averageRegistrations))}
+					{formatStatValue(dashboard.finance.succeededPayments30d)}
 				</p>
 				<p className={styles.caption}>
-					Динамика за {sortedRegistrations.length || 0} мес.
+					За 30 дней, уникальных плательщиков:{' '}
+					{formatStatValue(dashboard.finance.payingUsers30d)}, всего:{' '}
+					{formatStatValue(dashboard.finance.payingUsersTotal)}
 				</p>
 			</div>
 			<div className={styles.card}>
-				<p className={styles.label}>Рост к прошлому месяцу</p>
+				<p className={styles.label}>Средний чек</p>
 				<p className={styles.value}>
-					{formatPercentage(monthOverMonthGrowth)}
+					{formatMoney(dashboard.finance.averageCheck30d)}
+				</p>
+				<p className={styles.caption}>По успешным оплатам за 30 дней</p>
+			</div>
+			<div className={styles.card}>
+				<p className={styles.label}>Pending сейчас</p>
+				<p className={styles.value}>
+					{formatStatValue(dashboard.finance.pendingPaymentsCurrent)}
 				</p>
 				<p className={styles.caption}>
-					{previousMonth
-						? `Сравнение с ${previousMonth.month} ${previousMonth.year}`
-						: 'Недостаточно данных для сравнения'}
+					Отменённых за 30 дней:{' '}
+					{formatStatValue(dashboard.finance.cancelledPayments30d)}
 				</p>
 			</div>
 			<div className={styles.card}>
-				<p className={styles.label}>Пиковый месяц</p>
+				<p className={styles.label}>Активные подписки</p>
 				<p className={styles.value}>
-					{peakMonth ? formatStatValue(peakMonth.count) : '0'}
+					{formatStatValue(dashboard.subscriptions.active)}
 				</p>
 				<p className={styles.caption}>
-					{peakMonth
-						? `${peakMonth.month} ${peakMonth.year}`
-						: 'Данные недоступны'}
+					Оплаченных: {formatStatValue(dashboard.subscriptions.paidActive)}
+					, trial: {formatStatValue(dashboard.subscriptions.trialActive)}
 				</p>
 			</div>
 			<div className={styles.card}>
-				<p className={styles.label}>Пользователи</p>
+				<p className={styles.label}>Истекают скоро</p>
 				<p className={styles.value}>
-					{formatStatValue(overview?.totalUsers ?? 0)}
-				</p>
-				<p className={styles.caption}>Основной счётчик аудитории</p>
-			</div>
-			<div className={styles.card}>
-				<p className={styles.label}>Активные за 30 дней</p>
-				<p className={styles.value}>
-					{formatStatValue(overview?.activeUsers30d ?? 0)}
+					{formatStatValue(dashboard.subscriptions.expiring7d)}
 				</p>
 				<p className={styles.caption}>
-					Живая аудитория за последний месяц
+					Сегодня: {formatStatValue(dashboard.subscriptions.expiringToday)}
+					, за 3 дня: {formatStatValue(dashboard.subscriptions.expiring3d)}
 				</p>
 			</div>
 			<div className={styles.card}>
-				<p className={styles.label}>Новые за 30 дней</p>
+				<p className={styles.label}>Истекли, но ACTIVE</p>
 				<p className={styles.value}>
-					{formatStatValue(overview?.newUsers30d ?? 0)}
+					{formatStatValue(dashboard.subscriptions.expiredActive)}
+				</p>
+				<p className={styles.caption}>Требуют проверки статуса подписки</p>
+			</div>
+			<div className={styles.card}>
+				<p className={styles.label}>Заявки за 30 дней</p>
+				<p className={styles.value}>
+					{formatStatValue(dashboard.leads.total30d)}
 				</p>
 				<p className={styles.caption}>
-					Новые пользователи за последний месяц
+					К прошлым 30 дням: {formatPercentage(dashboard.leads.growth30d)}
 				</p>
 			</div>
 			<div className={styles.card}>
-				<p className={styles.label}>С 2+ способами входа</p>
+				<p className={styles.label}>Заявки сегодня</p>
 				<p className={styles.value}>
-					{formatStatValue(overview?.multiLoginUsers ?? 0)}
+					{formatStatValue(dashboard.leads.today)}
 				</p>
 				<p className={styles.caption}>
-					Пользователи с привязанными несколькими способами входа
+					Всего за всё время: {formatStatValue(dashboard.leads.allTime)}
 				</p>
 			</div>
 			<div className={styles.card}>
-				<p className={styles.label}>Администраторы</p>
+				<p className={styles.label}>Активные виджеты</p>
 				<p className={styles.value}>
-					{formatStatValue(overview?.adminUsers ?? 0)}
+					{formatStatValue(dashboard.widgets.active)}
 				</p>
 				<p className={styles.caption}>
-					Пользователи с правами администратора
+					Всего: {formatStatValue(dashboard.widgets.total)}, новых за 30
+					дней: {formatStatValue(dashboard.widgets.new30d)}
+				</p>
+			</div>
+			<div className={styles.card}>
+				<p className={styles.label}>Виджеты без домена</p>
+				<p className={styles.value}>
+					{formatStatValue(dashboard.widgets.withoutDomain)}
+				</p>
+				<p className={styles.caption}>
+					Активных без домена:{' '}
+					{formatStatValue(dashboard.widgets.activeWithoutDomain)}
+				</p>
+			</div>
+			<div className={styles.card}>
+				<p className={styles.label}>Пользователи без контактов</p>
+				<p className={styles.value}>
+					{formatStatValue(dashboard.users.withoutContacts)}
+				</p>
+				<p className={styles.caption}>
+					Без email: {formatStatValue(dashboard.users.withoutEmail)}, без
+					телефона: {formatStatValue(dashboard.users.withoutPhone)}
 				</p>
 			</div>
 		</div>

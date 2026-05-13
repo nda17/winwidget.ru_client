@@ -1,5 +1,5 @@
 import { useStatisticsOverview } from '@/components/screens/admin/statistics/hooks/useStatisticsOverview'
-import { getOverviewChartData } from '@/components/screens/admin/statistics/statistics.utils'
+import { getLeadTypeChartData } from '@/components/screens/admin/statistics/statistics.utils'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import { ArcElement, Chart as ChartJS, Legend, Tooltip } from 'chart.js'
 import { FC } from 'react'
@@ -16,27 +16,31 @@ const palette = [
 	'#6C757D'
 ]
 
-const OverviewDistributionChart: FC = () => {
+const LeadsByTypeChart: FC = () => {
 	const { data, isPending } = useStatisticsOverview()
-	const overviewChartData = getOverviewChartData(data)
+	const leadTypeChartData = getLeadTypeChartData(data)
 
 	if (isPending) {
 		return <SkeletonLoader count={1} className="w-full h-full" />
 	}
 
-	if (!overviewChartData.length) {
-		return null
+	if (!leadTypeChartData.length) {
+		return (
+			<div className="flex h-full items-center justify-center text-sm text-[#6b7280]">
+				Заявок за 30 дней пока нет
+			</div>
+		)
 	}
 
 	return (
 		<Doughnut
 			data={{
-				labels: overviewChartData.map(item => item.label),
+				labels: leadTypeChartData.map(item => item.label),
 				datasets: [
 					{
-						label: 'Ключевые показатели',
-						data: overviewChartData.map(item => item.value),
-						backgroundColor: overviewChartData.map(
+						label: 'Заявки',
+						data: leadTypeChartData.map(item => item.count),
+						backgroundColor: leadTypeChartData.map(
 							(_, index) => palette[index % palette.length]
 						),
 						borderWidth: 0
@@ -64,4 +68,4 @@ const OverviewDistributionChart: FC = () => {
 	)
 }
 
-export default OverviewDistributionChart
+export default LeadsByTypeChart

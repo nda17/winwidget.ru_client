@@ -6,8 +6,8 @@ export const useStatisticsOverview = () => {
 	const auth = useAuthStore(state => state.auth)
 
 	const { data, isPending } = useQuery({
-		queryKey: ['get-statistics-overview'],
-		queryFn: () => StatisticsService.getOverview(),
+		queryKey: ['get-statistics-dashboard'],
+		queryFn: () => StatisticsService.getDashboard(),
 		select: ({ data }) => data,
 		enabled: auth
 	})

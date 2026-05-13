@@ -1,9 +1,9 @@
 'use client'
 
 import styles from '@/components/screens/admin/statistics/Statistics.module.scss'
-import OverviewDistributionChart from '@/components/screens/admin/statistics/charts/OverviewDistributionChart/OverviewDistributionChart'
-import RegistrationByMonthBarChart from '@/components/screens/admin/statistics/charts/RegistrationByMonthBarChart/RegistrationByMonthBarChart'
-import RegistrationByMonthChart from '@/components/screens/admin/statistics/charts/RegistrationByMonthChart/RegistrationByMonthChart'
+import LeadsByDayChart from '@/components/screens/admin/statistics/charts/LeadsByDayChart/LeadsByDayChart'
+import LeadsByTypeChart from '@/components/screens/admin/statistics/charts/LeadsByTypeChart/LeadsByTypeChart'
+import RevenueByMonthChart from '@/components/screens/admin/statistics/charts/RevenueByMonthChart/RevenueByMonthChart'
 import StatisticsInsights from '@/components/screens/admin/statistics/insights/StatisticsInsights'
 import AdminTooltip from '@/components/ui/admin/admin-tooltip/AdminTooltip'
 import { FC } from 'react'
@@ -15,17 +15,17 @@ const Statistics: FC = () => {
 				<div className={styles['section-head']}>
 					<div className={styles['title-with-help']}>
 						<h3 className={styles['section-title']}>
-							Ключевые показатели
+							Коммерческие показатели
 						</h3>
 						<AdminTooltip
-							title="Ключевые показатели"
-							description="Сводные метрики по аудитории, регистрациям, активности и администраторам."
+							title="Коммерческие показатели"
+							description="Сводные метрики по оплатам, подпискам, заявкам, виджетам и готовности пользователей к оплате."
 							risk="low"
 							riskText="Блок ничего не меняет. Используй цифры как ориентир, а не как единственный источник решения."
 						/>
 					</div>
 					<p className={styles['section-subtitle']}>
-						Основные KPI по пользователям, активности и ролям команды.
+						Деньги, подписки, заявки и операционные сигналы по проекту.
 					</p>
 				</div>
 				<StatisticsInsights />
@@ -37,46 +37,42 @@ const Statistics: FC = () => {
 						<h3 className={styles['section-title']}>Графики и динамика</h3>
 						<AdminTooltip
 							title="Графики и динамика"
-							description="Визуальные отчёты помогают увидеть тренд регистраций и распределение текущих показателей."
+							description="Визуальные отчёты помогают увидеть тренд выручки, поток заявок и распределение заявок по типам виджетов."
 							risk="low"
 							riskText="Экран только показывает аналитику. Проверяй период и источник метрики перед выводами."
 						/>
 					</div>
 					<p className={styles['section-subtitle']}>
-						Визуализация тренда регистраций и структуры текущих
-						показателей.
+						Визуализация выручки, заявок и распределения нагрузки между
+						типами виджетов.
 					</p>
 				</div>
 				<div className={styles['charts-grid']}>
 					<div className={styles['chart-card']}>
-						<h3 className={styles['chart-title']}>Динамика регистраций</h3>
+						<h3 className={styles['chart-title']}>Выручка по месяцам</h3>
 						<p className={styles['chart-subtitle']}>
-							Помесячный тренд помогает быстро увидеть рост и провалы.
+							Сумма успешных оплат за последние 12 месяцев.
 						</p>
 						<div className={styles['chart-wrapper']}>
-							<RegistrationByMonthChart />
+							<RevenueByMonthChart />
 						</div>
 					</div>
 					<div className={styles['chart-card']}>
-						<h3 className={styles['chart-title']}>
-							Регистрации по месяцам
-						</h3>
+						<h3 className={styles['chart-title']}>Заявки по дням</h3>
 						<p className={styles['chart-subtitle']}>
-							Столбцы удобны для сравнения объёма между периодами.
+							Динамика заявок за 30 дней по каждому типу виджета.
 						</p>
 						<div className={styles['chart-wrapper']}>
-							<RegistrationByMonthBarChart />
+							<LeadsByDayChart />
 						</div>
 					</div>
 					<div className={styles['chart-card']}>
-						<h3 className={styles['chart-title']}>
-							Структура ключевых показателей
-						</h3>
+						<h3 className={styles['chart-title']}>Заявки по типам</h3>
 						<p className={styles['chart-subtitle']}>
-							Показывает распределение текущих агрегированных показателей.
+							Распределение заявок за 30 дней между виджетами.
 						</p>
 						<div className={styles['chart-wrapper']}>
-							<OverviewDistributionChart />
+							<LeadsByTypeChart />
 						</div>
 					</div>
 				</div>

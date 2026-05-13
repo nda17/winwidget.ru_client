@@ -1,4 +1,5 @@
-import { useRegistrationsByMonthChart } from '@/components/screens/admin/statistics/charts/RegistrationByMonthChart/useRegistrationByMonthChart'
+import { useRevenueByMonthChart } from '@/components/screens/admin/statistics/charts/RevenueByMonthChart/useRevenueByMonthChart'
+import { formatMoney } from '@/components/screens/admin/statistics/statistics.utils'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import {
 	CategoryScale,
@@ -23,8 +24,8 @@ ChartJS.register(
 	Legend
 )
 
-const RegistrationByMonthChart: FC = () => {
-	const { data, isPending } = useRegistrationsByMonthChart()
+const RevenueByMonthChart: FC = () => {
+	const { data, isPending } = useRevenueByMonthChart()
 
 	return isPending ? (
 		<SkeletonLoader count={1} className="w-full h-full" />
@@ -63,6 +64,7 @@ const RegistrationByMonthChart: FC = () => {
 					},
 					y: {
 						ticks: {
+							callback: value => formatMoney(Number(value)),
 							font: {
 								size: 10
 							}
@@ -74,4 +76,4 @@ const RegistrationByMonthChart: FC = () => {
 	) : null
 }
 
-export default RegistrationByMonthChart
+export default RevenueByMonthChart
