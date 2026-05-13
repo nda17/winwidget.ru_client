@@ -22,6 +22,16 @@ const planLabel: Record<string, string> = {
 	HARD: 'Hard'
 }
 
+const formatSubscriptionExpiresAt = (value: string) =>
+	`${new Intl.DateTimeFormat('ru-RU', {
+		day: '2-digit',
+		month: '2-digit',
+		year: 'numeric',
+		hour: '2-digit',
+		minute: '2-digit',
+		timeZone: 'Europe/Moscow'
+	}).format(new Date(value))} МСК`
+
 const Cabinet: FC = () => {
 	const searchParams = useSearchParams()
 	const initialTab: Tab =
@@ -105,9 +115,7 @@ const Cabinet: FC = () => {
 									{subscription?.expiresAt && (
 										<p className={styles.planExpires}>
 											до{' '}
-											{new Date(subscription.expiresAt).toLocaleDateString(
-												'ru-RU'
-											)}
+											{formatSubscriptionExpiresAt(subscription.expiresAt)}
 										</p>
 									)}
 								</div>

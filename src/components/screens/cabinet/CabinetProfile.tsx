@@ -3,6 +3,7 @@
 import { useProfileEdit } from '@/components/screens/profile/useProfileEdit'
 import { useProfileIdentityBinding } from '@/components/screens/profile/useProfileIdentityBinding'
 import FieldUploadFile from '@/components/ui/form-elements/universal-elements/field-upload-file/FieldUploadFile'
+import AppIcon from '@/components/ui/icons/AppIcon'
 import { usePhoneMask } from '@/hooks/usePhoneMask'
 import useUser from '@/hooks/useUser'
 import fileService from '@/services/file/file.service'
@@ -75,6 +76,8 @@ const CabinetProfile = () => {
 	> | null>(null)
 	const telegramBindingToastRef = useRef<string | null>(null)
 	const telegramNotificationsToastRef = useRef<string | null>(null)
+	const [isProfilePasswordVisible, setIsProfilePasswordVisible] =
+		useState(false)
 	const { data: telegramNotifications } = useQuery({
 		queryKey: ['profile-telegram-notifications'],
 		queryFn: () => userService.fetchProfileTelegramNotifications(),
@@ -181,7 +184,10 @@ const CabinetProfile = () => {
 
 	const handleProfileSubmit = handleSubmit(async data => {
 		const ok = await onSubmit(data)
-		if (ok) reset({ name: data.name || '', password: '' })
+		if (ok) {
+			reset({ name: data.name || '', password: '' })
+			setIsProfilePasswordVisible(false)
+		}
 	})
 
 	// ── Email binding form ─────────────────────────────────────────
@@ -577,22 +583,42 @@ const CabinetProfile = () => {
 						<label htmlFor="profile-password" className={styles.label}>
 							Новый пароль
 						</label>
-						<input
-							id="profile-password"
-							type="password"
-							className={`${styles.input} ${errors.password ? styles.inputError : ''}`}
-							placeholder="Введите новый пароль"
-							{...register('password', {
-								pattern: {
-									value: validPassword,
-									message:
-										'Мин. 6 символов: цифра, строчная и заглавная буква'
+						<div className={styles.passwordInputWrap}>
+							<input
+								id="profile-password"
+								type={isProfilePasswordVisible ? 'text' : 'password'}
+								className={`${styles.input} ${styles.passwordInput} ${errors.password ? styles.inputError : ''}`}
+								placeholder="Введите новый пароль"
+								autoComplete="new-password"
+								{...register('password', {
+									pattern: {
+										value: validPassword,
+										message:
+											'Мин. 6 символов: цифра, строчная и заглавная буква'
+									}
+								})}
+								aria-describedby={
+									errors.password ? 'profile-password-error' : undefined
 								}
-							})}
-							aria-describedby={
-								errors.password ? 'profile-password-error' : undefined
-							}
-						/>
+							/>
+							<button
+								type="button"
+								className={styles.passwordToggle}
+								onClick={() =>
+									setIsProfilePasswordVisible(value => !value)
+								}
+								aria-label={
+									isProfilePasswordVisible
+										? 'Скрыть пароль'
+										: 'Показать пароль'
+								}
+								aria-pressed={isProfilePasswordVisible}
+							>
+								<AppIcon
+									name={isProfilePasswordVisible ? 'eye-off' : 'eye'}
+								/>
+							</button>
+						</div>
 						{errors.password && (
 							<span
 								id="profile-password-error"
