@@ -3,6 +3,7 @@
 import CallbackSettingsModal from '@/components/screens/widgets/CallbackSettingsModal'
 import CountdownTimerSettingsModal from '@/components/screens/widgets/CountdownTimerSettingsModal'
 import QuizSettingsModal from '@/components/screens/widgets/QuizSettingsModal'
+import StopOfferSettingsModal from '@/components/screens/widgets/StopOfferSettingsModal'
 import WheelSettingsModal from '@/components/screens/widgets/WheelSettingsModal'
 import WidgetTypeModal from '@/components/screens/widgets/WidgetTypeModal'
 import {
@@ -19,6 +20,8 @@ import countdownTimerService from '@/services/countdown-timer/countdown-timer.se
 import { CountdownTimer } from '@/services/countdown-timer/countdown-timer.types'
 import quizService from '@/services/quiz/quiz.service'
 import { Quiz } from '@/services/quiz/quiz.types'
+import stopOfferService from '@/services/stop-offer/stop-offer.service'
+import { StopOffer } from '@/services/stop-offer/stop-offer.types'
 import widgetService from '@/services/widget/widget.service'
 import { Widget } from '@/services/widget/widget.types'
 import { useAuthStore } from '@/store/auth-store/auth-store'
@@ -36,6 +39,7 @@ type ListItem =
 	| { kind: 'quiz'; item: Quiz }
 	| { kind: 'callback'; item: Callback }
 	| { kind: 'timer'; item: CountdownTimer }
+	| { kind: 'stop-offer'; item: StopOffer }
 
 const CabinetWidgets = () => {
 	const auth = useAuthStore(state => state.auth)
@@ -48,6 +52,8 @@ const CabinetWidgets = () => {
 		useState<Callback | null>(null)
 	const [settingsTimer, setSettingsTimer] =
 		useState<CountdownTimer | null>(null)
+	const [settingsStopOffer, setSettingsStopOffer] =
+		useState<StopOffer | null>(null)
 	const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(
 		null
 	)
@@ -77,11 +83,18 @@ const CabinetWidgets = () => {
 		enabled: !!auth
 	})
 
+	const { data: stopOffersData, isLoading: stopOffersLoading } = useQuery({
+		queryKey: ['stop-offers'],
+		queryFn: stopOfferService.getMyStopOffers,
+		enabled: !!auth
+	})
+
 	const subscription =
 		widgetsData?.subscription ||
 		quizzesData?.subscription ||
 		callbacksData?.subscription ||
-		timersData?.subscription
+		timersData?.subscription ||
+		stopOffersData?.subscription
 	const canUseCustomButtonImage =
 		subscription?.plan === 'HARD' && subscription.status === 'ACTIVE'
 
@@ -101,6 +114,10 @@ const CabinetWidgets = () => {
 		...(timersData?.countdownTimers || []).map(t => ({
 			kind: 'timer' as const,
 			item: t
+		})),
+		...(stopOffersData?.stopOffers || []).map(s => ({
+			kind: 'stop-offer' as const,
+			item: s
 		}))
 	].sort(
 		(a, b) =>
@@ -114,7 +131,8 @@ const CabinetWidgets = () => {
 			(widgetsLoading ||
 				quizzesLoading ||
 				callbacksLoading ||
-				timersLoading))
+				timersLoading ||
+				stopOffersLoading))
 
 	const createMutation = useMutation({
 		mutationFn: (typeId: string) => {
@@ -123,6 +141,8 @@ const CabinetWidgets = () => {
 				return callbackService.createCallback('Обратный звонок')
 			if (typeId === 'timer')
 				return countdownTimerService.createCountdownTimer('Таймер')
+			if (typeId === 'stop-offer')
+				return stopOfferService.createStopOffer('Стоп-оффер')
 			const names: Record<string, string> = {
 				wheel: 'Колесо фортуны',
 				drum: 'Барабан'
@@ -140,7 +160,9 @@ const CabinetWidgets = () => {
 							? ['callbacks']
 							: typeId === 'timer'
 								? ['countdown-timers']
-								: ['widgets']
+								: typeId === 'stop-offer'
+									? ['stop-offers']
+									: ['widgets']
 			})
 			setShowTypeModal(false)
 			toast.success('Виджет создан', { id: toastId })
@@ -222,6 +244,23 @@ const CabinetWidgets = () => {
 		}
 	})
 
+	const deleteStopOfferMutation = useMutation({
+		mutationFn: (id: string) => stopOfferService.deleteStopOffer(id),
+		onMutate: () =>
+			toast.loading('Удаляем виджет, пожалуйста подождите...'),
+		onSuccess: (_, __, toastId) => {
+			queryClient.invalidateQueries({ queryKey: ['stop-offers'] })
+			setConfirmDeleteId(null)
+			toast.success('Виджет удалён', { id: toastId })
+		},
+		onError: (e: any, __, toastId) => {
+			toast.error(
+				e?.response?.data?.message || 'Ошибка удаления виджета',
+				{ id: toastId }
+			)
+		}
+	})
+
 	const toggleWidgetMutation = useMutation({
 		mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
 			widgetService.updateWidget(id, { isActive }),
@@ -277,6 +316,22 @@ const CabinetWidgets = () => {
 			),
 		onSuccess: (_, __, toastId) => {
 			queryClient.invalidateQueries({ queryKey: ['countdown-timers'] })
+			toast.dismiss(toastId)
+		},
+		onError: (e: any, __, toastId) => {
+			toast.error(e?.response?.data?.message || 'Ошибка', { id: toastId })
+		}
+	})
+
+	const toggleStopOfferMutation = useMutation({
+		mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+			stopOfferService.updateStopOffer(id, { isActive }),
+		onMutate: ({ isActive }) =>
+			toast.loading(
+				isActive ? 'Включаем виджет...' : 'Отключаем виджет...'
+			),
+		onSuccess: (_, __, toastId) => {
+			queryClient.invalidateQueries({ queryKey: ['stop-offers'] })
 			toast.dismiss(toastId)
 		},
 		onError: (e: any, __, toastId) => {
@@ -438,7 +493,9 @@ const CabinetWidgets = () => {
 										? deleteQuizMutation.isPending
 										: kind === 'callback'
 											? deleteCallbackMutation.isPending
-											: deleteTimerMutation.isPending) &&
+											: kind === 'timer'
+												? deleteTimerMutation.isPending
+												: deleteStopOfferMutation.isPending) &&
 								confirmDeleteId === item.id
 
 							const pageUrl =
@@ -448,7 +505,9 @@ const CabinetWidgets = () => {
 										? `${publicSiteUrl}/page-quiz/${item.publicKey}`
 										: kind === 'callback'
 											? `${publicSiteUrl}/page-callback/${item.publicKey}`
-											: `${publicSiteUrl}/page-timer/${item.publicKey}`
+											: kind === 'timer'
+												? `${publicSiteUrl}/page-timer/${item.publicKey}`
+												: `${publicSiteUrl}/page-stop-offer/${item.publicKey}`
 
 							const leadsUrl =
 								kind === 'wheel'
@@ -457,7 +516,9 @@ const CabinetWidgets = () => {
 										? `/quizzes/${item.id}/leads`
 										: kind === 'callback'
 											? `/callbacks/${item.id}/leads`
-											: `/timers/${item.id}/leads`
+											: kind === 'timer'
+												? `/timers/${item.id}/leads`
+												: `/stop-offers/${item.id}/leads`
 
 							return (
 								<div
@@ -482,8 +543,13 @@ const CabinetWidgets = () => {
 													id: item.id,
 													isActive: !item.isActive
 												})
-											} else {
+											} else if (kind === 'timer') {
 												toggleTimerMutation.mutate({
+													id: item.id,
+													isActive: !item.isActive
+												})
+											} else {
+												toggleStopOfferMutation.mutate({
 													id: item.id,
 													isActive: !item.isActive
 												})
@@ -515,7 +581,9 @@ const CabinetWidgets = () => {
 														? 'Квиз'
 														: kind === 'callback'
 															? 'Звонок'
-															: 'Таймер'}
+															: kind === 'timer'
+																? 'Таймер'
+																: 'Стоп-оффер'}
 											</span>
 										</div>
 										<span
@@ -562,8 +630,10 @@ const CabinetWidgets = () => {
 													setSettingsQuiz(item as Quiz)
 												} else if (kind === 'callback') {
 													setSettingsCallback(item as Callback)
-												} else {
+												} else if (kind === 'timer') {
 													setSettingsTimer(item as CountdownTimer)
+												} else {
+													setSettingsStopOffer(item as StopOffer)
 												}
 											}}
 										>
@@ -581,8 +651,10 @@ const CabinetWidgets = () => {
 															deleteQuizMutation.mutate(item.id)
 														} else if (kind === 'callback') {
 															deleteCallbackMutation.mutate(item.id)
-														} else {
+														} else if (kind === 'timer') {
 															deleteTimerMutation.mutate(item.id)
+														} else {
+															deleteStopOfferMutation.mutate(item.id)
 														}
 													}}
 													disabled={isDeleting}
@@ -688,6 +760,20 @@ const CabinetWidgets = () => {
 						setSettingsTimer(updated)
 						queryClient.invalidateQueries({
 							queryKey: ['countdown-timers']
+						})
+					}}
+				/>
+			)}
+
+			{settingsStopOffer && (
+				<StopOfferSettingsModal
+					stopOffer={settingsStopOffer}
+					canUseCustomButtonImage={canUseCustomButtonImage}
+					onClose={() => setSettingsStopOffer(null)}
+					onSaved={updated => {
+						setSettingsStopOffer(updated)
+						queryClient.invalidateQueries({
+							queryKey: ['stop-offers']
 						})
 					}}
 				/>

@@ -228,10 +228,12 @@ export const DEFAULT_HOME_PAGE_TECHNICAL_SEO_CONTENT: HomePageContent['technical
 			'/quizzes/',
 			'/callbacks/',
 			'/timers/',
+			'/stop-offers/',
 			'/page-wheel/',
 			'/page-quiz/',
 			'/page-callback/',
 			'/page-timer/',
+			'/page-stop-offer/',
 			'/payment/',
 			'/logout/',
 			'/login/',
@@ -297,7 +299,8 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 			wheel: 'Испытайте удачу!',
 			quiz: 'Поможем сделать выбор!',
 			callback: 'Перезвоним вам за 5 минут',
-			countdown: 'Супер-акция!'
+			countdown: 'Супер-акция!',
+			stopOffer: 'Остановите клиента при уходе!'
 		}
 	},
 	hero: {
@@ -431,8 +434,8 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 			{
 				title: 'Стоп-оффер',
 				description:
-					'Появляется, когда пользователь собирается уйти: “Подождите, заберите скидку 10%”.\nХорошо возвращает часть потерянного трафика.\n',
-				comingSoon: true,
+					'Появляется, когда пользователь собирается уйти: “Заберите скидку 10%”.\nХорошо возвращает часть потерянного трафика.\n',
+				comingSoon: false,
 				previewType: 'none'
 			},
 			{

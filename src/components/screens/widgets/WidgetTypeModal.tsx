@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, type ReactNode } from 'react'
+import { useEffect, useId, type ReactNode } from 'react'
 import styles from './WidgetTypeModal.module.scss'
 
 interface WidgetType {
@@ -211,6 +211,46 @@ const TimerIcon = () => (
 	</svg>
 )
 
+const StopOfferIcon = () => (
+	<svg
+		width="72"
+		height="72"
+		viewBox="0 0 72 72"
+		fill="none"
+		xmlns="http://www.w3.org/2000/svg"
+	>
+		<circle cx="36" cy="36" r="34" stroke="#e0d6f0" strokeWidth="2" />
+		<rect
+			x="14"
+			y="18"
+			width="44"
+			height="36"
+			rx="8"
+			fill="#fff"
+			stroke="#e0d6f0"
+			strokeWidth="2"
+		/>
+		<rect x="22" y="26" width="28" height="4" rx="2" fill="#7b3fa0" />
+		<rect
+			x="22"
+			y="35"
+			width="20"
+			height="4"
+			rx="2"
+			fill="#C21B84"
+			opacity="0.65"
+		/>
+		<rect x="22" y="44" width="28" height="6" rx="3" fill="#FA595E" />
+		<circle cx="52" cy="22" r="10" fill="#F8BD31" />
+		<path
+			d="M48.5 22h7M52 18.5v7"
+			stroke="#470B58"
+			strokeWidth="2.2"
+			strokeLinecap="round"
+		/>
+	</svg>
+)
+
 const DrumIcon = () => (
 	<svg
 		width="72"
@@ -278,6 +318,14 @@ const WIDGET_TYPES: WidgetType[] = [
 			'Показывает дедлайн акции, ведёт на товар или собирает контакт перед переходом.',
 		icon: <TimerIcon />,
 		available: true
+	},
+	{
+		id: 'stop-offer',
+		name: 'Стоп-оффер',
+		description:
+			'Показывает предложение при попытке ухода и возвращает часть потерянного трафика.',
+		icon: <StopOfferIcon />,
+		available: true
 	}
 ]
 
@@ -290,6 +338,16 @@ interface Props {
 const WidgetTypeModal = ({ onSelect, onClose, isCreating }: Props) => {
 	const titleId = useId()
 	const descriptionId = useId()
+
+	useEffect(() => {
+		const originalOverflow = document.body.style.overflow
+
+		document.body.style.overflow = 'hidden'
+
+		return () => {
+			document.body.style.overflow = originalOverflow
+		}
+	}, [])
 
 	return (
 		<div className={styles.overlay}>

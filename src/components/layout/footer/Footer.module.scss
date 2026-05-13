@@ -91,6 +91,77 @@
 			}
 			.ybs-inform-wrapper {
 				@apply flex gap-1 mb-3 items-center;
+
+				.ybs-logo {
+					@apply block origin-center;
+					animation: ybsLogoFloat 4.8s ease-in-out infinite;
+					filter: drop-shadow(0 0.25rem 0.7rem rgb(0 0 0 / 0.1));
+				}
+
+				.ybs-logo-mark {
+					@apply origin-center;
+					animation: ybsLogoMarkPulse 4.8s ease-in-out infinite;
+				}
+
+				.ybs-logo-ring {
+					@apply origin-center;
+					animation: ybsLogoRingPulse 4.8s ease-in-out infinite;
+				}
+			}
+		}
+	}
+}
+
+@keyframes ybsLogoFloat {
+	0%,
+	100% {
+		transform: translateY(0) scale(1);
+	}
+
+	42% {
+		transform: translateY(-0.125rem) scale(1.035);
+	}
+
+	68% {
+		transform: translateY(0.0625rem) scale(0.995);
+	}
+}
+
+@keyframes ybsLogoMarkPulse {
+	0%,
+	100% {
+		opacity: 1;
+		transform: translateY(0);
+	}
+
+	48% {
+		opacity: 0.86;
+		transform: translateY(-0.0625rem);
+	}
+}
+
+@keyframes ybsLogoRingPulse {
+	0%,
+	100% {
+		stroke-width: 10;
+	}
+
+	48% {
+		stroke-width: 11.5;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.footer {
+		.layout-container {
+			.inform-wrapper {
+				.ybs-inform-wrapper {
+					.ybs-logo,
+					.ybs-logo-mark,
+					.ybs-logo-ring {
+						animation: none;
+					}
+				}
 			}
 		}
 	}

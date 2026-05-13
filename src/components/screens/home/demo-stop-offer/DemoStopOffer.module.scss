@@ -1,0 +1,256 @@
+.overlay {
+	@apply fixed inset-0 z-[9999] flex items-center justify-center p-4 box-border;
+	background: rgba(8, 4, 20, 0.82);
+	backdrop-filter: blur(7px);
+	-webkit-backdrop-filter: blur(7px);
+}
+
+.backdrop {
+	@apply absolute inset-0 border-none bg-transparent p-0;
+}
+
+.modal {
+	@apply relative w-full bg-white overflow-hidden;
+	max-width: 460px;
+	border-radius: 24px;
+	padding: 30px 24px 22px;
+	max-height: calc(100svh - 48px);
+	box-sizing: border-box;
+	box-shadow: 0 28px 80px rgba(0, 0, 0, 0.3);
+	font-family:
+		system-ui,
+		-apple-system,
+		BlinkMacSystemFont,
+		'Segoe UI',
+		sans-serif;
+	animation: modalIn 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes modalIn {
+	from {
+		opacity: 0;
+		transform: translateY(28px) scale(0.98);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+.closeBtn {
+	@apply absolute border-none cursor-pointer leading-none flex items-center justify-center;
+	top: 12px;
+	right: 14px;
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	background: rgba(71, 5, 251, 0.08);
+	color: #7b3fa0;
+	font-size: 20px;
+
+	&:hover {
+		background: rgba(71, 5, 251, 0.14);
+	}
+}
+
+.badge {
+	@apply inline-flex font-black uppercase;
+	margin-bottom: 12px;
+	padding: 5px 10px;
+	border-radius: 999px;
+	background: rgba(71, 5, 251, 0.07);
+	color: #4705fb;
+	font-size: 11px;
+	letter-spacing: 0.06em;
+}
+
+.offer {
+	@apply font-black;
+	margin: 0 0 12px;
+	font-size: 34px;
+	line-height: 1.05;
+	color: #4705fb;
+}
+
+.title {
+	@apply font-extrabold;
+	margin: 0 22px 8px 0;
+	font-size: 26px;
+	line-height: 1.18;
+	color: #1a1a1a;
+}
+
+.subtitle {
+	margin: 0 0 18px;
+	max-width: 360px;
+	font-size: 14px;
+	color: #777;
+	line-height: 1.5;
+}
+
+.contactTitle {
+	@apply font-bold;
+	margin: 0 0 10px;
+	font-size: 14px;
+	color: #1a1a1a;
+	line-height: 1.4;
+}
+
+.form {
+	@apply flex flex-col;
+	gap: 10px;
+}
+
+.input {
+	@apply w-full box-border outline-none;
+	height: 48px;
+	padding: 0 14px;
+	font-size: 15px;
+	border: 1px solid #e0d6f0;
+	border-radius: 12px;
+	background: #f8f5ff;
+	color: #1a1a1a;
+	font-family: inherit;
+	transition:
+		border-color 0.2s,
+		box-shadow 0.2s;
+
+	&:focus {
+		border-color: #4705fb;
+		box-shadow: 0 0 0 3px rgba(71, 5, 251, 0.12);
+	}
+
+	&::placeholder {
+		color: #bbb;
+	}
+}
+
+.inputError {
+	border-color: #ef4444 !important;
+	box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12) !important;
+}
+
+.errText {
+	margin: 5px 0 0 2px;
+	font-size: 11px;
+	color: #ef4444;
+}
+
+.submitBtn {
+	@apply w-full border-none cursor-pointer text-white font-bold;
+	height: 50px;
+	border-radius: 12px;
+	background: #4705fb;
+	font-size: 15px;
+	box-shadow: 0 8px 22px rgba(71, 5, 251, 0.22);
+	font-family: inherit;
+	transition:
+		opacity 0.2s,
+		transform 0.15s;
+
+	&:hover {
+		opacity: 0.9;
+	}
+}
+
+.privacy {
+	margin: 0;
+	font-size: 11px;
+	color: #aaa;
+	text-align: center;
+	line-height: 1.45;
+
+	a {
+		color: #999;
+	}
+}
+
+.brand {
+	@apply text-center;
+	margin-top: 12px;
+	font-size: 12px;
+	color: #6b6378;
+	line-height: 1.5;
+
+	a {
+		@apply no-underline font-semibold;
+		color: #4705fb;
+	}
+}
+
+.successIcon {
+	@apply flex items-center justify-center mx-auto font-extrabold;
+	width: 60px;
+	height: 60px;
+	border-radius: 50%;
+	background: rgba(71, 5, 251, 0.07);
+	margin: 8px auto 16px;
+	font-size: 30px;
+	color: #4705fb;
+}
+
+.successTitle {
+	@apply font-extrabold text-center;
+	margin: 0 0 8px;
+	font-size: 22px;
+	color: #1a1a1a;
+}
+
+.successSubtitle {
+	margin: 0 0 16px;
+	font-size: 14px;
+	color: #777;
+	text-align: center;
+	line-height: 1.5;
+}
+
+.shake {
+	animation: shake 450ms ease;
+}
+
+@keyframes shake {
+	0%,
+	100% {
+		transform: translateX(0);
+	}
+	12% {
+		transform: translateX(-5px);
+	}
+	25% {
+		transform: translateX(5px);
+	}
+	37% {
+		transform: translateX(-4px);
+	}
+	50% {
+		transform: translateX(4px);
+	}
+	62% {
+		transform: translateX(-2px);
+	}
+	75% {
+		transform: translateX(2px);
+	}
+	87% {
+		transform: translateX(-1px);
+	}
+}
+
+@media (max-width: 520px) {
+	.overlay {
+		@apply p-3;
+	}
+
+	.modal {
+		border-radius: 18px;
+		padding: 24px 16px 18px;
+	}
+
+	.offer {
+		font-size: 30px;
+	}
+
+	.title {
+		font-size: 23px;
+	}
+}

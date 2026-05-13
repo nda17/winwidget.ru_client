@@ -1,5 +1,5 @@
 .overlay {
-	@apply fixed inset-0 bg-[rgba(20,10,40,0.45)] backdrop-blur-[4px] z-[1000] flex items-center justify-center p-6;
+	@apply fixed inset-0 bg-[rgba(20,10,40,0.45)] backdrop-blur-[4px] z-[1000] flex items-center justify-center p-6 overscroll-contain;
 	-webkit-backdrop-filter: blur(4px);
 }
 
@@ -8,8 +8,11 @@
 }
 
 .modal {
-	@apply relative z-[1] bg-white rounded-[1.25rem] border border-[#e0d6f0] pt-10 px-8 pb-8 max-w-[540px] w-full;
+	@apply relative z-[1] flex w-full max-w-[56rem] max-h-[calc(100dvh-3rem)] flex-col overflow-y-auto overscroll-contain rounded-[1.25rem] border border-[#e0d6f0] bg-white px-8 pb-8 pt-9;
 	box-shadow: 0 20px 60px rgba(100, 60, 180, 0.15);
+}
+.modal::-webkit-scrollbar {
+	@apply hidden;
 }
 
 .closeBtn {
@@ -24,15 +27,15 @@
 }
 
 .subtitle {
-	@apply text-sm text-[#aaa] text-center mb-7;
+	@apply text-sm text-[#aaa] text-center mb-6;
 }
 
 .gridLayout {
-	@apply grid grid-cols-2 gap-4;
+	@apply grid grid-cols-3 gap-4;
 }
 
 .card {
-	@apply relative flex flex-col items-center gap-3 rounded-[1rem] border-2 border-[#e0d6f0] bg-[#f8f5ff] cursor-pointer transition-[border-color,box-shadow,transform] duration-200 text-center pt-7 px-5 pb-6;
+	@apply relative flex flex-col items-center gap-3 rounded-[1rem] border-2 border-[#e0d6f0] bg-[#f8f5ff] cursor-pointer transition-[border-color,box-shadow,transform] duration-200 text-center px-4 pb-5 pt-6;
 }
 .card:hover:not(:disabled) {
 	@apply border-[#c4a8e8] -translate-y-[2px];
@@ -66,9 +69,27 @@
 	@apply text-[0.8rem] text-[#7b3fa0] font-semibold;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 768px) {
+	.overlay {
+		@apply p-4;
+	}
 	.modal {
-		@apply pt-8 px-5 pb-6;
+		@apply max-w-[42rem] max-h-[calc(100dvh-2rem)] px-5 pb-6 pt-8;
+	}
+	.gridLayout {
+		@apply grid-cols-2 gap-3;
+	}
+	.card {
+		@apply gap-2 px-4 pb-5 pt-5;
+	}
+}
+
+@media (max-width: 480px) {
+	.overlay {
+		@apply items-stretch p-0;
+	}
+	.modal {
+		@apply h-[100dvh] max-h-none max-w-none rounded-none px-4 pb-6 pt-6;
 	}
 	.title {
 		@apply text-xl;

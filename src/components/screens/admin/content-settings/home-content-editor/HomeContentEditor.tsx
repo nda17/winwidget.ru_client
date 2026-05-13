@@ -1210,7 +1210,8 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 								['wheel', 'Облако колеса'],
 								['quiz', 'Облако квиза'],
 								['callback', 'Облако звонка'],
-								['countdown', 'Облако таймера']
+								['countdown', 'Облако таймера'],
+								['stopOffer', 'Облако стоп-оффера']
 							] as const
 						).map(([key, label]) => (
 							<TextField

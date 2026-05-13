@@ -115,14 +115,15 @@ const Footer: NextPage<FooterProps> = ({ content }) => {
 						<p className={clsx(styles['date-inform'])}>Project by</p>
 						<svg
 							id="ybs"
+							className={styles['ybs-logo']}
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 204.4 204.3"
 							width="40"
 							height="40"
-							style={{ display: 'block' }}
 							xmlSpace="preserve"
 						>
 							<path
+								className={styles['ybs-logo-mark']}
 								fill="#000000"
 								d="M172.4,117.2c0,3.8-0.8,7.3-2.4,10.3c-1.6,3.1-4,5.5-7,7.2c-3.1,1.7-6.8,2.6-11,2.6c-5.1,0-9.3-1.2-12.6-3.5
     c-2.3-1.7-4.2-4-5.7-6.8c-1.5-2.8-2.2-5.6-2.2-8.3c0-1.6,0.4-2.9,1.3-4c0.9-1.1,2-1.7,3.4-1.7c1.1,0,2,0.4,2.8,1.3s1.4,2.1,2,3.9
@@ -135,6 +136,7 @@ const Footer: NextPage<FooterProps> = ({ content }) => {
     c2.4,1,4.4,2.2,6,3.7c1.7,1.4,2.9,3.3,3.9,5.5C172,111.3,172.4,114,172.4,117.2z"
 							/>
 							<path
+								className={styles['ybs-logo-mark']}
 								fill="#000000"
 								d="M103.5,136.2H87.8c-2.3,0-3.9-0.6-4.9-1.9c-1-1.3-1.5-3.3-1.5-6V80.6c0-2.8,0.5-4.8,1.5-6
     c1-1.2,2.6-1.8,4.8-1.8h16.7c2.5,0,4.6,0.2,6.4,0.6c1.8,0.4,3.4,1.1,4.9,2.2c1.2,0.9,2.3,2,3.2,3.4c0.9,1.4,1.7,2.9,2.1,4.5
@@ -144,6 +146,7 @@ const Footer: NextPage<FooterProps> = ({ content }) => {
     c0-3.2-0.9-5.5-2.7-7C109.1,108.8,106.4,108,102.7,108z"
 							/>
 							<path
+								className={styles['ybs-logo-mark']}
 								fill="#000000"
 								d="M48,129.5v-20.1l-12.6-24c-1.1-2.2-1.9-3.9-2.3-5.1c-0.5-1.2-0.7-2.3-0.7-3.2c0-1.5,0.5-2.7,1.4-3.8
     c0.9-1.1,2.1-1.6,3.4-1.6c1.4,0,2.5,0.5,3.3,1.5s1.8,3,3.3,5.9l9.6,19.3l9.7-19.3c0.6-1.2,1.1-2.2,1.5-3c0.4-0.8,0.8-1.6,1.3-2.3
@@ -152,6 +155,7 @@ const Footer: NextPage<FooterProps> = ({ content }) => {
 							/>
 
 							<circle
+								className={styles['ybs-logo-ring']}
 								cx="102.2"
 								cy="102.15"
 								r="88"

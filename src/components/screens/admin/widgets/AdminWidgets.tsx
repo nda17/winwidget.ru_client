@@ -25,7 +25,8 @@ const TYPE_LABELS: Record<AdminWidgetType, string> = {
 	WHEEL: 'Колесо',
 	QUIZ: 'Квиз',
 	CALLBACK: 'Обратный звонок',
-	TIMER: 'Таймер'
+	TIMER: 'Таймер',
+	STOP_OFFER: 'Стоп-оффер'
 }
 
 const PLAN_LABELS: Record<Plan, string> = {
@@ -66,7 +67,8 @@ const TYPE_FILTER_OPTIONS: Array<{
 	{ value: 'WHEEL', label: TYPE_LABELS.WHEEL },
 	{ value: 'QUIZ', label: TYPE_LABELS.QUIZ },
 	{ value: 'CALLBACK', label: TYPE_LABELS.CALLBACK },
-	{ value: 'TIMER', label: TYPE_LABELS.TIMER }
+	{ value: 'TIMER', label: TYPE_LABELS.TIMER },
+	{ value: 'STOP_OFFER', label: TYPE_LABELS.STOP_OFFER }
 ]
 
 const ACTIVE_FILTER_OPTIONS: Array<{

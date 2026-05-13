@@ -56,6 +56,12 @@ const LeadsByDayChart: FC = () => {
 						data: data.leads.byDay.map(item => item.countdownTimer),
 						backgroundColor: '#2A9D8F',
 						borderRadius: 6
+					},
+					{
+						label: 'Стоп-офферы',
+						data: data.leads.byDay.map(item => item.stopOffer),
+						backgroundColor: '#7C3AED',
+						borderRadius: 6
 					}
 				]
 			}}

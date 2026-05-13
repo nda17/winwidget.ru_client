@@ -33,6 +33,10 @@ const nextConfig = {
 		{
 			source: '/page-timer/:path*',
 			headers: widgetPreviewFrameHeaders
+		},
+		{
+			source: '/page-stop-offer/:path*',
+			headers: widgetPreviewFrameHeaders
 		}
 	],
 	rewrites: () => {

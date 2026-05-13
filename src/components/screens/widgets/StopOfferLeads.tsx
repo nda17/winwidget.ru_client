@@ -1,29 +1,25 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
-import widgetService from '@/services/widget/widget.service'
-import { useAuthStore } from '@/store/auth-store/auth-store'
-import {
-	Lead,
-	LeadsStatsResponse,
-	Subscription
-} from '@/services/widget/widget.types'
 import Pagination from '@/components/ui/pagination/Pagination'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import AppIcon from '@/components/ui/icons/AppIcon'
-import styles from './WidgetLeads.module.scss'
+import stopOfferService from '@/services/stop-offer/stop-offer.service'
+import { Subscription as WidgetSubscription } from '@/services/widget/widget.types'
+import widgetService from '@/services/widget/widget.service'
+import { useAuthStore } from '@/store/auth-store/auth-store'
+import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
+import styles from './WidgetLeads.module.scss'
 
 interface Props {
-	widgetId: string
+	stopOfferId: string
 }
 
-const WidgetLeads = ({ widgetId }: Props) => {
+const StopOfferLeads = ({ stopOfferId }: Props) => {
 	const auth = useAuthStore(state => state.auth)
 	const isAuthResolved = useAuthStore(state => state.isAuthResolved)
-
 	const [exporting, setExporting] = useState<
 		'csv' | 'xlsx' | 'pdf' | null
 	>(null)
@@ -31,27 +27,20 @@ const WidgetLeads = ({ widgetId }: Props) => {
 	const itemQuantity = 50
 
 	const { data, isLoading } = useQuery({
-		queryKey: ['leads', widgetId, currentPage, itemQuantity],
+		queryKey: ['stop-offer-leads', stopOfferId, currentPage, itemQuantity],
 		queryFn: () =>
-			widgetService.getLeads(widgetId, currentPage, itemQuantity),
-		enabled: auth
+			stopOfferService.getLeads(stopOfferId, currentPage, itemQuantity),
+		enabled: !!auth
 	})
 
-	const { data: subscription } = useQuery<Subscription>({
+	const { data: subscription } = useQuery<WidgetSubscription>({
 		queryKey: ['subscription'],
 		queryFn: () => widgetService.getSubscription(),
-		enabled: auth
+		enabled: !!auth
 	})
 
 	const canAccess =
 		subscription?.plan === 'TRIAL' || subscription?.plan === 'HARD'
-
-	const { data: statsData } = useQuery<LeadsStatsResponse>({
-		queryKey: ['leads-stats', widgetId],
-		queryFn: () => widgetService.getLeadsStats(widgetId),
-		enabled: !!auth && canAccess
-	})
-
 	const isPending = !isAuthResolved || (!!auth && isLoading)
 	const totalPages = data?.totalPages ?? currentPage
 	const listPage = Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -66,20 +55,18 @@ const WidgetLeads = ({ widgetId }: Props) => {
 	const nextPage = () => setCurrentPage(p => Math.min(totalPages, p + 1))
 	const changeActivePage = (page: number) => setCurrentPage(page)
 
-	const formatPhone = (raw: string) => {
-		const digits = raw.replace(/\D/g, '')
-		return digits ? `+${digits}` : raw
-	}
-
-	const formatDate = (iso: string) => {
-		const d = new Date(iso)
-		return d.toLocaleString('ru-RU', {
+	const formatDate = (iso: string) =>
+		new Date(iso).toLocaleString('ru-RU', {
 			day: '2-digit',
 			month: '2-digit',
 			year: 'numeric',
 			hour: '2-digit',
 			minute: '2-digit'
 		})
+
+	const formatPhone = (raw: string) => {
+		const digits = raw.replace(/\D/g, '')
+		return digits ? `+${digits}` : raw
 	}
 
 	const triggerDownload = (blob: Blob, filename: string) => {
@@ -91,29 +78,19 @@ const WidgetLeads = ({ widgetId }: Props) => {
 		URL.revokeObjectURL(url)
 	}
 
-	const handleExportCsv = async () => {
-		setExporting('csv')
-		const toastId = toast.loading('Подготовка CSV...')
+	const handleExport = async (format: 'csv' | 'xlsx') => {
+		setExporting(format)
+		const toastId = toast.loading(
+			format === 'csv' ? 'Подготовка CSV...' : 'Подготовка Excel...'
+		)
 		try {
-			const blob = await widgetService.exportLeads(widgetId, 'csv')
-			triggerDownload(blob, `leads.csv`)
-			toast.success('CSV скачан', { id: toastId })
+			const blob = await stopOfferService.exportLeads(stopOfferId, format)
+			triggerDownload(blob, `stop-offer-leads.${format}`)
+			toast.success(format === 'csv' ? 'CSV скачан' : 'Excel скачан', {
+				id: toastId
+			})
 		} catch {
-			toast.error('Ошибка при скачивании CSV', { id: toastId })
-		} finally {
-			setExporting(null)
-		}
-	}
-
-	const handleExportXlsx = async () => {
-		setExporting('xlsx')
-		const toastId = toast.loading('Подготовка Excel...')
-		try {
-			const blob = await widgetService.exportLeads(widgetId, 'xlsx')
-			triggerDownload(blob, `leads.xlsx`)
-			toast.success('Excel скачан', { id: toastId })
-		} catch {
-			toast.error('Ошибка при скачивании Excel', { id: toastId })
+			toast.error('Ошибка при скачивании файла', { id: toastId })
 		} finally {
 			setExporting(null)
 		}
@@ -123,45 +100,24 @@ const WidgetLeads = ({ widgetId }: Props) => {
 		setExporting('pdf')
 		const toastId = toast.loading('Подготовка PDF...')
 		try {
-			const all = await widgetService.getAllLeads(widgetId)
-			const html = buildPdfHtml(all.leads)
-			const blob = new Blob([html], { type: 'text/html; charset=utf-8' })
-			const url = URL.createObjectURL(blob)
-			window.open(url, '_blank')
-			toast.success(
-				'PDF открыт в новой вкладке — нажмите Ctrl+P для сохранения',
-				{
-					id: toastId,
-					duration: 5000
-				}
-			)
-		} catch {
-			toast.error('Ошибка при формировании PDF', { id: toastId })
-		} finally {
-			setExporting(null)
-		}
-	}
-
-	const buildPdfHtml = (leads: Lead[]) => {
-		const rows = leads
-			.map(
-				(lead, i) => `
+			const all = await stopOfferService.getAllLeads(stopOfferId)
+			const rows = all.leads
+				.map(
+					(lead, i) => `
 			<tr>
 				<td>${i + 1}</td>
 				<td>${formatDate(lead.createdAt)}</td>
-				<td>${lead.phone ? formatPhone(lead.phone) : lead.contact ? formatPhone(lead.contact) : '—'}</td>
+				<td>${lead.phone ? formatPhone(lead.phone) : '—'}</td>
 				<td>${lead.email || '—'}</td>
-				<td>${lead.bonus || '—'}</td>
 				<td>${lead.url ? `<a href="${lead.url}">${lead.url.length > 50 ? lead.url.slice(0, 50) + '…' : lead.url}</a>` : '—'}</td>
 			</tr>`
-			)
-			.join('')
-
-		return `<!DOCTYPE html>
+				)
+				.join('')
+			const html = `<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>Заявки</title>
+<title>Заявки со стоп-оффера</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: Arial, Helvetica, sans-serif; padding: 24px; color: #1a1a1a; font-size: 13px; }
@@ -177,16 +133,15 @@ const WidgetLeads = ({ widgetId }: Props) => {
 </head>
 <body>
 <div class="print-hint">Нажмите Ctrl+P (⌘P на Mac) → «Сохранить как PDF»</div>
-<h1>Заявки — всего ${leads.length}</h1>
+<h1>Заявки со стоп-оффера — всего ${all.leads.length}</h1>
 <table>
-  <caption style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Таблица заявок по виджету</caption>
+  <caption style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Таблица заявок со стоп-оффера</caption>
   <thead>
     <tr>
       <th scope="col">#</th>
       <th scope="col">Дата</th>
       <th scope="col">Телефон</th>
       <th scope="col">Email</th>
-      <th scope="col">Бонус</th>
       <th scope="col">Страница</th>
     </tr>
   </thead>
@@ -194,6 +149,17 @@ const WidgetLeads = ({ widgetId }: Props) => {
 </table>
 </body>
 </html>`
+			const blob = new Blob([html], { type: 'text/html; charset=utf-8' })
+			window.open(URL.createObjectURL(blob), '_blank')
+			toast.success(
+				'PDF открыт в новой вкладке — нажмите Ctrl+P для сохранения',
+				{ id: toastId, duration: 5000 }
+			)
+		} catch {
+			toast.error('Ошибка при формировании PDF', { id: toastId })
+		} finally {
+			setExporting(null)
+		}
 	}
 
 	return (
@@ -204,7 +170,7 @@ const WidgetLeads = ({ widgetId }: Props) => {
 				</Link>
 			</div>
 
-			<h1 className={styles.title}>Заявки</h1>
+			<h1 className={styles.title}>Заявки со стоп-оффера</h1>
 
 			<div className={styles.metricsGrid}>
 				<div className={styles.metricCard}>
@@ -246,50 +212,19 @@ const WidgetLeads = ({ widgetId }: Props) => {
 						<AppIcon name="diamond" size={24} />
 					</span>
 					<span className={styles.metricCopy}>
-						<span className={styles.metricLabel}>Уникальных бонусов</span>
+						<span className={styles.metricLabel}>
+							Всего страниц списка
+						</span>
 						{isPending ? (
 							<SkeletonLoader height={28} width={64} />
 						) : (
 							<strong className={styles.metricValue}>
-								{canAccess ? (statsData?.stats.length ?? 0) : '—'}
+								{data?.total ? totalPages : 0}
 							</strong>
 						)}
 					</span>
 				</div>
 			</div>
-
-			{canAccess && statsData && statsData.stats.length > 0 && (
-				<div className={styles.statsBlock}>
-					<p className={styles.statsTitle}>Аналитика бонусов</p>
-					<div className={styles.statsList}>
-						{statsData.stats.map(stat => (
-							<div key={stat.bonus} className={styles.statRow}>
-								<span className={styles.statName}>{stat.bonus}</span>
-								<div className={styles.statBarWrap}>
-									<div
-										className={styles.statBar}
-										style={{ width: `${stat.percent}%` }}
-									/>
-								</div>
-								<span className={styles.statCount}>{stat.count}</span>
-								<span className={styles.statPercent}>{stat.percent}%</span>
-							</div>
-						))}
-					</div>
-					<p className={styles.statsTotal}>
-						Всего заявок: {statsData.total}
-					</p>
-				</div>
-			)}
-
-			{!canAccess && subscription && (
-				<div className={styles.statsLocked}>
-					🔒 Аналитика бонусов доступна на{' '}
-					<Link href="/payment" className={styles.exportHintLink}>
-						тарифах Тест-драйв и Hard
-					</Link>
-				</div>
-			)}
 
 			{isPending ? (
 				<div className={styles.skeletonWrapper}>
@@ -301,7 +236,7 @@ const WidgetLeads = ({ widgetId }: Props) => {
 					</div>
 					<div className={styles.skeletonTable}>
 						<div className={styles.skeletonHead}>
-							{[0.4, 1.5, 1.5, 1.5, 1.2, 1.8].map((flex, i) => (
+							{[0.4, 1.5, 1.5, 1.5, 1.8].map((flex, i) => (
 								<div key={i} style={{ flex, minWidth: 0 }}>
 									<SkeletonLoader height={14} />
 								</div>
@@ -309,7 +244,7 @@ const WidgetLeads = ({ widgetId }: Props) => {
 						</div>
 						{[1, 2, 3, 4, 5].map(i => (
 							<div key={i} className={styles.skeletonRow}>
-								{[0.4, 1.5, 1.5, 1.5, 1.2, 1.8].map((flex, j) => (
+								{[0.4, 1.5, 1.5, 1.5, 1.8].map((flex, j) => (
 									<div key={j} style={{ flex, minWidth: 0 }}>
 										<SkeletonLoader height={14} />
 									</div>
@@ -326,7 +261,7 @@ const WidgetLeads = ({ widgetId }: Props) => {
 						<span className={styles.exportLabel}>Выгрузить:</span>
 						<button
 							className={styles.exportBtn}
-							onClick={handleExportCsv}
+							onClick={() => handleExport('csv')}
 							disabled={!canAccess || exporting !== null}
 							title={
 								!canAccess ? 'Недоступно на тарифе Easy' : 'Скачать CSV'
@@ -338,7 +273,7 @@ const WidgetLeads = ({ widgetId }: Props) => {
 						</button>
 						<button
 							className={styles.exportBtn}
-							onClick={handleExportXlsx}
+							onClick={() => handleExport('xlsx')}
 							disabled={!canAccess || exporting !== null}
 							title={
 								!canAccess ? 'Недоступно на тарифе Easy' : 'Скачать Excel'
@@ -371,9 +306,10 @@ const WidgetLeads = ({ widgetId }: Props) => {
 							</span>
 						)}
 					</div>
-
 					<table className={styles.table}>
-						<caption className="srOnly">Таблица заявок по виджету</caption>
+						<caption className="srOnly">
+							Таблица заявок со стоп-оффера
+						</caption>
 						<thead>
 							<tr>
 								<th className={styles.th} scope="col">
@@ -387,9 +323,6 @@ const WidgetLeads = ({ widgetId }: Props) => {
 								</th>
 								<th className={styles.th} scope="col">
 									Email
-								</th>
-								<th className={styles.th} scope="col">
-									Бонус
 								</th>
 								<th className={styles.th} scope="col">
 									Страница
@@ -406,17 +339,10 @@ const WidgetLeads = ({ widgetId }: Props) => {
 										{formatDate(lead.createdAt)}
 									</td>
 									<td className={styles.td} data-label="Телефон">
-										{lead.phone
-											? formatPhone(lead.phone)
-											: lead.contact
-												? formatPhone(lead.contact)
-												: '—'}
+										{lead.phone ? formatPhone(lead.phone) : '—'}
 									</td>
 									<td className={styles.td} data-label="Email">
 										{lead.email || '—'}
-									</td>
-									<td className={styles.td} data-label="Бонус">
-										{lead.bonus || '—'}
 									</td>
 									<td className={styles.td} data-label="Страница">
 										{lead.url ? (
@@ -438,15 +364,14 @@ const WidgetLeads = ({ widgetId }: Props) => {
 							))}
 						</tbody>
 					</table>
-
 					{data.total > data.limit && (
 						<>
 							<p className={styles.pagination}>
 								Показано {data.leads.length} из {data.total}
 							</p>
 							<Pagination
-								listPage={listPage}
 								currentPage={currentPage}
+								listPage={listPage}
 								prevPage={prevPage}
 								nextPage={nextPage}
 								changeActivePage={changeActivePage}
@@ -459,4 +384,4 @@ const WidgetLeads = ({ widgetId }: Props) => {
 	)
 }
 
-export default WidgetLeads
+export default StopOfferLeads

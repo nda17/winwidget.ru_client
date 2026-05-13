@@ -1,7 +1,12 @@
 import { axiosInterceptorsRequest } from '@/api/interceptors'
 import { Plan, SubscriptionStatus } from '@/services/widget/widget.types'
 
-export type AdminWidgetType = 'WHEEL' | 'QUIZ' | 'CALLBACK' | 'TIMER'
+export type AdminWidgetType =
+	| 'WHEEL'
+	| 'QUIZ'
+	| 'CALLBACK'
+	| 'TIMER'
+	| 'STOP_OFFER'
 export type AdminWidgetActiveFilter = 'true' | 'false'
 export type AdminWidgetPlanFilter = Plan | 'NONE'
 

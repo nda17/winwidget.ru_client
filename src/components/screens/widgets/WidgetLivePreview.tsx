@@ -3,12 +3,13 @@
 import { CallbackConfig } from '@/services/callback/callback.types'
 import { CountdownTimerConfig } from '@/services/countdown-timer/countdown-timer.types'
 import { QuizConfig } from '@/services/quiz/quiz.types'
+import { StopOfferConfig } from '@/services/stop-offer/stop-offer.types'
 import { WidgetConfig } from '@/services/widget/widget.types'
 import type { CSSProperties } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import styles from './WidgetLivePreview.module.scss'
 
-type PreviewType = 'wheel' | 'quiz' | 'callback' | 'timer'
+type PreviewType = 'wheel' | 'quiz' | 'callback' | 'timer' | 'stopOffer'
 
 type WidgetLivePreviewProps =
 	| {
@@ -31,6 +32,11 @@ type WidgetLivePreviewProps =
 			config: CountdownTimerConfig
 			isHardPlan: boolean
 	  }
+	| {
+			type: 'stopOffer'
+			config: StopOfferConfig
+			isHardPlan: boolean
+	  }
 
 const API_URL =
 	process.env.NEXT_PUBLIC_MODE === 'production'
@@ -41,14 +47,16 @@ const SCRIPT_BY_TYPE: Record<PreviewType, string> = {
 	wheel: 'wheel.js',
 	quiz: 'quiz.js',
 	callback: 'callback.js',
-	timer: 'timer.js'
+	timer: 'timer.js',
+	stopOffer: 'stop-offer.js'
 }
 
 const CONFIG_PATH_BY_TYPE: Record<PreviewType, string> = {
 	wheel: 'widget',
 	quiz: 'quiz',
 	callback: 'callback',
-	timer: 'countdown-timer'
+	timer: 'countdown-timer',
+	stopOffer: 'stop-offer'
 }
 
 const DESKTOP_PREVIEW_FRAME = {
@@ -253,6 +261,46 @@ const buildPreviewPublicConfig = (props: WidgetLivePreviewProps) => {
 		}
 	}
 
+	if (props.type === 'stopOffer') {
+		const dataType = getDataType(props.config.dataType, 'PHONE')
+
+		return {
+			isActive: true,
+			color: props.config.color || '#4705fb',
+			bgColor: props.config.bgColor || '',
+			buttonColor: props.config.buttonColor || '',
+			hideBranding: props.isHardPlan,
+			autoOpenDelay: props.config.autoOpenDelay || null,
+			desktopExitIntent: props.config.desktopExitIntent !== false,
+			mobileAutoOpenDelay: props.config.mobileAutoOpenDelay ?? 8,
+			scrollPercent: props.config.scrollPercent ?? 70,
+			showOnce: false,
+			displayCooldownDays: props.config.displayCooldownDays ?? 7,
+			displayResetToken: props.config.displayResetToken || '',
+			hideIfSubmitted: false,
+			badgeText: props.config.badgeText || 'Подождите',
+			title: props.config.title || 'Заберите скидку 10%',
+			subtitle: props.config.subtitle || '',
+			offerText: props.config.offerText || 'Скидка 10%',
+			dataType,
+			contactTitle: props.config.contactTitle || 'Куда отправить скидку?',
+			submitButtonText: props.config.submitButtonText || 'Забрать скидку',
+			successTitle:
+				props.config.successTitle || 'Спасибо! Скидка закреплена',
+			successSubtitle: props.config.successSubtitle || '',
+			actionButtonEnabled: props.config.actionButtonEnabled === true,
+			actionButtonText: props.config.actionButtonText || 'Перейти к акции',
+			actionButtonUrl: props.config.actionButtonUrl || '',
+			privacyUrl: props.config.privacyUrl || null,
+			developInfoActive:
+				props.config.developInfoActive !== false && !props.isHardPlan,
+			filterDuplicates: false,
+			submissionCooldownDays: props.config.submissionCooldownDays ?? 0,
+			submissionResetToken: props.config.submissionResetToken || '',
+			hasSubmittedByIp: false
+		}
+	}
+
 	const dataType = getDataType(props.config.dataType, 'NONE')
 
 	return {
@@ -325,7 +373,9 @@ const buildPreviewSandboxDocument = (
 			var previewTouchLastY = null;
 			var previewStoragePrefixes = [
 				'winwidget_played_',
-				'wintimer_submitted_'
+				'wintimer_submitted_',
+				'winstopoffer_seen_',
+				'winstopoffer_submitted_'
 			];
 			var sandboxStageLayouts = {
 				wheel: {
@@ -343,6 +393,10 @@ const buildPreviewSandboxDocument = (
 				timer: {
 					host: 'timer-widget-host',
 					css: '#timer-widget-overlay{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:clamp(16px,8vw,52px)!important;padding-right:clamp(16px,8vw,52px)!important}#wt-modal{max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
+				},
+				stopOffer: {
+					host: 'stop-offer-widget-host',
+					css: '#wso-overlay{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:clamp(16px,8vw,52px)!important;padding-right:clamp(16px,8vw,52px)!important}#wso-modal{max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
 				}
 			};
 
@@ -490,6 +544,10 @@ const buildPreviewSandboxDocument = (
 			window.wintimerAutoOpen = previewType === 'timer';
 			window.winwidgetTimerAutoOpen = previewType === 'timer';
 			window.wintimer = previewType === 'timer' ? previewKey : undefined;
+			window.winstopofferAutoOpen = previewType === 'stopOffer';
+			window.winwidgetStopOfferAutoOpen = previewType === 'stopOffer';
+			window.winstopoffer =
+				previewType === 'stopOffer' ? previewKey : undefined;
 
 			function schedulePreviewRestart() {
 				if (restartNoticeSent) return;
@@ -592,6 +650,7 @@ const getTypeLabel = (type: PreviewType) => {
 	if (type === 'wheel') return 'Колесо'
 	if (type === 'quiz') return 'Квиз'
 	if (type === 'callback') return 'Звонок'
+	if (type === 'stopOffer') return 'Стоп-оффер'
 
 	return 'Таймер'
 }

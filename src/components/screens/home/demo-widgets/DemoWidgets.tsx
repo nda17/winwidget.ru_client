@@ -5,17 +5,24 @@ import DemoWheel from '@/components/screens/home/demo-wheel/DemoWheel'
 import DemoQuiz from '@/components/screens/home/demo-quiz/DemoQuiz'
 import DemoCallback from '@/components/screens/home/demo-callback/DemoCallback'
 import DemoCountdown from '@/components/screens/home/demo-countdown/DemoCountdown'
+import DemoStopOffer from '@/components/screens/home/demo-stop-offer/DemoStopOffer'
 import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import styles from './DemoWidgets.module.scss'
 
-type ActiveDemo = 'wheel' | 'quiz' | 'callback' | 'countdown'
+type ActiveDemo = 'wheel' | 'quiz' | 'callback' | 'countdown' | 'stopOffer'
 
 const SWITCH_INTERVAL = 7000
 const FADE_DURATION = 520
 const EDGE_OFFSET = 12
 const MOBILE_EDGE_OFFSET = 8
-const DEMO_ORDER: ActiveDemo[] = ['wheel', 'quiz', 'callback', 'countdown']
+const DEMO_ORDER: ActiveDemo[] = [
+	'wheel',
+	'quiz',
+	'callback',
+	'countdown',
+	'stopOffer'
+]
 
 const getNextDemo = (demo: ActiveDemo) => {
 	const currentIndex = DEMO_ORDER.indexOf(demo)
@@ -33,6 +40,7 @@ const DemoWidgets = ({ content }: Props) => {
 	const [quizOpen, setQuizOpen] = useState(false)
 	const [callbackOpen, setCallbackOpen] = useState(false)
 	const [countdownOpen, setCountdownOpen] = useState(false)
+	const [stopOfferOpen, setStopOfferOpen] = useState(false)
 	const [bubbleVisible, setBubbleVisible] = useState(false)
 	const floatRef = useRef<HTMLDivElement>(null)
 	const activeDemoRef = useRef<ActiveDemo>('wheel')
@@ -95,7 +103,8 @@ const DemoWidgets = ({ content }: Props) => {
 		if (activeDemo === 'wheel') setWheelOpen(true)
 		else if (activeDemo === 'quiz') setQuizOpen(true)
 		else if (activeDemo === 'callback') setCallbackOpen(true)
-		else setCountdownOpen(true)
+		else if (activeDemo === 'countdown') setCountdownOpen(true)
+		else setStopOfferOpen(true)
 	}
 
 	const renderButtonContent = (demo: ActiveDemo) => {
@@ -138,13 +147,26 @@ const DemoWidgets = ({ content }: Props) => {
 			)
 		}
 
+		if (demo === 'countdown') {
+			return (
+				<Image
+					src="/images/tools/timer-button.png"
+					alt=""
+					width={60}
+					height={60}
+					className={styles.floatIconTimer}
+					aria-hidden="true"
+				/>
+			)
+		}
+
 		return (
 			<Image
-				src="/images/tools/timer-button.png"
+				src="/images/tools/stop-offer-button.png"
 				alt=""
 				width={60}
 				height={60}
-				className={styles.floatIconTimer}
+				className={styles.floatIconStopOffer}
 				aria-hidden="true"
 			/>
 		)
@@ -185,7 +207,9 @@ const DemoWidgets = ({ content }: Props) => {
 								? 'Открыть демо квиза'
 								: activeDemo === 'callback'
 									? 'Открыть демо обратного звонка'
-									: 'Открыть демо таймера обратного отсчёта'
+									: activeDemo === 'countdown'
+										? 'Открыть демо таймера обратного отсчёта'
+										: 'Открыть демо стоп-оффера'
 					}
 				>
 					{previousDemo && previousDemo !== activeDemo && (
@@ -222,6 +246,10 @@ const DemoWidgets = ({ content }: Props) => {
 			<DemoCountdown
 				open={countdownOpen}
 				onClose={() => setCountdownOpen(false)}
+			/>
+			<DemoStopOffer
+				open={stopOfferOpen}
+				onClose={() => setStopOfferOpen(false)}
 			/>
 		</>
 	)

@@ -6,6 +6,7 @@ import { Subscription as WidgetSubscription } from '@/services/widget/widget.typ
 import widgetService from '@/services/widget/widget.service'
 import Pagination from '@/components/ui/pagination/Pagination'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
+import AppIcon from '@/components/ui/icons/AppIcon'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
@@ -182,6 +183,60 @@ const CallbackLeads = ({ callbackId }: Props) => {
 
 			<h1 className={styles.title}>Заявки на обратный звонок</h1>
 
+			<div className={styles.metricsGrid}>
+				<div className={styles.metricCard}>
+					<span className={styles.metricIcon}>
+						<AppIcon name="payment" size={24} />
+					</span>
+					<span className={styles.metricCopy}>
+						<span className={styles.metricLabel}>
+							Всего заявок за всё время
+						</span>
+						{isPending ? (
+							<SkeletonLoader height={28} width={64} />
+						) : (
+							<strong className={styles.metricValue}>
+								{data?.total ?? 0}
+							</strong>
+						)}
+					</span>
+				</div>
+				<div className={styles.metricCard}>
+					<span className={styles.metricIcon}>
+						<AppIcon name="dashboard" size={24} />
+					</span>
+					<span className={styles.metricCopy}>
+						<span className={styles.metricLabel}>
+							Показано на этой странице
+						</span>
+						{isPending ? (
+							<SkeletonLoader height={28} width={64} />
+						) : (
+							<strong className={styles.metricValue}>
+								{data?.leads.length ?? 0}
+							</strong>
+						)}
+					</span>
+				</div>
+				<div className={styles.metricCard}>
+					<span className={styles.metricIcon}>
+						<AppIcon name="diamond" size={24} />
+					</span>
+					<span className={styles.metricCopy}>
+						<span className={styles.metricLabel}>
+							Всего страниц списка
+						</span>
+						{isPending ? (
+							<SkeletonLoader height={28} width={64} />
+						) : (
+							<strong className={styles.metricValue}>
+								{data?.total ? totalPages : 0}
+							</strong>
+						)}
+					</span>
+				</div>
+			</div>
+
 			{isPending ? (
 				<div className={styles.skeletonWrapper}>
 					<div className={styles.skeletonExportBar}>
@@ -223,6 +278,7 @@ const CallbackLeads = ({ callbackId }: Props) => {
 								!canAccess ? 'Недоступно на тарифе Easy' : 'Скачать CSV'
 							}
 						>
+							<AppIcon name="payment" size={17} />
 							{exporting === 'csv' ? '…' : 'CSV'}
 							{!canAccess && <span className={styles.lockIcon}>🔒</span>}
 						</button>
@@ -234,6 +290,7 @@ const CallbackLeads = ({ callbackId }: Props) => {
 								!canAccess ? 'Недоступно на тарифе Easy' : 'Скачать Excel'
 							}
 						>
+							<AppIcon name="dashboard" size={17} />
 							{exporting === 'xlsx' ? '…' : 'Excel'}
 							{!canAccess && <span className={styles.lockIcon}>🔒</span>}
 						</button>
@@ -242,9 +299,12 @@ const CallbackLeads = ({ callbackId }: Props) => {
 							onClick={handleExportPdf}
 							disabled={!canAccess || exporting !== null}
 							title={
-								!canAccess ? 'Недоступно на тарифе Easy' : 'Открыть PDF'
+								!canAccess
+									? 'Недоступно на тарифе Easy'
+									: 'Открыть PDF для печати'
 							}
 						>
+							<AppIcon name="apps" size={17} />
 							{exporting === 'pdf' ? '…' : 'PDF'}
 							{!canAccess && <span className={styles.lockIcon}>🔒</span>}
 						</button>

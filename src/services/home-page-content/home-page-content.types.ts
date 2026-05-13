@@ -78,6 +78,7 @@ export interface HomePageDemoWidgetsContent {
 		quiz: string
 		callback: string
 		countdown: string
+		stopOffer: string
 	}
 }
 

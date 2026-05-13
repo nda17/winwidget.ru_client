@@ -62,6 +62,7 @@ export type AdminUserOverviewWidgetType =
 	| 'QUIZ'
 	| 'CALLBACK'
 	| 'COUNTDOWN_TIMER'
+	| 'STOP_OFFER'
 
 export type AdminUserOverviewActivityRole = 'TARGET' | 'ADMIN'
 
