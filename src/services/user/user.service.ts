@@ -32,6 +32,7 @@ export interface IProfileTelegramNotificationsStatus {
 	disabledAt: string | null
 	telegramBotTokenConfigured: boolean
 	telegramBotUsernameConfigured: boolean
+	pendingRequest: IProfileTelegramBindingResponse | null
 }
 
 export interface IUserListResponse {

@@ -63,6 +63,10 @@ const CabinetProfile = () => {
 	const [telegramBindingUrl, setTelegramBindingUrl] = useState('')
 	const [telegramNotificationsUrl, setTelegramNotificationsUrl] =
 		useState('')
+	const [
+		telegramNotificationsRequestId,
+		setTelegramNotificationsRequestId
+	] = useState('')
 	const telegramBindingPollRef = useRef<ReturnType<
 		typeof setInterval
 	> | null>(null)
@@ -79,12 +83,29 @@ const CabinetProfile = () => {
 	const hasTelegramNotifications = Boolean(
 		telegramNotifications?.connected
 	)
+	const pendingTelegramNotificationsRequest =
+		telegramNotifications?.pendingRequest ?? null
 	const isTelegramNotificationsConfigured = telegramNotifications
 		? Boolean(
 				telegramNotifications.telegramBotTokenConfigured &&
 				telegramNotifications.telegramBotUsernameConfigured
 			)
 		: true
+
+	useEffect(() => {
+		if (hasTelegramNotifications) {
+			setTelegramNotificationsUrl('')
+			setTelegramNotificationsRequestId('')
+			return
+		}
+
+		if (!pendingTelegramNotificationsRequest) return
+
+		setTelegramNotificationsUrl(pendingTelegramNotificationsRequest.botUrl)
+		setTelegramNotificationsRequestId(
+			pendingTelegramNotificationsRequest.requestId
+		)
+	}, [hasTelegramNotifications, pendingTelegramNotificationsRequest])
 
 	const handleDeleteAvatar = async () => {
 		const currentAvatar = user?.avatarPath
@@ -135,6 +156,17 @@ const CabinetProfile = () => {
 		resetEmailBinding,
 		resetPhoneBinding
 	} = useProfileIdentityBinding()
+	const isTelegramNotificationsWaiting = Boolean(
+		!hasTelegramNotifications &&
+		(telegramNotificationsBindingRequested ||
+			pendingTelegramNotificationsRequest ||
+			telegramNotificationsRequestId)
+	)
+	const telegramNotificationsCommand = telegramNotificationsRequestId
+		? `/start ${telegramNotificationsRequestId}`
+		: pendingTelegramNotificationsRequest?.requestId
+			? `/start ${pendingTelegramNotificationsRequest.requestId}`
+			: ''
 
 	// ── Main profile form ──────────────────────────────────────────
 	const {
@@ -326,6 +358,7 @@ const CabinetProfile = () => {
 						telegramNotificationsToastRef.current || undefined
 					telegramNotificationsToastRef.current = null
 					setTelegramNotificationsUrl('')
+					setTelegramNotificationsRequestId('')
 					await queryClient.invalidateQueries({
 						queryKey: ['profile-telegram-notifications']
 					})
@@ -419,7 +452,11 @@ const CabinetProfile = () => {
 		}
 
 		setTelegramNotificationsUrl(data.botUrl)
+		setTelegramNotificationsRequestId(data.requestId)
 		startTelegramNotificationsPolling()
+		await queryClient.invalidateQueries({
+			queryKey: ['profile-telegram-notifications']
+		})
 
 		if (telegramWindow) {
 			telegramWindow.location.href = data.botUrl
@@ -445,7 +482,22 @@ const CabinetProfile = () => {
 		if (!cancelled) return
 
 		setTelegramNotificationsUrl('')
+		setTelegramNotificationsRequestId('')
+		await queryClient.invalidateQueries({
+			queryKey: ['profile-telegram-notifications']
+		})
 		toast.success('Ожидание подключения уведомлений отменено')
+	}
+
+	const copyTelegramNotificationsCommand = async () => {
+		if (!telegramNotificationsCommand) return
+
+		try {
+			await navigator.clipboard.writeText(telegramNotificationsCommand)
+			toast.success('Команда для бота скопирована')
+		} catch {
+			toast.error('Не удалось скопировать команду')
+		}
 	}
 
 	const phoneRegistration = regPhone('phone', {
@@ -864,13 +916,13 @@ const CabinetProfile = () => {
 						</p>
 					)}
 
-					{telegramNotificationsBindingRequested &&
-						!hasTelegramNotifications && (
-							<p className={styles.hint}>
-								Откройте @winwidget_info_bot и нажмите Start. После этого
-								статус обновится автоматически.
-							</p>
-						)}
+					{isTelegramNotificationsWaiting && !hasTelegramNotifications && (
+						<p className={styles.hint}>
+							Откройте @winwidget_info_bot и нажмите Start. Если Telegram
+							не подставил команду автоматически, отправьте боту:{' '}
+							{telegramNotificationsCommand}
+						</p>
+					)}
 
 					<div className={styles.btnRow}>
 						{hasTelegramNotifications ? (
@@ -890,7 +942,7 @@ const CabinetProfile = () => {
 							>
 								{isStartingTelegramNotifications
 									? 'Открываем...'
-									: telegramNotificationsBindingRequested
+									: isTelegramNotificationsWaiting
 										? 'Открыть @winwidget_info_bot ещё раз'
 										: 'Подключить уведомления'}
 							</button>
@@ -914,6 +966,15 @@ const CabinetProfile = () => {
 							>
 								Открыть ссылку вручную
 							</button>
+							{telegramNotificationsCommand && (
+								<button
+									type="button"
+									className={styles.resetLink}
+									onClick={copyTelegramNotificationsCommand}
+								>
+									Скопировать команду
+								</button>
+							)}
 							<button
 								type="button"
 								className={styles.resetLink}
