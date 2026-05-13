@@ -203,7 +203,7 @@ export const DEFAULT_HOME_PAGE_FOOTER_CONTENT: HomePageContent['footer'] =
 		infoLines: ['ООО «ЮБС»', 'ИНН: 2700019628', 'ОГРН: 1232700016460'],
 		email: 'info@winwidget.ru',
 		vkUrl: 'https://vk.ru',
-		telegramUrl: 'https://t.me/ybs_one',
+		telegramUrl: 'https://t.me/winwidget_support_bot',
 		vkAriaLabel: 'Winwidget во ВКонтакте',
 		telegramAriaLabel: 'Winwidget в Telegram'
 	}
@@ -315,10 +315,18 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 		subtitle:
 			'Вы платите за рекламу, SEO и контент, но клиенты молча закрывают вкладку. Мы поможем их «зацепить», когда они:',
 		cards: [
-			{ text: 'Собираются уйти' },
-			{ text: 'Долго листают страницу' },
-			{ text: 'Сравнивают с конкурентами' },
-			{ text: 'Хотят быстрой связи' }
+			{
+				text: 'Собираются уйти'
+			},
+			{
+				text: 'Долго листают страницу'
+			},
+			{
+				text: 'Сравнивают с конкурентами'
+			},
+			{
+				text: 'Хотят быстрой связи'
+			}
 		]
 	},
 	integrations: {
@@ -414,22 +422,72 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 				previewType: 'timer'
 			},
 			{
-				title: 'Чат с оператором',
+				title: 'Онлайн-консультант ',
 				description:
-					'Консультируйте клиента\nавтономно с помощью нейросети',
+					'Не полноценный чат, а кнопки: “Узнать цену”, “Подобрать”, “Сроки”, “Доставка”.\nВ разы дешевле чем AI-чат, но не менее полезно.',
 				comingSoon: true,
 				previewType: 'none'
 			},
 			{
-				title: 'Ловец призов',
-				description: 'Дайте возможность клиенту\nиспытать удачу',
+				title: 'Стоп-оффер',
+				description:
+					'Появляется, когда пользователь собирается уйти: “Подождите, заберите скидку 10%”.\nХорошо возвращает часть потерянного трафика.\n',
 				comingSoon: true,
 				previewType: 'none'
 			},
 			{
-				title: 'Супер-кликер',
+				title: 'Социальное доказательство',
 				description:
-					'Дайте возможность клиенту\nнакликать себе скидку\nза определенное время',
+					'Маленькие уведомления: “Анна из Казани оставила заявку”, “3 человека сейчас смотрят этот товар”.\nПовышает доверие и ощущение активности.\n',
+				comingSoon: true,
+				previewType: 'none'
+			},
+			{
+				title: 'Отзывы',
+				description:
+					'Компактный блок с отзывами, рейтингом, фото/именем, ссылкой на источник.\nОчень ценно для лендингов и услуг.',
+				comingSoon: true,
+				previewType: 'none'
+			},
+			{
+				title: 'Брошенная корзина',
+				description:
+					'Для магазинов: “Оставьте телефон, мы сохраним корзину и пришлём скидку”.\nОстановите клиента при попытке покинуть ваш сайт.\n',
+				comingSoon: true,
+				previewType: 'none'
+			},
+			{
+				title: 'Запись на услугу',
+				description:
+					'Мини-форма выбора даты/времени: салоны, клиники, консультации, сервисы.\nЭто более ценно, чем просто “оставьте заявку”.\n',
+				comingSoon: true,
+				previewType: 'none'
+			},
+			{
+				title: 'Калькулятор стоимости',
+				description:
+					'“Рассчитать цену” с несколькими параметрами и сбором контакта перед результатом или после.\nОтлично для услуг, ремонта, доставки, мебели, производства.\n',
+				comingSoon: true,
+				previewType: 'none'
+			},
+			{
+				title: 'NPS-опрос',
+				description:
+					'Для текущих клиентов: “Оцените сервис от 1 до 10”.\nПолезно бизнесу не только для продаж, но и для качества.',
+				comingSoon: true,
+				previewType: 'none'
+			},
+			{
+				title: 'Реферальный виджет',
+				description:
+					'“Поделитесь ссылкой и получите бонус”.\nЦенный виджет для проектов с повторными продажами и бизнеса с товарами широкого потребления.',
+				comingSoon: true,
+				previewType: 'none'
+			},
+			{
+				title: 'Сравнение тарифов',
+				description:
+					'Покажите клиенту наглядно чем отличаются ваши продукты.\n',
 				comingSoon: true,
 				previewType: 'none'
 			}
@@ -443,8 +501,12 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 			{
 				text: 'Настройте дизайн и логику виджета'
 			},
-			{ text: 'Скопируйте одну строчку кода' },
-			{ text: 'Вставьте в код своего сайта' }
+			{
+				text: 'Скопируйте одну строчку кода'
+			},
+			{
+				text: 'Вставьте в код своего сайта'
+			}
 		]
 	},
 	customization: {
@@ -471,9 +533,15 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 			}
 		],
 		features: [
-			{ text: 'Свой бренд' },
-			{ text: 'Гибкие настройки' },
-			{ text: 'Единый стиль сайта' }
+			{
+				text: 'Свой бренд'
+			},
+			{
+				text: 'Гибкие настройки'
+			},
+			{
+				text: 'Единый стиль сайта'
+			}
 		],
 		bottomText: 'Виджет выглядит так, как нужно именно вашему бизнесу'
 	},
@@ -485,10 +553,18 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 		cardTitle:
 			'Оплатили подписку — получили полный набор инструментов для роста конверсии',
 		items: [
-			{ text: 'Виджеты' },
-			{ text: 'Интеграции' },
-			{ text: 'Заявки' },
-			{ text: 'Аналитика' }
+			{
+				text: 'Виджеты'
+			},
+			{
+				text: 'Интеграции'
+			},
+			{
+				text: 'Заявки'
+			},
+			{
+				text: 'Аналитика'
+			}
 		]
 	},
 	pricing: {
@@ -510,8 +586,14 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 					'Тестовый период - 7 дней',
 					'Демонстрация работы всего функционала, доступного на платных тарифах'
 				],
-				monthly: { price: 'Бесплатно', priceNote: '' },
-				yearly: { price: 'Бесплатно', priceNote: '' },
+				monthly: {
+					price: 'Бесплатно',
+					priceNote: ''
+				},
+				yearly: {
+					price: 'Бесплатно',
+					priceNote: ''
+				},
 				star: false,
 				popular: false
 			},
@@ -527,7 +609,10 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 					'Установка виджетов на сайт, открытие по прямой ссылке, QR-коду',
 					'Интеграции с amoCRM, Bitrix24, Яндекс Метрика, VK Ретаргетинг, Roistat, по Webhook'
 				],
-				monthly: { price: '990 ₽', priceNote: 'в месяц' },
+				monthly: {
+					price: '990 ₽',
+					priceNote: 'в месяц'
+				},
 				yearly: {
 					price: '390 ₽',
 					priceNote: 'в месяц',
@@ -548,10 +633,14 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 					'Email уведомления / Telegram',
 					'Аналитика бонусов',
 					'Своя картинка кнопки открытия виджета',
+					'Отключена рекламная ссылка на winwidget.ru в установленном виджете',
 					'Интеграции с amoCRM, Bitrix24, Яндекс Метрика, VK Ретаргетинг, Roistat, по Webhook',
 					'Выгрузка заявок в Exсel, PDF, CSV'
 				],
-				monthly: { price: '1 690 ₽', priceNote: 'в месяц' },
+				monthly: {
+					price: '1 690 ₽',
+					priceNote: 'в месяц'
+				},
 				yearly: {
 					price: '790 ₽',
 					priceNote: 'в месяц',
@@ -596,7 +685,7 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 				question:
 					'Есть ли какая-либо защита от мошенничества со стороны моих клиентов при взаимодействии с бонусными виджетами?',
 				answerHtml:
-					'Да, во все наши виджеты внедрены различные механизмы антифрод-системы от мошенничества со стороны пользователей.'
+					'Да, во все наши виджеты внедрены различные механизмы антифрод-системы от мошенничества со стороны пользователей b2b/b2c.'
 			},
 			{
 				question:
@@ -607,7 +696,7 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 			{
 				question: 'Могу ли я оплатить с расчётного счёта ИП или ООО?',
 				answerHtml:
-					'Да, мы выставляем счета для юридических лиц и ИП. Напишите нам на <a href="mailto:info@winwidget.ru">info@winwidget.ru</a> или в <a href="https://t.me/ybs_one" target="_blank" rel="noopener noreferrer">Telegram</a> для выставления счёта.'
+					'Да, мы выставляем счета для юридических лиц и ИП. Напишите нам на <a href="mailto:info@winwidget.ru">info@winwidget.ru</a> или в <a href="https://t.me/winwidget_support_bot" target="_blank" rel="noopener noreferrer">Telegram</a> для выставления счёта.'
 			},
 			{
 				question:
@@ -628,7 +717,7 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 			{
 				question: 'Как подключить уведомления в Telegram?',
 				answerHtml:
-					'Откройте нашего Telegram-бота <a href="https://t.me/winwidget_info_bot" target="_blank" rel="noopener noreferrer">@winwidget_info_bot</a> и нажмите «Старт» — бот пришлёт вам ваш Chat ID. Вставьте этот ID в поле «Telegram Chat ID» во вкладке «Интеграции». После этого каждая новая заявка будет моментально приходить в Telegram.'
+					'Откройте Telegram-бота <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer">@userinfobot</a> и нажмите «Старт» — бот пришлёт вам информацию о вашем профиле. Скопируйте и вставьте ID профиля в поле «Telegram Chat ID» во вкладке «Интеграции». \nДалее перейдите в чат с нашим инфо-ботом <a href="https://t.me/winwidgetBot" target="_blank" rel="noopener noreferrer">@winwidget_info_bot</a> и нажмите «Старт».\nПосле этого Инфо-бот будет моментально пересылать вам каждую новую заявку в личные сообщения либо группу Telegram. Чтобы бот пересылал заявки в вашу группу, он должен быть участником этой группы.'
 			},
 			{
 				question: 'Как интегрировать виджет с Битрикс24?',
@@ -662,9 +751,15 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 		text: 'Попробуйте сейчас\nи начните получать больше заявок уже через 10 минут',
 		buttonText: 'Начать бесплатный период',
 		benefits: [
-			{ text: 'Без привязки\nбанковской карты' },
-			{ text: '7 дней полного\nдоступа' },
-			{ text: 'Работа в интересах\nбизнеса' }
+			{
+				text: 'Без привязки\nбанковской карты'
+			},
+			{
+				text: '7 дней полного\nдоступа'
+			},
+			{
+				text: 'Работа в интересах\nбизнеса'
+			}
 		]
 	},
 	footer: DEFAULT_HOME_PAGE_FOOTER_CONTENT,
