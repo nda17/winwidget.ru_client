@@ -9,7 +9,7 @@ import {
 
 export interface IProfileEditInput {
 	name?: string
-	avatarPath?: string
+	avatarPath?: string | null
 	password?: string
 }
 

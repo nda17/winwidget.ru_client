@@ -5,6 +5,7 @@ import AdminSectionHeading from '@/components/ui/admin/admin-section-heading/Adm
 import Heading from '@/components/ui/heading/Heading'
 import Pagination from '@/components/ui/pagination/Pagination'
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
+import { ADMIN_PAGES } from '@/config/pages/admin.config'
 import adminAlertsService, {
 	AdminAlertSeverity,
 	AdminAlertType,
@@ -24,7 +25,17 @@ const TYPE_LABELS: Record<AdminAlertType, string> = {
 	EXPIRED_ACTIVE_SUBSCRIPTION: 'Истёкшая ACTIVE-подписка',
 	SUBSCRIPTION_EXPIRES_SOON: 'Подписка скоро истекает',
 	PENDING_PAYMENT: 'Pending-платёж',
-	USER_WITHOUT_CONTACT: 'Пользователь без контакта'
+	USER_WITHOUT_CONTACT: 'Пользователь без контакта',
+	ACTIVE_SUBSCRIBER_WITHOUT_CONTACT: 'Активная подписка без контакта',
+	SUCCEEDED_PAYMENT_WITHOUT_ACCESS: 'Оплата без доступа',
+	MULTIPLE_PENDING_PAYMENTS: 'Несколько pending-платежей',
+	ACTIVE_WIDGET_WITHOUT_ACCESS: 'Виджет без доступа',
+	ACTIVE_WIDGET_WITHOUT_DOMAIN: 'Виджет без домена',
+	WIDGET_DOMAIN_CONFLICT: 'Конфликт домена',
+	WIDGET_INVALID_DOMAIN: 'Некорректный домен',
+	INTEGRATION_PROBLEM: 'Проблема интеграции',
+	AFFILIATE_REWARD_STALE: 'Партнёрская выплата ждёт',
+	AFFILIATE_REWARD_PAYMENT_CANCELLED: 'Кэшбек по отменённому платежу'
 }
 
 const SEVERITY_LABELS: Record<AdminAlertSeverity, string> = {
@@ -102,6 +113,63 @@ const formatUserContact = (item: IAdminAlert) =>
 const getUserHref = (item: IAdminAlert) =>
 	item.targetUser ? `/admin/user/edit/${item.targetUser.id}` : ''
 
+const getAlertActions = (item: IAdminAlert) => {
+	const actions: Array<{ href: string; label: string }> = []
+
+	if (item.targetUser) {
+		actions.push({
+			href: getUserHref(item),
+			label: 'Пользователь'
+		})
+	}
+
+	if (
+		[
+			'PENDING_PAYMENT',
+			'SUCCEEDED_PAYMENT_WITHOUT_ACCESS',
+			'MULTIPLE_PENDING_PAYMENTS'
+		].includes(item.type)
+	) {
+		actions.push({ href: ADMIN_PAGES.PAYMENTS, label: 'Платежи' })
+	}
+
+	if (
+		[
+			'SUBSCRIPTION_EXPIRES_SOON',
+			'EXPIRED_ACTIVE_SUBSCRIPTION',
+			'ACTIVE_SUBSCRIBER_WITHOUT_CONTACT'
+		].includes(item.type)
+	) {
+		actions.push({ href: ADMIN_PAGES.SUBSCRIPTIONS, label: 'Подписки' })
+	}
+
+	if (
+		[
+			'ACTIVE_WIDGET_WITHOUT_ACCESS',
+			'ACTIVE_WIDGET_WITHOUT_DOMAIN',
+			'WIDGET_DOMAIN_CONFLICT',
+			'WIDGET_INVALID_DOMAIN'
+		].includes(item.type)
+	) {
+		actions.push({ href: ADMIN_PAGES.WIDGETS, label: 'Виджеты' })
+	}
+
+	if (item.type === 'INTEGRATION_PROBLEM') {
+		actions.push({ href: ADMIN_PAGES.SYSTEM, label: 'Система' })
+	}
+
+	if (
+		[
+			'AFFILIATE_REWARD_STALE',
+			'AFFILIATE_REWARD_PAYMENT_CANCELLED'
+		].includes(item.type)
+	) {
+		actions.push({ href: ADMIN_PAGES.AFFILIATE, label: 'Партнёрка' })
+	}
+
+	return actions
+}
+
 const AdminAlerts: NextPage = () => {
 	const auth = useAuthStore(state => state.auth)
 	const [currentPage, setCurrentPage] = useState(1)
@@ -168,6 +236,26 @@ const AdminAlerts: NextPage = () => {
 		)
 	}
 
+	const renderActions = (item: IAdminAlert) => {
+		const actions = getAlertActions(item)
+
+		if (!actions.length) return '—'
+
+		return (
+			<div className={styles.actionsCell}>
+				{actions.map(action => (
+					<Link
+						key={`${item.type}-${item.referenceId}-${action.href}`}
+						href={action.href}
+						className={styles.actionLink}
+					>
+						{action.label}
+					</Link>
+				))}
+			</div>
+		)
+	}
+
 	return (
 		<section className={styles.wrapper}>
 			<Heading text="Панель администратора" />
@@ -176,7 +264,7 @@ const AdminAlerts: NextPage = () => {
 			<AdminSectionHeading
 				text="Предупреждения"
 				title="Центр предупреждений"
-				description="Собирает операционные ситуации, которые требуют внимания: истёкшие ACTIVE-подписки, скорое окончание подписок, долгие pending-платежи и пользователей без email/телефона."
+				description="Собирает операционные ситуации, которые требуют внимания: подписки, платежи, домены виджетов, интеграции, партнёрские начисления и пользователей без email/телефона."
 				risk="medium"
 				riskText="Раздел показывает проблемы, но не исправляет их автоматически. Перед ручным действием открой пользователя или платёж и проверь контекст."
 			/>
@@ -323,6 +411,12 @@ const AdminAlerts: NextPage = () => {
 												{formatDateTime(item.alertAt)}
 											</span>
 										</div>
+										<div className={styles.cardRow}>
+											<span className={styles.cardLabel}>Действия</span>
+											<span className={styles.cardValue}>
+												{renderActions(item)}
+											</span>
+										</div>
 									</div>
 								))}
 							</div>
@@ -339,6 +433,7 @@ const AdminAlerts: NextPage = () => {
 											<th scope="col">Пользователь</th>
 											<th scope="col">Сообщение</th>
 											<th scope="col">Дата</th>
+											<th scope="col">Действия</th>
 										</tr>
 									</thead>
 									<tbody>
@@ -367,6 +462,7 @@ const AdminAlerts: NextPage = () => {
 													</div>
 												</td>
 												<td>{formatDateTime(item.alertAt)}</td>
+												<td>{renderActions(item)}</td>
 											</tr>
 										))}
 									</tbody>

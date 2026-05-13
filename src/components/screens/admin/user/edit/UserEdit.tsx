@@ -378,7 +378,8 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 		onSubmit,
 		isSaving,
 		isActivationUpdating,
-		toggleActivation
+		toggleActivation,
+		deleteAvatar
 	} = useUserEdit(params)
 
 	const loginMethodLabels: Record<UserLoginMethod, string> = {
@@ -434,6 +435,7 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 	)
 	const handleUserSubmit = (values: IUserEditInput) =>
 		onSubmit(canManageDevRole ? values : { ...values, isDev: undefined })
+	const handleDeleteAvatar = () => deleteAvatar(data?.avatarPath)
 
 	return (
 		<section className={styles.wrapper}>
@@ -798,6 +800,8 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 											}
 											folder="user-avatar"
 											placeholder="Фото профиля"
+											canDelete
+											onDelete={handleDeleteAvatar}
 											showFilePath
 										/>
 									)}

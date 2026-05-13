@@ -123,12 +123,21 @@
 }
 
 .userCell,
-.messageCell {
+.messageCell,
+.actionsCell {
 	@apply flex flex-col gap-1 min-w-[12rem];
 }
 
 .userLink {
 	@apply text-primary transition-opacity hover:opacity-80;
+}
+
+.actionsCell {
+	@apply min-w-[8rem] items-start;
+}
+
+.actionLink {
+	@apply text-xs font-semibold text-primary transition-opacity hover:opacity-80;
 }
 
 .muted {

@@ -1,5 +1,6 @@
 import { IUserEditInput } from '@/components/screens/admin/user/edit/user-edit.interface'
 import { ADMIN_PAGES } from '@/config/pages/admin.config'
+import fileService from '@/services/file/file.service'
 import UserService from '@/services/user/user.service'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import {
@@ -12,6 +13,27 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { SubmitHandler } from 'react-hook-form'
 import toast from 'react-hot-toast'
+
+const DEFAULT_AVATAR = '/avatar-default.png'
+
+const isManagedAvatarFile = (avatarPath?: string | null) => {
+	return Boolean(
+		avatarPath &&
+		avatarPath !== DEFAULT_AVATAR &&
+		(avatarPath.startsWith('/uploads/') ||
+			avatarPath.includes('/user-avatar/'))
+	)
+}
+
+const deleteAvatarFileSilently = async (avatarPath?: string | null) => {
+	if (!isManagedAvatarFile(avatarPath)) return
+
+	try {
+		await fileService.delete(avatarPath)
+	} catch {
+		// Файл мог быть уже удалён или недоступен, профиль уже обновлён.
+	}
+}
 
 export const useUserEdit = (params: { id: string }) => {
 	const auth = useAuthStore(state => state.auth)
@@ -108,6 +130,23 @@ export const useUserEdit = (params: { id: string }) => {
 		}
 	})
 
+	const { isPending: isAvatarDeleting, mutateAsync: deleteAvatarAsync } =
+		useMutation({
+			mutationKey: ['delete-user-avatar', userId],
+			mutationFn: async (avatarPath?: string | null) => {
+				await UserService.updateUser(userId, {
+					avatarPath: null
+				} as IUserEditInput)
+				await queryClient.invalidateQueries({
+					queryKey: ['get-user-by-id', userId]
+				})
+				await queryClient.invalidateQueries({
+					queryKey: ['get-user-list']
+				})
+				await deleteAvatarFileSilently(avatarPath)
+			}
+		})
+
 	const onSubmit: SubmitHandler<IUserEditInput> = async data => {
 		await mutateAsync(data)
 	}
@@ -120,6 +159,8 @@ export const useUserEdit = (params: { id: string }) => {
 		isOverviewLoading,
 		isSaving: isPending,
 		isActivationUpdating,
-		toggleActivation: toggleActivationAsync
+		toggleActivation: toggleActivationAsync,
+		isAvatarDeleting,
+		deleteAvatar: deleteAvatarAsync
 	}
 }
