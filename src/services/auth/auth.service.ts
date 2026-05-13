@@ -33,10 +33,12 @@ interface IEmailCodePayload {
 interface ITelegramAuthVerifyPayload {
 	requestId: string
 	code: string
+	referrerId?: string
 }
 
 interface ITelegramAuthCompletePayload {
 	requestId: string
+	referrerId?: string
 }
 
 interface ITelegramAuthCancelPayload {
@@ -275,7 +277,8 @@ class AuthService {
 			'/auth/telegram/verify',
 			{
 				requestId: data.requestId,
-				code: data.code
+				code: data.code,
+				referrerId: data.referrerId
 			},
 			{
 				headers: {
@@ -296,7 +299,8 @@ class AuthService {
 			await axiosClassicRequest.post<ITelegramAuthCompleteResponse>(
 				'/auth/telegram/complete',
 				{
-					requestId: data.requestId
+					requestId: data.requestId,
+					referrerId: data.referrerId
 				}
 			)
 

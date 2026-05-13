@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import toast from 'react-hot-toast'
 
+const AFFILIATE_REFERRER_STORAGE_KEY = 'affiliateReferrerId'
+
 const SocialAuthPage: NextPage = () => {
 	const router = useRouter()
 	const setAuth = useAuthStore(state => state.setAuth)
@@ -17,6 +19,7 @@ const SocialAuthPage: NextPage = () => {
 		authService
 			.getNewTokens()
 			.then(() => {
+				window.localStorage.removeItem(AFFILIATE_REFERRER_STORAGE_KEY)
 				setAuth(true)
 				setAuthResolved(true)
 			})

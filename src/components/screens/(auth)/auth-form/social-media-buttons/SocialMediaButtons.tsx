@@ -5,6 +5,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 
+const AFFILIATE_REFERRER_STORAGE_KEY = 'affiliateReferrerId'
+
 interface SocialMediaButtonsProps {
 	onTelegramAuthStart: () => void
 	isTelegramAuthLoading?: boolean
@@ -25,8 +27,18 @@ const SocialMediaButtons = ({
 	const telegramAuthEnabled = siteSettings?.telegramAuthEnabled ?? true
 
 	const handleSocialAuth = (path: string) => {
+		const referrerId =
+			typeof window !== 'undefined'
+				? window.localStorage
+						.getItem(AFFILIATE_REFERRER_STORAGE_KEY)
+						?.trim()
+				: ''
+		const targetPath = referrerId
+			? `${path}?${new URLSearchParams({ ref: referrerId })}`
+			: path
+
 		toast.loading('Загрузка...', { id: 'social-auth' })
-		router.push(path)
+		router.push(targetPath)
 	}
 
 	return (

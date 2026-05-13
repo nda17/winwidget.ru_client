@@ -424,6 +424,7 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 			setTelegramRequest(null)
 			setAuth(true)
 			setAuthResolved(true)
+			clearAffiliateReferrerId()
 			toast.success('Успешный вход через Telegram', { id: toastId })
 			reset()
 			router.replace(
@@ -448,7 +449,8 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 		telegramAuthPollRef.current = setInterval(async () => {
 			try {
 				const { data } = await authService.completeTelegramAuth({
-					requestId
+					requestId,
+					referrerId: getAffiliateReferrerId()
 				})
 
 				if (data.confirmed) {
