@@ -297,6 +297,12 @@ class UserService {
 			`${this._BASE_URL}/profile/telegram-notifications/cancel`
 		)
 	}
+
+	async disconnectProfileTelegramNotifications() {
+		return axiosInterceptorsRequest.delete(
+			`${this._BASE_URL}/profile/telegram-notifications`
+		)
+	}
 }
 
 const userService = new UserService()

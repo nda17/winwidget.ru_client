@@ -172,6 +172,30 @@ export const useProfileIdentityBinding = () => {
 		}
 	})
 
+	const {
+		mutateAsync: disconnectTelegramNotificationsAsync,
+		isPending: isDisconnectingTelegramNotifications
+	} = useMutation({
+		mutationKey: ['profile-disconnect-telegram-notifications'],
+		mutationFn: () => userService.disconnectProfileTelegramNotifications(),
+		onMutate: () => toast.loading('Отключаем Telegram-уведомления...'),
+		onSuccess(_, __, toastId) {
+			setTelegramNotificationsBindingRequested(false)
+			toast.success('Telegram-уведомления отключены', { id: toastId })
+			queryClient.invalidateQueries({
+				queryKey: ['profile-telegram-notifications']
+			})
+		},
+		onError(error, _, toastId) {
+			toast.error(
+				`Отключение Telegram-уведомлений: ${errorCatch(error)}`,
+				{
+					id: toastId
+				}
+			)
+		}
+	})
+
 	const requestEmailCode = async (email: string) => {
 		try {
 			await sendEmailCodeAsync(email)
@@ -257,6 +281,15 @@ export const useProfileIdentityBinding = () => {
 		}
 	}
 
+	const disconnectTelegramNotifications = async () => {
+		try {
+			await disconnectTelegramNotificationsAsync()
+			return true
+		} catch {
+			return false
+		}
+	}
+
 	return {
 		emailCodeRequested,
 		phoneCodeRequested,
@@ -271,6 +304,7 @@ export const useProfileIdentityBinding = () => {
 		isCancellingTelegramBinding,
 		isStartingTelegramNotifications,
 		isCancellingTelegramNotifications,
+		isDisconnectingTelegramNotifications,
 		requestEmailCode,
 		confirmEmailCode,
 		requestPhoneCode,
@@ -280,6 +314,7 @@ export const useProfileIdentityBinding = () => {
 		unlinkTelegramBinding,
 		cancelTelegramBinding,
 		cancelTelegramNotificationsBinding,
+		disconnectTelegramNotifications,
 		resetEmailBinding() {
 			setEmailCodeRequested(false)
 		},

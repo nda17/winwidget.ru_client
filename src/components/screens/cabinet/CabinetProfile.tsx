@@ -144,6 +144,7 @@ const CabinetProfile = () => {
 		isCancellingTelegramBinding,
 		isStartingTelegramNotifications,
 		isCancellingTelegramNotifications,
+		isDisconnectingTelegramNotifications,
 		requestEmailCode,
 		confirmEmailCode,
 		requestPhoneCode,
@@ -153,6 +154,7 @@ const CabinetProfile = () => {
 		unlinkTelegramBinding,
 		cancelTelegramBinding,
 		cancelTelegramNotificationsBinding,
+		disconnectTelegramNotifications,
 		resetEmailBinding,
 		resetPhoneBinding
 	} = useProfileIdentityBinding()
@@ -487,6 +489,19 @@ const CabinetProfile = () => {
 			queryKey: ['profile-telegram-notifications']
 		})
 		toast.success('Ожидание подключения уведомлений отменено')
+	}
+
+	const handleTelegramNotificationsDisconnect = async () => {
+		clearTelegramNotificationsPolling(true)
+		const disconnected = await disconnectTelegramNotifications()
+
+		if (!disconnected) return
+
+		setTelegramNotificationsUrl('')
+		setTelegramNotificationsRequestId('')
+		await queryClient.invalidateQueries({
+			queryKey: ['profile-telegram-notifications']
+		})
 	}
 
 	const copyTelegramNotificationsCommand = async () => {
@@ -926,9 +941,25 @@ const CabinetProfile = () => {
 
 					<div className={styles.btnRow}>
 						{hasTelegramNotifications ? (
-							<button type="button" className={styles.btnOutline} disabled>
-								Подключены
-							</button>
+							<>
+								<button
+									type="button"
+									className={styles.btnOutline}
+									disabled
+								>
+									Подключены
+								</button>
+								<button
+									type="button"
+									className={styles.btnOutline}
+									disabled={isDisconnectingTelegramNotifications}
+									onClick={handleTelegramNotificationsDisconnect}
+								>
+									{isDisconnectingTelegramNotifications
+										? 'Отвязываем...'
+										: 'Отвязать'}
+								</button>
+							</>
 						) : (
 							<button
 								type="button"
