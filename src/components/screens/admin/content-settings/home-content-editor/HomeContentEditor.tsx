@@ -120,10 +120,10 @@ const EDITOR_META: Record<
 		title: 'SEO',
 		helpTitle: 'SEO-настройки',
 		helpDescription:
-			'Управляет SEO главной страницы, страницы оплаты, robots.txt и sitemap.xml.',
+			'Управляет SEO главной страницы, SEO-текстом на главной, страницей оплаты, robots.txt и sitemap.xml.',
 		riskText:
 			'Ошибки в SEO могут ухудшить сниппеты, индексацию или открыть служебные разделы поисковикам.',
-		hint: 'После сохранения обновятся SEO главной, страницы оплаты, robots.txt и sitemap.xml.',
+		hint: 'После сохранения обновятся SEO главной, SEO-текст, страница оплаты, robots.txt и sitemap.xml.',
 		saveLabel: 'Сохранить SEO',
 		loadingText: 'Загрузка SEO-настроек...',
 		successText: 'SEO-настройки сохранены',
@@ -630,7 +630,6 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 			tariffComparison: defaultHomeContent.tariffComparison,
 			pricing: defaultHomeContent.pricing,
 			microCta: defaultHomeContent.microCta,
-			seoText: defaultHomeContent.seoText,
 			faq: defaultHomeContent.faq,
 			cta: defaultHomeContent.cta
 		}
@@ -657,6 +656,7 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 			nextContent.seo = defaultContent.seo
 			nextContent.payment = defaultContent.payment
 			nextContent.technicalSeo = defaultContent.technicalSeo
+			nextContent.seoText = defaultContent.seoText
 		}
 
 		if (isDemoArea) {
@@ -972,6 +972,53 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 								}))
 							}
 							hint="Каждый keyword с новой строки."
+						/>
+					</section>
+
+					<section className={styles.panel}>
+						<div className={styles.panelHeader}>
+							<SectionTitle
+								title="SEO-текст на главной"
+								description="Небольшой текстовый блок внизу главной для объяснения продукта посетителям и поисковым системам."
+								risk="medium"
+								riskText="Не превращайте блок в длинную SEO-простыню. Текст должен оставаться полезным для человека."
+							>
+								SEO-текст
+							</SectionTitle>
+							<ToggleField
+								label="Показывать"
+								checked={draft.seoText.enabled}
+								onChange={checked =>
+									updateDraft(prev => ({
+										...prev,
+										seoText: { ...prev.seoText, enabled: checked }
+									}))
+								}
+							/>
+						</div>
+						<TextField
+							id="seo-text-title"
+							label="Заголовок"
+							value={draft.seoText.title}
+							onChange={value =>
+								updateDraft(prev => ({
+									...prev,
+									seoText: { ...prev.seoText, title: value }
+								}))
+							}
+						/>
+						<TextAreaField
+							id="seo-text-text"
+							label="Текст"
+							value={draft.seoText.text}
+							onChange={value =>
+								updateDraft(prev => ({
+									...prev,
+									seoText: { ...prev.seoText, text: value }
+								}))
+							}
+							rows={6}
+							hint="Переносы строк сохраняются."
 						/>
 					</section>
 
@@ -1538,53 +1585,6 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 								}
 							/>
 						</div>
-					</section>
-
-					<section className={styles.panel}>
-						<div className={styles.panelHeader}>
-							<SectionTitle
-								title="SEO-текст на главной"
-								description="Небольшой текстовый блок внизу главной для объяснения продукта посетителям и поисковым системам."
-								risk="medium"
-								riskText="Не превращайте блок в длинную SEO-простыню. Текст должен оставаться полезным для человека."
-							>
-								SEO-текст
-							</SectionTitle>
-							<ToggleField
-								label="Показывать"
-								checked={draft.seoText.enabled}
-								onChange={checked =>
-									updateDraft(prev => ({
-										...prev,
-										seoText: { ...prev.seoText, enabled: checked }
-									}))
-								}
-							/>
-						</div>
-						<TextField
-							id="seo-text-title"
-							label="Заголовок"
-							value={draft.seoText.title}
-							onChange={value =>
-								updateDraft(prev => ({
-									...prev,
-									seoText: { ...prev.seoText, title: value }
-								}))
-							}
-						/>
-						<TextAreaField
-							id="seo-text-text"
-							label="Текст"
-							value={draft.seoText.text}
-							onChange={value =>
-								updateDraft(prev => ({
-									...prev,
-									seoText: { ...prev.seoText, text: value }
-								}))
-							}
-							rows={6}
-							hint="Переносы строк сохраняются."
-						/>
 					</section>
 
 					<section className={styles.panel}>
