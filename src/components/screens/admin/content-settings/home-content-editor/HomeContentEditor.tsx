@@ -5,6 +5,7 @@ import { revalidateHomePageContent } from '@/services/home-page-content/home-pag
 import { normalizeHomePageContent } from '@/services/home-page-content/home-page-content.defaults'
 import homePageContentService from '@/services/home-page-content/home-page-content.service'
 import type {
+	HomePageCaseStudy,
 	HomePageContent,
 	HomePageFeatureCard,
 	HomePageIntegrationIconKey,
@@ -12,6 +13,7 @@ import type {
 	HomePagePricingPlan,
 	HomePageSitemapChangeFrequency,
 	HomePageSitemapItem,
+	HomePageTariffComparisonRow,
 	HomePageTextCard,
 	HomePageToolItem,
 	HomePageToolPreviewType
@@ -323,6 +325,30 @@ const cleanFeatureCards = (
 		}))
 		.filter(item => item.title || item.text)
 
+const cleanCaseStudies = (
+	items: HomePageCaseStudy[]
+): HomePageCaseStudy[] =>
+	items
+		.map(item => ({
+			...item,
+			title: item.title.trim(),
+			text: item.text.trim(),
+			result: item.result.trim()
+		}))
+		.filter(item => item.title || item.text || item.result)
+
+const cleanComparisonRows = (
+	items: HomePageTariffComparisonRow[]
+): HomePageTariffComparisonRow[] =>
+	items
+		.map(item => ({
+			...item,
+			feature: item.feature.trim(),
+			easy: item.easy.trim(),
+			hard: item.hard.trim()
+		}))
+		.filter(item => item.feature || item.easy || item.hard)
+
 const prepareContentForSave = (
 	content: HomePageContent
 ): HomePageContent => ({
@@ -339,10 +365,44 @@ const prepareContentForSave = (
 		...content.subscriptionBundle,
 		items: cleanTextCards(content.subscriptionBundle.items)
 	},
+	audiences: {
+		...content.audiences,
+		items: cleanFeatureCards(content.audiences.items)
+	},
+	caseStudies: {
+		...content.caseStudies,
+		items: cleanCaseStudies(content.caseStudies.items)
+	},
+	leadFlow: {
+		...content.leadFlow,
+		items: cleanFeatureCards(content.leadFlow.items)
+	},
+	whyWidgets: {
+		...content.whyWidgets,
+		formItems: cleanTextCards(content.whyWidgets.formItems),
+		widgetItems: cleanTextCards(content.whyWidgets.widgetItems)
+	},
 	customization: {
 		...content.customization,
 		cards: cleanFeatureCards(content.customization.cards),
 		features: cleanTextCards(content.customization.features)
+	},
+	dashboardPreview: {
+		...content.dashboardPreview,
+		cards: cleanFeatureCards(content.dashboardPreview.cards),
+		metrics: cleanFeatureCards(content.dashboardPreview.metrics)
+	},
+	directLink: {
+		...content.directLink,
+		items: cleanFeatureCards(content.directLink.items)
+	},
+	security: {
+		...content.security,
+		items: cleanFeatureCards(content.security.items)
+	},
+	tariffComparison: {
+		...content.tariffComparison,
+		rows: cleanComparisonRows(content.tariffComparison.rows)
 	},
 	pricing: {
 		...content.pricing,
@@ -557,10 +617,20 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 			analysis: defaultHomeContent.analysis,
 			integrations: defaultHomeContent.integrations,
 			tools: defaultHomeContent.tools,
+			audiences: defaultHomeContent.audiences,
+			caseStudies: defaultHomeContent.caseStudies,
+			leadFlow: defaultHomeContent.leadFlow,
+			whyWidgets: defaultHomeContent.whyWidgets,
 			steps: defaultHomeContent.steps,
 			customization: defaultHomeContent.customization,
+			dashboardPreview: defaultHomeContent.dashboardPreview,
+			directLink: defaultHomeContent.directLink,
+			security: defaultHomeContent.security,
 			subscriptionBundle: defaultHomeContent.subscriptionBundle,
+			tariffComparison: defaultHomeContent.tariffComparison,
 			pricing: defaultHomeContent.pricing,
+			microCta: defaultHomeContent.microCta,
+			seoText: defaultHomeContent.seoText,
 			faq: defaultHomeContent.faq,
 			cta: defaultHomeContent.cta
 		}
@@ -641,6 +711,36 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 			tools: { ...prev.tools, items }
 		}))
 
+	const updateAudienceItems = (items: HomePageFeatureCard[]) =>
+		updateDraft(prev => ({
+			...prev,
+			audiences: { ...prev.audiences, items }
+		}))
+
+	const updateCaseStudyItems = (items: HomePageCaseStudy[]) =>
+		updateDraft(prev => ({
+			...prev,
+			caseStudies: { ...prev.caseStudies, items }
+		}))
+
+	const updateLeadFlowItems = (items: HomePageFeatureCard[]) =>
+		updateDraft(prev => ({
+			...prev,
+			leadFlow: { ...prev.leadFlow, items }
+		}))
+
+	const updateWhyWidgetsFormItems = (formItems: HomePageTextCard[]) =>
+		updateDraft(prev => ({
+			...prev,
+			whyWidgets: { ...prev.whyWidgets, formItems }
+		}))
+
+	const updateWhyWidgetsWidgetItems = (widgetItems: HomePageTextCard[]) =>
+		updateDraft(prev => ({
+			...prev,
+			whyWidgets: { ...prev.whyWidgets, widgetItems }
+		}))
+
 	const updateCustomizationCards = (cards: HomePageFeatureCard[]) =>
 		updateDraft(prev => ({
 			...prev,
@@ -651,6 +751,38 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 		updateDraft(prev => ({
 			...prev,
 			customization: { ...prev.customization, features }
+		}))
+
+	const updateDashboardCards = (cards: HomePageFeatureCard[]) =>
+		updateDraft(prev => ({
+			...prev,
+			dashboardPreview: { ...prev.dashboardPreview, cards }
+		}))
+
+	const updateDashboardMetrics = (metrics: HomePageFeatureCard[]) =>
+		updateDraft(prev => ({
+			...prev,
+			dashboardPreview: { ...prev.dashboardPreview, metrics }
+		}))
+
+	const updateDirectLinkItems = (items: HomePageFeatureCard[]) =>
+		updateDraft(prev => ({
+			...prev,
+			directLink: { ...prev.directLink, items }
+		}))
+
+	const updateSecurityItems = (items: HomePageFeatureCard[]) =>
+		updateDraft(prev => ({
+			...prev,
+			security: { ...prev.security, items }
+		}))
+
+	const updateTariffComparisonRows = (
+		rows: HomePageTariffComparisonRow[]
+	) =>
+		updateDraft(prev => ({
+			...prev,
+			tariffComparison: { ...prev.tariffComparison, rows }
 		}))
 
 	const updatePricingPlans = (plans: HomePagePricingPlan[]) =>
@@ -1411,8 +1543,55 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 					<section className={styles.panel}>
 						<div className={styles.panelHeader}>
 							<SectionTitle
+								title="SEO-текст на главной"
+								description="Небольшой текстовый блок внизу главной для объяснения продукта посетителям и поисковым системам."
+								risk="medium"
+								riskText="Не превращайте блок в длинную SEO-простыню. Текст должен оставаться полезным для человека."
+							>
+								SEO-текст
+							</SectionTitle>
+							<ToggleField
+								label="Показывать"
+								checked={draft.seoText.enabled}
+								onChange={checked =>
+									updateDraft(prev => ({
+										...prev,
+										seoText: { ...prev.seoText, enabled: checked }
+									}))
+								}
+							/>
+						</div>
+						<TextField
+							id="seo-text-title"
+							label="Заголовок"
+							value={draft.seoText.title}
+							onChange={value =>
+								updateDraft(prev => ({
+									...prev,
+									seoText: { ...prev.seoText, title: value }
+								}))
+							}
+						/>
+						<TextAreaField
+							id="seo-text-text"
+							label="Текст"
+							value={draft.seoText.text}
+							onChange={value =>
+								updateDraft(prev => ({
+									...prev,
+									seoText: { ...prev.seoText, text: value }
+								}))
+							}
+							rows={6}
+							hint="Переносы строк сохраняются."
+						/>
+					</section>
+
+					<section className={styles.panel}>
+						<div className={styles.panelHeader}>
+							<SectionTitle
 								title="Блок с проблемой"
-								description="Секция про уходящих посетителей и карточки сценариев, когда виджеты помогают удержать клиента."
+								description="Секция про уходящих посетителей и карточки кейсов, когда виджеты помогают удержать клиента."
 								risk="medium"
 								riskText="Если убрать боль клиента или сделать карточки слишком общими, блок станет менее убедительным. Количество карточек лучше держать умеренным."
 							>
@@ -1462,7 +1641,7 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 								>
 									<div className={styles.itemHeader}>
 										<span className={styles.itemTitle}>
-											Сценарий {index + 1}
+											Кейс {index + 1}
 										</span>
 										<ListActions
 											onMoveUp={() =>
@@ -1515,7 +1694,7 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 								])
 							}
 						>
-							Добавить сценарий
+							Добавить кейс
 						</button>
 					</section>
 
@@ -1832,6 +2011,517 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 							}
 						>
 							Добавить инструмент
+						</button>
+					</section>
+
+					<section className={styles.panel}>
+						<div className={styles.panelHeader}>
+							<SectionTitle
+								title="Для каких бизнесов"
+								description="Блок социального доказательства: показывает посетителю, что сервис подходит разным нишам и задачам."
+								risk="medium"
+								riskText="Не указывайте ниши, которым продукт фактически не подходит. Длинные описания могут перегрузить карточки."
+							>
+								Для каких бизнесов
+							</SectionTitle>
+							<ToggleField
+								label="Показывать"
+								checked={draft.audiences.enabled}
+								onChange={checked =>
+									updateDraft(prev => ({
+										...prev,
+										audiences: {
+											...prev.audiences,
+											enabled: checked
+										}
+									}))
+								}
+							/>
+						</div>
+						<div className={styles.gridTwo}>
+							<TextField
+								id="audiences-title"
+								label="Заголовок"
+								value={draft.audiences.title}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										audiences: { ...prev.audiences, title: value }
+									}))
+								}
+							/>
+							<TextAreaField
+								id="audiences-subtitle"
+								label="Подзаголовок"
+								value={draft.audiences.subtitle}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										audiences: {
+											...prev.audiences,
+											subtitle: value
+										}
+									}))
+								}
+							/>
+						</div>
+						<div className={styles.list}>
+							{draft.audiences.items.map((item, index) => (
+								<div key={`audience-${index}`} className={styles.itemCard}>
+									<div className={styles.itemHeader}>
+										<span className={styles.itemTitle}>
+											Ниша {index + 1}
+										</span>
+										<ListActions
+											onMoveUp={() =>
+												updateAudienceItems(
+													moveItem(draft.audiences.items, index, -1)
+												)
+											}
+											onMoveDown={() =>
+												updateAudienceItems(
+													moveItem(draft.audiences.items, index, 1)
+												)
+											}
+											onRemove={() =>
+												updateAudienceItems(
+													removeItem(draft.audiences.items, index)
+												)
+											}
+											disableUp={index === 0}
+											disableDown={
+												index === draft.audiences.items.length - 1
+											}
+										/>
+									</div>
+									<div className={styles.gridTwo}>
+										<TextField
+											id={`audience-title-${index}`}
+											label="Название"
+											value={item.title}
+											onChange={value =>
+												updateAudienceItems(
+													updateItem(draft.audiences.items, index, {
+														title: value
+													})
+												)
+											}
+										/>
+										<TextAreaField
+											id={`audience-text-${index}`}
+											label="Описание"
+											value={item.text}
+											onChange={value =>
+												updateAudienceItems(
+													updateItem(draft.audiences.items, index, {
+														text: value
+													})
+												)
+											}
+										/>
+									</div>
+								</div>
+							))}
+						</div>
+						<button
+							type="button"
+							className={styles.addBtn}
+							onClick={() =>
+								updateAudienceItems([
+									...draft.audiences.items,
+									{
+										title: 'Новая ниша',
+										text: 'Описание кейса для этой ниши'
+									}
+								])
+							}
+						>
+							Добавить нишу
+						</button>
+					</section>
+
+					<section className={styles.panel}>
+						<div className={styles.panelHeader}>
+							<SectionTitle
+								title="Кейсы"
+								description="Мини-примеры использования виджетов: задача, кейс и ожидаемый результат для бизнеса."
+								risk="medium"
+								riskText="Если кейсы не подтверждены реальными цифрами, формулируйте их как кейсы, а не как гарантированный результат."
+							>
+								Кейсы
+							</SectionTitle>
+							<ToggleField
+								label="Показывать"
+								checked={draft.caseStudies.enabled}
+								onChange={checked =>
+									updateDraft(prev => ({
+										...prev,
+										caseStudies: {
+											...prev.caseStudies,
+											enabled: checked
+										}
+									}))
+								}
+							/>
+						</div>
+						<div className={styles.gridTwo}>
+							<TextField
+								id="case-studies-title"
+								label="Заголовок"
+								value={draft.caseStudies.title}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										caseStudies: {
+											...prev.caseStudies,
+											title: value
+										}
+									}))
+								}
+							/>
+							<TextAreaField
+								id="case-studies-subtitle"
+								label="Подзаголовок"
+								value={draft.caseStudies.subtitle}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										caseStudies: {
+											...prev.caseStudies,
+											subtitle: value
+										}
+									}))
+								}
+							/>
+						</div>
+						<div className={styles.list}>
+							{draft.caseStudies.items.map((item, index) => (
+								<div key={`case-${index}`} className={styles.itemCard}>
+									<div className={styles.itemHeader}>
+										<span className={styles.itemTitle}>
+											Кейс {index + 1}
+										</span>
+										<ListActions
+											onMoveUp={() =>
+												updateCaseStudyItems(
+													moveItem(draft.caseStudies.items, index, -1)
+												)
+											}
+											onMoveDown={() =>
+												updateCaseStudyItems(
+													moveItem(draft.caseStudies.items, index, 1)
+												)
+											}
+											onRemove={() =>
+												updateCaseStudyItems(
+													removeItem(draft.caseStudies.items, index)
+												)
+											}
+											disableUp={index === 0}
+											disableDown={
+												index === draft.caseStudies.items.length - 1
+											}
+										/>
+									</div>
+									<TextField
+										id={`case-title-${index}`}
+										label="Название"
+										value={item.title}
+										onChange={value =>
+											updateCaseStudyItems(
+												updateItem(draft.caseStudies.items, index, {
+													title: value
+												})
+											)
+										}
+									/>
+									<div className={styles.gridTwo}>
+										<TextAreaField
+											id={`case-text-${index}`}
+											label="Кейс"
+											value={item.text}
+											onChange={value =>
+												updateCaseStudyItems(
+													updateItem(draft.caseStudies.items, index, {
+														text: value
+													})
+												)
+											}
+										/>
+										<TextAreaField
+											id={`case-result-${index}`}
+											label="Результат"
+											value={item.result}
+											onChange={value =>
+												updateCaseStudyItems(
+													updateItem(draft.caseStudies.items, index, {
+														result: value
+													})
+												)
+											}
+										/>
+									</div>
+								</div>
+							))}
+						</div>
+						<button
+							type="button"
+							className={styles.addBtn}
+							onClick={() =>
+								updateCaseStudyItems([
+									...draft.caseStudies.items,
+									{
+										title: 'Новый кейс',
+										text: 'Описание кейса',
+										result: 'Ожидаемый результат'
+									}
+								])
+							}
+						>
+							Добавить кейс
+						</button>
+					</section>
+
+					<section className={styles.panel}>
+						<div className={styles.panelHeader}>
+							<SectionTitle
+								title="Почему не обычная форма"
+								description="Сравнительный блок, объясняющий разницу между пассивной формой и интерактивным виджетом."
+								risk="medium"
+								riskText="Не делайте формулировки агрессивными против форм: часть клиентов всё равно использует формы вместе с виджетами."
+							>
+								Почему не обычная форма
+							</SectionTitle>
+							<ToggleField
+								label="Показывать"
+								checked={draft.whyWidgets.enabled}
+								onChange={checked =>
+									updateDraft(prev => ({
+										...prev,
+										whyWidgets: {
+											...prev.whyWidgets,
+											enabled: checked
+										}
+									}))
+								}
+							/>
+						</div>
+						<div className={styles.gridTwo}>
+							<TextField
+								id="why-widgets-title"
+								label="Заголовок"
+								value={draft.whyWidgets.title}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										whyWidgets: {
+											...prev.whyWidgets,
+											title: value
+										}
+									}))
+								}
+							/>
+							<TextAreaField
+								id="why-widgets-subtitle"
+								label="Подзаголовок"
+								value={draft.whyWidgets.subtitle}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										whyWidgets: {
+											...prev.whyWidgets,
+											subtitle: value
+										}
+									}))
+								}
+							/>
+						</div>
+						<div className={styles.gridTwo}>
+							<TextField
+								id="why-form-title"
+								label="Заголовок левой колонки"
+								value={draft.whyWidgets.formTitle}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										whyWidgets: {
+											...prev.whyWidgets,
+											formTitle: value
+										}
+									}))
+								}
+							/>
+							<TextField
+								id="why-widget-title"
+								label="Заголовок правой колонки"
+								value={draft.whyWidgets.widgetTitle}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										whyWidgets: {
+											...prev.whyWidgets,
+											widgetTitle: value
+										}
+									}))
+								}
+							/>
+						</div>
+						<div className={styles.gridTwo}>
+							<TextAreaField
+								id="why-form-items"
+								label="Пункты обычной формы"
+								value={draft.whyWidgets.formItems
+									.map(item => item.text)
+									.join('\n')}
+								onChange={value =>
+									updateWhyWidgetsFormItems(
+										textToFeatures(value).map(text => ({ text }))
+									)
+								}
+								hint="Каждый пункт с новой строки."
+							/>
+							<TextAreaField
+								id="why-widget-items"
+								label="Пункты умного виджета"
+								value={draft.whyWidgets.widgetItems
+									.map(item => item.text)
+									.join('\n')}
+								onChange={value =>
+									updateWhyWidgetsWidgetItems(
+										textToFeatures(value).map(text => ({ text }))
+									)
+								}
+								hint="Каждый пункт с новой строки."
+							/>
+						</div>
+					</section>
+
+					<section className={styles.panel}>
+						<div className={styles.panelHeader}>
+							<SectionTitle
+								title="Путь заявки"
+								description="Объясняет, что происходит после того, как посетитель оставил контакт в виджете."
+								risk="medium"
+								riskText="Не обещайте каналы обработки заявок, которые не включены в продукт или тарифы."
+							>
+								Путь заявки
+							</SectionTitle>
+							<ToggleField
+								label="Показывать"
+								checked={draft.leadFlow.enabled}
+								onChange={checked =>
+									updateDraft(prev => ({
+										...prev,
+										leadFlow: {
+											...prev.leadFlow,
+											enabled: checked
+										}
+									}))
+								}
+							/>
+						</div>
+						<div className={styles.gridTwo}>
+							<TextField
+								id="lead-flow-title"
+								label="Заголовок"
+								value={draft.leadFlow.title}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										leadFlow: { ...prev.leadFlow, title: value }
+									}))
+								}
+							/>
+							<TextAreaField
+								id="lead-flow-subtitle"
+								label="Подзаголовок"
+								value={draft.leadFlow.subtitle}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										leadFlow: {
+											...prev.leadFlow,
+											subtitle: value
+										}
+									}))
+								}
+							/>
+						</div>
+						<div className={styles.list}>
+							{draft.leadFlow.items.map((item, index) => (
+								<div
+									key={`lead-flow-${index}`}
+									className={styles.itemCard}
+								>
+									<div className={styles.itemHeader}>
+										<span className={styles.itemTitle}>
+											Шаг заявки {index + 1}
+										</span>
+										<ListActions
+											onMoveUp={() =>
+												updateLeadFlowItems(
+													moveItem(draft.leadFlow.items, index, -1)
+												)
+											}
+											onMoveDown={() =>
+												updateLeadFlowItems(
+													moveItem(draft.leadFlow.items, index, 1)
+												)
+											}
+											onRemove={() =>
+												updateLeadFlowItems(
+													removeItem(draft.leadFlow.items, index)
+												)
+											}
+											disableUp={index === 0}
+											disableDown={
+												index === draft.leadFlow.items.length - 1
+											}
+										/>
+									</div>
+									<div className={styles.gridTwo}>
+										<TextField
+											id={`lead-flow-title-${index}`}
+											label="Название"
+											value={item.title}
+											onChange={value =>
+												updateLeadFlowItems(
+													updateItem(draft.leadFlow.items, index, {
+														title: value
+													})
+												)
+											}
+										/>
+										<TextAreaField
+											id={`lead-flow-text-${index}`}
+											label="Описание"
+											value={item.text}
+											onChange={value =>
+												updateLeadFlowItems(
+													updateItem(draft.leadFlow.items, index, {
+														text: value
+													})
+												)
+											}
+										/>
+									</div>
+								</div>
+							))}
+						</div>
+						<button
+							type="button"
+							className={styles.addBtn}
+							onClick={() =>
+								updateLeadFlowItems([
+									...draft.leadFlow.items,
+									{
+										title: 'Новый шаг',
+										text: 'Описание шага'
+									}
+								])
+							}
+						>
+							Добавить шаг заявки
 						</button>
 					</section>
 
@@ -2155,6 +2845,561 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 					<section className={styles.panel}>
 						<div className={styles.panelHeader}>
 							<SectionTitle
+								title="Промежуточные CTA"
+								description="Короткие призывы к действию после ключевых блоков главной: после интеграций и после шагов установки."
+								risk="medium"
+								riskText="Слишком частые или агрессивные CTA могут раздражать посетителя. Тексты должны быть короткими."
+							>
+								Промежуточные CTA
+							</SectionTitle>
+							<ToggleField
+								label="Показывать"
+								checked={draft.microCta.enabled}
+								onChange={checked =>
+									updateDraft(prev => ({
+										...prev,
+										microCta: { ...prev.microCta, enabled: checked }
+									}))
+								}
+							/>
+						</div>
+						<div className={styles.gridTwo}>
+							<TextAreaField
+								id="micro-cta-integrations-text"
+								label="Текст после интеграций"
+								value={draft.microCta.afterIntegrationsText}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										microCta: {
+											...prev.microCta,
+											afterIntegrationsText: value
+										}
+									}))
+								}
+							/>
+							<TextField
+								id="micro-cta-integrations-button"
+								label="Кнопка после интеграций"
+								value={draft.microCta.afterIntegrationsButtonText}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										microCta: {
+											...prev.microCta,
+											afterIntegrationsButtonText: value
+										}
+									}))
+								}
+							/>
+						</div>
+						<div className={styles.gridTwo}>
+							<TextAreaField
+								id="micro-cta-steps-text"
+								label="Текст после шагов"
+								value={draft.microCta.afterStepsText}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										microCta: {
+											...prev.microCta,
+											afterStepsText: value
+										}
+									}))
+								}
+							/>
+							<TextField
+								id="micro-cta-steps-button"
+								label="Кнопка после шагов"
+								value={draft.microCta.afterStepsButtonText}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										microCta: {
+											...prev.microCta,
+											afterStepsButtonText: value
+										}
+									}))
+								}
+							/>
+						</div>
+					</section>
+
+					<section className={styles.panel}>
+						<div className={styles.panelHeader}>
+							<SectionTitle
+								title="Личный кабинет"
+								description="Блок показывает, что после регистрации пользователь управляет заявками, настройками, интеграциями и аналитикой."
+								risk="medium"
+								riskText="Не указывайте возможности кабинета, которых нет в продукте или которые доступны только на другом тарифе без пояснения."
+							>
+								Личный кабинет
+							</SectionTitle>
+							<ToggleField
+								label="Показывать"
+								checked={draft.dashboardPreview.enabled}
+								onChange={checked =>
+									updateDraft(prev => ({
+										...prev,
+										dashboardPreview: {
+											...prev.dashboardPreview,
+											enabled: checked
+										}
+									}))
+								}
+							/>
+						</div>
+						<div className={styles.gridTwo}>
+							<TextField
+								id="dashboard-title"
+								label="Заголовок"
+								value={draft.dashboardPreview.title}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										dashboardPreview: {
+											...prev.dashboardPreview,
+											title: value
+										}
+									}))
+								}
+							/>
+							<TextAreaField
+								id="dashboard-subtitle"
+								label="Подзаголовок"
+								value={draft.dashboardPreview.subtitle}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										dashboardPreview: {
+											...prev.dashboardPreview,
+											subtitle: value
+										}
+									}))
+								}
+							/>
+						</div>
+						<div className={styles.list}>
+							{draft.dashboardPreview.cards.map((card, index) => (
+								<div
+									key={`dashboard-card-${index}`}
+									className={styles.itemCard}
+								>
+									<div className={styles.itemHeader}>
+										<span className={styles.itemTitle}>
+											Карточка кабинета {index + 1}
+										</span>
+										<ListActions
+											onMoveUp={() =>
+												updateDashboardCards(
+													moveItem(draft.dashboardPreview.cards, index, -1)
+												)
+											}
+											onMoveDown={() =>
+												updateDashboardCards(
+													moveItem(draft.dashboardPreview.cards, index, 1)
+												)
+											}
+											onRemove={() =>
+												updateDashboardCards(
+													removeItem(draft.dashboardPreview.cards, index)
+												)
+											}
+											disableUp={index === 0}
+											disableDown={
+												index === draft.dashboardPreview.cards.length - 1
+											}
+										/>
+									</div>
+									<div className={styles.gridTwo}>
+										<TextField
+											id={`dashboard-card-title-${index}`}
+											label="Название"
+											value={card.title}
+											onChange={value =>
+												updateDashboardCards(
+													updateItem(draft.dashboardPreview.cards, index, {
+														title: value
+													})
+												)
+											}
+										/>
+										<TextAreaField
+											id={`dashboard-card-text-${index}`}
+											label="Описание"
+											value={card.text}
+											onChange={value =>
+												updateDashboardCards(
+													updateItem(draft.dashboardPreview.cards, index, {
+														text: value
+													})
+												)
+											}
+										/>
+									</div>
+								</div>
+							))}
+						</div>
+						<button
+							type="button"
+							className={styles.addBtn}
+							onClick={() =>
+								updateDashboardCards([
+									...draft.dashboardPreview.cards,
+									{
+										title: 'Новая карточка',
+										text: 'Описание карточки'
+									}
+								])
+							}
+						>
+							Добавить карточку кабинета
+						</button>
+						<div className={styles.list}>
+							{draft.dashboardPreview.metrics.map((metric, index) => (
+								<div
+									key={`dashboard-metric-${index}`}
+									className={styles.itemCard}
+								>
+									<div className={styles.itemHeader}>
+										<span className={styles.itemTitle}>
+											Метрика {index + 1}
+										</span>
+										<ListActions
+											onMoveUp={() =>
+												updateDashboardMetrics(
+													moveItem(
+														draft.dashboardPreview.metrics,
+														index,
+														-1
+													)
+												)
+											}
+											onMoveDown={() =>
+												updateDashboardMetrics(
+													moveItem(
+														draft.dashboardPreview.metrics,
+														index,
+														1
+													)
+												)
+											}
+											onRemove={() =>
+												updateDashboardMetrics(
+													removeItem(draft.dashboardPreview.metrics, index)
+												)
+											}
+											disableUp={index === 0}
+											disableDown={
+												index === draft.dashboardPreview.metrics.length - 1
+											}
+										/>
+									</div>
+									<div className={styles.gridTwo}>
+										<TextField
+											id={`dashboard-metric-title-${index}`}
+											label="Значение"
+											value={metric.title}
+											onChange={value =>
+												updateDashboardMetrics(
+													updateItem(
+														draft.dashboardPreview.metrics,
+														index,
+														{ title: value }
+													)
+												)
+											}
+										/>
+										<TextAreaField
+											id={`dashboard-metric-text-${index}`}
+											label="Подпись"
+											value={metric.text}
+											onChange={value =>
+												updateDashboardMetrics(
+													updateItem(
+														draft.dashboardPreview.metrics,
+														index,
+														{ text: value }
+													)
+												)
+											}
+										/>
+									</div>
+								</div>
+							))}
+						</div>
+						<button
+							type="button"
+							className={styles.addBtn}
+							onClick={() =>
+								updateDashboardMetrics([
+									...draft.dashboardPreview.metrics,
+									{ title: '1', text: 'Новая метрика' }
+								])
+							}
+						>
+							Добавить метрику
+						</button>
+					</section>
+
+					<section className={styles.panel}>
+						<div className={styles.panelHeader}>
+							<SectionTitle
+								title="Без сайта и QR"
+								description="Блок рассказывает про прямые ссылки, QR-коды и кейсы использования виджета без установки на сайт."
+								risk="low"
+								riskText="Проверьте, чтобы текст не обещал офлайн-функции сверх прямых ссылок и QR-сценариев."
+							>
+								Без сайта и QR
+							</SectionTitle>
+							<ToggleField
+								label="Показывать"
+								checked={draft.directLink.enabled}
+								onChange={checked =>
+									updateDraft(prev => ({
+										...prev,
+										directLink: {
+											...prev.directLink,
+											enabled: checked
+										}
+									}))
+								}
+							/>
+						</div>
+						<div className={styles.gridTwo}>
+							<TextField
+								id="direct-link-title"
+								label="Заголовок"
+								value={draft.directLink.title}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										directLink: { ...prev.directLink, title: value }
+									}))
+								}
+							/>
+							<TextAreaField
+								id="direct-link-subtitle"
+								label="Подзаголовок"
+								value={draft.directLink.subtitle}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										directLink: {
+											...prev.directLink,
+											subtitle: value
+										}
+									}))
+								}
+							/>
+						</div>
+						<div className={styles.list}>
+							{draft.directLink.items.map((item, index) => (
+								<div
+									key={`direct-link-${index}`}
+									className={styles.itemCard}
+								>
+									<div className={styles.itemHeader}>
+										<span className={styles.itemTitle}>
+											Кейс {index + 1}
+										</span>
+										<ListActions
+											onMoveUp={() =>
+												updateDirectLinkItems(
+													moveItem(draft.directLink.items, index, -1)
+												)
+											}
+											onMoveDown={() =>
+												updateDirectLinkItems(
+													moveItem(draft.directLink.items, index, 1)
+												)
+											}
+											onRemove={() =>
+												updateDirectLinkItems(
+													removeItem(draft.directLink.items, index)
+												)
+											}
+											disableUp={index === 0}
+											disableDown={
+												index === draft.directLink.items.length - 1
+											}
+										/>
+									</div>
+									<div className={styles.gridTwo}>
+										<TextField
+											id={`direct-link-title-${index}`}
+											label="Название"
+											value={item.title}
+											onChange={value =>
+												updateDirectLinkItems(
+													updateItem(draft.directLink.items, index, {
+														title: value
+													})
+												)
+											}
+										/>
+										<TextAreaField
+											id={`direct-link-text-${index}`}
+											label="Описание"
+											value={item.text}
+											onChange={value =>
+												updateDirectLinkItems(
+													updateItem(draft.directLink.items, index, {
+														text: value
+													})
+												)
+											}
+										/>
+									</div>
+								</div>
+							))}
+						</div>
+						<button
+							type="button"
+							className={styles.addBtn}
+							onClick={() =>
+								updateDirectLinkItems([
+									...draft.directLink.items,
+									{
+										title: 'Новый кейс',
+										text: 'Описание кейса'
+									}
+								])
+							}
+						>
+							Добавить кейс
+						</button>
+					</section>
+
+					<section className={styles.panel}>
+						<div className={styles.panelHeader}>
+							<SectionTitle
+								title="Доверие и безопасность"
+								description="Блок объясняет хранение заявок, оплату, домен установки и защитные ограничения продукта."
+								risk="high"
+								riskText="Это доверительный блок. Не обещайте юридические или технические гарантии, которых нет в продукте."
+							>
+								Доверие и безопасность
+							</SectionTitle>
+							<ToggleField
+								label="Показывать"
+								checked={draft.security.enabled}
+								onChange={checked =>
+									updateDraft(prev => ({
+										...prev,
+										security: {
+											...prev.security,
+											enabled: checked
+										}
+									}))
+								}
+							/>
+						</div>
+						<div className={styles.gridTwo}>
+							<TextField
+								id="security-title"
+								label="Заголовок"
+								value={draft.security.title}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										security: { ...prev.security, title: value }
+									}))
+								}
+							/>
+							<TextAreaField
+								id="security-subtitle"
+								label="Подзаголовок"
+								value={draft.security.subtitle}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										security: {
+											...prev.security,
+											subtitle: value
+										}
+									}))
+								}
+							/>
+						</div>
+						<div className={styles.list}>
+							{draft.security.items.map((item, index) => (
+								<div key={`security-${index}`} className={styles.itemCard}>
+									<div className={styles.itemHeader}>
+										<span className={styles.itemTitle}>
+											Пункт доверия {index + 1}
+										</span>
+										<ListActions
+											onMoveUp={() =>
+												updateSecurityItems(
+													moveItem(draft.security.items, index, -1)
+												)
+											}
+											onMoveDown={() =>
+												updateSecurityItems(
+													moveItem(draft.security.items, index, 1)
+												)
+											}
+											onRemove={() =>
+												updateSecurityItems(
+													removeItem(draft.security.items, index)
+												)
+											}
+											disableUp={index === 0}
+											disableDown={
+												index === draft.security.items.length - 1
+											}
+										/>
+									</div>
+									<div className={styles.gridTwo}>
+										<TextField
+											id={`security-title-${index}`}
+											label="Название"
+											value={item.title}
+											onChange={value =>
+												updateSecurityItems(
+													updateItem(draft.security.items, index, {
+														title: value
+													})
+												)
+											}
+										/>
+										<TextAreaField
+											id={`security-text-${index}`}
+											label="Описание"
+											value={item.text}
+											onChange={value =>
+												updateSecurityItems(
+													updateItem(draft.security.items, index, {
+														text: value
+													})
+												)
+											}
+										/>
+									</div>
+								</div>
+							))}
+						</div>
+						<button
+							type="button"
+							className={styles.addBtn}
+							onClick={() =>
+								updateSecurityItems([
+									...draft.security.items,
+									{
+										title: 'Новый пункт',
+										text: 'Описание пункта'
+									}
+								])
+							}
+						>
+							Добавить пункт доверия
+						</button>
+					</section>
+
+					<section className={styles.panel}>
+						<div className={styles.panelHeader}>
+							<SectionTitle
 								title="Блок единой подписки"
 								description="Редактирует новый блок главной с объяснением, что в одной подписке доступны виджеты, интеграции, заявки и аналитика."
 								risk="medium"
@@ -2289,6 +3534,151 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 							}
 						>
 							Добавить элемент
+						</button>
+					</section>
+
+					<section className={styles.panel}>
+						<div className={styles.panelHeader}>
+							<SectionTitle
+								title="Сравнение тарифов"
+								description="Таблица сравнения Easy и Hard по ключевым возможностям перед тарифными карточками."
+								risk="high"
+								riskText="Эта таблица должна соответствовать реальным ограничениям тарифов. Цены всё равно редактируются только в разделе Тарифы."
+							>
+								Сравнение тарифов
+							</SectionTitle>
+							<ToggleField
+								label="Показывать"
+								checked={draft.tariffComparison.enabled}
+								onChange={checked =>
+									updateDraft(prev => ({
+										...prev,
+										tariffComparison: {
+											...prev.tariffComparison,
+											enabled: checked
+										}
+									}))
+								}
+							/>
+						</div>
+						<div className={styles.gridTwo}>
+							<TextField
+								id="tariff-comparison-title"
+								label="Заголовок"
+								value={draft.tariffComparison.title}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										tariffComparison: {
+											...prev.tariffComparison,
+											title: value
+										}
+									}))
+								}
+							/>
+							<TextAreaField
+								id="tariff-comparison-subtitle"
+								label="Подзаголовок"
+								value={draft.tariffComparison.subtitle}
+								onChange={value =>
+									updateDraft(prev => ({
+										...prev,
+										tariffComparison: {
+											...prev.tariffComparison,
+											subtitle: value
+										}
+									}))
+								}
+							/>
+						</div>
+						<div className={styles.list}>
+							{draft.tariffComparison.rows.map((row, index) => (
+								<div
+									key={`tariff-comparison-row-${index}`}
+									className={styles.itemCard}
+								>
+									<div className={styles.itemHeader}>
+										<span className={styles.itemTitle}>
+											Строка {index + 1}
+										</span>
+										<ListActions
+											onMoveUp={() =>
+												updateTariffComparisonRows(
+													moveItem(draft.tariffComparison.rows, index, -1)
+												)
+											}
+											onMoveDown={() =>
+												updateTariffComparisonRows(
+													moveItem(draft.tariffComparison.rows, index, 1)
+												)
+											}
+											onRemove={() =>
+												updateTariffComparisonRows(
+													removeItem(draft.tariffComparison.rows, index)
+												)
+											}
+											disableUp={index === 0}
+											disableDown={
+												index === draft.tariffComparison.rows.length - 1
+											}
+										/>
+									</div>
+									<div className={styles.gridThree}>
+										<TextField
+											id={`tariff-comparison-feature-${index}`}
+											label="Возможность"
+											value={row.feature}
+											onChange={value =>
+												updateTariffComparisonRows(
+													updateItem(draft.tariffComparison.rows, index, {
+														feature: value
+													})
+												)
+											}
+										/>
+										<TextAreaField
+											id={`tariff-comparison-easy-${index}`}
+											label="Easy"
+											value={row.easy}
+											onChange={value =>
+												updateTariffComparisonRows(
+													updateItem(draft.tariffComparison.rows, index, {
+														easy: value
+													})
+												)
+											}
+										/>
+										<TextAreaField
+											id={`tariff-comparison-hard-${index}`}
+											label="Hard"
+											value={row.hard}
+											onChange={value =>
+												updateTariffComparisonRows(
+													updateItem(draft.tariffComparison.rows, index, {
+														hard: value
+													})
+												)
+											}
+										/>
+									</div>
+								</div>
+							))}
+						</div>
+						<button
+							type="button"
+							className={styles.addBtn}
+							onClick={() =>
+								updateTariffComparisonRows([
+									...draft.tariffComparison.rows,
+									{
+										feature: 'Новая возможность',
+										easy: 'Значение Easy',
+										hard: 'Значение Hard'
+									}
+								])
+							}
+						>
+							Добавить строку сравнения
 						</button>
 					</section>
 

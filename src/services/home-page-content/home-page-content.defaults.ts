@@ -496,6 +496,96 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 			}
 		]
 	},
+	audiences: {
+		enabled: true,
+		title: 'Подходит бизнесам, где важна каждая заявка',
+		subtitle:
+			'Winwidget помогает не терять посетителей в разных нишах: от интернет-магазинов до услуг с длинным циклом выбора.',
+		items: [
+			{
+				title: 'E-commerce',
+				text: 'Скидки, подарки и стоп-офферы помогают вернуть посетителя к покупке.'
+			},
+			{
+				title: 'Услуги и консультации',
+				text: 'Квиз или заказ звонка превращает интерес в конкретную заявку.'
+			},
+			{
+				title: 'Бьюти и медицина',
+				text: 'Акции, запись и быстрый контакт помогают заполнить расписание.'
+			},
+			{
+				title: 'Обучение и мероприятия',
+				text: 'Сбор заявок, сегментация и напоминания помогают прогреть аудиторию.'
+			}
+		]
+	},
+	caseStudies: {
+		enabled: true,
+		title: 'Как это работает на практике',
+		subtitle:
+			'Несколько понятных сценариев, где виджеты закрывают реальные задачи бизнеса.',
+		items: [
+			{
+				title: 'Интернет-магазин',
+				text: 'Посетитель собирается уйти без покупки. Стоп-оффер показывает персональную скидку и забирает контакт.',
+				result: 'Часть потерянного трафика возвращается в воронку продаж.'
+			},
+			{
+				title: 'Сайт услуг',
+				text: 'Квиз задаёт 3-5 вопросов, помогает выбрать услугу и передаёт менеджеру уже тёплую заявку.',
+				result:
+					'Менеджер видит контекст обращения, а не просто номер телефона.'
+			},
+			{
+				title: 'Лендинг акции',
+				text: 'Обратный отсчёт и колесо фортуны усиливают срочность и дают понятный повод оставить контакт.',
+				result: 'Посетителю проще сделать первый шаг прямо сейчас.'
+			}
+		]
+	},
+	leadFlow: {
+		enabled: true,
+		title: 'Что происходит после заявки',
+		subtitle:
+			'Виджет не просто собирает контакт: заявка сразу попадает туда, где её удобно обработать.',
+		items: [
+			{
+				title: 'Посетитель оставляет контакт',
+				text: 'Телефон, email, выбранный бонус, результат квиза или страница сохраняются автоматически.'
+			},
+			{
+				title: 'Заявка приходит в нужный канал',
+				text: 'Кабинет, Email, Telegram, CRM или webhook получают данные без ручного копирования.'
+			},
+			{
+				title: 'Менеджер быстро связывается',
+				text: 'В заявке уже есть контекст: с какой страницы пришёл клиент и что его заинтересовало.'
+			},
+			{
+				title: 'Аналитика показывает результат',
+				text: 'Вы видите, какие сценарии и бонусы собирают больше заявок.'
+			}
+		]
+	},
+	whyWidgets: {
+		enabled: true,
+		title: 'Почему это сильнее обычной формы',
+		subtitle:
+			'Статичная форма ждёт, пока посетитель сам решится. Виджет ловит момент интереса и помогает сделать первый шаг.',
+		formTitle: 'Обычная форма',
+		widgetTitle: 'Умный виджет',
+		formItems: [
+			{ text: 'Пассивно размещена на странице' },
+			{ text: 'Не реагирует на поведение посетителя' },
+			{ text: 'Даёт мало поводов оставить контакт' }
+		],
+		widgetItems: [
+			{ text: 'Появляется в нужный момент' },
+			{ text: 'Даёт бонус, срочность или быстрый сценарий выбора' },
+			{ text: 'Сразу передаёт заявку в кабинет и интеграции' }
+		]
+	},
 	steps: {
 		enabled: true,
 		title: 'Установка проще, чем сварить кофе',
@@ -548,6 +638,75 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 		],
 		bottomText: 'Виджет выглядит так, как нужно именно вашему бизнесу'
 	},
+	dashboardPreview: {
+		enabled: true,
+		title: 'В личном кабинете видно всё важное',
+		subtitle:
+			'После регистрации вы управляете виджетами, заявками, интеграциями и настройками из одного места.',
+		cards: [
+			{
+				title: 'Заявки',
+				text: 'Телефоны, email, бонусы, страницы и даты обращений хранятся в кабинете.'
+			},
+			{
+				title: 'Настройки',
+				text: 'Цвета, тексты, логика показа, интеграции и домен установки меняются без разработчика.'
+			},
+			{
+				title: 'Аналитика',
+				text: 'Смотрите, какие сценарии, результаты и бонусы приводят больше лидов.'
+			}
+		],
+		metrics: [
+			{ title: '5', text: 'видов виджетов уже доступны' },
+			{ title: '10 минут', text: 'до первой установки на сайт' },
+			{ title: '24/7', text: 'сбор заявок без участия менеджера' }
+		]
+	},
+	directLink: {
+		enabled: true,
+		title: 'Можно использовать даже без сайта',
+		subtitle:
+			'У каждого виджета есть публичная ссылка. Её можно отправлять клиентам напрямую или размещать там, где сайта пока нет.',
+		items: [
+			{
+				title: 'Соцсети и мессенджеры',
+				text: 'Отправляйте ссылку в Telegram, VK, WhatsApp или рекламных сообщениях.'
+			},
+			{
+				title: 'QR-код в офлайне',
+				text: 'Печатайте QR на стойке, флаере, меню или визитке.'
+			},
+			{
+				title: 'Быстрые акции',
+				text: 'Запускайте розыгрыш или сбор заявок без отдельной посадочной страницы.'
+			}
+		]
+	},
+	security: {
+		enabled: true,
+		title: 'Доверие, безопасность и контроль',
+		subtitle:
+			'Winwidget сделан как коммерческий инструмент: с хранением заявок, ограничениями подписки и защитой установленного виджета.',
+		items: [
+			{
+				title: 'Данные заявок сохраняются',
+				text: 'Контакты и история заявок остаются в личном кабинете.'
+			},
+			{
+				title: 'Автоматическая активация',
+				text: 'Подписка активируется автоматически после оплаты.'
+			},
+			{
+				title: 'Ограничение по домену',
+				text: 'Виджет привязывается к домену установки, чтобы код не использовали на чужих сайтах.'
+			},
+			{
+				title: 'Антидубли и ограничения',
+				text: 'Настройки помогают снижать повторные и некачественные заявки.'
+			}
+		]
+	},
 	subscriptionBundle: {
 		enabled: true,
 		title: 'Одна подписка — все решения сразу',
@@ -567,6 +726,39 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 			},
 			{
 				text: 'Аналитика'
+			}
+		]
+	},
+	tariffComparison: {
+		enabled: true,
+		title: 'Сравните тарифы по ключевым возможностям',
+		subtitle:
+			'Карточки тарифов показывают главное, а эта таблица помогает быстро понять разницу перед оплатой.',
+		rows: [
+			{
+				feature: 'Количество виджетов',
+				easy: '1 виджет',
+				hard: '10 любых виджетов'
+			},
+			{
+				feature: 'Лимит заявок',
+				easy: '100 заявок в месяц',
+				hard: 'Безлимитные заявки'
+			},
+			{
+				feature: 'Интеграции',
+				easy: 'Email, Telegram, CRM, Метрика, webhook',
+				hard: 'Все интеграции Easy'
+			},
+			{
+				feature: 'Аналитика и выгрузка',
+				easy: 'Базовое хранение заявок',
+				hard: 'Аналитика, Excel, PDF, CSV'
+			},
+			{
+				feature: 'Брендинг виджета',
+				easy: 'Ссылка на Winwidget',
+				hard: 'Можно скрыть брендинг'
 			}
 		]
 	},
@@ -653,6 +845,19 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 				popular: false
 			}
 		]
+	},
+	microCta: {
+		enabled: true,
+		afterIntegrationsText: 'Хотите получать заявки сразу в удобный канал?',
+		afterIntegrationsButtonText: 'Создать первый виджет',
+		afterStepsText:
+			'Готовы проверить виджет на своём сайте или по прямой ссылке?',
+		afterStepsButtonText: 'Попробовать бесплатно'
+	},
+	seoText: {
+		enabled: true,
+		title: 'Виджеты для сайта, которые помогают собирать больше заявок',
+		text: 'Winwidget объединяет интерактивные инструменты для роста конверсии: колесо фортуны, квизы, обратный звонок, таймер обратного отсчёта и стоп-оффер. Виджеты помогают удерживать посетителей, собирать контакты, передавать заявки в CRM, Telegram, Email и аналитику, а также запускать акции без сложной разработки.'
 	},
 	payment: {
 		seoTitle: 'Тарифы и оплата',
@@ -852,6 +1057,48 @@ export const normalizeHomePageContent = (
 				defaultContent.tools.items
 			)
 		},
+		audiences: {
+			...defaultContent.audiences,
+			...(isRecord(content.audiences) ? content.audiences : {}),
+			items: mergeSimpleArray(
+				isRecord(content.audiences) ? content.audiences.items : undefined,
+				defaultContent.audiences.items
+			)
+		},
+		caseStudies: {
+			...defaultContent.caseStudies,
+			...(isRecord(content.caseStudies) ? content.caseStudies : {}),
+			items: mergeSimpleArray(
+				isRecord(content.caseStudies)
+					? content.caseStudies.items
+					: undefined,
+				defaultContent.caseStudies.items
+			)
+		},
+		leadFlow: {
+			...defaultContent.leadFlow,
+			...(isRecord(content.leadFlow) ? content.leadFlow : {}),
+			items: mergeSimpleArray(
+				isRecord(content.leadFlow) ? content.leadFlow.items : undefined,
+				defaultContent.leadFlow.items
+			)
+		},
+		whyWidgets: {
+			...defaultContent.whyWidgets,
+			...(isRecord(content.whyWidgets) ? content.whyWidgets : {}),
+			formItems: mergeSimpleArray(
+				isRecord(content.whyWidgets)
+					? content.whyWidgets.formItems
+					: undefined,
+				defaultContent.whyWidgets.formItems
+			),
+			widgetItems: mergeSimpleArray(
+				isRecord(content.whyWidgets)
+					? content.whyWidgets.widgetItems
+					: undefined,
+				defaultContent.whyWidgets.widgetItems
+			)
+		},
 		steps: {
 			...defaultContent.steps,
 			...(isRecord(content.steps) ? content.steps : {}),
@@ -876,6 +1123,42 @@ export const normalizeHomePageContent = (
 				defaultContent.customization.features
 			)
 		},
+		dashboardPreview: {
+			...defaultContent.dashboardPreview,
+			...(isRecord(content.dashboardPreview)
+				? content.dashboardPreview
+				: {}),
+			cards: mergeSimpleArray(
+				isRecord(content.dashboardPreview)
+					? content.dashboardPreview.cards
+					: undefined,
+				defaultContent.dashboardPreview.cards
+			),
+			metrics: mergeSimpleArray(
+				isRecord(content.dashboardPreview)
+					? content.dashboardPreview.metrics
+					: undefined,
+				defaultContent.dashboardPreview.metrics
+			)
+		},
+		directLink: {
+			...defaultContent.directLink,
+			...(isRecord(content.directLink) ? content.directLink : {}),
+			items: mergeSimpleArray(
+				isRecord(content.directLink)
+					? content.directLink.items
+					: undefined,
+				defaultContent.directLink.items
+			)
+		},
+		security: {
+			...defaultContent.security,
+			...(isRecord(content.security) ? content.security : {}),
+			items: mergeSimpleArray(
+				isRecord(content.security) ? content.security.items : undefined,
+				defaultContent.security.items
+			)
+		},
 		subscriptionBundle: {
 			...defaultContent.subscriptionBundle,
 			...(isRecord(content.subscriptionBundle)
@@ -888,6 +1171,18 @@ export const normalizeHomePageContent = (
 				defaultContent.subscriptionBundle.items
 			)
 		},
+		tariffComparison: {
+			...defaultContent.tariffComparison,
+			...(isRecord(content.tariffComparison)
+				? content.tariffComparison
+				: {}),
+			rows: mergeSimpleArray(
+				isRecord(content.tariffComparison)
+					? content.tariffComparison.rows
+					: undefined,
+				defaultContent.tariffComparison.rows
+			)
+		},
 		pricing: {
 			...defaultContent.pricing,
 			...(isRecord(content.pricing) ? content.pricing : {}),
@@ -896,6 +1191,8 @@ export const normalizeHomePageContent = (
 				defaultContent.pricing.plans
 			)
 		},
+		microCta: mergeObject(defaultContent.microCta, content.microCta),
+		seoText: mergeObject(defaultContent.seoText, content.seoText),
 		payment: mergePaymentContent(content.payment, defaultContent.payment),
 		faq: {
 			...defaultContent.faq,

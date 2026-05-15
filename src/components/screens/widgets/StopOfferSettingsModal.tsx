@@ -43,7 +43,7 @@ const getDefaultConfig = (): StopOfferConfig => ({
 	displayResetToken: '',
 	hideIfSubmitted: true,
 	badgeText: 'Подождите',
-	title: 'Заберите скидку 10%',
+	title: 'Персональное предложение',
 	subtitle: 'Оставьте контакт или перейдите к предложению прямо сейчас',
 	offerText: 'Скидка 10%',
 	dataType: 'PHONE',

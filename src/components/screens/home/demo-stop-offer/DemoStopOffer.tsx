@@ -121,7 +121,7 @@ const DemoStopOffer = ({ open, onClose }: Props) => {
 						<div className={styles.badge}>Подождите</div>
 						<div className={styles.offer}>Скидка 10%</div>
 						<h2 id={dialogTitleId} className={styles.title}>
-							Заберите скидку 10%
+							Персональное предложение
 						</h2>
 						<p className={styles.subtitle}>
 							Оставьте контакт или перейдите к предложению прямо сейчас

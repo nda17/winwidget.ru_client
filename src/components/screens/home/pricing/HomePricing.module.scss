@@ -12,14 +12,6 @@
 			transparent
 		);
 	}
-
-	@media (max-width: 900px) {
-		@apply py-[3.25rem];
-	}
-
-	@media (max-width: 480px) {
-		@apply px-3 py-[2.75rem];
-	}
 }
 
 .title {

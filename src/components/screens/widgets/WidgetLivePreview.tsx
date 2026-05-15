@@ -279,7 +279,7 @@ const buildPreviewPublicConfig = (props: WidgetLivePreviewProps) => {
 			displayResetToken: props.config.displayResetToken || '',
 			hideIfSubmitted: false,
 			badgeText: props.config.badgeText || 'Подождите',
-			title: props.config.title || 'Заберите скидку 10%',
+			title: props.config.title || 'Персональное предложение',
 			subtitle: props.config.subtitle || '',
 			offerText: props.config.offerText || 'Скидка 10%',
 			dataType,

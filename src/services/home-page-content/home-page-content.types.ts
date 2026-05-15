@@ -29,10 +29,20 @@ export interface HomePageContent {
 	analysis: HomePageAnalysisContent
 	integrations: HomePageIntegrationsContent
 	tools: HomePageToolsContent
+	audiences: HomePageAudiencesContent
+	caseStudies: HomePageCaseStudiesContent
+	leadFlow: HomePageLeadFlowContent
+	whyWidgets: HomePageWhyWidgetsContent
 	steps: HomePageStepsContent
 	customization: HomePageCustomizationContent
+	dashboardPreview: HomePageDashboardPreviewContent
+	directLink: HomePageDirectLinkContent
+	security: HomePageSecurityContent
 	subscriptionBundle: HomePageSubscriptionBundleContent
+	tariffComparison: HomePageTariffComparisonContent
 	pricing: HomePagePricingContent
+	microCta: HomePageMicroCtaContent
+	seoText: HomePageSeoTextContent
 	payment: HomePagePaymentContent
 	faq: HomePageFaqContent
 	cta: HomePageCtaContent
@@ -125,6 +135,43 @@ export interface HomePageToolItem {
 	previewType: HomePageToolPreviewType
 }
 
+export interface HomePageAudiencesContent {
+	enabled: boolean
+	title: string
+	subtitle: string
+	items: HomePageFeatureCard[]
+}
+
+export interface HomePageCaseStudiesContent {
+	enabled: boolean
+	title: string
+	subtitle: string
+	items: HomePageCaseStudy[]
+}
+
+export interface HomePageCaseStudy {
+	title: string
+	text: string
+	result: string
+}
+
+export interface HomePageLeadFlowContent {
+	enabled: boolean
+	title: string
+	subtitle: string
+	items: HomePageFeatureCard[]
+}
+
+export interface HomePageWhyWidgetsContent {
+	enabled: boolean
+	title: string
+	subtitle: string
+	formTitle: string
+	widgetTitle: string
+	formItems: HomePageTextCard[]
+	widgetItems: HomePageTextCard[]
+}
+
 export interface HomePageStepsContent {
 	enabled: boolean
 	title: string
@@ -150,12 +197,47 @@ export interface HomePageCustomizationContent {
 	bottomText: string
 }
 
+export interface HomePageDashboardPreviewContent {
+	enabled: boolean
+	title: string
+	subtitle: string
+	cards: HomePageFeatureCard[]
+	metrics: HomePageFeatureCard[]
+}
+
+export interface HomePageDirectLinkContent {
+	enabled: boolean
+	title: string
+	subtitle: string
+	items: HomePageFeatureCard[]
+}
+
+export interface HomePageSecurityContent {
+	enabled: boolean
+	title: string
+	subtitle: string
+	items: HomePageFeatureCard[]
+}
+
 export interface HomePageSubscriptionBundleContent {
 	enabled: boolean
 	title: string
 	subtitle: string
 	cardTitle: string
 	items: HomePageTextCard[]
+}
+
+export interface HomePageTariffComparisonContent {
+	enabled: boolean
+	title: string
+	subtitle: string
+	rows: HomePageTariffComparisonRow[]
+}
+
+export interface HomePageTariffComparisonRow {
+	feature: string
+	easy: string
+	hard: string
 }
 
 export interface HomePagePricingContent {
@@ -184,6 +266,20 @@ export interface HomePagePlanPrice {
 	price: string
 	priceNote: string
 	yearlyTotal?: string
+}
+
+export interface HomePageMicroCtaContent {
+	enabled: boolean
+	afterIntegrationsText: string
+	afterIntegrationsButtonText: string
+	afterStepsText: string
+	afterStepsButtonText: string
+}
+
+export interface HomePageSeoTextContent {
+	enabled: boolean
+	title: string
+	text: string
 }
 
 export interface HomePagePaymentContent {
