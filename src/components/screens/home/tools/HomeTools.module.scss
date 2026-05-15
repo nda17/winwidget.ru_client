@@ -44,7 +44,7 @@
 /* Card */
 
 .card {
-	@apply shrink-0 grow-0 relative rounded-[20px] overflow-hidden flex flex-col min-h-[360px] bg-white;
+	@apply shrink-0 grow-0 relative rounded-[20px] overflow-hidden flex flex-col min-h-[460px] bg-white;
 	transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 
 	&::before {
@@ -206,7 +206,7 @@
 }
 
 .cardFooter {
-	@apply bg-white pt-[1.1rem] px-[1.4rem] pb-[1.4rem] border-t border-black/[0.06];
+	@apply bg-white pt-[1.1rem] px-[1.4rem] pb-[1.4rem] min-h-[13rem] border-t border-black/[0.06];
 }
 
 .cardTitle {
