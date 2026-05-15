@@ -178,10 +178,28 @@
 	filter: drop-shadow(0 16px 28px rgba(8, 1, 16, 0.22));
 }
 
+.stopOfferPreview {
+	@apply relative z-[1] flex h-[220px] w-full items-center justify-center overflow-hidden rounded-[12px];
+
+	@media (max-width: 900px) {
+		@apply h-[210px];
+	}
+
+	@media (max-width: 560px) {
+		@apply h-[238px];
+	}
+}
+
+.stopOfferImage {
+	@apply block h-[86%] w-auto max-w-[88%] object-contain;
+	filter: drop-shadow(0 18px 30px rgba(8, 1, 16, 0.26));
+}
+
 .wheelImage,
 .quizImage,
 .callbackImage,
-.timerImage {
+.timerImage,
+.stopOfferImage {
 	@media (max-width: 560px) {
 		@apply h-[78%] max-w-[84%];
 	}

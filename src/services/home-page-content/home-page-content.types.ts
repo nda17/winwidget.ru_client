@@ -3,6 +3,7 @@ export type HomePageToolPreviewType =
 	| 'quiz'
 	| 'callback'
 	| 'timer'
+	| 'stopOffer'
 	| 'none'
 
 export type HomePageIntegrationIconKey =

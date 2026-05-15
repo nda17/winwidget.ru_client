@@ -2,7 +2,9 @@ import type {
 	HomePageContent,
 	HomePageIntegrationIconKey,
 	HomePagePricingPlan,
-	HomePageSitemapChangeFrequency
+	HomePageSitemapChangeFrequency,
+	HomePageToolItem,
+	HomePageToolPreviewType
 } from '@/services/home-page-content/home-page-content.types'
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
@@ -28,6 +30,46 @@ const mergeSimpleArray = <T extends object>(
 		...clone(fallback[index] ?? fallback[fallback.length - 1]),
 		...(isRecord(item) ? item : {})
 	})) as T[]
+}
+
+const TOOL_PREVIEW_TYPES: HomePageToolPreviewType[] = [
+	'wheel',
+	'quiz',
+	'callback',
+	'timer',
+	'stopOffer',
+	'none'
+]
+
+const normalizeToolPreviewType = (
+	value: unknown,
+	fallback: HomePageToolPreviewType
+): HomePageToolPreviewType =>
+	TOOL_PREVIEW_TYPES.includes(value as HomePageToolPreviewType)
+		? (value as HomePageToolPreviewType)
+		: fallback
+
+const mergeToolItems = (
+	value: unknown,
+	fallback: HomePageToolItem[]
+): HomePageToolItem[] => {
+	if (!Array.isArray(value)) return clone(fallback)
+
+	return value.map((item, index) => {
+		const base = clone(fallback[index] ?? fallback[fallback.length - 1])
+		const merged = {
+			...base,
+			...(isRecord(item) ? item : {})
+		}
+
+		return {
+			...merged,
+			previewType: normalizeToolPreviewType(
+				isRecord(item) ? item.previewType : undefined,
+				base.previewType
+			)
+		}
+	})
 }
 
 const mergeStringArray = (
@@ -436,7 +478,7 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 				description:
 					'Появляется, когда пользователь собирается уйти: “Заберите скидку 10%”.\nХорошо возвращает часть потерянного трафика.\n',
 				comingSoon: false,
-				previewType: 'none'
+				previewType: 'stopOffer'
 			},
 			{
 				title: 'Социальное доказательство',
@@ -1052,7 +1094,7 @@ export const normalizeHomePageContent = (
 		tools: {
 			...defaultContent.tools,
 			...(isRecord(content.tools) ? content.tools : {}),
-			items: mergeSimpleArray(
+			items: mergeToolItems(
 				isRecord(content.tools) ? content.tools.items : undefined,
 				defaultContent.tools.items
 			)

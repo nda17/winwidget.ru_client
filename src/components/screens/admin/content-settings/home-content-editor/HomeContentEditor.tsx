@@ -51,6 +51,7 @@ const PREVIEW_OPTIONS: Array<{
 	{ value: 'quiz', label: 'Квиз' },
 	{ value: 'callback', label: 'Звонок' },
 	{ value: 'timer', label: 'Таймер' },
+	{ value: 'stopOffer', label: 'Стоп-оффер' },
 	{ value: 'none', label: 'Без превью' }
 ]
 

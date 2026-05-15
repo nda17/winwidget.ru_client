@@ -63,6 +63,19 @@ const TimerPreview = () => (
 	</div>
 )
 
+const StopOfferPreview = () => (
+	<div className={styles.stopOfferPreview}>
+		<Image
+			src="/images/tools/stop-offer-widget-preview.png"
+			alt="Превью виджета стоп-оффер Winwidget"
+			width={900}
+			height={796}
+			className={styles.stopOfferImage}
+			sizes="(max-width: 560px) 78vw, 240px"
+		/>
+	</div>
+)
+
 const TOOL_GRADIENTS = [
 	'linear-gradient(160deg, #a855f7 0%, #ec4899 50%, #f43f5e 100%)',
 	'linear-gradient(160deg, #170724 0%, #3a1670 48%, #8a3ffc 100%)',
@@ -86,6 +99,7 @@ const getPreview = (tool: HomePageToolItem) => {
 	if (tool.previewType === 'quiz') return <QuizPreview />
 	if (tool.previewType === 'callback') return <CallbackPreview />
 	if (tool.previewType === 'timer') return <TimerPreview />
+	if (tool.previewType === 'stopOffer') return <StopOfferPreview />
 	return null
 }
 
