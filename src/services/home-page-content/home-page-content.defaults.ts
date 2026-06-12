@@ -37,6 +37,7 @@ const TOOL_PREVIEW_TYPES: HomePageToolPreviewType[] = [
 	'quiz',
 	'callback',
 	'timer',
+	'onlineConsultant',
 	'stopOffer',
 	'none'
 ]
@@ -342,6 +343,7 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 			quiz: 'Поможем сделать выбор!',
 			callback: 'Перезвоним вам за 5 минут',
 			countdown: 'Супер-акция!',
+			onlineConsultant: 'Проконсультируем!',
 			stopOffer: 'Остановите клиента при уходе!'
 		}
 	},
@@ -467,11 +469,11 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 				previewType: 'timer'
 			},
 			{
-				title: 'Онлайн-консультант ',
+				title: 'Онлайн-консультант',
 				description:
 					'Не полноценный чат, а кнопки: “Узнать цену”, “Подобрать”, “Сроки”, “Доставка”.\nВ разы дешевле чем AI-чат, но не менее полезно.',
-				comingSoon: true,
-				previewType: 'none'
+				comingSoon: false,
+				previewType: 'onlineConsultant'
 			},
 			{
 				title: 'Стоп-оффер',

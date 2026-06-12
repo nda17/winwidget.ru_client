@@ -47,7 +47,8 @@ const Layout: NextPage<ILayout> = ({
 		pathname.startsWith('/page-quiz/') ||
 		pathname.startsWith('/page-callback/') ||
 		pathname.startsWith('/page-timer/') ||
-		pathname.startsWith('/page-stop-offer/')
+		pathname.startsWith('/page-stop-offer/') ||
+		pathname.startsWith('/page-online-consultant/')
 
 	if (isWidgetPreview) {
 		return <>{children}</>

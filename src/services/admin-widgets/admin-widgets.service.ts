@@ -7,6 +7,7 @@ export type AdminWidgetType =
 	| 'CALLBACK'
 	| 'TIMER'
 	| 'STOP_OFFER'
+	| 'ONLINE_CONSULTANT'
 export type AdminWidgetActiveFilter = 'true' | 'false'
 export type AdminWidgetPlanFilter = Plan | 'NONE'
 

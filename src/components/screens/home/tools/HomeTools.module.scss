@@ -195,6 +195,50 @@
 	filter: drop-shadow(0 18px 30px rgba(8, 1, 16, 0.26));
 }
 
+.onlineConsultantPreview {
+	@apply relative z-[1] flex h-[220px] w-full items-center justify-center overflow-hidden rounded-[12px];
+
+	@media (max-width: 900px) {
+		@apply h-[210px];
+	}
+
+	@media (max-width: 560px) {
+		@apply h-[238px];
+	}
+}
+
+.onlineConsultantModal {
+	@apply absolute left-1/2 top-1/2 flex w-[210px] -translate-x-1/2 -translate-y-1/2 flex-col gap-2 rounded-[18px] bg-white p-4;
+	box-shadow: 0 18px 34px rgba(8, 1, 16, 0.3);
+}
+
+.onlineConsultantTitle {
+	@apply h-4 w-[72%] rounded-full bg-[#1a1a1a];
+}
+
+.onlineConsultantText {
+	@apply h-2.5 w-[88%] rounded-full bg-[#ddd7e8];
+}
+
+.onlineConsultantGrid {
+	@apply grid grid-cols-2 gap-2;
+}
+
+.onlineConsultantGrid span {
+	@apply h-8 rounded-[10px] bg-[#fff7ed];
+	border: 1px solid rgba(239, 43, 23, 0.16);
+}
+
+.onlineConsultantAnswer {
+	@apply h-10 rounded-xl bg-[#f8f7fb];
+}
+
+.onlineConsultantButton {
+	@apply absolute bottom-8 right-8 h-[78px] w-[78px] object-contain;
+	filter: drop-shadow(0 12px 24px rgba(239, 43, 23, 0.42))
+		drop-shadow(0 2px 8px rgba(0, 0, 0, 0.24));
+}
+
 .wheelImage,
 .quizImage,
 .callbackImage,
@@ -202,6 +246,16 @@
 .stopOfferImage {
 	@media (max-width: 560px) {
 		@apply h-[78%] max-w-[84%];
+	}
+}
+
+@media (max-width: 560px) {
+	.onlineConsultantModal {
+		@apply w-[190px] p-3;
+	}
+
+	.onlineConsultantButton {
+		@apply bottom-10 right-10 h-[68px] w-[68px];
 	}
 }
 

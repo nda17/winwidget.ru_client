@@ -26,7 +26,8 @@ const TYPE_LABELS: Record<AdminWidgetType, string> = {
 	QUIZ: 'Квиз',
 	CALLBACK: 'Обратный звонок',
 	TIMER: 'Таймер',
-	STOP_OFFER: 'Стоп-оффер'
+	STOP_OFFER: 'Стоп-оффер',
+	ONLINE_CONSULTANT: 'Онлайн-консультант'
 }
 
 const PLAN_LABELS: Record<Plan, string> = {
@@ -68,7 +69,8 @@ const TYPE_FILTER_OPTIONS: Array<{
 	{ value: 'QUIZ', label: TYPE_LABELS.QUIZ },
 	{ value: 'CALLBACK', label: TYPE_LABELS.CALLBACK },
 	{ value: 'TIMER', label: TYPE_LABELS.TIMER },
-	{ value: 'STOP_OFFER', label: TYPE_LABELS.STOP_OFFER }
+	{ value: 'STOP_OFFER', label: TYPE_LABELS.STOP_OFFER },
+	{ value: 'ONLINE_CONSULTANT', label: TYPE_LABELS.ONLINE_CONSULTANT }
 ]
 
 const ACTIVE_FILTER_OPTIONS: Array<{

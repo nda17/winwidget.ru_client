@@ -21,6 +21,7 @@ export type StatisticsWidgetType =
 	| 'callback'
 	| 'countdownTimer'
 	| 'stopOffer'
+	| 'onlineConsultant'
 
 export interface IStatisticsChartPoint {
 	label: string
@@ -39,6 +40,7 @@ export interface IStatisticsLeadDayPoint extends IStatisticsChartPoint {
 	callback: number
 	countdownTimer: number
 	stopOffer: number
+	onlineConsultant: number
 	total: number
 }
 

@@ -218,6 +218,34 @@ select.input {
 	@apply flex flex-col gap-3;
 }
 
+.actionHeader {
+	@apply flex items-center justify-between gap-3;
+}
+
+.removeBtn {
+	@apply w-7 h-7 flex items-center justify-center rounded-full border border-[#e0d6f0] bg-transparent text-[#bbb] text-sm cursor-pointer transition-all duration-150 shrink-0;
+}
+
+.removeBtn:hover {
+	@apply border-[#e05a5a] text-[#e05a5a];
+}
+
+.removeBtn:disabled {
+	@apply opacity-40 cursor-not-allowed;
+}
+
+.addBtn {
+	@apply flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-medium cursor-pointer border border-dashed border-[#c4a8e8] bg-transparent text-[#7b3fa0] transition-all duration-150;
+}
+
+.addBtn:hover {
+	@apply bg-[#f3eeff];
+}
+
+.addBtn:disabled {
+	@apply opacity-40 cursor-not-allowed;
+}
+
 .dangerItem {
 	@apply flex flex-col gap-3 rounded-lg border border-[#f1c7c7] bg-[#fff7f7] p-3;
 }

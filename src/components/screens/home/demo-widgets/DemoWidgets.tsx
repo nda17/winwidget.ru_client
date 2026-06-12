@@ -5,12 +5,19 @@ import DemoWheel from '@/components/screens/home/demo-wheel/DemoWheel'
 import DemoQuiz from '@/components/screens/home/demo-quiz/DemoQuiz'
 import DemoCallback from '@/components/screens/home/demo-callback/DemoCallback'
 import DemoCountdown from '@/components/screens/home/demo-countdown/DemoCountdown'
+import DemoOnlineConsultant from '@/components/screens/home/demo-online-consultant/DemoOnlineConsultant'
 import DemoStopOffer from '@/components/screens/home/demo-stop-offer/DemoStopOffer'
 import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import styles from './DemoWidgets.module.scss'
 
-type ActiveDemo = 'wheel' | 'quiz' | 'callback' | 'countdown' | 'stopOffer'
+type ActiveDemo =
+	| 'wheel'
+	| 'quiz'
+	| 'callback'
+	| 'countdown'
+	| 'onlineConsultant'
+	| 'stopOffer'
 
 const SWITCH_INTERVAL = 7000
 const FADE_DURATION = 520
@@ -21,6 +28,7 @@ const DEMO_ORDER: ActiveDemo[] = [
 	'quiz',
 	'callback',
 	'countdown',
+	'onlineConsultant',
 	'stopOffer'
 ]
 
@@ -40,6 +48,7 @@ const DemoWidgets = ({ content }: Props) => {
 	const [quizOpen, setQuizOpen] = useState(false)
 	const [callbackOpen, setCallbackOpen] = useState(false)
 	const [countdownOpen, setCountdownOpen] = useState(false)
+	const [onlineConsultantOpen, setOnlineConsultantOpen] = useState(false)
 	const [stopOfferOpen, setStopOfferOpen] = useState(false)
 	const [bubbleVisible, setBubbleVisible] = useState(false)
 	const floatRef = useRef<HTMLDivElement>(null)
@@ -104,6 +113,8 @@ const DemoWidgets = ({ content }: Props) => {
 		else if (activeDemo === 'quiz') setQuizOpen(true)
 		else if (activeDemo === 'callback') setCallbackOpen(true)
 		else if (activeDemo === 'countdown') setCountdownOpen(true)
+		else if (activeDemo === 'onlineConsultant')
+			setOnlineConsultantOpen(true)
 		else setStopOfferOpen(true)
 	}
 
@@ -160,6 +171,19 @@ const DemoWidgets = ({ content }: Props) => {
 			)
 		}
 
+		if (demo === 'onlineConsultant') {
+			return (
+				<Image
+					src="/images/tools/online-consultant-button.png"
+					alt=""
+					width={60}
+					height={60}
+					className={styles.floatIconOnlineConsultant}
+					aria-hidden="true"
+				/>
+			)
+		}
+
 		return (
 			<Image
 				src="/images/tools/stop-offer-button.png"
@@ -209,7 +233,9 @@ const DemoWidgets = ({ content }: Props) => {
 									? 'Открыть демо обратного звонка'
 									: activeDemo === 'countdown'
 										? 'Открыть демо таймера обратного отсчёта'
-										: 'Открыть демо стоп-оффера'
+										: activeDemo === 'onlineConsultant'
+											? 'Открыть демо онлайн-консультанта'
+											: 'Открыть демо стоп-оффера'
 					}
 				>
 					{previousDemo && previousDemo !== activeDemo && (
@@ -246,6 +272,10 @@ const DemoWidgets = ({ content }: Props) => {
 			<DemoCountdown
 				open={countdownOpen}
 				onClose={() => setCountdownOpen(false)}
+			/>
+			<DemoOnlineConsultant
+				open={onlineConsultantOpen}
+				onClose={() => setOnlineConsultantOpen(false)}
 			/>
 			<DemoStopOffer
 				open={stopOfferOpen}

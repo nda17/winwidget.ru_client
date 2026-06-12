@@ -76,6 +76,30 @@ const StopOfferPreview = () => (
 	</div>
 )
 
+const OnlineConsultantPreview = () => (
+	<div className={styles.onlineConsultantPreview}>
+		<div className={styles.onlineConsultantModal}>
+			<div className={styles.onlineConsultantTitle} />
+			<div className={styles.onlineConsultantText} />
+			<div className={styles.onlineConsultantGrid}>
+				<span />
+				<span />
+				<span />
+				<span />
+			</div>
+			<div className={styles.onlineConsultantAnswer} />
+		</div>
+		<Image
+			src="/images/tools/online-consultant-button.png"
+			alt="Превью кнопки онлайн-консультанта Winwidget"
+			width={320}
+			height={320}
+			className={styles.onlineConsultantButton}
+			sizes="(max-width: 560px) 68px, 78px"
+		/>
+	</div>
+)
+
 const TOOL_GRADIENTS = [
 	'linear-gradient(160deg, #a855f7 0%, #ec4899 50%, #f43f5e 100%)',
 	'linear-gradient(160deg, #170724 0%, #3a1670 48%, #8a3ffc 100%)',
@@ -99,6 +123,8 @@ const getPreview = (tool: HomePageToolItem) => {
 	if (tool.previewType === 'quiz') return <QuizPreview />
 	if (tool.previewType === 'callback') return <CallbackPreview />
 	if (tool.previewType === 'timer') return <TimerPreview />
+	if (tool.previewType === 'onlineConsultant')
+		return <OnlineConsultantPreview />
 	if (tool.previewType === 'stopOffer') return <StopOfferPreview />
 	return null
 }

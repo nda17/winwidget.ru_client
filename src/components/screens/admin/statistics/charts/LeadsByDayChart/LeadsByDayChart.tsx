@@ -62,6 +62,12 @@ const LeadsByDayChart: FC = () => {
 						data: data.leads.byDay.map(item => item.stopOffer),
 						backgroundColor: '#7C3AED',
 						borderRadius: 6
+					},
+					{
+						label: 'Онлайн-консультанты',
+						data: data.leads.byDay.map(item => item.onlineConsultant),
+						backgroundColor: '#EF2B17',
+						borderRadius: 6
 					}
 				]
 			}}

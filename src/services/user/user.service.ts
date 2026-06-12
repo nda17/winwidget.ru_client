@@ -63,6 +63,7 @@ export type AdminUserOverviewWidgetType =
 	| 'CALLBACK'
 	| 'COUNTDOWN_TIMER'
 	| 'STOP_OFFER'
+	| 'ONLINE_CONSULTANT'
 
 export type AdminUserOverviewActivityRole = 'TARGET' | 'ADMIN'
 

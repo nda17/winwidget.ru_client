@@ -2,6 +2,7 @@
 
 import { CallbackConfig } from '@/services/callback/callback.types'
 import { CountdownTimerConfig } from '@/services/countdown-timer/countdown-timer.types'
+import { OnlineConsultantConfig } from '@/services/online-consultant/online-consultant.types'
 import { QuizConfig } from '@/services/quiz/quiz.types'
 import { StopOfferConfig } from '@/services/stop-offer/stop-offer.types'
 import { WidgetConfig } from '@/services/widget/widget.types'
@@ -9,7 +10,13 @@ import type { CSSProperties } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import styles from './WidgetLivePreview.module.scss'
 
-type PreviewType = 'wheel' | 'quiz' | 'callback' | 'timer' | 'stopOffer'
+type PreviewType =
+	| 'wheel'
+	| 'quiz'
+	| 'callback'
+	| 'timer'
+	| 'stopOffer'
+	| 'onlineConsultant'
 
 type WidgetLivePreviewProps =
 	| {
@@ -37,6 +44,11 @@ type WidgetLivePreviewProps =
 			config: StopOfferConfig
 			isHardPlan: boolean
 	  }
+	| {
+			type: 'onlineConsultant'
+			config: OnlineConsultantConfig
+			isHardPlan: boolean
+	  }
 
 const API_URL =
 	process.env.NEXT_PUBLIC_MODE === 'production'
@@ -48,7 +60,8 @@ const SCRIPT_BY_TYPE: Record<PreviewType, string> = {
 	quiz: 'quiz.js',
 	callback: 'callback.js',
 	timer: 'timer.js',
-	stopOffer: 'stop-offer.js'
+	stopOffer: 'stop-offer.js',
+	onlineConsultant: 'online-consultant.js'
 }
 
 const CONFIG_PATH_BY_TYPE: Record<PreviewType, string> = {
@@ -56,7 +69,8 @@ const CONFIG_PATH_BY_TYPE: Record<PreviewType, string> = {
 	quiz: 'quiz',
 	callback: 'callback',
 	timer: 'countdown-timer',
-	stopOffer: 'stop-offer'
+	stopOffer: 'stop-offer',
+	onlineConsultant: 'online-consultant'
 }
 
 const DESKTOP_PREVIEW_FRAME = {
@@ -301,6 +315,30 @@ const buildPreviewPublicConfig = (props: WidgetLivePreviewProps) => {
 		}
 	}
 
+	if (props.type === 'onlineConsultant') {
+		return {
+			...getSharedPublicConfig(props.config, props.isHardPlan),
+			color: props.config.color || '#ef2b17',
+			buttonSize: props.config.buttonSize ?? 60,
+			bubbleEnabled: false,
+			bubbleText: '',
+			title: props.config.title || 'Онлайн-консультант',
+			subtitle: props.config.subtitle || '',
+			dataType: getDataType(props.config.dataType, 'PHONE'),
+			contactTitle:
+				props.config.contactTitle ||
+				'Оставьте контакт, если нужен персональный ответ',
+			submitButtonText: props.config.submitButtonText || 'Отправить',
+			successTitle:
+				props.config.successTitle || 'Спасибо! Заявка отправлена',
+			successSubtitle: props.config.successSubtitle || '',
+			privacyUrl: props.config.privacyUrl || null,
+			filterDuplicates: false,
+			quickActions: props.config.quickActions || [],
+			hasSubmittedByIp: false
+		}
+	}
+
 	const dataType = getDataType(props.config.dataType, 'NONE')
 
 	return {
@@ -375,7 +413,8 @@ const buildPreviewSandboxDocument = (
 				'winwidget_played_',
 				'wintimer_submitted_',
 				'winstopoffer_seen_',
-				'winstopoffer_submitted_'
+				'winstopoffer_submitted_',
+				'winonlineconsultant_submitted_'
 			];
 			var sandboxStageLayouts = {
 				wheel: {
@@ -397,6 +436,10 @@ const buildPreviewSandboxDocument = (
 				stopOffer: {
 					host: 'stop-offer-widget-host',
 					css: '#wso-overlay{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:clamp(16px,8vw,52px)!important;padding-right:clamp(16px,8vw,52px)!important}#wso-modal{max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
+				},
+				onlineConsultant: {
+					host: 'online-consultant-widget-host',
+					css: '.woc-overlay{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:clamp(16px,8vw,52px)!important;padding-right:clamp(16px,8vw,52px)!important}.woc-modal{max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
 				}
 			};
 
@@ -548,6 +591,12 @@ const buildPreviewSandboxDocument = (
 			window.winwidgetStopOfferAutoOpen = previewType === 'stopOffer';
 			window.winstopoffer =
 				previewType === 'stopOffer' ? previewKey : undefined;
+			window.winonlineconsultantAutoOpen =
+				previewType === 'onlineConsultant';
+			window.winwidgetOnlineConsultantAutoOpen =
+				previewType === 'onlineConsultant';
+			window.winonlineconsultant =
+				previewType === 'onlineConsultant' ? previewKey : undefined;
 
 			function schedulePreviewRestart() {
 				if (restartNoticeSent) return;
@@ -651,6 +700,7 @@ const getTypeLabel = (type: PreviewType) => {
 	if (type === 'quiz') return 'Квиз'
 	if (type === 'callback') return 'Звонок'
 	if (type === 'stopOffer') return 'Стоп-оффер'
+	if (type === 'onlineConsultant') return 'Онлайн-консультант'
 
 	return 'Таймер'
 }

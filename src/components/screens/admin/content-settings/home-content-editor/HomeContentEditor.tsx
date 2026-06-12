@@ -51,6 +51,7 @@ const PREVIEW_OPTIONS: Array<{
 	{ value: 'quiz', label: 'Квиз' },
 	{ value: 'callback', label: 'Звонок' },
 	{ value: 'timer', label: 'Таймер' },
+	{ value: 'onlineConsultant', label: 'Онлайн-консультант' },
 	{ value: 'stopOffer', label: 'Стоп-оффер' },
 	{ value: 'none', label: 'Без превью' }
 ]
@@ -1391,6 +1392,7 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 								['quiz', 'Облако квиза'],
 								['callback', 'Облако звонка'],
 								['countdown', 'Облако таймера'],
+								['onlineConsultant', 'Облако онлайн-консультанта'],
 								['stopOffer', 'Облако стоп-оффера']
 							] as const
 						).map(([key, label]) => (

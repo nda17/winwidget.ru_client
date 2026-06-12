@@ -2,6 +2,7 @@
 
 import CallbackSettingsModal from '@/components/screens/widgets/CallbackSettingsModal'
 import CountdownTimerSettingsModal from '@/components/screens/widgets/CountdownTimerSettingsModal'
+import OnlineConsultantSettingsModal from '@/components/screens/widgets/OnlineConsultantSettingsModal'
 import QuizSettingsModal from '@/components/screens/widgets/QuizSettingsModal'
 import StopOfferSettingsModal from '@/components/screens/widgets/StopOfferSettingsModal'
 import WheelSettingsModal from '@/components/screens/widgets/WheelSettingsModal'
@@ -18,6 +19,8 @@ import callbackService from '@/services/callback/callback.service'
 import { Callback } from '@/services/callback/callback.types'
 import countdownTimerService from '@/services/countdown-timer/countdown-timer.service'
 import { CountdownTimer } from '@/services/countdown-timer/countdown-timer.types'
+import onlineConsultantService from '@/services/online-consultant/online-consultant.service'
+import { OnlineConsultant } from '@/services/online-consultant/online-consultant.types'
 import quizService from '@/services/quiz/quiz.service'
 import { Quiz } from '@/services/quiz/quiz.types'
 import stopOfferService from '@/services/stop-offer/stop-offer.service'
@@ -40,6 +43,7 @@ type ListItem =
 	| { kind: 'callback'; item: Callback }
 	| { kind: 'timer'; item: CountdownTimer }
 	| { kind: 'stop-offer'; item: StopOffer }
+	| { kind: 'online-consultant'; item: OnlineConsultant }
 
 const CabinetWidgets = () => {
 	const auth = useAuthStore(state => state.auth)
@@ -54,6 +58,8 @@ const CabinetWidgets = () => {
 		useState<CountdownTimer | null>(null)
 	const [settingsStopOffer, setSettingsStopOffer] =
 		useState<StopOffer | null>(null)
+	const [settingsOnlineConsultant, setSettingsOnlineConsultant] =
+		useState<OnlineConsultant | null>(null)
 	const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(
 		null
 	)
@@ -89,12 +95,22 @@ const CabinetWidgets = () => {
 		enabled: !!auth
 	})
 
+	const {
+		data: onlineConsultantsData,
+		isLoading: onlineConsultantsLoading
+	} = useQuery({
+		queryKey: ['online-consultants'],
+		queryFn: onlineConsultantService.getMyOnlineConsultants,
+		enabled: !!auth
+	})
+
 	const subscription =
 		widgetsData?.subscription ||
 		quizzesData?.subscription ||
 		callbacksData?.subscription ||
 		timersData?.subscription ||
-		stopOffersData?.subscription
+		stopOffersData?.subscription ||
+		onlineConsultantsData?.subscription
 	const canUseCustomButtonImage =
 		subscription?.plan === 'HARD' && subscription.status === 'ACTIVE'
 
@@ -118,6 +134,10 @@ const CabinetWidgets = () => {
 		...(stopOffersData?.stopOffers || []).map(s => ({
 			kind: 'stop-offer' as const,
 			item: s
+		})),
+		...(onlineConsultantsData?.onlineConsultants || []).map(c => ({
+			kind: 'online-consultant' as const,
+			item: c
 		}))
 	].sort(
 		(a, b) =>
@@ -132,7 +152,8 @@ const CabinetWidgets = () => {
 				quizzesLoading ||
 				callbacksLoading ||
 				timersLoading ||
-				stopOffersLoading))
+				stopOffersLoading ||
+				onlineConsultantsLoading))
 
 	const createMutation = useMutation({
 		mutationFn: (typeId: string) => {
@@ -143,6 +164,10 @@ const CabinetWidgets = () => {
 				return countdownTimerService.createCountdownTimer('Таймер')
 			if (typeId === 'stop-offer')
 				return stopOfferService.createStopOffer('Стоп-оффер')
+			if (typeId === 'online-consultant')
+				return onlineConsultantService.createOnlineConsultant(
+					'Онлайн-консультант'
+				)
 			const names: Record<string, string> = {
 				wheel: 'Колесо фортуны',
 				drum: 'Барабан'
@@ -162,7 +187,9 @@ const CabinetWidgets = () => {
 								? ['countdown-timers']
 								: typeId === 'stop-offer'
 									? ['stop-offers']
-									: ['widgets']
+									: typeId === 'online-consultant'
+										? ['online-consultants']
+										: ['widgets']
 			})
 			setShowTypeModal(false)
 			toast.success('Виджет создан', { id: toastId })
@@ -261,6 +288,24 @@ const CabinetWidgets = () => {
 		}
 	})
 
+	const deleteOnlineConsultantMutation = useMutation({
+		mutationFn: (id: string) =>
+			onlineConsultantService.deleteOnlineConsultant(id),
+		onMutate: () =>
+			toast.loading('Удаляем виджет, пожалуйста подождите...'),
+		onSuccess: (_, __, toastId) => {
+			queryClient.invalidateQueries({ queryKey: ['online-consultants'] })
+			setConfirmDeleteId(null)
+			toast.success('Виджет удалён', { id: toastId })
+		},
+		onError: (e: any, __, toastId) => {
+			toast.error(
+				e?.response?.data?.message || 'Ошибка удаления виджета',
+				{ id: toastId }
+			)
+		}
+	})
+
 	const toggleWidgetMutation = useMutation({
 		mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
 			widgetService.updateWidget(id, { isActive }),
@@ -332,6 +377,22 @@ const CabinetWidgets = () => {
 			),
 		onSuccess: (_, __, toastId) => {
 			queryClient.invalidateQueries({ queryKey: ['stop-offers'] })
+			toast.dismiss(toastId)
+		},
+		onError: (e: any, __, toastId) => {
+			toast.error(e?.response?.data?.message || 'Ошибка', { id: toastId })
+		}
+	})
+
+	const toggleOnlineConsultantMutation = useMutation({
+		mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+			onlineConsultantService.updateOnlineConsultant(id, { isActive }),
+		onMutate: ({ isActive }) =>
+			toast.loading(
+				isActive ? 'Включаем виджет...' : 'Отключаем виджет...'
+			),
+		onSuccess: (_, __, toastId) => {
+			queryClient.invalidateQueries({ queryKey: ['online-consultants'] })
 			toast.dismiss(toastId)
 		},
 		onError: (e: any, __, toastId) => {
@@ -495,7 +556,9 @@ const CabinetWidgets = () => {
 											? deleteCallbackMutation.isPending
 											: kind === 'timer'
 												? deleteTimerMutation.isPending
-												: deleteStopOfferMutation.isPending) &&
+												: kind === 'stop-offer'
+													? deleteStopOfferMutation.isPending
+													: deleteOnlineConsultantMutation.isPending) &&
 								confirmDeleteId === item.id
 
 							const pageUrl =
@@ -507,7 +570,9 @@ const CabinetWidgets = () => {
 											? `${publicSiteUrl}/page-callback/${item.publicKey}`
 											: kind === 'timer'
 												? `${publicSiteUrl}/page-timer/${item.publicKey}`
-												: `${publicSiteUrl}/page-stop-offer/${item.publicKey}`
+												: kind === 'stop-offer'
+													? `${publicSiteUrl}/page-stop-offer/${item.publicKey}`
+													: `${publicSiteUrl}/page-online-consultant/${item.publicKey}`
 
 							const leadsUrl =
 								kind === 'wheel'
@@ -518,7 +583,9 @@ const CabinetWidgets = () => {
 											? `/callbacks/${item.id}/leads`
 											: kind === 'timer'
 												? `/timers/${item.id}/leads`
-												: `/stop-offers/${item.id}/leads`
+												: kind === 'stop-offer'
+													? `/stop-offers/${item.id}/leads`
+													: `/online-consultants/${item.id}/leads`
 
 							return (
 								<div
@@ -548,8 +615,13 @@ const CabinetWidgets = () => {
 													id: item.id,
 													isActive: !item.isActive
 												})
-											} else {
+											} else if (kind === 'stop-offer') {
 												toggleStopOfferMutation.mutate({
+													id: item.id,
+													isActive: !item.isActive
+												})
+											} else {
+												toggleOnlineConsultantMutation.mutate({
 													id: item.id,
 													isActive: !item.isActive
 												})
@@ -583,7 +655,9 @@ const CabinetWidgets = () => {
 															? 'Звонок'
 															: kind === 'timer'
 																? 'Таймер'
-																: 'Стоп-оффер'}
+																: kind === 'stop-offer'
+																	? 'Стоп-оффер'
+																	: 'Онлайн-консультант'}
 											</span>
 										</div>
 										<span
@@ -632,8 +706,12 @@ const CabinetWidgets = () => {
 													setSettingsCallback(item as Callback)
 												} else if (kind === 'timer') {
 													setSettingsTimer(item as CountdownTimer)
-												} else {
+												} else if (kind === 'stop-offer') {
 													setSettingsStopOffer(item as StopOffer)
+												} else {
+													setSettingsOnlineConsultant(
+														item as OnlineConsultant
+													)
 												}
 											}}
 										>
@@ -653,8 +731,12 @@ const CabinetWidgets = () => {
 															deleteCallbackMutation.mutate(item.id)
 														} else if (kind === 'timer') {
 															deleteTimerMutation.mutate(item.id)
-														} else {
+														} else if (kind === 'stop-offer') {
 															deleteStopOfferMutation.mutate(item.id)
+														} else {
+															deleteOnlineConsultantMutation.mutate(
+																item.id
+															)
 														}
 													}}
 													disabled={isDeleting}
@@ -774,6 +856,20 @@ const CabinetWidgets = () => {
 						setSettingsStopOffer(updated)
 						queryClient.invalidateQueries({
 							queryKey: ['stop-offers']
+						})
+					}}
+				/>
+			)}
+
+			{settingsOnlineConsultant && (
+				<OnlineConsultantSettingsModal
+					onlineConsultant={settingsOnlineConsultant}
+					canUseCustomButtonImage={canUseCustomButtonImage}
+					onClose={() => setSettingsOnlineConsultant(null)}
+					onSaved={updated => {
+						setSettingsOnlineConsultant(updated)
+						queryClient.invalidateQueries({
+							queryKey: ['online-consultants']
 						})
 					}}
 				/>

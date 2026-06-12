@@ -3,6 +3,7 @@ export type HomePageToolPreviewType =
 	| 'quiz'
 	| 'callback'
 	| 'timer'
+	| 'onlineConsultant'
 	| 'stopOffer'
 	| 'none'
 
@@ -89,6 +90,7 @@ export interface HomePageDemoWidgetsContent {
 		quiz: string
 		callback: string
 		countdown: string
+		onlineConsultant: string
 		stopOffer: string
 	}
 }

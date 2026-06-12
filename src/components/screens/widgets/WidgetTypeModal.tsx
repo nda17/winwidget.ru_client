@@ -251,6 +251,38 @@ const StopOfferIcon = () => (
 	</svg>
 )
 
+const OnlineConsultantIcon = () => (
+	<svg
+		width="72"
+		height="72"
+		viewBox="0 0 72 72"
+		fill="none"
+		xmlns="http://www.w3.org/2000/svg"
+	>
+		<circle cx="36" cy="36" r="34" stroke="#e0d6f0" strokeWidth="2" />
+		<path
+			d="M17 27c0-6.1 5-11 11-11h16c6.1 0 11 4.9 11 11v7c0 6.1-4.9 11-11 11h-7.5l-9 7c-1.3 1-3.2.1-3.2-1.6V44.2A10.9 10.9 0 0117 34v-7z"
+			fill="#fff7ed"
+			stroke="#e0d6f0"
+			strokeWidth="2.4"
+			strokeLinejoin="round"
+		/>
+		<path
+			d="M29 30h14M29 37h10"
+			stroke="#ef2b17"
+			strokeWidth="3"
+			strokeLinecap="round"
+		/>
+		<circle cx="51" cy="49" r="10" fill="#F8BD31" />
+		<path
+			d="M47.5 49h7M51 45.5v7"
+			stroke="#470B58"
+			strokeWidth="2.2"
+			strokeLinecap="round"
+		/>
+	</svg>
+)
+
 const DrumIcon = () => (
 	<svg
 		width="72"
@@ -325,6 +357,14 @@ const WIDGET_TYPES: WidgetType[] = [
 		description:
 			'Показывает предложение при попытке ухода и возвращает часть потерянного трафика.',
 		icon: <StopOfferIcon />,
+		available: true
+	},
+	{
+		id: 'online-consultant',
+		name: 'Онлайн-консультант',
+		description:
+			'Показывает быстрые кнопки для популярных вопросов и при необходимости собирает контакт.',
+		icon: <OnlineConsultantIcon />,
 		available: true
 	}
 ]
