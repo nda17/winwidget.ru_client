@@ -97,6 +97,9 @@ select.input {
 .colorRowLabel {
 	@apply text-[11px] text-[#7b3fa0] font-medium;
 }
+.colorInputs {
+	@apply flex items-center gap-1.5;
+}
 .colorPicker {
 	@apply w-9 h-9 rounded-[6px] cursor-pointer border border-[#e0d6f0] p-[2px] bg-transparent;
 }

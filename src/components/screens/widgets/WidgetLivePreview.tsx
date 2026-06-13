@@ -222,6 +222,7 @@ const buildPreviewPublicConfig = (props: WidgetLivePreviewProps) => {
 				'Каждый посетитель может крутить колесо только один раз',
 			hideIfPlayed: false,
 			buttonColor: props.config.buttonColor || '',
+			textColor: props.config.textColor || '',
 			centerColor: props.config.centerColor || '#ffffff',
 			arrowColor: props.config.arrowColor || '#ffcc00',
 			spinCooldownDays: props.config.spinCooldownDays ?? 0,

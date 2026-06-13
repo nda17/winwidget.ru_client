@@ -12,6 +12,63 @@ import styles from './WheelSettingsModal.module.scss'
 
 type Tab = 'main' | 'bonuses' | 'integrations' | 'code' | 'info'
 const BUTTON_IMAGE_MAX_SIZE_BYTES = 200 * 1024
+const WHEEL_RADIUS = 150
+const WHEEL_TEXT_RADIUS = WHEEL_RADIUS * 0.59
+const WHEEL_TEXT_LINE_WIDTH = 102
+const WHEEL_TEXT_MIN_FONT_SIZE = 9
+const WHEEL_TEXT_MAX_LINES = 3
+const WHEEL_TEXT_AVERAGE_CHAR_WIDTH = 0.72
+const WHEEL_TEXT_TANGENT_PADDING = 18
+const WHEEL_BONUS_NAME_MAX_LENGTH = 50
+const WHEEL_BONUS_WORD_MAX_LENGTH = 16
+
+const getWheelSectorTextMaxLines = (sectorCount: number) =>
+	sectorCount >= 7 ? 2 : WHEEL_TEXT_MAX_LINES
+
+const getWheelSectorLabelMaxLength = (sectorCount: number) => {
+	const normalizedSectorCount = Math.max(2, Math.min(8, sectorCount || 8))
+	const sectorAngle = (2 * Math.PI) / normalizedSectorCount
+	const tangentSpace =
+		2 * WHEEL_TEXT_RADIUS * Math.sin(sectorAngle / 2) -
+		WHEEL_TEXT_TANGENT_PADDING
+	const maxLines = Math.max(
+		1,
+		Math.min(
+			getWheelSectorTextMaxLines(normalizedSectorCount),
+			Math.floor(tangentSpace / (WHEEL_TEXT_MIN_FONT_SIZE * 1.2))
+		)
+	)
+	const charsPerLine = Math.floor(
+		WHEEL_TEXT_LINE_WIDTH /
+			(WHEEL_TEXT_MIN_FONT_SIZE * WHEEL_TEXT_AVERAGE_CHAR_WIDTH)
+	)
+
+	return Math.max(
+		12,
+		Math.min(WHEEL_BONUS_NAME_MAX_LENGTH, charsPerLine * maxLines)
+	)
+}
+
+const hasTooLongWheelSectorWord = (value: string) =>
+	value
+		.trim()
+		.split(/\s+/)
+		.some(word => word.length > WHEEL_BONUS_WORD_MAX_LENGTH)
+
+const getReadableTextColor = (color: string) => {
+	const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(
+		color.trim()
+	)
+
+	if (!match) return '#ffffff'
+
+	const red = parseInt(match[1], 16)
+	const green = parseInt(match[2], 16)
+	const blue = parseInt(match[3], 16)
+	const brightness = (red * 299 + green * 587 + blue * 114) / 1000
+
+	return brightness > 170 ? '#000000' : '#ffffff'
+}
 
 interface Props {
 	widget: Widget
@@ -48,6 +105,11 @@ const WheelSettingsModal = ({
 	)
 	const currentSnapshot = JSON.stringify({ name, installDomain, config })
 	const hasUnsavedChanges = currentSnapshot !== savedSnapshot
+	const activeBonusCount = Math.max(
+		2,
+		config.bonuses.filter(bonus => bonus.active).length
+	)
+	const bonusNameMaxLength = getWheelSectorLabelMaxLength(activeBonusCount)
 
 	const DEFAULT_CONFIG: WidgetConfig = {
 		color: '#4705fb',
@@ -76,6 +138,7 @@ const WheelSettingsModal = ({
 		buttonText: 'Крутить!',
 		filterDuplicates: false,
 		buttonColor: '',
+		textColor: '',
 		centerColor: '#ffffff',
 		arrowColor: '#ffcc00',
 		spinCooldownDays: 0,
@@ -210,7 +273,13 @@ const WheelSettingsModal = ({
 
 	const setBonus = (
 		index: number,
-		field: 'name' | 'active' | 'probability' | 'color' | 'neverWin',
+		field:
+			| 'name'
+			| 'active'
+			| 'probability'
+			| 'color'
+			| 'textColor'
+			| 'neverWin',
 		value: string | boolean | number
 	) => {
 		setConfig(prev => {
@@ -295,6 +364,24 @@ const WheelSettingsModal = ({
 		}
 		if (activeCount > 8) {
 			toast.error('Максимум 8 бонусов могут участвовать в розыгрыше')
+			return
+		}
+		const invalidBonusNameLength = config.bonuses.findIndex(
+			b => b.active && b.name.trim().length > bonusNameMaxLength
+		)
+		if (invalidBonusNameLength !== -1) {
+			toast.error(
+				`Бонус #${invalidBonusNameLength + 1}: название не должно быть длиннее ${bonusNameMaxLength} символов`
+			)
+			return
+		}
+		const invalidBonusNameWord = config.bonuses.findIndex(
+			b => b.active && hasTooLongWheelSectorWord(b.name)
+		)
+		if (invalidBonusNameWord !== -1) {
+			toast.error(
+				`Бонус #${invalidBonusNameWord + 1}: слишком длинное слово, добавьте пробел или сократите название`
+			)
 			return
 		}
 		const spin = config.spinDuration ?? 5
@@ -473,6 +560,44 @@ const WheelSettingsModal = ({
 									<p className={styles.hint}>
 										Цвет фона карточки (фон под колесом). Оставьте пустым
 										для стандартного градиента.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>Цвет текста виджета</p>
+									<div className={styles.colorRow}>
+										<input
+											type="color"
+											className={styles.colorPicker}
+											value={
+												config.textColor ||
+												getReadableTextColor(
+													config.bgColor || config.color
+												)
+											}
+											onChange={e => setField('textColor', e.target.value)}
+										/>
+										<input
+											className={styles.input}
+											value={config.textColor || ''}
+											onChange={e => setField('textColor', e.target.value)}
+											placeholder="Авто по фону"
+											maxLength={7}
+										/>
+										{config.textColor && (
+											<button
+												type="button"
+												className={styles.clearColorBtn}
+												onClick={() => setField('textColor', '')}
+												title="Вернуть автоцвет"
+											>
+												✕
+											</button>
+										)}
+									</div>
+									<p className={styles.hint}>
+										По умолчанию подбирается автоматически под цвет фона.
+										Можно задать вручную для брендового оформления.
 									</p>
 								</div>
 
@@ -1264,18 +1389,16 @@ const WheelSettingsModal = ({
 										value={bonus.name}
 										onChange={e => setBonus(i, 'name', e.target.value)}
 										placeholder={`Бонус #${i + 1}`}
-										maxLength={50}
+										maxLength={bonusNameMaxLength}
 									/>
+									<p className={styles.hint}>
+										Короткая фраза до {bonusNameMaxLength} символов. Одно
+										слово — до {WHEEL_BONUS_WORD_MAX_LENGTH}.
+									</p>
 									<div className={styles.colorRow}>
 										<div className={styles.colorRowField}>
 											<span className={styles.colorRowLabel}>Цвет</span>
-											<div
-												style={{
-													display: 'flex',
-													gap: '6px',
-													alignItems: 'center'
-												}}
-											>
+											<div className={styles.colorInputs}>
 												<input
 													type="color"
 													className={styles.colorPicker}
@@ -1293,6 +1416,46 @@ const WheelSettingsModal = ({
 													placeholder="#4705fb"
 													maxLength={7}
 												/>
+											</div>
+										</div>
+										<div className={styles.colorRowField}>
+											<span className={styles.colorRowLabel}>
+												Цвет текста
+											</span>
+											<div className={styles.colorInputs}>
+												<input
+													type="color"
+													className={styles.colorPicker}
+													value={
+														bonus.textColor ||
+														getReadableTextColor(
+															bonus.color ||
+																(i % 2 === 0 ? config.color : '#ffffff')
+														)
+													}
+													onChange={e =>
+														setBonus(i, 'textColor', e.target.value)
+													}
+												/>
+												<input
+													className={styles.input}
+													value={bonus.textColor || ''}
+													onChange={e =>
+														setBonus(i, 'textColor', e.target.value)
+													}
+													placeholder="Авто"
+													maxLength={7}
+												/>
+												{bonus.textColor && (
+													<button
+														type="button"
+														className={styles.clearColorBtn}
+														onClick={() => setBonus(i, 'textColor', '')}
+														title="Вернуть автоцвет"
+													>
+														✕
+													</button>
+												)}
 											</div>
 										</div>
 										<div className={styles.colorRowField}>

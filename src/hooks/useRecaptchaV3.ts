@@ -84,12 +84,15 @@ const waitForRecaptchaReady = () => {
 
 export const useRecaptchaV3 = () => {
 	const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+	const isProductionMode = process.env.NEXT_PUBLIC_MODE === 'production'
 	const [isReady, setIsReady] = useState(false)
 	const { data: siteSettings } = useQuery({
 		queryKey: ['site-settings'],
-		queryFn: siteSettingsService.get
+		queryFn: siteSettingsService.get,
+		enabled: isProductionMode
 	})
-	const isRecaptchaEnabled = siteSettings?.recaptchaEnabled ?? true
+	const isRecaptchaEnabled =
+		isProductionMode && (siteSettings?.recaptchaEnabled ?? true)
 
 	useEffect(() => {
 		if (!siteKey || !isRecaptchaEnabled) {

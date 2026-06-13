@@ -7,6 +7,7 @@ export interface WidgetBonus {
 	active: boolean
 	probability?: number
 	color?: string
+	textColor?: string
 	neverWin?: boolean
 }
 
@@ -47,6 +48,7 @@ export interface WidgetConfig {
 	buttonText: string
 	filterDuplicates: boolean
 	buttonColor: string
+	textColor: string
 	centerColor: string
 	arrowColor: string
 	spinCooldownDays: number
