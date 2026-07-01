@@ -96,10 +96,25 @@ const mergeConfig = (
 	}
 }
 
-const toOptionalNumber = (value: string) => {
+const clampNumber = (
+	value: number,
+	min: number,
+	max: number,
+	fallback: number
+) => {
+	const numeric = Number.isFinite(value) ? value : fallback
+	return Math.min(max, Math.max(min, numeric))
+}
+
+const toOptionalNumber = (
+	value: string,
+	min = Number.NEGATIVE_INFINITY,
+	max = Number.POSITIVE_INFINITY
+) => {
 	if (value.trim() === '') return null
 	const numeric = Number(value)
-	return Number.isFinite(numeric) ? numeric : null
+	if (!Number.isFinite(numeric)) return null
+	return Math.min(max, Math.max(min, numeric))
 }
 
 const createResetToken = () =>
@@ -535,7 +550,12 @@ const StopOfferSettingsModal = ({
 											value={cfg.displayCooldownDays}
 											onChange={e =>
 												set({
-													displayCooldownDays: Number(e.target.value)
+													displayCooldownDays: clampNumber(
+														Number(e.target.value),
+														0,
+														365,
+														0
+													)
 												})
 											}
 										/>
@@ -556,7 +576,7 @@ const StopOfferSettingsModal = ({
 										value={cfg.autoOpenDelay ?? ''}
 										onChange={e =>
 											set({
-												autoOpenDelay: toOptionalNumber(e.target.value)
+												autoOpenDelay: toOptionalNumber(e.target.value, 0)
 											})
 										}
 									/>
@@ -577,7 +597,10 @@ const StopOfferSettingsModal = ({
 										value={cfg.mobileAutoOpenDelay}
 										onChange={e =>
 											set({
-												mobileAutoOpenDelay: Number(e.target.value)
+												mobileAutoOpenDelay: Math.max(
+													1,
+													Number(e.target.value) || 1
+												)
 											})
 										}
 									/>
@@ -595,7 +618,14 @@ const StopOfferSettingsModal = ({
 										max={100}
 										value={cfg.scrollPercent}
 										onChange={e =>
-											set({ scrollPercent: Number(e.target.value) })
+											set({
+												scrollPercent: clampNumber(
+													Number(e.target.value),
+													1,
+													100,
+													70
+												)
+											})
 										}
 									/>
 									<p className={styles.hint}>
@@ -847,7 +877,12 @@ const StopOfferSettingsModal = ({
 												value={cfg.submissionCooldownDays}
 												onChange={e =>
 													set({
-														submissionCooldownDays: Number(e.target.value)
+														submissionCooldownDays: clampNumber(
+															Number(e.target.value),
+															0,
+															365,
+															0
+														)
 													})
 												}
 											/>

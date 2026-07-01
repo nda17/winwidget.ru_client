@@ -36,6 +36,23 @@ interface Props {
 
 const makeId = () => Math.random().toString(36).slice(2, 9)
 
+const clampNumber = (
+	value: number,
+	min: number,
+	max: number,
+	fallback: number
+) => {
+	const numeric = Number.isFinite(value) ? value : fallback
+	return Math.min(max, Math.max(min, numeric))
+}
+
+const toOptionalNonNegativeNumber = (value: string) => {
+	if (value.trim() === '') return null
+	const numeric = Number(value)
+	if (!Number.isFinite(numeric)) return null
+	return Math.max(0, numeric)
+}
+
 const makeScoredOption = (
 	text: string,
 	resultIds: string[],
@@ -1353,9 +1370,7 @@ const QuizSettingsModal = ({
 										onChange={e =>
 											setField(
 												'autoOpenDelay',
-												e.target.value === ''
-													? null
-													: Number(e.target.value)
+												toOptionalNonNegativeNumber(e.target.value)
 											)
 										}
 										placeholder="Не открывать автоматически"
@@ -1601,11 +1616,21 @@ const QuizSettingsModal = ({
 												className={styles.input}
 												value={cooldownInput}
 												onChange={e => {
-													setCooldownInput(e.target.value)
-													const n = parseInt(e.target.value)
-													if (!isNaN(n) && n >= 0 && n <= 365) {
-														setField('quizCooldownDays', n)
+													const raw = e.target.value
+													if (!/^\d*$/.test(raw)) return
+													setCooldownInput(raw)
+													if (raw === '') {
+														setField('quizCooldownDays', 0)
+														return
 													}
+													const normalized = clampNumber(
+														parseInt(raw),
+														0,
+														365,
+														0
+													)
+													setCooldownInput(String(normalized))
+													setField('quizCooldownDays', normalized)
 												}}
 												min={0}
 												max={365}
@@ -1974,12 +1999,11 @@ const QuizSettingsModal = ({
 																				qIdx,
 																				oIdx,
 																				r.id,
-																				Math.max(
+																				clampNumber(
+																					Number(e.target.value),
 																					0,
-																					Math.min(
-																						10,
-																						Number(e.target.value)
-																					)
+																					10,
+																					0
 																				)
 																			)
 																		}

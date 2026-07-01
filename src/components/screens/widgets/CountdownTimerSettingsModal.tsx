@@ -93,6 +93,23 @@ const mergeConfig = (
 	}
 }
 
+const clampNumber = (
+	value: number,
+	min: number,
+	max: number,
+	fallback: number
+) => {
+	const numeric = Number.isFinite(value) ? value : fallback
+	return Math.min(max, Math.max(min, numeric))
+}
+
+const toOptionalNonNegativeInteger = (value: string) => {
+	if (value.trim() === '') return null
+	const parsed = parseInt(value)
+	if (Number.isNaN(parsed)) return null
+	return Math.max(0, parsed)
+}
+
 const toDateTimeLocal = (iso?: string) => {
 	if (!iso) return ''
 	const date = new Date(iso)
@@ -653,9 +670,9 @@ const CountdownTimerSettingsModal = ({
 										placeholder="Не открывать автоматически"
 										onChange={e =>
 											set({
-												autoOpenDelay: e.target.value
-													? parseInt(e.target.value)
-													: null
+												autoOpenDelay: toOptionalNonNegativeInteger(
+													e.target.value
+												)
 											})
 										}
 									/>
@@ -808,7 +825,12 @@ const CountdownTimerSettingsModal = ({
 											value={cfg.evergreenDurationMinutes}
 											onChange={e =>
 												set({
-													evergreenDurationMinutes: Number(e.target.value)
+													evergreenDurationMinutes: clampNumber(
+														Number(e.target.value),
+														1,
+														10080,
+														15
+													)
 												})
 											}
 										/>
@@ -991,9 +1013,11 @@ const CountdownTimerSettingsModal = ({
 													value={cfg.submissionCooldownDays}
 													onChange={e =>
 														set({
-															submissionCooldownDays: Math.max(
+															submissionCooldownDays: clampNumber(
+																parseInt(e.target.value) || 0,
 																0,
-																parseInt(e.target.value) || 0
+																365,
+																0
 															)
 														})
 													}

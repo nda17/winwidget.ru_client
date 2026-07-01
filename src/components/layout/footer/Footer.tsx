@@ -18,6 +18,7 @@ const Footer: NextPage<FooterProps> = ({ content }) => {
 	const email = footerContent.email.trim()
 	const vkUrl = footerContent.vkUrl.trim()
 	const telegramUrl = footerContent.telegramUrl.trim()
+	const legalDisclaimer = (footerContent.legalDisclaimer ?? '').trim()
 
 	return (
 		<footer className={styles.footer}>
@@ -107,6 +108,11 @@ const Footer: NextPage<FooterProps> = ({ content }) => {
 						>
 							Договор-оферта
 						</Link>
+						{legalDisclaimer && (
+							<p className={clsx(styles['legal-disclaimer'])}>
+								{legalDisclaimer}
+							</p>
+						)}
 					</nav>
 				</div>
 

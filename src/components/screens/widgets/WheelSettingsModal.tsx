@@ -55,6 +55,16 @@ const hasTooLongWheelSectorWord = (value: string) =>
 		.split(/\s+/)
 		.some(word => word.length > WHEEL_BONUS_WORD_MAX_LENGTH)
 
+const clampNumber = (value: number, min: number, max: number) =>
+	Math.min(max, Math.max(min, value))
+
+const toOptionalNonNegativeInteger = (value: string) => {
+	if (value.trim() === '') return null
+	const parsed = parseInt(value)
+	if (Number.isNaN(parsed)) return null
+	return Math.max(0, parsed)
+}
+
 const getReadableTextColor = (color: string) => {
 	const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(
 		color.trim()
@@ -734,7 +744,9 @@ const WheelSettingsModal = ({
 											const val = parseInt(e.target.value)
 											setField(
 												'spinDuration',
-												isNaN(val) ? ('' as any) : val
+												Number.isNaN(val)
+													? ('' as any)
+													: clampNumber(val, 4, 10)
 											)
 										}}
 										placeholder="5"
@@ -997,7 +1009,7 @@ const WheelSettingsModal = ({
 										onChange={e =>
 											setField(
 												'autoOpenDelay',
-												e.target.value ? parseInt(e.target.value) : null
+												toOptionalNonNegativeInteger(e.target.value)
 											)
 										}
 										placeholder="Оставьте пустым для отключения"
@@ -1210,12 +1222,20 @@ const WheelSettingsModal = ({
 											if (!/^\d*$/.test(raw)) return
 											setCooldownInput(raw)
 											if (raw !== '') {
-												setField('spinCooldownDays', parseInt(raw))
+												const normalized = clampNumber(
+													parseInt(raw),
+													0,
+													365
+												)
+												setCooldownInput(String(normalized))
+												setField('spinCooldownDays', normalized)
 											}
 										}}
 										onBlur={() => {
 											const val = parseInt(cooldownInput)
-											const normalized = isNaN(val) ? 0 : Math.max(0, val)
+											const normalized = Number.isNaN(val)
+												? 0
+												: clampNumber(val, 0, 365)
 											setCooldownInput(String(normalized))
 											setField('spinCooldownDays', normalized)
 										}}
@@ -1470,7 +1490,11 @@ const WheelSettingsModal = ({
 													setBonus(
 														i,
 														'probability',
-														parseInt(e.target.value) || 1
+														clampNumber(
+															parseInt(e.target.value) || 1,
+															1,
+															100
+														)
 													)
 												}
 												style={{ width: '80px' }}

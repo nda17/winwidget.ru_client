@@ -80,6 +80,10 @@
 						@apply text-secondary;
 					}
 				}
+
+				.legal-disclaimer {
+					@apply max-w-[20rem] text-black text-[0.7rem] leading-[0.95rem] text-center sm:text-left opacity-80 select-none;
+				}
 			}
 		}
 

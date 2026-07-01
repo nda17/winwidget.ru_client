@@ -415,7 +415,8 @@ const prepareContentForSave = (
 	},
 	footer: {
 		...content.footer,
-		infoLines: cleanStringList(content.footer.infoLines)
+		infoLines: cleanStringList(content.footer.infoLines),
+		legalDisclaimer: (content.footer.legalDisclaimer ?? '').trim()
 	},
 	cta: {
 		...content.cta,
@@ -1359,6 +1360,21 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 							}
 						/>
 					</div>
+					<TextAreaField
+						id="footer-legal-disclaimer"
+						label="Текст под договором-офертой"
+						value={draft.footer.legalDisclaimer}
+						onChange={value =>
+							updateDraft(prev => ({
+								...prev,
+								footer: {
+									...prev.footer,
+									legalDisclaimer: value
+								}
+							}))
+						}
+						hint="Показывается мелким шрифтом под ссылкой «Договор-оферта»."
+					/>
 				</section>
 			)}
 

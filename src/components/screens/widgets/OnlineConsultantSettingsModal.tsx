@@ -73,6 +73,13 @@ const getDefaultActions = (): OnlineConsultantQuickAction[] => [
 const createActionId = () =>
 	`action-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 
+const toOptionalNonNegativeInteger = (value: string) => {
+	if (value.trim() === '') return null
+	const parsed = parseInt(value)
+	if (Number.isNaN(parsed)) return null
+	return Math.max(0, parsed)
+}
+
 const createQuickAction = (
 	index: number
 ): OnlineConsultantQuickAction => ({
@@ -821,9 +828,9 @@ const OnlineConsultantSettingsModal = ({
 										value={cfg.autoOpenDelay ?? ''}
 										onChange={e =>
 											set({
-												autoOpenDelay: e.target.value
-													? parseInt(e.target.value)
-													: null
+												autoOpenDelay: toOptionalNonNegativeInteger(
+													e.target.value
+												)
 											})
 										}
 										placeholder="Оставьте пустым для отключения"

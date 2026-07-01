@@ -42,6 +42,14 @@ const PERIOD_LABELS: Record<BillingPeriod, string> = {
 const formatRub = (value: number) =>
 	new Intl.NumberFormat('ru-RU').format(value)
 
+const normalizeTariffAmountInput = (value: string) => {
+	if (value.trim() === '') return ''
+	const amount = Number(value)
+	if (!Number.isFinite(amount)) return ''
+
+	return String(Math.min(10000000, Math.max(1, Math.trunc(amount))))
+}
+
 const createDraftFromMap = (priceMap: TariffPriceMap): TariffDraft => ({
 	EASY: {
 		MONTHLY: String(priceMap.EASY.MONTHLY),
@@ -121,7 +129,7 @@ const AdminTariffs: NextPage = () => {
 			...prev,
 			[plan]: {
 				...prev[plan],
-				[period]: value
+				[period]: normalizeTariffAmountInput(value)
 			}
 		}))
 	}

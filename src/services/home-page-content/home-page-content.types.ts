@@ -316,6 +316,7 @@ export interface HomePageFooterContent {
 	telegramUrl: string
 	vkAriaLabel: string
 	telegramAriaLabel: string
+	legalDisclaimer: string
 }
 
 export interface HomePageBodyContent {

@@ -113,6 +113,14 @@ const DEFAULT_HISTORY_FILTERS: SubscriptionHistoryFilterDraft = {
 	createdTo: ''
 }
 
+const normalizeBonusDaysInput = (value: string) => {
+	if (value.trim() === '') return ''
+	const days = Number(value)
+	if (!Number.isFinite(days)) return ''
+
+	return String(Math.min(3650, Math.max(1, Math.trunc(days))))
+}
+
 const PLAN_FILTER_OPTIONS: Array<{
 	value: SubscriptionPlanFilter
 	label: string
@@ -656,7 +664,9 @@ const AdminSubscriptions: NextPage = () => {
 						className={styles.input}
 						placeholder="Например: 14"
 						value={bonusDays}
-						onChange={e => setBonusDays(e.target.value)}
+						onChange={e =>
+							setBonusDays(normalizeBonusDaysInput(e.target.value))
+						}
 					/>
 				</div>
 

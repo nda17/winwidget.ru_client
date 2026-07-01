@@ -74,6 +74,13 @@ const DEFAULT_CONFIG: CallbackConfig = {
 	}
 }
 
+const toOptionalNonNegativeInteger = (value: string) => {
+	if (value.trim() === '') return null
+	const parsed = parseInt(value)
+	if (Number.isNaN(parsed)) return null
+	return Math.max(0, parsed)
+}
+
 const getDefaultConfig = (): CallbackConfig => ({
 	...DEFAULT_CONFIG,
 	timeSlots: [...DEFAULT_CONFIG.timeSlots],
@@ -674,9 +681,9 @@ const CallbackSettingsModal = ({
 										placeholder="Не открывать автоматически"
 										onChange={e =>
 											set({
-												autoOpenDelay: e.target.value
-													? parseInt(e.target.value)
-													: null
+												autoOpenDelay: toOptionalNonNegativeInteger(
+													e.target.value
+												)
 											})
 										}
 									/>

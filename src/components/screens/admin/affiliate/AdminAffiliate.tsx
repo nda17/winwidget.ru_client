@@ -79,6 +79,16 @@ const formatUser = (user: AffiliateReferral['referrer']) =>
 const formatContact = (user: AffiliateReferral['referrer']) =>
 	user.email || user.phone || user.id
 
+const clampNumber = (
+	value: number,
+	min: number,
+	max: number,
+	fallback: number
+) => {
+	const numeric = Number.isFinite(value) ? value : fallback
+	return Math.min(max, Math.max(min, numeric))
+}
+
 const AdminAffiliate: NextPage = () => {
 	const auth = useAuthStore(state => state.auth)
 	const queryClient = useQueryClient()
@@ -222,7 +232,9 @@ const AdminAffiliate: NextPage = () => {
 									className={styles.input}
 									value={cashbackPercent}
 									onChange={event =>
-										setCashbackPercent(Number(event.target.value))
+										setCashbackPercent(
+											clampNumber(Number(event.target.value), 1, 50, 1)
+										)
 									}
 								/>
 							</label>
