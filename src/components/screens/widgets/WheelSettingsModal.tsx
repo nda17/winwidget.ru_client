@@ -119,7 +119,8 @@ const WheelSettingsModal = ({
 		2,
 		config.bonuses.filter(bonus => bonus.active).length
 	)
-	const bonusNameMaxLength = getWheelSectorLabelMaxLength(activeBonusCount)
+	const wheelLabelMaxLength =
+		getWheelSectorLabelMaxLength(activeBonusCount)
 
 	const DEFAULT_CONFIG: WidgetConfig = {
 		color: '#4705fb',
@@ -155,14 +156,14 @@ const WheelSettingsModal = ({
 		spinResetToken: '',
 		actionButton: null,
 		bonuses: [
-			{ name: 'Бонус #1', active: true },
-			{ name: 'Бонус #2', active: true },
-			{ name: 'Бонус #3', active: true },
-			{ name: 'Бонус #4', active: true },
-			{ name: 'Бонус #5', active: true },
-			{ name: 'Бонус #6', active: true },
-			{ name: 'Бонус #7', active: true },
-			{ name: 'Бонус #8', active: true }
+			{ name: 'Бонус #1', wheelLabel: 'Бонус #1', active: true },
+			{ name: 'Бонус #2', wheelLabel: 'Бонус #2', active: true },
+			{ name: 'Бонус #3', wheelLabel: 'Бонус #3', active: true },
+			{ name: 'Бонус #4', wheelLabel: 'Бонус #4', active: true },
+			{ name: 'Бонус #5', wheelLabel: 'Бонус #5', active: true },
+			{ name: 'Бонус #6', wheelLabel: 'Бонус #6', active: true },
+			{ name: 'Бонус #7', wheelLabel: 'Бонус #7', active: true },
+			{ name: 'Бонус #8', wheelLabel: 'Бонус #8', active: true }
 		],
 		integrations: {
 			email: '',
@@ -285,6 +286,7 @@ const WheelSettingsModal = ({
 		index: number,
 		field:
 			| 'name'
+			| 'wheelLabel'
 			| 'active'
 			| 'probability'
 			| 'color'
@@ -377,20 +379,38 @@ const WheelSettingsModal = ({
 			return
 		}
 		const invalidBonusNameLength = config.bonuses.findIndex(
-			b => b.active && b.name.trim().length > bonusNameMaxLength
+			b => b.active && b.name.trim().length > WHEEL_BONUS_NAME_MAX_LENGTH
 		)
 		if (invalidBonusNameLength !== -1) {
 			toast.error(
-				`Бонус #${invalidBonusNameLength + 1}: название не должно быть длиннее ${bonusNameMaxLength} символов`
+				`Бонус #${invalidBonusNameLength + 1}: полное название не должно быть длиннее ${WHEEL_BONUS_NAME_MAX_LENGTH} символов`
 			)
 			return
 		}
-		const invalidBonusNameWord = config.bonuses.findIndex(
-			b => b.active && hasTooLongWheelSectorWord(b.name)
+		const invalidWheelLabel = config.bonuses.findIndex(
+			b => b.active && !b.wheelLabel?.trim().length
 		)
-		if (invalidBonusNameWord !== -1) {
+		if (invalidWheelLabel !== -1) {
 			toast.error(
-				`Бонус #${invalidBonusNameWord + 1}: слишком длинное слово, добавьте пробел или сократите название`
+				`Бонус #${invalidWheelLabel + 1}: заполните текст на колесе`
+			)
+			return
+		}
+		const invalidWheelLabelLength = config.bonuses.findIndex(
+			b => b.active && b.wheelLabel.trim().length > wheelLabelMaxLength
+		)
+		if (invalidWheelLabelLength !== -1) {
+			toast.error(
+				`Бонус #${invalidWheelLabelLength + 1}: текст на колесе не должен быть длиннее ${wheelLabelMaxLength} символов`
+			)
+			return
+		}
+		const invalidWheelLabelWord = config.bonuses.findIndex(
+			b => b.active && hasTooLongWheelSectorWord(b.wheelLabel)
+		)
+		if (invalidWheelLabelWord !== -1) {
+			toast.error(
+				`Бонус #${invalidWheelLabelWord + 1}: слишком длинное слово в тексте на колесе, добавьте пробел или сократите текст`
 			)
 			return
 		}
@@ -424,6 +444,7 @@ const WheelSettingsModal = ({
 			bonuses: config.bonuses.map((b, i) => ({
 				...b,
 				name: b.name.trim() || `Бонус #${i + 1}`,
+				wheelLabel: (b.wheelLabel || '').trim(),
 				probability: b.probability ?? 1
 			}))
 		}
@@ -1383,7 +1404,13 @@ const WheelSettingsModal = ({
 									</h3>
 								</div>
 								<p className={styles.hint}>
-									Укажите от 2 до 8 бонусов. <b>Вес (от 1 до 100)</b>
+									Укажите от 2 до 8 бонусов. У каждого бонуса есть полное
+									название приза и короткая подпись на колесе. В секторе
+									мало места, поэтому длинные фразы лучше оставлять в
+									названии приза.
+									<br />
+									<br />
+									<b>Вес (от 1 до 100)</b>
 									<br />
 									<br /> управляет частотой выпадения сектора: чем больше
 									вес, тем чаще он выпадает.
@@ -1404,16 +1431,39 @@ const WheelSettingsModal = ({
 							{config.bonuses.map((bonus, i) => (
 								<div key={i} className={styles.bonusBlock}>
 									<p className={styles.label}>Бонус #{i + 1}</p>
+									<p className={styles.label}>Название приза</p>
+									<p className={styles.hint}>
+										Полное название увидит победитель. Оно попадет в
+										заявку, уведомления и интеграции.
+									</p>
 									<input
 										className={styles.input}
 										value={bonus.name}
 										onChange={e => setBonus(i, 'name', e.target.value)}
-										placeholder={`Бонус #${i + 1}`}
-										maxLength={bonusNameMaxLength}
+										placeholder={`Например: Скидка до 60 000 рублей`}
+										maxLength={WHEEL_BONUS_NAME_MAX_LENGTH}
 									/>
 									<p className={styles.hint}>
-										Короткая фраза до {bonusNameMaxLength} символов. Одно
-										слово — до {WHEEL_BONUS_WORD_MAX_LENGTH}.
+										До {WHEEL_BONUS_NAME_MAX_LENGTH} символов. Здесь можно
+										писать подробнее, чем на секторе.
+									</p>
+									<p className={styles.label}>Текст на секторе</p>
+									<p className={styles.hint}>
+										Короткая подпись внутри колеса. Пишите 1-3 слова, без
+										длинных фраз, чтобы текст не обрезался.
+									</p>
+									<input
+										className={styles.input}
+										value={bonus.wheelLabel || ''}
+										onChange={e =>
+											setBonus(i, 'wheelLabel', e.target.value)
+										}
+										placeholder="Короткий текст на колесе"
+										maxLength={wheelLabelMaxLength}
+									/>
+									<p className={styles.hint}>
+										До {wheelLabelMaxLength} символов. Одно слово — до{' '}
+										{WHEEL_BONUS_WORD_MAX_LENGTH} символов.
 									</p>
 									<div className={styles.colorRow}>
 										<div className={styles.colorRowField}>

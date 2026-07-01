@@ -4,6 +4,7 @@ export type SubscriptionStatus = 'ACTIVE' | 'EXPIRED' | 'CANCELLED'
 
 export interface WidgetBonus {
 	name: string
+	wheelLabel: string
 	active: boolean
 	probability?: number
 	color?: string
