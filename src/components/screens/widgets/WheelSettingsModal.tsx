@@ -125,6 +125,8 @@ const WheelSettingsModal = ({
 	const DEFAULT_CONFIG: WidgetConfig = {
 		color: '#4705fb',
 		bgColor: '',
+		glassEffect: false,
+		wheelBorderColor: '',
 		autoOpenDelay: null,
 		spinDuration: 5,
 		buttonSide: 'right',
@@ -596,8 +598,45 @@ const WheelSettingsModal = ({
 										)}
 									</div>
 									<p className={styles.hint}>
-										Цвет кромки барабана, фона карточки и секторов по
-										умолчанию (если не задан свой цвет сектора).
+										Цвет фона карточки и секторов по умолчанию (если не
+										задан свой цвет сектора).
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>Цвет обода колеса:</p>
+									<div className={styles.colorRow}>
+										<input
+											type="color"
+											className={styles.colorPicker}
+											value={config.wheelBorderColor || config.color}
+											onChange={e =>
+												setField('wheelBorderColor', e.target.value)
+											}
+										/>
+										<input
+											className={styles.input}
+											value={config.wheelBorderColor || ''}
+											onChange={e =>
+												setField('wheelBorderColor', e.target.value)
+											}
+											placeholder="Как основной цвет"
+											maxLength={7}
+										/>
+										{config.wheelBorderColor && (
+											<button
+												type="button"
+												className={styles.clearColorBtn}
+												onClick={() => setField('wheelBorderColor', '')}
+												title="Вернуть основной цвет"
+											>
+												✕
+											</button>
+										)}
+									</div>
+									<p className={styles.hint}>
+										Отдельный цвет внешнего кольца колеса. Оставьте пустым,
+										чтобы использовать основной цвет.
 									</p>
 								</div>
 
@@ -631,6 +670,25 @@ const WheelSettingsModal = ({
 									<p className={styles.hint}>
 										Цвет фона карточки (фон под колесом). Оставьте пустым
 										для стандартного градиента.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<label className={styles.checkRow}>
+										<input
+											type="checkbox"
+											checked={config.glassEffect}
+											onChange={e =>
+												setField('glassEffect', e.target.checked)
+											}
+										/>
+										<span className={styles.checkLabel}>
+											Стеклянный эффект фона
+										</span>
+									</label>
+									<p className={styles.hint}>
+										Делает фон карточки полупрозрачным, с мягким бликом и
+										размытием подложки.
 									</p>
 								</div>
 

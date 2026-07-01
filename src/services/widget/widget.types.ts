@@ -27,6 +27,8 @@ export interface WidgetIntegrations {
 export interface WidgetConfig {
 	color: string
 	bgColor: string
+	glassEffect: boolean
+	wheelBorderColor: string
 	autoOpenDelay: number | null
 	spinDuration: number
 	buttonSide: 'left' | 'right'

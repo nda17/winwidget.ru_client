@@ -160,6 +160,8 @@ const getSharedPublicConfig = (
 	config: {
 		color?: string
 		bgColor?: string
+		glassEffect?: boolean
+		wheelBorderColor?: string
 		buttonColor?: string
 		openButtonColor?: string
 		buttonSide?: 'left' | 'right'
@@ -183,6 +185,8 @@ const getSharedPublicConfig = (
 	isActive: true,
 	color: config.color || '#4705fb',
 	bgColor: config.bgColor || null,
+	glassEffect: config.glassEffect === true,
+	wheelBorderColor: config.wheelBorderColor || '',
 	buttonColor: config.buttonColor || '',
 	openButtonColor: config.openButtonColor || '',
 	buttonSide: config.buttonSide || 'right',
