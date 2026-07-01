@@ -156,14 +156,54 @@ const WheelSettingsModal = ({
 		spinResetToken: '',
 		actionButton: null,
 		bonuses: [
-			{ name: 'Бонус #1', wheelLabel: 'Бонус #1', active: true },
-			{ name: 'Бонус #2', wheelLabel: 'Бонус #2', active: true },
-			{ name: 'Бонус #3', wheelLabel: 'Бонус #3', active: true },
-			{ name: 'Бонус #4', wheelLabel: 'Бонус #4', active: true },
-			{ name: 'Бонус #5', wheelLabel: 'Бонус #5', active: true },
-			{ name: 'Бонус #6', wheelLabel: 'Бонус #6', active: true },
-			{ name: 'Бонус #7', wheelLabel: 'Бонус #7', active: true },
-			{ name: 'Бонус #8', wheelLabel: 'Бонус #8', active: true }
+			{
+				name: 'Бонус #1',
+				wheelLabel: 'Бонус #1',
+				active: true,
+				probability: 1
+			},
+			{
+				name: 'Бонус #2',
+				wheelLabel: 'Бонус #2',
+				active: true,
+				probability: 1
+			},
+			{
+				name: 'Бонус #3',
+				wheelLabel: 'Бонус #3',
+				active: true,
+				probability: 1
+			},
+			{
+				name: 'Бонус #4',
+				wheelLabel: 'Бонус #4',
+				active: true,
+				probability: 1
+			},
+			{
+				name: 'Бонус #5',
+				wheelLabel: 'Бонус #5',
+				active: true,
+				probability: 1
+			},
+			{
+				name: 'Бонус #6',
+				wheelLabel: 'Бонус #6',
+				active: true,
+				probability: 1
+			},
+			{
+				name: 'Бонус #7',
+				wheelLabel: 'Бонус #7',
+				active: true,
+				probability: 1
+			},
+			{
+				name: 'Бонус #8',
+				wheelLabel: 'Бонус #8',
+				active: true,
+				probability: 1
+			}
 		],
 		integrations: {
 			email: '',
@@ -292,7 +332,7 @@ const WheelSettingsModal = ({
 			| 'color'
 			| 'textColor'
 			| 'neverWin',
-		value: string | boolean | number
+		value: string | boolean | number | undefined
 	) => {
 		setConfig(prev => {
 			const bonuses = [...prev.bonuses]
@@ -1535,18 +1575,20 @@ const WheelSettingsModal = ({
 												type="number"
 												min="1"
 												max="100"
-												value={bonus.probability ?? 1}
-												onChange={e =>
+												value={bonus.probability ?? ''}
+												onChange={e => {
+													if (e.target.value === '') {
+														setBonus(i, 'probability', undefined)
+														return
+													}
+													const parsed = parseInt(e.target.value)
+													if (Number.isNaN(parsed)) return
 													setBonus(
 														i,
 														'probability',
-														clampNumber(
-															parseInt(e.target.value) || 1,
-															1,
-															100
-														)
+														clampNumber(parsed, 1, 100)
 													)
-												}
+												}}
 												style={{ width: '80px' }}
 											/>
 										</div>
