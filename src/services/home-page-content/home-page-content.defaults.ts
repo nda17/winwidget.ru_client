@@ -250,7 +250,7 @@ export const DEFAULT_HOME_PAGE_FOOTER_CONTENT: HomePageContent['footer'] =
 		vkAriaLabel: 'Winwidget во ВКонтакте',
 		telegramAriaLabel: 'Winwidget в Telegram',
 		legalDisclaimer:
-			'Согласно ст. 437 ГК РФ, Информация на сайте не является публичной офертой (ст. 437 ГК РФ)'
+			'Согласно ст. 437 ГК РФ, информация на сайте не является публичной офертой.'
 	}
 
 export const DEFAULT_HOME_PAGE_BODY_CONTENT: HomePageContent['body'] = {
