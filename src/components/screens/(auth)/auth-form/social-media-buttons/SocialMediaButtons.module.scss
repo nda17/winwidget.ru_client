@@ -1,24 +1,20 @@
 .wrapper {
-	@apply flex justify-center flex-col gap-3;
+	@apply flex flex-wrap gap-[0.75rem] justify-start;
 
-	.buttonGroup {
-		@apply flex flex-wrap sm:grid gap-[0.75rem] sm:grid-cols-2;
+	.button {
+		@apply w-[47%] sm:w-[48%] flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-[0.92rem] font-medium transition-all text-[#7b3fa0] bg-[#f3eeff] border-[#e0d6f0];
 
-		.button {
-			@apply w-full flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-[0.92rem] font-medium transition-all text-[#7b3fa0] bg-[#f3eeff] border-[#e0d6f0];
+		&:hover {
+			@apply bg-[#e0d6f0] -translate-y-px;
+		}
 
-			&:hover {
-				@apply bg-[#e0d6f0] -translate-y-px;
-			}
+		&:disabled {
+			@apply cursor-not-allowed opacity-60 translate-y-0;
+		}
 
-			&:disabled {
-				@apply cursor-not-allowed opacity-60 translate-y-0;
-			}
-
-			> svg {
-				@apply h-[1.1rem] w-[1.1rem] shrink-0 overflow-visible;
-				fill: currentColor;
-			}
+		> svg {
+			@apply h-[1.1rem] w-[1.1rem] shrink-0 overflow-visible;
+			fill: currentColor;
 		}
 	}
 }

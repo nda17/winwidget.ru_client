@@ -43,51 +43,47 @@ const SocialMediaButtons = ({
 
 	return (
 		<div className={styles.wrapper}>
-			<div className={styles.buttonGroup}>
-				{googleAuthEnabled && (
-					<button
-						onClick={() => handleSocialAuth('/auth/google')}
-						className={styles.button}
-						type="button"
-					>
-						<AppIcon name="google" fill="currentColor" />
-						<span>Google</span>
-					</button>
-				)}
-				{yandexAuthEnabled && (
-					<button
-						onClick={() => handleSocialAuth('/auth/yandex')}
-						className={styles.button}
-						type="button"
-					>
-						<AppIcon name="yandex" fill="currentColor" />
-						<span>Яндекс</span>
-					</button>
-				)}
-			</div>
-			<div className={styles.buttonGroup}>
-				{telegramAuthEnabled && (
-					<button
-						onClick={onTelegramAuthStart}
-						className={styles.button}
-						type="button"
-						disabled={isTelegramAuthLoading}
-					>
-						<AppIcon name="telegram" fill="currentColor" />
-						<span>{isTelegramAuthLoading ? 'Ждём...' : 'Telegram'}</span>
-					</button>
-				)}
-				{githubAuthEnabled && (
-					<button
-						onClick={() => handleSocialAuth('/auth/github')}
-						className={styles.button}
-						type="button"
-					>
-						<AppIcon name="github" fill="currentColor" />
-						<span>GitHub</span>
-					</button>
-				)}
-			</div>
+			{googleAuthEnabled && (
+				<button
+					onClick={() => handleSocialAuth('/auth/google')}
+					className={styles.button}
+					type="button"
+				>
+					<AppIcon name="google" fill="currentColor" />
+					<span>Google</span>
+				</button>
+			)}
+			{yandexAuthEnabled && (
+				<button
+					onClick={() => handleSocialAuth('/auth/yandex')}
+					className={styles.button}
+					type="button"
+				>
+					<AppIcon name="yandex" fill="currentColor" />
+					<span>Яндекс</span>
+				</button>
+			)}
+			{telegramAuthEnabled && (
+				<button
+					onClick={onTelegramAuthStart}
+					className={styles.button}
+					type="button"
+					disabled={isTelegramAuthLoading}
+				>
+					<AppIcon name="telegram" fill="currentColor" />
+					<span>{isTelegramAuthLoading ? 'Ждём...' : 'Telegram'}</span>
+				</button>
+			)}
+			{githubAuthEnabled && (
+				<button
+					onClick={() => handleSocialAuth('/auth/github')}
+					className={styles.button}
+					type="button"
+				>
+					<AppIcon name="github" fill="currentColor" />
+					<span>GitHub</span>
+				</button>
+			)}
 		</div>
 	)
 }
