@@ -8,6 +8,7 @@ export interface SiteSettings {
 	googleAuthEnabled: boolean
 	yandexAuthEnabled: boolean
 	githubAuthEnabled: boolean
+	vkAuthEnabled: boolean
 	telegramAuthEnabled: boolean
 	affiliateProgramEnabled: boolean
 	affiliateCashbackPercent: number

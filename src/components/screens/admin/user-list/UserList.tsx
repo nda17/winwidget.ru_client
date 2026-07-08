@@ -120,6 +120,7 @@ const UserList: NextPage = () => {
 		GOOGLE: 'Google',
 		GITHUB: 'GitHub',
 		YANDEX: 'Яндекс',
+		VK: 'VK',
 		TELEGRAM: 'Telegram'
 	}
 

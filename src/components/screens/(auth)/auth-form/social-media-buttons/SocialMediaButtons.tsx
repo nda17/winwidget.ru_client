@@ -24,6 +24,7 @@ const SocialMediaButtons = ({
 	const googleAuthEnabled = siteSettings?.googleAuthEnabled ?? true
 	const yandexAuthEnabled = siteSettings?.yandexAuthEnabled ?? true
 	const githubAuthEnabled = siteSettings?.githubAuthEnabled ?? true
+	const vkAuthEnabled = siteSettings?.vkAuthEnabled ?? false
 	const telegramAuthEnabled = siteSettings?.telegramAuthEnabled ?? true
 
 	const handleSocialAuth = (path: string) => {
@@ -72,6 +73,16 @@ const SocialMediaButtons = ({
 				>
 					<AppIcon name="telegram" fill="currentColor" />
 					<span>{isTelegramAuthLoading ? 'Ждём...' : 'Telegram'}</span>
+				</button>
+			)}
+			{vkAuthEnabled && (
+				<button
+					onClick={() => handleSocialAuth('/auth/vk')}
+					className={styles.button}
+					type="button"
+				>
+					<AppIcon name="vk" fill="currentColor" />
+					<span>VK</span>
 				</button>
 			)}
 			{githubAuthEnabled && (

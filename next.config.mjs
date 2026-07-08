@@ -54,6 +54,10 @@ const nextConfig = {
 				destination: `${apiBase}/auth/yandex`
 			},
 			{
+				source: '/auth/vk',
+				destination: `${apiBase}/auth/vk`
+			},
+			{
 				source: '/uploads/:path*',
 				destination: `${apiBase}/uploads/:path*`
 			}

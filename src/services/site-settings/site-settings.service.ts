@@ -19,6 +19,7 @@ const siteSettingsService = {
 				| 'googleAuthEnabled'
 				| 'yandexAuthEnabled'
 				| 'githubAuthEnabled'
+				| 'vkAuthEnabled'
 				| 'telegramAuthEnabled'
 			>
 		>

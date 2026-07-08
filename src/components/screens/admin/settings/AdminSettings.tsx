@@ -299,6 +299,30 @@ const AdminSettings: NextPage = () => {
 
 						<div className={styles.toggleRow}>
 							<div>
+								<p className={styles.fieldLabel}>Вход через VK</p>
+								<p className={styles.fieldHint}>
+									Если выключено, кнопка VK скрывается, а прямой переход на
+									VK-авторизацию блокируется
+								</p>
+							</div>
+							<button
+								className={`${styles.toggle} ${settings?.vkAuthEnabled ? styles.toggleOn : ''}`}
+								onClick={() =>
+									saveWithToast(
+										{
+											vkAuthEnabled: !settings?.vkAuthEnabled
+										},
+										'Применяем настройку...'
+									)
+								}
+								disabled={mutation.isPending}
+							>
+								<span className={styles.toggleThumb} />
+							</button>
+						</div>
+
+						<div className={styles.toggleRow}>
+							<div>
 								<p className={styles.fieldLabel}>Вход через Telegram</p>
 								<p className={styles.fieldHint}>
 									Если выключено, кнопка Telegram скрывается, а запрос к

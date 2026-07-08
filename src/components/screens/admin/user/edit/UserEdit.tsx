@@ -388,6 +388,7 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 		GOOGLE: 'Google',
 		GITHUB: 'GitHub',
 		YANDEX: 'Яндекс',
+		VK: 'VK',
 		TELEGRAM: 'Telegram'
 	}
 
