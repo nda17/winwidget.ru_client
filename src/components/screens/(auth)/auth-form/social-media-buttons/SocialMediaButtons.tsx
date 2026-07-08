@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 
 const AFFILIATE_REFERRER_STORAGE_KEY = 'affiliateReferrerId'
-const SOCIAL_AUTH_SKELETON_ITEMS = [0, 1, 2, 3]
+const SOCIAL_AUTH_SKELETON_ITEMS = [0, 1]
 
 interface SocialMediaButtonsProps {
 	onTelegramAuthStart: () => void
