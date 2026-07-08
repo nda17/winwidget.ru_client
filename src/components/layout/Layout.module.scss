@@ -10,7 +10,7 @@
 }
 
 .layout {
-	@apply max-w-[1440px] flex flex-col min-h-full m-0 relative bg-[#f8f5ff];
+	@apply w-full flex flex-col min-h-full m-0 relative bg-[#f8f5ff];
 	margin-inline: auto;
 	@apply overflow-x-clip;
 

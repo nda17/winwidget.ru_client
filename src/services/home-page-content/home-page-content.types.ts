@@ -312,6 +312,7 @@ export interface HomePageFooterContent {
 	aboutTitle: string
 	infoLines: string[]
 	email: string
+	ybsUrl: string
 	vkUrl: string
 	telegramUrl: string
 	vkAriaLabel: string

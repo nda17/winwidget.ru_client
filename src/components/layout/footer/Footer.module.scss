@@ -55,6 +55,14 @@
 
 				.info-llc {
 					@apply text-black text-[0.8rem] leading-[1.05rem] select-none;
+
+					.info-link {
+						@apply text-black transition-colors;
+
+						&:hover {
+							@apply text-secondary;
+						}
+					}
 				}
 
 				.link-contact {
@@ -95,6 +103,14 @@
 			}
 			.ybs-inform-wrapper {
 				@apply flex gap-1 mb-3 items-center;
+
+				.ybs-logo-link {
+					@apply inline-flex items-center justify-center rounded-full transition-transform;
+
+					&:hover {
+						@apply -translate-y-px;
+					}
+				}
 
 				.ybs-logo {
 					@apply block origin-center;

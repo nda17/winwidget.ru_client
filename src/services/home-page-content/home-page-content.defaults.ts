@@ -245,6 +245,7 @@ export const DEFAULT_HOME_PAGE_FOOTER_CONTENT: HomePageContent['footer'] =
 		aboutTitle: 'О нас:',
 		infoLines: ['ООО «ЮБС»', 'ИНН: 2700019628', 'ОГРН: 1232700016460'],
 		email: 'info@winwidget.ru',
+		ybsUrl: 'https://ybs.one',
 		vkUrl: 'https://vk.ru',
 		telegramUrl: 'https://t.me/winwidget_support_bot',
 		vkAriaLabel: 'Winwidget во ВКонтакте',

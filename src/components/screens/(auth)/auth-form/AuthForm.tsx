@@ -254,9 +254,6 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin, authMessage }) => {
 			</div>
 
 			<div className={styles['social-section']}>
-				<div className={styles['section-divider']}>
-					<span>или продолжить через</span>
-				</div>
 				<SocialMediaButtons
 					onTelegramAuthStart={startTelegramAuth}
 					isTelegramAuthLoading={isTelegramAuthLoading}

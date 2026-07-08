@@ -1309,6 +1309,17 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 						}
 						hint="Каждая строка выводится отдельным абзацем."
 					/>
+					<TextField
+						id="footer-ybs-url"
+						label="Ссылка ООО ЮБС"
+						value={draft.footer.ybsUrl}
+						onChange={value =>
+							updateDraft(prev => ({
+								...prev,
+								footer: { ...prev.footer, ybsUrl: value }
+							}))
+						}
+					/>
 					<div className={styles.gridTwo}>
 						<TextField
 							id="footer-vk-url"

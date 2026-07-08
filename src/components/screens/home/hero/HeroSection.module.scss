@@ -6,6 +6,10 @@
 		transform: rotate(548deg);
 		will-change: transform;
 
+		@media (min-width: 1440px) {
+			@apply left-[-8vw] w-[120vw] max-w-none;
+		}
+
 		@media (min-width: 992px) {
 			transform: rotate(553deg);
 		}
