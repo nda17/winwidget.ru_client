@@ -4,7 +4,7 @@ import { profileMiddleware } from '@/app/middlewares/profileMiddleware'
 import { NextRequest, NextResponse } from 'next/server'
 
 const WIDGET_PREVIEW_PATH =
-	/^\/page-(wheel|quiz|callback|timer|stop-offer|online-consultant)\//
+	/^\/page-(wheel|quiz|callback|timer|stop-offer|online-consultant|calculator)\//
 
 export const config = {
 	matcher: [

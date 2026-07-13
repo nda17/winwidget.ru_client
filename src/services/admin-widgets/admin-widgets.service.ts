@@ -8,6 +8,7 @@ export type AdminWidgetType =
 	| 'TIMER'
 	| 'STOP_OFFER'
 	| 'ONLINE_CONSULTANT'
+	| 'CALCULATOR'
 export type AdminWidgetActiveFilter = 'true' | 'false'
 export type AdminWidgetPlanFilter = Plan | 'NONE'
 

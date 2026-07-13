@@ -39,6 +39,7 @@ const TOOL_PREVIEW_TYPES: HomePageToolPreviewType[] = [
 	'timer',
 	'onlineConsultant',
 	'stopOffer',
+	'calculator',
 	'none'
 ]
 
@@ -275,11 +276,13 @@ export const DEFAULT_HOME_PAGE_TECHNICAL_SEO_CONTENT: HomePageContent['technical
 			'/callbacks/',
 			'/timers/',
 			'/stop-offers/',
+			'/calculators/',
 			'/page-wheel/',
 			'/page-quiz/',
 			'/page-callback/',
 			'/page-timer/',
 			'/page-stop-offer/',
+			'/page-calculator/',
 			'/payment/',
 			'/logout/',
 			'/login/',
@@ -347,7 +350,8 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 			callback: 'Перезвоним вам за 5 минут',
 			countdown: 'Супер-акция!',
 			onlineConsultant: 'Проконсультируем!',
-			stopOffer: 'Остановите клиента при уходе!'
+			stopOffer: 'Остановите клиента при уходе!',
+			calculator: 'Рассчитайте стоимость!'
 		}
 	},
 	hero: {
@@ -517,8 +521,8 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 				title: 'Калькулятор стоимости',
 				description:
 					'“Рассчитать цену” с несколькими параметрами и сбором контакта перед результатом или после.\nОтлично для услуг, ремонта, доставки, мебели, производства.\n',
-				comingSoon: true,
-				previewType: 'none'
+				comingSoon: false,
+				previewType: 'calculator'
 			},
 			{
 				title: 'NPS-опрос',

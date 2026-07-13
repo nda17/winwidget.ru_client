@@ -1,0 +1,261 @@
+.overlay {
+	@apply fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[4px];
+}
+
+.backdrop {
+	@apply absolute inset-0 border-none bg-transparent p-0;
+}
+
+.modal {
+	@apply relative z-[1] flex max-h-[90vh] w-full max-w-[56rem] flex-col overflow-y-auto rounded-2xl border border-[#e0d6f0] bg-white px-8 pt-8 shadow-2xl;
+}
+
+.modal::-webkit-scrollbar,
+.tabs::-webkit-scrollbar {
+	@apply hidden;
+}
+
+.closeBtn {
+	@apply absolute right-4 top-4 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-none bg-[#f3eeff] text-lg text-[#7b3fa0] transition-colors hover:bg-[#e0d6f0];
+}
+
+.modalTitle {
+	@apply mb-6 text-center text-2xl font-bold text-[#1a1a1a];
+}
+
+.tabs {
+	@apply mb-6 flex shrink-0 flex-wrap justify-center gap-x-4 gap-y-2 overflow-visible border-b border-[#e0d6f0] pb-2;
+}
+
+.tab {
+	@apply shrink-0 cursor-pointer whitespace-nowrap border-none bg-transparent pb-2 text-sm text-[#aaa] transition-colors hover:text-[#7b3fa0];
+}
+
+.tabActive {
+	@apply border-b-2 border-[#7b3fa0] font-semibold text-[#7b3fa0];
+}
+
+.tabContent {
+	@apply flex-1;
+}
+
+.fields {
+	@apply flex flex-col gap-5;
+}
+
+.settingsGroup,
+.itemCard {
+	@apply flex flex-col gap-4 rounded-xl border border-[#e0d6f0] bg-white p-4;
+}
+
+.settingsGroupTitle {
+	@apply m-0 border-b border-[#f0eaf8] pb-3 text-sm font-semibold uppercase tracking-[0.06em] text-[#7b3fa0];
+}
+
+.field {
+	@apply flex min-w-0 flex-col gap-2;
+}
+
+.label {
+	@apply text-sm font-medium text-[#555];
+}
+
+.input {
+	@apply w-full rounded-lg border border-[#e0d6f0] bg-[#f8f5ff] px-4 py-3 text-sm text-[#1a1a1a] outline-none transition-colors focus:border-[#c4a8e8];
+}
+
+select.input {
+	@apply appearance-none bg-no-repeat pr-11;
+	background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 6L8 10L12 6' stroke='%231A1A1A' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+	background-position: right 1rem center;
+	background-size: 16px 16px;
+}
+
+.input[type='number'] {
+	@apply appearance-none;
+}
+
+.input[type='number']::-webkit-inner-spin-button,
+.input[type='number']::-webkit-outer-spin-button {
+	@apply m-0 appearance-none;
+}
+
+.input option {
+	@apply bg-white;
+}
+
+.gridTwo {
+	@apply grid grid-cols-2 gap-4;
+}
+
+.gridThree {
+	@apply grid grid-cols-3 gap-4;
+}
+
+.colorRow {
+	@apply flex items-center gap-2;
+}
+
+.colorPicker {
+	@apply h-10 w-10 shrink-0 cursor-pointer rounded-md border border-[#e0d6f0] bg-transparent p-0.5;
+}
+
+.checkRow {
+	@apply flex cursor-pointer items-center gap-2 text-sm text-[#555];
+}
+
+.hint {
+	@apply m-0 text-xs leading-5 text-[#999];
+}
+
+.buttonImageBox {
+	@apply flex items-center gap-4 rounded-lg border border-dashed border-[#e0d6f0] bg-[#faf8ff] p-3;
+}
+
+.buttonImagePreview {
+	@apply flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#e0d6f0] bg-white p-2;
+}
+
+.buttonImagePreview img {
+	@apply max-h-full max-w-full object-contain;
+}
+
+.buttonImageContent {
+	@apply flex flex-1 flex-col gap-2;
+}
+
+.buttonImageActions,
+.footerActions,
+.itemActions {
+	@apply flex flex-wrap items-center gap-2;
+}
+
+.fileInput {
+	@apply hidden;
+}
+
+.secondaryBtn,
+.smallBtn,
+.openLink {
+	@apply inline-flex cursor-pointer items-center justify-center rounded-lg border border-[#c4a8e8] bg-white px-3 py-2 text-xs font-semibold text-[#7b3fa0] no-underline transition-colors hover:bg-[#f3eeff] disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+.disabled {
+	@apply pointer-events-none cursor-not-allowed opacity-50;
+}
+
+.itemHeader {
+	@apply flex items-center justify-between gap-3 text-sm text-[#555];
+}
+
+.dangerBtn,
+.removeBtn {
+	@apply cursor-pointer rounded-lg border border-[#f1c7c7] bg-[#fff7f7] px-3 py-2 text-xs font-semibold text-[#d14d4d] transition-colors hover:bg-[#fde8e8];
+}
+
+.removeBtn {
+	@apply h-10 w-10 shrink-0 p-0;
+}
+
+.addBtn {
+	@apply self-start rounded-xl border-none bg-[#7b3fa0] px-5 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90;
+}
+
+.optionList {
+	@apply flex flex-col gap-3 rounded-lg border border-dashed border-[#e0d6f0] bg-[#faf8ff] p-3;
+}
+
+.optionRow {
+	@apply grid grid-cols-[minmax(0,1fr)_8rem_8rem_auto] items-end gap-2;
+}
+
+.compactField {
+	@apply flex min-w-0 flex-col gap-1 text-[11px] font-medium text-[#7b3fa0];
+}
+
+.infoText {
+	@apply m-0 text-sm leading-6 text-[#555];
+}
+
+.infoList {
+	@apply m-0 flex flex-col gap-2 pl-5 text-sm leading-6 text-[#555];
+}
+
+.domainHint {
+	@apply m-0 text-xs leading-5 text-red-600;
+}
+
+.codeArea {
+	@apply min-h-20 resize-none font-mono text-xs;
+}
+
+.directLink {
+	@apply flex items-stretch gap-2;
+}
+
+.openLink {
+	@apply shrink-0 px-4 text-sm;
+}
+
+.stickyFooter {
+	@apply sticky bottom-0 z-10 mt-6 flex items-center justify-between gap-4 border-t border-[#e0d6f0] bg-white py-4;
+}
+
+.saveStatus {
+	@apply m-0 text-xs text-[#999];
+}
+
+.saveStatusDirty {
+	@apply font-semibold text-[#b26a00];
+}
+
+.cancelBtn {
+	@apply cursor-pointer rounded-xl border border-[#e0d6f0] bg-white px-5 py-3 text-sm font-semibold text-[#7b3fa0] transition-colors hover:bg-[#f3eeff] disabled:cursor-not-allowed disabled:opacity-60;
+}
+
+.saveBtn {
+	@apply cursor-pointer rounded-xl border-none bg-[#7b3fa0] px-5 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+@media (max-width: 720px) {
+	.modal {
+		@apply max-h-[96vh] max-w-[calc(100vw-1rem)] px-4 pt-6;
+	}
+
+	.modalTitle {
+		@apply pr-8 text-xl;
+	}
+
+	.gridTwo,
+	.gridThree,
+	.optionRow {
+		@apply grid-cols-1;
+	}
+
+	.itemHeader,
+	.stickyFooter {
+		@apply items-start;
+	}
+
+	.itemHeader {
+		@apply flex-col;
+	}
+
+	.stickyFooter {
+		@apply flex-col;
+	}
+
+	.footerActions {
+		@apply w-full;
+	}
+
+	.cancelBtn,
+	.saveBtn {
+		@apply flex-1;
+	}
+
+	.buttonImageBox,
+	.directLink {
+		@apply flex-col items-stretch;
+	}
+}

@@ -7,6 +7,7 @@ import DemoCallback from '@/components/screens/home/demo-callback/DemoCallback'
 import DemoCountdown from '@/components/screens/home/demo-countdown/DemoCountdown'
 import DemoOnlineConsultant from '@/components/screens/home/demo-online-consultant/DemoOnlineConsultant'
 import DemoStopOffer from '@/components/screens/home/demo-stop-offer/DemoStopOffer'
+import DemoCalculator from '@/components/screens/home/demo-calculator/DemoCalculator'
 import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import styles from './DemoWidgets.module.scss'
@@ -18,6 +19,7 @@ type ActiveDemo =
 	| 'countdown'
 	| 'onlineConsultant'
 	| 'stopOffer'
+	| 'calculator'
 
 const SWITCH_INTERVAL = 7000
 const FADE_DURATION = 520
@@ -29,7 +31,8 @@ const DEMO_ORDER: ActiveDemo[] = [
 	'callback',
 	'countdown',
 	'onlineConsultant',
-	'stopOffer'
+	'stopOffer',
+	'calculator'
 ]
 
 const getNextDemo = (demo: ActiveDemo) => {
@@ -50,6 +53,7 @@ const DemoWidgets = ({ content }: Props) => {
 	const [countdownOpen, setCountdownOpen] = useState(false)
 	const [onlineConsultantOpen, setOnlineConsultantOpen] = useState(false)
 	const [stopOfferOpen, setStopOfferOpen] = useState(false)
+	const [calculatorOpen, setCalculatorOpen] = useState(false)
 	const [bubbleVisible, setBubbleVisible] = useState(false)
 	const floatRef = useRef<HTMLDivElement>(null)
 	const activeDemoRef = useRef<ActiveDemo>('wheel')
@@ -115,7 +119,8 @@ const DemoWidgets = ({ content }: Props) => {
 		else if (activeDemo === 'countdown') setCountdownOpen(true)
 		else if (activeDemo === 'onlineConsultant')
 			setOnlineConsultantOpen(true)
-		else setStopOfferOpen(true)
+		else if (activeDemo === 'stopOffer') setStopOfferOpen(true)
+		else setCalculatorOpen(true)
 	}
 
 	const renderButtonContent = (demo: ActiveDemo) => {
@@ -184,6 +189,19 @@ const DemoWidgets = ({ content }: Props) => {
 			)
 		}
 
+		if (demo === 'calculator') {
+			return (
+				<Image
+					src="/images/tools/calculator-button.png"
+					alt=""
+					width={60}
+					height={60}
+					className={styles.floatIconCalculator}
+					aria-hidden="true"
+				/>
+			)
+		}
+
 		return (
 			<Image
 				src="/images/tools/stop-offer-button.png"
@@ -235,7 +253,9 @@ const DemoWidgets = ({ content }: Props) => {
 										? 'Открыть демо таймера обратного отсчёта'
 										: activeDemo === 'onlineConsultant'
 											? 'Открыть демо онлайн-консультанта'
-											: 'Открыть демо стоп-оффера'
+											: activeDemo === 'stopOffer'
+												? 'Открыть демо стоп-оффера'
+												: 'Открыть демо калькулятора стоимости'
 					}
 				>
 					{previousDemo && previousDemo !== activeDemo && (
@@ -280,6 +300,10 @@ const DemoWidgets = ({ content }: Props) => {
 			<DemoStopOffer
 				open={stopOfferOpen}
 				onClose={() => setStopOfferOpen(false)}
+			/>
+			<DemoCalculator
+				open={calculatorOpen}
+				onClose={() => setCalculatorOpen(false)}
 			/>
 		</>
 	)

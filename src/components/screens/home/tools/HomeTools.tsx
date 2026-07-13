@@ -100,6 +100,27 @@ const OnlineConsultantPreview = () => (
 	</div>
 )
 
+const CalculatorPreview = () => (
+	<div className={styles.calculatorPreview} aria-hidden="true">
+		<Image
+			src="/images/tools/calculator-widget-preview.png"
+			alt=""
+			width={940}
+			height={954}
+			className={styles.calculatorImage}
+			sizes="(max-width: 560px) 78vw, 240px"
+		/>
+		<Image
+			src="/images/tools/calculator-button.png"
+			alt=""
+			width={320}
+			height={320}
+			className={styles.calculatorPreviewButton}
+			sizes="(max-width: 560px) 58px, 68px"
+		/>
+	</div>
+)
+
 const TOOL_GRADIENTS = [
 	'linear-gradient(160deg, #a855f7 0%, #ec4899 50%, #f43f5e 100%)',
 	'linear-gradient(160deg, #170724 0%, #3a1670 48%, #8a3ffc 100%)',
@@ -126,6 +147,12 @@ const getPreview = (tool: HomePageToolItem) => {
 	if (tool.previewType === 'onlineConsultant')
 		return <OnlineConsultantPreview />
 	if (tool.previewType === 'stopOffer') return <StopOfferPreview />
+	if (
+		tool.previewType === 'calculator' ||
+		(tool.previewType === 'none' &&
+			tool.title.trim() === 'Калькулятор стоимости')
+	)
+		return <CalculatorPreview />
 	return null
 }
 

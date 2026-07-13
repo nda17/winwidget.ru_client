@@ -2,10 +2,16 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
+import calculatorService from '@/services/calculator/calculator.service'
+import {
+	CalculatorLead,
+	CalculatorLeadsResponse
+} from '@/services/calculator/calculator.types'
 import widgetService from '@/services/widget/widget.service'
 import { useAuthStore } from '@/store/auth-store/auth-store'
 import {
 	Lead,
+	LeadsResponse,
 	LeadsStatsResponse,
 	Subscription
 } from '@/services/widget/widget.types'
@@ -16,13 +22,15 @@ import styles from './WidgetLeads.module.scss'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
-interface Props {
-	widgetId: string
-}
+type Props =
+	| { source?: 'wheel'; widgetId: string; calculatorId?: never }
+	| { source: 'calculator'; calculatorId: string; widgetId?: never }
 
-const WidgetLeads = ({ widgetId }: Props) => {
+const WidgetLeads = (props: Props) => {
 	const auth = useAuthStore(state => state.auth)
 	const isAuthResolved = useAuthStore(state => state.isAuthResolved)
+	const isCalculator = props.source === 'calculator'
+	const sourceId = isCalculator ? props.calculatorId : props.widgetId
 
 	const [exporting, setExporting] = useState<
 		'csv' | 'xlsx' | 'pdf' | null
@@ -30,10 +38,19 @@ const WidgetLeads = ({ widgetId }: Props) => {
 	const [currentPage, setCurrentPage] = useState(1)
 	const itemQuantity = 50
 
-	const { data, isLoading } = useQuery({
-		queryKey: ['leads', widgetId, currentPage, itemQuantity],
+	const { data, isLoading } = useQuery<
+		LeadsResponse | CalculatorLeadsResponse
+	>({
+		queryKey: [
+			isCalculator ? 'calculator-leads' : 'leads',
+			sourceId,
+			currentPage,
+			itemQuantity
+		],
 		queryFn: () =>
-			widgetService.getLeads(widgetId, currentPage, itemQuantity),
+			isCalculator
+				? calculatorService.getLeads(sourceId, currentPage, itemQuantity)
+				: widgetService.getLeads(sourceId, currentPage, itemQuantity),
 		enabled: auth
 	})
 
@@ -47,9 +64,9 @@ const WidgetLeads = ({ widgetId }: Props) => {
 		subscription?.plan === 'TRIAL' || subscription?.plan === 'HARD'
 
 	const { data: statsData } = useQuery<LeadsStatsResponse>({
-		queryKey: ['leads-stats', widgetId],
-		queryFn: () => widgetService.getLeadsStats(widgetId),
-		enabled: !!auth && canAccess
+		queryKey: ['leads-stats', sourceId],
+		queryFn: () => widgetService.getLeadsStats(sourceId),
+		enabled: !!auth && canAccess && !isCalculator
 	})
 
 	const isPending = !isAuthResolved || (!!auth && isLoading)
@@ -82,6 +99,53 @@ const WidgetLeads = ({ widgetId }: Props) => {
 		})
 	}
 
+	const formatCalculatorAnswers = (
+		answers: CalculatorLead['answers']
+	): string => {
+		if (Array.isArray(answers)) {
+			return answers
+				.map(answer => {
+					const value =
+						answer.valueLabel ||
+						(Array.isArray(answer.value)
+							? answer.value.join(', ')
+							: String(answer.value))
+					return `${answer.fieldLabel || answer.fieldId}: ${value}`
+				})
+				.join('; ')
+		}
+
+		return Object.entries(answers || {})
+			.map(
+				([key, value]) =>
+					`${key}: ${Array.isArray(value) ? value.join(', ') : String(value)}`
+			)
+			.join('; ')
+	}
+
+	const escapeHtml = (value: unknown) =>
+		String(value ?? '')
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#039;')
+
+	const formatPdfUrl = (url?: string | null) => {
+		if (!url) return '—'
+
+		const label = url.length > 50 ? `${url.slice(0, 50)}…` : url
+		try {
+			const parsedUrl = new URL(url)
+			if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+				return escapeHtml(label)
+			}
+			return `<a href="${escapeHtml(parsedUrl.toString())}">${escapeHtml(label)}</a>`
+		} catch {
+			return escapeHtml(label)
+		}
+	}
+
 	const triggerDownload = (blob: Blob, filename: string) => {
 		const url = URL.createObjectURL(blob)
 		const a = document.createElement('a')
@@ -95,8 +159,13 @@ const WidgetLeads = ({ widgetId }: Props) => {
 		setExporting('csv')
 		const toastId = toast.loading('Подготовка CSV...')
 		try {
-			const blob = await widgetService.exportLeads(widgetId, 'csv')
-			triggerDownload(blob, `leads.csv`)
+			const blob = isCalculator
+				? await calculatorService.exportLeads(sourceId, 'csv')
+				: await widgetService.exportLeads(sourceId, 'csv')
+			triggerDownload(
+				blob,
+				isCalculator ? 'calculator-leads.csv' : 'leads.csv'
+			)
 			toast.success('CSV скачан', { id: toastId })
 		} catch {
 			toast.error('Ошибка при скачивании CSV', { id: toastId })
@@ -109,8 +178,13 @@ const WidgetLeads = ({ widgetId }: Props) => {
 		setExporting('xlsx')
 		const toastId = toast.loading('Подготовка Excel...')
 		try {
-			const blob = await widgetService.exportLeads(widgetId, 'xlsx')
-			triggerDownload(blob, `leads.xlsx`)
+			const blob = isCalculator
+				? await calculatorService.exportLeads(sourceId, 'xlsx')
+				: await widgetService.exportLeads(sourceId, 'xlsx')
+			triggerDownload(
+				blob,
+				isCalculator ? 'calculator-leads.xlsx' : 'leads.xlsx'
+			)
 			toast.success('Excel скачан', { id: toastId })
 		} catch {
 			toast.error('Ошибка при скачивании Excel', { id: toastId })
@@ -123,7 +197,9 @@ const WidgetLeads = ({ widgetId }: Props) => {
 		setExporting('pdf')
 		const toastId = toast.loading('Подготовка PDF...')
 		try {
-			const all = await widgetService.getAllLeads(widgetId)
+			const all = isCalculator
+				? await calculatorService.getAllLeads(sourceId)
+				: await widgetService.getAllLeads(sourceId)
 			const html = buildPdfHtml(all.leads)
 			const blob = new Blob([html], { type: 'text/html; charset=utf-8' })
 			const url = URL.createObjectURL(blob)
@@ -142,26 +218,44 @@ const WidgetLeads = ({ widgetId }: Props) => {
 		}
 	}
 
-	const buildPdfHtml = (leads: Lead[]) => {
+	const buildPdfHtml = (leads: Array<Lead | CalculatorLead>) => {
 		const rows = leads
-			.map(
-				(lead, i) => `
+			.map((lead, i) => {
+				if (isCalculator) {
+					const calculatorLead = lead as CalculatorLead
+					return `
 			<tr>
 				<td>${i + 1}</td>
-				<td>${formatDate(lead.createdAt)}</td>
-				<td>${lead.phone ? formatPhone(lead.phone) : lead.contact ? formatPhone(lead.contact) : '—'}</td>
-				<td>${lead.email || '—'}</td>
-				<td>${lead.bonus || '—'}</td>
-				<td>${lead.url ? `<a href="${lead.url}">${lead.url.length > 50 ? lead.url.slice(0, 50) + '…' : lead.url}</a>` : '—'}</td>
+				<td>${escapeHtml(formatDate(calculatorLead.createdAt))}</td>
+				<td>${calculatorLead.phone ? escapeHtml(formatPhone(calculatorLead.phone)) : '—'}</td>
+				<td>${calculatorLead.email ? escapeHtml(calculatorLead.email) : '—'}</td>
+				<td>${escapeHtml(formatCalculatorAnswers(calculatorLead.answers)) || '—'}</td>
+				<td>${escapeHtml(calculatorLead.calculatedPrice)} ${escapeHtml(calculatorLead.currency)}</td>
+				<td>${formatPdfUrl(calculatorLead.url)}</td>
 			</tr>`
-			)
+				}
+
+				const wheelLead = lead as Lead
+				return `
+			<tr>
+				<td>${i + 1}</td>
+				<td>${escapeHtml(formatDate(wheelLead.createdAt))}</td>
+				<td>${wheelLead.phone ? escapeHtml(formatPhone(wheelLead.phone)) : wheelLead.contact ? escapeHtml(formatPhone(wheelLead.contact)) : '—'}</td>
+				<td>${wheelLead.email ? escapeHtml(wheelLead.email) : '—'}</td>
+				<td>${wheelLead.bonus ? escapeHtml(wheelLead.bonus) : '—'}</td>
+				<td>${formatPdfUrl(wheelLead.url)}</td>
+			</tr>`
+			})
 			.join('')
+		const extraHead = isCalculator
+			? '<th scope="col">Параметры</th><th scope="col">Расчёт</th>'
+			: '<th scope="col">Бонус</th>'
 
 		return `<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>Заявки</title>
+<title>${isCalculator ? 'Заявки калькулятора' : 'Заявки'}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: Arial, Helvetica, sans-serif; padding: 24px; color: #1a1a1a; font-size: 13px; }
@@ -186,7 +280,7 @@ const WidgetLeads = ({ widgetId }: Props) => {
       <th scope="col">Дата</th>
       <th scope="col">Телефон</th>
       <th scope="col">Email</th>
-      <th scope="col">Бонус</th>
+	  ${extraHead}
       <th scope="col">Страница</th>
     </tr>
   </thead>
@@ -204,7 +298,9 @@ const WidgetLeads = ({ widgetId }: Props) => {
 				</Link>
 			</div>
 
-			<h1 className={styles.title}>Заявки</h1>
+			<h1 className={styles.title}>
+				{isCalculator ? 'Заявки калькулятора' : 'Заявки'}
+			</h1>
 
 			<div className={styles.metricsGrid}>
 				<div className={styles.metricCard}>
@@ -246,43 +342,58 @@ const WidgetLeads = ({ widgetId }: Props) => {
 						<AppIcon name="diamond" size={24} />
 					</span>
 					<span className={styles.metricCopy}>
-						<span className={styles.metricLabel}>Уникальных бонусов</span>
+						<span className={styles.metricLabel}>
+							{isCalculator
+								? 'Всего страниц списка'
+								: 'Уникальных бонусов'}
+						</span>
 						{isPending ? (
 							<SkeletonLoader height={28} width={64} />
 						) : (
 							<strong className={styles.metricValue}>
-								{canAccess ? (statsData?.stats.length ?? 0) : '—'}
+								{isCalculator
+									? data?.total
+										? totalPages
+										: 0
+									: canAccess
+										? (statsData?.stats.length ?? 0)
+										: '—'}
 							</strong>
 						)}
 					</span>
 				</div>
 			</div>
 
-			{canAccess && statsData && statsData.stats.length > 0 && (
-				<div className={styles.statsBlock}>
-					<p className={styles.statsTitle}>Аналитика бонусов</p>
-					<div className={styles.statsList}>
-						{statsData.stats.map(stat => (
-							<div key={stat.bonus} className={styles.statRow}>
-								<span className={styles.statName}>{stat.bonus}</span>
-								<div className={styles.statBarWrap}>
-									<div
-										className={styles.statBar}
-										style={{ width: `${stat.percent}%` }}
-									/>
+			{!isCalculator &&
+				canAccess &&
+				statsData &&
+				statsData.stats.length > 0 && (
+					<div className={styles.statsBlock}>
+						<p className={styles.statsTitle}>Аналитика бонусов</p>
+						<div className={styles.statsList}>
+							{statsData.stats.map(stat => (
+								<div key={stat.bonus} className={styles.statRow}>
+									<span className={styles.statName}>{stat.bonus}</span>
+									<div className={styles.statBarWrap}>
+										<div
+											className={styles.statBar}
+											style={{ width: `${stat.percent}%` }}
+										/>
+									</div>
+									<span className={styles.statCount}>{stat.count}</span>
+									<span className={styles.statPercent}>
+										{stat.percent}%
+									</span>
 								</div>
-								<span className={styles.statCount}>{stat.count}</span>
-								<span className={styles.statPercent}>{stat.percent}%</span>
-							</div>
-						))}
+							))}
+						</div>
+						<p className={styles.statsTotal}>
+							Всего заявок: {statsData.total}
+						</p>
 					</div>
-					<p className={styles.statsTotal}>
-						Всего заявок: {statsData.total}
-					</p>
-				</div>
-			)}
+				)}
 
-			{!canAccess && subscription && (
+			{!isCalculator && !canAccess && subscription && (
 				<div className={styles.statsLocked}>
 					🔒 Аналитика бонусов доступна на{' '}
 					<Link href="/payment" className={styles.exportHintLink}>
@@ -301,7 +412,10 @@ const WidgetLeads = ({ widgetId }: Props) => {
 					</div>
 					<div className={styles.skeletonTable}>
 						<div className={styles.skeletonHead}>
-							{[0.4, 1.5, 1.5, 1.5, 1.2, 1.8].map((flex, i) => (
+							{(isCalculator
+								? [0.4, 1.2, 1.2, 1.2, 2, 1.1, 1.8]
+								: [0.4, 1.5, 1.5, 1.5, 1.2, 1.8]
+							).map((flex, i) => (
 								<div key={i} style={{ flex, minWidth: 0 }}>
 									<SkeletonLoader height={14} />
 								</div>
@@ -309,7 +423,10 @@ const WidgetLeads = ({ widgetId }: Props) => {
 						</div>
 						{[1, 2, 3, 4, 5].map(i => (
 							<div key={i} className={styles.skeletonRow}>
-								{[0.4, 1.5, 1.5, 1.5, 1.2, 1.8].map((flex, j) => (
+								{(isCalculator
+									? [0.4, 1.2, 1.2, 1.2, 2, 1.1, 1.8]
+									: [0.4, 1.5, 1.5, 1.5, 1.2, 1.8]
+								).map((flex, j) => (
 									<div key={j} style={{ flex, minWidth: 0 }}>
 										<SkeletonLoader height={14} />
 									</div>
@@ -373,7 +490,11 @@ const WidgetLeads = ({ widgetId }: Props) => {
 					</div>
 
 					<table className={styles.table}>
-						<caption className="srOnly">Таблица заявок по виджету</caption>
+						<caption className="srOnly">
+							{isCalculator
+								? 'Таблица заявок калькулятора'
+								: 'Таблица заявок по виджету'}
+						</caption>
 						<thead>
 							<tr>
 								<th className={styles.th} scope="col">
@@ -388,54 +509,83 @@ const WidgetLeads = ({ widgetId }: Props) => {
 								<th className={styles.th} scope="col">
 									Email
 								</th>
-								<th className={styles.th} scope="col">
-									Бонус
-								</th>
+								{isCalculator ? (
+									<>
+										<th className={styles.th} scope="col">
+											Параметры
+										</th>
+										<th className={styles.th} scope="col">
+											Расчёт
+										</th>
+									</>
+								) : (
+									<th className={styles.th} scope="col">
+										Бонус
+									</th>
+								)}
 								<th className={styles.th} scope="col">
 									Страница
 								</th>
 							</tr>
 						</thead>
 						<tbody>
-							{data.leads.map((lead, i) => (
-								<tr key={lead.id} className={styles.tr}>
-									<td className={styles.td} data-label="#">
-										{(data.page - 1) * data.limit + i + 1}
-									</td>
-									<td className={styles.td} data-label="Дата">
-										{formatDate(lead.createdAt)}
-									</td>
-									<td className={styles.td} data-label="Телефон">
-										{lead.phone
-											? formatPhone(lead.phone)
-											: lead.contact
-												? formatPhone(lead.contact)
-												: '—'}
-									</td>
-									<td className={styles.td} data-label="Email">
-										{lead.email || '—'}
-									</td>
-									<td className={styles.td} data-label="Бонус">
-										{lead.bonus || '—'}
-									</td>
-									<td className={styles.td} data-label="Страница">
-										{lead.url ? (
-											<a
-												href={lead.url}
-												target="_blank"
-												rel="noopener noreferrer"
-												className={styles.urlLink}
-											>
-												{lead.url.length > 40
-													? lead.url.slice(0, 40) + '…'
-													: lead.url}
-											</a>
+							{data.leads.map((lead, i) => {
+								const calculatorLead = lead as CalculatorLead
+								const wheelLead = lead as Lead
+								return (
+									<tr key={lead.id} className={styles.tr}>
+										<td className={styles.td} data-label="#">
+											{(data.page - 1) * data.limit + i + 1}
+										</td>
+										<td className={styles.td} data-label="Дата">
+											{formatDate(lead.createdAt)}
+										</td>
+										<td className={styles.td} data-label="Телефон">
+											{lead.phone
+												? formatPhone(lead.phone)
+												: !isCalculator && lead.contact
+													? formatPhone(lead.contact)
+													: '—'}
+										</td>
+										<td className={styles.td} data-label="Email">
+											{lead.email || '—'}
+										</td>
+										{isCalculator ? (
+											<>
+												<td className={styles.td} data-label="Параметры">
+													{formatCalculatorAnswers(
+														calculatorLead.answers
+													) || '—'}
+												</td>
+												<td className={styles.td} data-label="Расчёт">
+													{calculatorLead.calculatedPrice}{' '}
+													{calculatorLead.currency}
+												</td>
+											</>
 										) : (
-											'—'
+											<td className={styles.td} data-label="Бонус">
+												{wheelLead.bonus || '—'}
+											</td>
 										)}
-									</td>
-								</tr>
-							))}
+										<td className={styles.td} data-label="Страница">
+											{lead.url ? (
+												<a
+													href={lead.url}
+													target="_blank"
+													rel="noopener noreferrer"
+													className={styles.urlLink}
+												>
+													{lead.url.length > 40
+														? lead.url.slice(0, 40) + '…'
+														: lead.url}
+												</a>
+											) : (
+												'—'
+											)}
+										</td>
+									</tr>
+								)
+							})}
 						</tbody>
 					</table>
 

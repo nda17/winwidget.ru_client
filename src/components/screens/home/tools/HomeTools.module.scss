@@ -239,11 +239,35 @@
 		drop-shadow(0 2px 8px rgba(0, 0, 0, 0.24));
 }
 
+.calculatorPreview {
+	@apply relative z-[1] flex h-[220px] w-full items-center justify-center overflow-hidden rounded-xl;
+
+	@media (max-width: 900px) {
+		@apply h-[210px];
+	}
+
+	@media (max-width: 560px) {
+		@apply h-[238px];
+	}
+}
+
+.calculatorImage {
+	@apply block h-full w-auto max-w-full object-contain;
+	filter: drop-shadow(0 16px 28px rgba(8, 1, 16, 0.28));
+}
+
+.calculatorPreviewButton {
+	@apply absolute bottom-5 right-6 h-[68px] w-[68px] object-contain;
+	filter: drop-shadow(0 12px 24px rgba(249, 63, 31, 0.4))
+		drop-shadow(0 2px 8px rgba(0, 0, 0, 0.24));
+}
+
 .wheelImage,
 .quizImage,
 .callbackImage,
 .timerImage,
-.stopOfferImage {
+.stopOfferImage,
+.calculatorImage {
 	@media (max-width: 560px) {
 		@apply h-[78%] max-w-[84%];
 	}
@@ -256,6 +280,10 @@
 
 	.onlineConsultantButton {
 		@apply bottom-10 right-10 h-[68px] w-[68px];
+	}
+
+	.calculatorPreviewButton {
+		@apply bottom-9 right-9 h-[58px] w-[58px];
 	}
 }
 

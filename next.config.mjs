@@ -37,6 +37,10 @@ const nextConfig = {
 		{
 			source: '/page-stop-offer/:path*',
 			headers: widgetPreviewFrameHeaders
+		},
+		{
+			source: '/page-calculator/:path*',
+			headers: widgetPreviewFrameHeaders
 		}
 	],
 	rewrites: () => {

@@ -283,7 +283,7 @@ const OnlineConsultantIcon = () => (
 	</svg>
 )
 
-const DrumIcon = () => (
+const CalculatorIcon = () => (
 	<svg
 		width="72"
 		height="72"
@@ -292,29 +292,38 @@ const DrumIcon = () => (
 		xmlns="http://www.w3.org/2000/svg"
 	>
 		<rect
-			x="10"
-			y="16"
-			width="52"
-			height="40"
-			rx="6"
+			x="13"
+			y="8"
+			width="46"
+			height="56"
+			rx="8"
+			fill="#f8f5ff"
 			stroke="#e0d6f0"
 			strokeWidth="2"
-			fill="none"
 		/>
-		{[0, 1, 2].map(i => (
-			<rect
-				key={i}
-				x="16"
-				y={22 + i * 11}
-				width="40"
-				height="9"
-				rx="3"
-				fill={(['#470B58', '#C21B84', '#FA595E'] as const)[i]}
-				opacity="0.7"
-			/>
-		))}
-		<rect x="8" y="14" width="56" height="6" rx="3" fill="#e0d6f0" />
-		<rect x="8" y="52" width="56" height="6" rx="3" fill="#e0d6f0" />
+		<rect
+			x="20"
+			y="15"
+			width="32"
+			height="12"
+			rx="3"
+			fill="#470B58"
+			opacity="0.9"
+		/>
+		{[0, 1, 2].map(row =>
+			[0, 1, 2].map(column => (
+				<rect
+					key={`${row}-${column}`}
+					x={20 + column * 11}
+					y={33 + row * 9}
+					width="8"
+					height="6"
+					rx="2"
+					fill={column === 2 && row === 2 ? '#FA595E' : '#C21B84'}
+					opacity={column === 2 && row === 2 ? 1 : 0.72}
+				/>
+			))
+		)}
 	</svg>
 )
 
@@ -365,6 +374,14 @@ const WIDGET_TYPES: WidgetType[] = [
 		description:
 			'Показывает быстрые кнопки для популярных вопросов и при необходимости собирает контакт.',
 		icon: <OnlineConsultantIcon />,
+		available: true
+	},
+	{
+		id: 'calculator',
+		name: 'Калькулятор стоимости',
+		description:
+			'Считает стоимость по выбранным параметрам и собирает контакт до или после результата.',
+		icon: <CalculatorIcon />,
 		available: true
 	}
 ]

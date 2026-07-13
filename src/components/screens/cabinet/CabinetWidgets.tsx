@@ -1,6 +1,7 @@
 'use client'
 
 import CallbackSettingsModal from '@/components/screens/widgets/CallbackSettingsModal'
+import CalculatorSettingsModal from '@/components/screens/widgets/CalculatorSettingsModal'
 import CountdownTimerSettingsModal from '@/components/screens/widgets/CountdownTimerSettingsModal'
 import OnlineConsultantSettingsModal from '@/components/screens/widgets/OnlineConsultantSettingsModal'
 import QuizSettingsModal from '@/components/screens/widgets/QuizSettingsModal'
@@ -17,6 +18,8 @@ import {
 import SkeletonLoader from '@/components/ui/skeleton-loader/SkeletonLoader'
 import callbackService from '@/services/callback/callback.service'
 import { Callback } from '@/services/callback/callback.types'
+import calculatorService from '@/services/calculator/calculator.service'
+import { Calculator } from '@/services/calculator/calculator.types'
 import countdownTimerService from '@/services/countdown-timer/countdown-timer.service'
 import { CountdownTimer } from '@/services/countdown-timer/countdown-timer.types'
 import onlineConsultantService from '@/services/online-consultant/online-consultant.service'
@@ -44,6 +47,7 @@ type ListItem =
 	| { kind: 'timer'; item: CountdownTimer }
 	| { kind: 'stop-offer'; item: StopOffer }
 	| { kind: 'online-consultant'; item: OnlineConsultant }
+	| { kind: 'calculator'; item: Calculator }
 
 const CabinetWidgets = () => {
 	const auth = useAuthStore(state => state.auth)
@@ -60,6 +64,8 @@ const CabinetWidgets = () => {
 		useState<StopOffer | null>(null)
 	const [settingsOnlineConsultant, setSettingsOnlineConsultant] =
 		useState<OnlineConsultant | null>(null)
+	const [settingsCalculator, setSettingsCalculator] =
+		useState<Calculator | null>(null)
 	const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(
 		null
 	)
@@ -104,13 +110,21 @@ const CabinetWidgets = () => {
 		enabled: !!auth
 	})
 
+	const { data: calculatorsData, isLoading: calculatorsLoading } =
+		useQuery({
+			queryKey: ['calculators'],
+			queryFn: calculatorService.getMyCalculators,
+			enabled: !!auth
+		})
+
 	const subscription =
 		widgetsData?.subscription ||
 		quizzesData?.subscription ||
 		callbacksData?.subscription ||
 		timersData?.subscription ||
 		stopOffersData?.subscription ||
-		onlineConsultantsData?.subscription
+		onlineConsultantsData?.subscription ||
+		calculatorsData?.subscription
 	const canUseCustomButtonImage =
 		subscription?.plan === 'HARD' && subscription.status === 'ACTIVE'
 
@@ -138,6 +152,10 @@ const CabinetWidgets = () => {
 		...(onlineConsultantsData?.onlineConsultants || []).map(c => ({
 			kind: 'online-consultant' as const,
 			item: c
+		})),
+		...(calculatorsData?.calculators || []).map(calculator => ({
+			kind: 'calculator' as const,
+			item: calculator
 		}))
 	].sort(
 		(a, b) =>
@@ -153,7 +171,8 @@ const CabinetWidgets = () => {
 				callbacksLoading ||
 				timersLoading ||
 				stopOffersLoading ||
-				onlineConsultantsLoading))
+				onlineConsultantsLoading ||
+				calculatorsLoading))
 
 	const createMutation = useMutation({
 		mutationFn: (typeId: string) => {
@@ -168,9 +187,10 @@ const CabinetWidgets = () => {
 				return onlineConsultantService.createOnlineConsultant(
 					'Онлайн-консультант'
 				)
+			if (typeId === 'calculator')
+				return calculatorService.createCalculator('Калькулятор стоимости')
 			const names: Record<string, string> = {
-				wheel: 'Колесо фортуны',
-				drum: 'Барабан'
+				wheel: 'Колесо фортуны'
 			}
 			return widgetService.createWidget(names[typeId] || 'Виджет')
 		},
@@ -189,7 +209,9 @@ const CabinetWidgets = () => {
 									? ['stop-offers']
 									: typeId === 'online-consultant'
 										? ['online-consultants']
-										: ['widgets']
+										: typeId === 'calculator'
+											? ['calculators']
+											: ['widgets']
 			})
 			setShowTypeModal(false)
 			toast.success('Виджет создан', { id: toastId })
@@ -306,6 +328,23 @@ const CabinetWidgets = () => {
 		}
 	})
 
+	const deleteCalculatorMutation = useMutation({
+		mutationFn: (id: string) => calculatorService.deleteCalculator(id),
+		onMutate: () =>
+			toast.loading('Удаляем виджет, пожалуйста подождите...'),
+		onSuccess: (_, __, toastId) => {
+			queryClient.invalidateQueries({ queryKey: ['calculators'] })
+			setConfirmDeleteId(null)
+			toast.success('Виджет удалён', { id: toastId })
+		},
+		onError: (error: any, __, toastId) => {
+			toast.error(
+				error?.response?.data?.message || 'Ошибка удаления виджета',
+				{ id: toastId }
+			)
+		}
+	})
+
 	const toggleWidgetMutation = useMutation({
 		mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
 			widgetService.updateWidget(id, { isActive }),
@@ -397,6 +436,24 @@ const CabinetWidgets = () => {
 		},
 		onError: (e: any, __, toastId) => {
 			toast.error(e?.response?.data?.message || 'Ошибка', { id: toastId })
+		}
+	})
+
+	const toggleCalculatorMutation = useMutation({
+		mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+			calculatorService.updateCalculator(id, { isActive }),
+		onMutate: ({ isActive }) =>
+			toast.loading(
+				isActive ? 'Включаем виджет...' : 'Отключаем виджет...'
+			),
+		onSuccess: (_, __, toastId) => {
+			queryClient.invalidateQueries({ queryKey: ['calculators'] })
+			toast.success('Статус виджета обновлён', { id: toastId })
+		},
+		onError: (error: any, __, toastId) => {
+			toast.error(error?.response?.data?.message || 'Ошибка', {
+				id: toastId
+			})
 		}
 	})
 
@@ -558,7 +615,9 @@ const CabinetWidgets = () => {
 												? deleteTimerMutation.isPending
 												: kind === 'stop-offer'
 													? deleteStopOfferMutation.isPending
-													: deleteOnlineConsultantMutation.isPending) &&
+													: kind === 'online-consultant'
+														? deleteOnlineConsultantMutation.isPending
+														: deleteCalculatorMutation.isPending) &&
 								confirmDeleteId === item.id
 
 							const pageUrl =
@@ -572,7 +631,9 @@ const CabinetWidgets = () => {
 												? `${publicSiteUrl}/page-timer/${item.publicKey}`
 												: kind === 'stop-offer'
 													? `${publicSiteUrl}/page-stop-offer/${item.publicKey}`
-													: `${publicSiteUrl}/page-online-consultant/${item.publicKey}`
+													: kind === 'online-consultant'
+														? `${publicSiteUrl}/page-online-consultant/${item.publicKey}`
+														: `${publicSiteUrl}/page-calculator/${item.publicKey}`
 
 							const leadsUrl =
 								kind === 'wheel'
@@ -585,7 +646,9 @@ const CabinetWidgets = () => {
 												? `/timers/${item.id}/leads`
 												: kind === 'stop-offer'
 													? `/stop-offers/${item.id}/leads`
-													: `/online-consultants/${item.id}/leads`
+													: kind === 'online-consultant'
+														? `/online-consultants/${item.id}/leads`
+														: `/calculators/${item.id}/leads`
 
 							return (
 								<div
@@ -620,8 +683,13 @@ const CabinetWidgets = () => {
 													id: item.id,
 													isActive: !item.isActive
 												})
-											} else {
+											} else if (kind === 'online-consultant') {
 												toggleOnlineConsultantMutation.mutate({
+													id: item.id,
+													isActive: !item.isActive
+												})
+											} else {
+												toggleCalculatorMutation.mutate({
 													id: item.id,
 													isActive: !item.isActive
 												})
@@ -657,7 +725,9 @@ const CabinetWidgets = () => {
 																? 'Таймер'
 																: kind === 'stop-offer'
 																	? 'Стоп-оффер'
-																	: 'Онлайн-консультант'}
+																	: kind === 'online-consultant'
+																		? 'Онлайн-консультант'
+																		: 'Калькулятор'}
 											</span>
 										</div>
 										<span
@@ -708,10 +778,12 @@ const CabinetWidgets = () => {
 													setSettingsTimer(item as CountdownTimer)
 												} else if (kind === 'stop-offer') {
 													setSettingsStopOffer(item as StopOffer)
-												} else {
+												} else if (kind === 'online-consultant') {
 													setSettingsOnlineConsultant(
 														item as OnlineConsultant
 													)
+												} else {
+													setSettingsCalculator(item as Calculator)
 												}
 											}}
 										>
@@ -733,10 +805,12 @@ const CabinetWidgets = () => {
 															deleteTimerMutation.mutate(item.id)
 														} else if (kind === 'stop-offer') {
 															deleteStopOfferMutation.mutate(item.id)
-														} else {
+														} else if (kind === 'online-consultant') {
 															deleteOnlineConsultantMutation.mutate(
 																item.id
 															)
+														} else {
+															deleteCalculatorMutation.mutate(item.id)
 														}
 													}}
 													disabled={isDeleting}
@@ -871,6 +945,18 @@ const CabinetWidgets = () => {
 						queryClient.invalidateQueries({
 							queryKey: ['online-consultants']
 						})
+					}}
+				/>
+			)}
+
+			{settingsCalculator && (
+				<CalculatorSettingsModal
+					calculator={settingsCalculator}
+					canUseCustomButtonImage={canUseCustomButtonImage}
+					onClose={() => setSettingsCalculator(null)}
+					onSaved={updated => {
+						setSettingsCalculator(updated)
+						queryClient.invalidateQueries({ queryKey: ['calculators'] })
 					}}
 				/>
 			)}

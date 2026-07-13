@@ -53,6 +53,7 @@ const PREVIEW_OPTIONS: Array<{
 	{ value: 'timer', label: 'Таймер' },
 	{ value: 'onlineConsultant', label: 'Онлайн-консультант' },
 	{ value: 'stopOffer', label: 'Стоп-оффер' },
+	{ value: 'calculator', label: 'Калькулятор' },
 	{ value: 'none', label: 'Без превью' }
 ]
 
@@ -1420,7 +1421,8 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 								['callback', 'Облако звонка'],
 								['countdown', 'Облако таймера'],
 								['onlineConsultant', 'Облако онлайн-консультанта'],
-								['stopOffer', 'Облако стоп-оффера']
+								['stopOffer', 'Облако стоп-оффера'],
+								['calculator', 'Облако калькулятора']
 							] as const
 						).map(([key, label]) => (
 							<TextField

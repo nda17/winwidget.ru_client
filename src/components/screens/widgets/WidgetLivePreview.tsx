@@ -1,6 +1,7 @@
 'use client'
 
 import { CallbackConfig } from '@/services/callback/callback.types'
+import { CalculatorConfig } from '@/services/calculator/calculator.types'
 import { CountdownTimerConfig } from '@/services/countdown-timer/countdown-timer.types'
 import { OnlineConsultantConfig } from '@/services/online-consultant/online-consultant.types'
 import { QuizConfig } from '@/services/quiz/quiz.types'
@@ -17,6 +18,7 @@ type PreviewType =
 	| 'timer'
 	| 'stopOffer'
 	| 'onlineConsultant'
+	| 'calculator'
 
 type WidgetLivePreviewProps =
 	| {
@@ -49,6 +51,11 @@ type WidgetLivePreviewProps =
 			config: OnlineConsultantConfig
 			isHardPlan: boolean
 	  }
+	| {
+			type: 'calculator'
+			config: CalculatorConfig
+			isHardPlan: boolean
+	  }
 
 const API_URL =
 	process.env.NEXT_PUBLIC_MODE === 'production'
@@ -61,7 +68,8 @@ const SCRIPT_BY_TYPE: Record<PreviewType, string> = {
 	callback: 'callback.js',
 	timer: 'timer.js',
 	stopOffer: 'stop-offer.js',
-	onlineConsultant: 'online-consultant.js'
+	onlineConsultant: 'online-consultant.js',
+	calculator: 'calculator.js'
 }
 
 const CONFIG_PATH_BY_TYPE: Record<PreviewType, string> = {
@@ -70,7 +78,8 @@ const CONFIG_PATH_BY_TYPE: Record<PreviewType, string> = {
 	callback: 'callback',
 	timer: 'countdown-timer',
 	stopOffer: 'stop-offer',
-	onlineConsultant: 'online-consultant'
+	onlineConsultant: 'online-consultant',
+	calculator: 'calculator'
 }
 
 const DESKTOP_PREVIEW_FRAME = {
@@ -280,6 +289,30 @@ const buildPreviewPublicConfig = (props: WidgetLivePreviewProps) => {
 		}
 	}
 
+	if (props.type === 'calculator') {
+		return {
+			...getSharedPublicConfig(props.config, props.isHardPlan),
+			glassEffect: props.config.glassEffect === true,
+			textColor: props.config.textColor || '',
+			title: props.config.title || 'Рассчитайте стоимость',
+			subtitle: props.config.subtitle || '',
+			calculateButtonText:
+				props.config.calculateButtonText || 'Рассчитать',
+			contactTitle:
+				props.config.contactTitle ||
+				'Оставьте контакт, чтобы получить расчёт',
+			contactPosition: props.config.contactPosition || 'AFTER_RESULT',
+			resultTitle: props.config.resultTitle || 'Ориентировочная стоимость',
+			dataType: getDataType(props.config.dataType),
+			privacyUrl: props.config.privacyUrl || null,
+			filterDuplicates: false,
+			basePrice: props.config.basePrice ?? 0,
+			currency: props.config.currency || 'RUB',
+			roundingStep: props.config.roundingStep || 1,
+			fields: props.config.fields || []
+		}
+	}
+
 	if (props.type === 'stopOffer') {
 		const dataType = getDataType(props.config.dataType, 'PHONE')
 
@@ -419,7 +452,8 @@ const buildPreviewSandboxDocument = (
 				'wintimer_submitted_',
 				'winstopoffer_seen_',
 				'winstopoffer_submitted_',
-				'winonlineconsultant_submitted_'
+				'winonlineconsultant_submitted_',
+				'wincalculator_submitted_'
 			];
 			var sandboxStageLayouts = {
 				wheel: {
@@ -445,6 +479,10 @@ const buildPreviewSandboxDocument = (
 				onlineConsultant: {
 					host: 'online-consultant-widget-host',
 					css: '.woc-overlay{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:clamp(16px,8vw,52px)!important;padding-right:clamp(16px,8vw,52px)!important}.woc-modal{max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
+				},
+				calculator: {
+					host: 'calculator-widget-host',
+					css: '#wwc-overlay{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:clamp(16px,8vw,52px)!important;padding-right:clamp(16px,8vw,52px)!important}#wwc-card{max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
 				}
 			};
 
@@ -602,6 +640,9 @@ const buildPreviewSandboxDocument = (
 				previewType === 'onlineConsultant';
 			window.winonlineconsultant =
 				previewType === 'onlineConsultant' ? previewKey : undefined;
+			window.wincalculatorAutoOpen = previewType === 'calculator';
+			window.wincalculator =
+				previewType === 'calculator' ? previewKey : undefined;
 
 			function schedulePreviewRestart() {
 				if (restartNoticeSent) return;
@@ -706,6 +747,7 @@ const getTypeLabel = (type: PreviewType) => {
 	if (type === 'callback') return 'Звонок'
 	if (type === 'stopOffer') return 'Стоп-оффер'
 	if (type === 'onlineConsultant') return 'Онлайн-консультант'
+	if (type === 'calculator') return 'Калькулятор'
 
 	return 'Таймер'
 }

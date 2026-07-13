@@ -5,6 +5,7 @@ export type HomePageToolPreviewType =
 	| 'timer'
 	| 'onlineConsultant'
 	| 'stopOffer'
+	| 'calculator'
 	| 'none'
 
 export type HomePageIntegrationIconKey =
@@ -92,6 +93,7 @@ export interface HomePageDemoWidgetsContent {
 		countdown: string
 		onlineConsultant: string
 		stopOffer: string
+		calculator: string
 	}
 }
 
