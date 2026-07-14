@@ -39,6 +39,10 @@ const nextConfig = {
 			headers: widgetPreviewFrameHeaders
 		},
 		{
+			source: '/page-online-consultant/:path*',
+			headers: widgetPreviewFrameHeaders
+		},
+		{
 			source: '/page-calculator/:path*',
 			headers: widgetPreviewFrameHeaders
 		}

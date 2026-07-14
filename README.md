@@ -344,6 +344,23 @@ pnpm build
 
 ---
 
+## Рекомендуемый формат веток
+
+```bash
+feature/auth-login
+feature/cards-page
+fix/header-layout
+refactor/user-store
+```
+
+## Commit convention
+
+```bash
+feat: add transfer form
+fix: resolve currency formatting issue
+refactor: split card widget
+```
+
 # CI/CD и production
 
 Workflow `.github/workflows/deploy-production.yml` запускается вручную или при
