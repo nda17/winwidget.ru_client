@@ -1,4 +1,4 @@
-import Admin from '@/components/screens/admin/Admin'
+import { Admin } from '@/screens/admin'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

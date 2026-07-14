@@ -1,4 +1,4 @@
-import AdminEventLog from '@/components/screens/admin/event-log/AdminEventLog'
+import { AdminEventLog } from '@/screens/admin'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

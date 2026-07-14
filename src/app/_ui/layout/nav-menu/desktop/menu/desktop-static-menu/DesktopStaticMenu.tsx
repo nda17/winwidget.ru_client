@@ -1,0 +1,17 @@
+import { staticMenu } from '@/app/_ui/layout/nav-menu/data/menu.data'
+import styles from '@/app/_ui/layout/nav-menu/desktop/menu/desktop-static-menu/DesktopStaticMenu.module.scss'
+import MenuItem from '@/app/_ui/layout/nav-menu/desktop/menu/menu-item/MenuItem'
+import { IMenuItem } from '@/app/_ui/layout/nav-menu/menu-item.interface'
+import { NextPage } from 'next'
+
+const DesktopStaticMenu: NextPage = () => {
+	return (
+		<ul className={styles.wrapper}>
+			{staticMenu.items?.map((item: IMenuItem) => (
+				<MenuItem item={item} key={item.link} />
+			))}
+		</ul>
+	)
+}
+
+export default DesktopStaticMenu

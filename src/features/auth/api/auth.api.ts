@@ -1,0 +1,303 @@
+import {
+	axiosClassicRequest,
+	refreshAccessToken,
+	removeFromStorage,
+	saveTokenStorage
+} from '@/shared/api'
+import { IFormData } from '@/features/auth/model/form.types'
+import type { IUser } from '@/entities/user'
+
+interface IAuthResponse {
+	accessToken: string
+	user: IUser
+}
+
+interface IEmail {
+	email?: string
+	phone?: string
+}
+
+interface IPhonePayload {
+	phone: string
+	password?: string
+	code?: string
+	referrerId?: string
+}
+
+interface IEmailCodePayload {
+	email: string
+	password?: string
+	code?: string
+	referrerId?: string
+}
+
+interface ITelegramAuthVerifyPayload {
+	requestId: string
+	code: string
+	referrerId?: string
+}
+
+interface ITelegramAuthCompletePayload {
+	requestId: string
+	referrerId?: string
+}
+
+interface ITelegramAuthCancelPayload {
+	requestId: string
+}
+
+export interface IEmailRegistrationResponse {
+	email: string
+	expiresAt: string
+	resendAvailableAt: string
+}
+
+export interface ITelegramAuthStartResponse {
+	requestId: string
+	botUrl: string
+	expiresAt: string
+}
+
+export type ITelegramAuthCompleteResponse =
+	| {
+			confirmed: false
+	  }
+	| {
+			confirmed: true
+			accessToken: string
+			user: IUser
+	  }
+
+class AuthService {
+	async main(type: 'login', data: IFormData, token?: string | null) {
+		const response = await axiosClassicRequest.post<IAuthResponse>(
+			`/auth/${type}`,
+			data,
+			{
+				headers: {
+					recaptcha: token
+				}
+			}
+		)
+
+		if (response.data.accessToken) {
+			saveTokenStorage(response.data.accessToken)
+		}
+
+		return response
+	}
+
+	async getNewTokens() {
+		return refreshAccessToken()
+	}
+
+	async getNewTokensByRefresh(refreshToken: string) {
+		const response = await axiosClassicRequest.post<IAuthResponse>(
+			'/auth/access-token',
+			{},
+			{
+				headers: {
+					Cookie: `refreshToken=${refreshToken}`
+				}
+			}
+		)
+
+		return response.data
+	}
+
+	async getRestorePassword(data: IEmail, token?: string | null) {
+		const response = await axiosClassicRequest.patch<IEmail>(
+			'/auth/restore-password',
+			{ email: data.email, phone: data.phone },
+			{
+				headers: {
+					recaptcha: token
+				}
+			}
+		)
+
+		return response
+	}
+
+	async logout() {
+		const response =
+			await axiosClassicRequest.post<boolean>('/auth/logout')
+
+		if (response.data) {
+			removeFromStorage()
+		}
+
+		return response
+	}
+
+	async sendEmailCode(data: IEmailCodePayload, token?: string | null) {
+		return axiosClassicRequest.post<IEmailRegistrationResponse>(
+			'/auth/register',
+			{
+				email: data.email,
+				password: data.password
+			},
+			{
+				headers: {
+					recaptcha: token
+				}
+			}
+		)
+	}
+
+	async registerByEmail(data: IEmailCodePayload, token?: string | null) {
+		const response = await axiosClassicRequest.post<IAuthResponse>(
+			'/auth/email/register',
+			{
+				email: data.email,
+				code: data.code,
+				referrerId: data.referrerId
+			},
+			{
+				headers: {
+					recaptcha: token
+				}
+			}
+		)
+
+		if (response.data.accessToken) {
+			saveTokenStorage(response.data.accessToken)
+		}
+
+		return response
+	}
+
+	async resendEmailCode(data: IEmailCodePayload, token?: string | null) {
+		return axiosClassicRequest.post<IEmailRegistrationResponse>(
+			'/auth/email/resend-code',
+			{
+				email: data.email
+			},
+			{
+				headers: {
+					recaptcha: token
+				}
+			}
+		)
+	}
+
+	async sendPhoneCode(data: IPhonePayload, token?: string | null) {
+		return axiosClassicRequest.post<boolean>(
+			'/auth/phone/send-code',
+			{ phone: data.phone },
+			{
+				headers: {
+					recaptcha: token
+				}
+			}
+		)
+	}
+
+	async registerByPhone(data: IPhonePayload, token?: string | null) {
+		const response = await axiosClassicRequest.post<IAuthResponse>(
+			'/auth/phone/register',
+			{
+				phone: data.phone,
+				password: data.password,
+				code: data.code,
+				referrerId: data.referrerId
+			},
+			{
+				headers: {
+					recaptcha: token
+				}
+			}
+		)
+
+		if (response.data.accessToken) {
+			saveTokenStorage(response.data.accessToken)
+		}
+
+		return response
+	}
+
+	async loginByPhone(data: IPhonePayload, token?: string | null) {
+		const response = await axiosClassicRequest.post<IAuthResponse>(
+			'/auth/phone/login',
+			{
+				phone: data.phone,
+				password: data.password
+			},
+			{
+				headers: {
+					recaptcha: token
+				}
+			}
+		)
+
+		if (response.data.accessToken) {
+			saveTokenStorage(response.data.accessToken)
+		}
+
+		return response
+	}
+
+	async startTelegramAuth(token?: string | null) {
+		return axiosClassicRequest.post<ITelegramAuthStartResponse>(
+			'/auth/telegram/start',
+			{},
+			{
+				headers: {
+					recaptcha: token
+				}
+			}
+		)
+	}
+
+	async verifyTelegramAuth(
+		data: ITelegramAuthVerifyPayload,
+		token?: string | null
+	) {
+		const response = await axiosClassicRequest.post<IAuthResponse>(
+			'/auth/telegram/verify',
+			{
+				requestId: data.requestId,
+				code: data.code,
+				referrerId: data.referrerId
+			},
+			{
+				headers: {
+					recaptcha: token
+				}
+			}
+		)
+
+		if (response.data.accessToken) {
+			saveTokenStorage(response.data.accessToken)
+		}
+
+		return response
+	}
+
+	async completeTelegramAuth(data: ITelegramAuthCompletePayload) {
+		const response =
+			await axiosClassicRequest.post<ITelegramAuthCompleteResponse>(
+				'/auth/telegram/complete',
+				{
+					requestId: data.requestId,
+					referrerId: data.referrerId
+				}
+			)
+
+		if (response.data.confirmed && response.data.accessToken) {
+			saveTokenStorage(response.data.accessToken)
+		}
+
+		return response
+	}
+
+	async cancelTelegramAuth(data: ITelegramAuthCancelPayload) {
+		return axiosClassicRequest.post('/auth/telegram/cancel', {
+			requestId: data.requestId
+		})
+	}
+}
+
+const authService = new AuthService()
+
+export default authService

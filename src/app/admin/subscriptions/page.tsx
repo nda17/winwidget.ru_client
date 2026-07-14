@@ -1,4 +1,4 @@
-import AdminSubscriptions from '@/components/screens/admin/subscriptions/AdminSubscriptions'
+import { AdminSubscriptions } from '@/screens/admin'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

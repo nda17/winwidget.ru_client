@@ -1,4 +1,4 @@
-import UserList from '@/components/screens/admin/user-list/UserList'
+import { UserList } from '@/screens/admin'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

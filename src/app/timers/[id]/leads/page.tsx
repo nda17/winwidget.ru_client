@@ -1,4 +1,4 @@
-import CountdownTimerLeads from '@/components/screens/widgets/CountdownTimerLeads'
+import { CountdownTimerLeads } from '@/screens/widget-leads'
 
 interface Props {
 	params: { id: string }

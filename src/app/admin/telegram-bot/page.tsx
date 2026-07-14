@@ -1,4 +1,4 @@
-import AdminTelegramBot from '@/components/screens/admin/telegram-bot/AdminTelegramBot'
+import { AdminTelegramBot } from '@/screens/admin'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

@@ -1,4 +1,4 @@
-import AdminAlerts from '@/components/screens/admin/alerts/AdminAlerts'
+import { AdminAlerts } from '@/screens/admin'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

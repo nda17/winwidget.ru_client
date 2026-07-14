@@ -1,4 +1,4 @@
-import LegalPageContent from '@/components/screens/legal-documentation/LegalPageContent'
+import { LegalPageContent } from '@/screens/legal-documentation'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {

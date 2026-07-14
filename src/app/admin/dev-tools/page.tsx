@@ -1,4 +1,4 @@
-import AdminDevTools from '@/components/screens/admin/dev-tools/AdminDevTools'
+import { AdminDevTools } from '@/screens/admin'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

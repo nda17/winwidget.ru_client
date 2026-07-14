@@ -1,4 +1,4 @@
-import AdminAffiliate from '@/components/screens/admin/affiliate/AdminAffiliate'
+import { AdminAffiliate } from '@/screens/admin'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

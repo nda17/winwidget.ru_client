@@ -1,4 +1,4 @@
-import AdminTariffs from '@/components/screens/admin/tariffs/AdminTariffs'
+import { AdminTariffs } from '@/screens/admin'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

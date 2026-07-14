@@ -1,0 +1,112 @@
+import LogoutButton from '@/app/_ui/layout/nav-menu/desktop/menu/logout-button/LogoutButton'
+import MenuItem from '@/app/_ui/layout/nav-menu/desktop/menu/menu-item/MenuItem'
+import { ADMIN_PAGES } from '@/shared/config/pages/admin.config'
+import { PUBLIC_PAGES } from '@/shared/config/pages/public.config'
+import { useUser } from '@/entities/user'
+import { useAuthStore } from '@/entities/user'
+import { NextPage } from 'next'
+import { useEffect } from 'react'
+import toast from 'react-hot-toast'
+
+const AuthItems: NextPage = () => {
+	const { user, isLoading } = useUser()
+	const auth = useAuthStore(state => state.auth)
+	const isAuthResolved = useAuthStore(state => state.isAuthResolved)
+
+	const isPending = !isAuthResolved || (auth && isLoading)
+
+	useEffect(() => {
+		if (!isPending) return
+		const id = toast.loading('Загрузка...', { id: 'auth-loading' })
+		return () => toast.dismiss(id)
+	}, [isPending])
+
+	if (isPending) {
+		return null
+	}
+
+	return (
+		<>
+			{!auth && (
+				<MenuItem
+					item={{
+						icon: 'apps',
+						link: '/#tools',
+						title: 'Виджеты'
+					}}
+				/>
+			)}
+			{!auth && (
+				<MenuItem
+					item={{
+						icon: 'diamond',
+						link: '/#pricing',
+						title: 'Тарифы'
+					}}
+				/>
+			)}
+			{!auth && (
+				<MenuItem
+					item={{
+						icon: 'help',
+						link: '/#faq',
+						title: 'Вопросы'
+					}}
+				/>
+			)}
+			{auth && (
+				<MenuItem
+					item={{
+						icon: 'dashboard',
+						link: PUBLIC_PAGES.CABINET,
+						title: 'Личный кабинет'
+					}}
+				/>
+			)}
+
+			{auth && (
+				<MenuItem
+					item={{
+						icon: 'payment',
+						link: PUBLIC_PAGES.PAYMENT,
+						title: 'Оплата'
+					}}
+				/>
+			)}
+
+			{user?.isAdmin && (
+				<MenuItem
+					item={{
+						icon: 'lock',
+						link: ADMIN_PAGES.HOME,
+						title: 'Админ панель'
+					}}
+				/>
+			)}
+
+			{!auth && (
+				<MenuItem
+					item={{
+						icon: 'login',
+						link: PUBLIC_PAGES.LOGIN,
+						title: 'Вход'
+					}}
+				/>
+			)}
+
+			{!auth && (
+				<MenuItem
+					item={{
+						icon: 'person-add',
+						link: PUBLIC_PAGES.REGISTER,
+						title: 'Регистрация'
+					}}
+				/>
+			)}
+
+			{auth && <LogoutButton />}
+		</>
+	)
+}
+
+export default AuthItems

@@ -1,32 +1,180 @@
 # Winwidget — frontend
 
-Frontend коммерческого сервиса Winwidget: публичный сайт, авторизация,
-личный кабинет, административная панель, настройка виджетов, просмотр
+Frontend-приложение коммерческого сервиса Winwidget: публичный сайт, авторизация,
+личный кабинет, административная панель, настройка виджетов, единая страница
 заявок и публичные страницы предпросмотра.
 
-Приложение построено на Next.js 14 с App Router и взаимодействует с
-backend через HTTP API.
-
-> Статус архитектуры: сейчас код использует структуру
-> `components/screens + services + hooks + store`. Ниже зафиксирована
-> целевая FSD-like архитектура и согласованный атомарный порядок перехода.
-> Пока рефакторинг не завершён, нельзя описывать проект как уже переведённый
-> на FSD.
+Приложение построено на Next.js 14 с App Router, использует архитектуру
+Feature-Sliced Design (FSD), адаптированную под Next.js App Router, и
+взаимодействует с backend через HTTP API.
 
 ## Технологический стек
 
-- Next.js 14, React 18, TypeScript;
-- TanStack React Query, Axios;
-- Zustand;
-- React Hook Form;
-- Tailwind CSS, SCSS Modules, Sass, PostCSS;
-- TipTap;
-- Chart.js и react-chartjs-2;
-- jose, js-cookie;
-- qrcode, sharp;
-- react-hot-toast;
-- ESLint, Prettier, Husky, lint-staged;
-- Node.js 20, pnpm 9, Docker.
+### Основные технологии
+
+- `Next.js 14` и App Router;
+- `React 18`;
+- `TypeScript`;
+- `TanStack React Query`;
+- `Axios`;
+- `Zustand`;
+- `React Hook Form`;
+- `libphonenumber-js`.
+
+### UI и стилизация
+
+- `Tailwind CSS 3`;
+- `SCSS Modules` и `Sass`;
+- `PostCSS` и `Autoprefixer`;
+- `clsx`;
+- `TipTap`;
+- `Chart.js` и `react-chartjs-2`;
+- `react-loading-skeleton`;
+- `react-hot-toast`.
+
+### Авторизация и вспомогательные библиотеки
+
+- `jose`;
+- `js-cookie`;
+- `qrcode`;
+- `sharp`.
+
+### Качество кода и инфраструктура
+
+- `ESLint` с `next/core-web-vitals` и `jsx-a11y/recommended`;
+- `Prettier`;
+- `Husky` и `lint-staged`;
+- `Node.js 20`;
+- `pnpm 9`;
+- `Docker` и Next.js standalone output.
+
+---
+
+# Архитектура проекта
+
+Проект построен по Feature-Sliced Design с адаптацией под Next.js App Router.
+
+Документация:
+[Feature-Sliced Design Documentation](https://feature-sliced.design/ru/docs/get-started/overview)
+
+## Структура слоёв
+
+```text
+src/
+├── app/          # Next.js routes, layouts, metadata, providers и app shell
+├── screens/      # композиции полноценных экранов
+├── features/     # пользовательские сценарии и действия
+├── entities/     # бизнес-сущности, их model, api и ui
+├── shared/
+│   ├── api/      # Axios clients, interceptors и token storage
+│   ├── assets/   # общие изображения
+│   ├── config/   # API и route config
+│   ├── lib/      # независимые hooks, stores и helpers
+│   ├── types/    # общие типы и глобальные декларации
+│   └── ui/       # переиспользуемые UI-примитивы
+└── middleware.ts # обязательная точка входа Next.js middleware
+```
+
+Направление зависимостей:
+
+```text
+app -> screens -> features -> entities -> shared
+```
+
+Стандартный FSD-слой `pages` заменён на `screens`, потому что маршрутизация
+принадлежит Next.js App Router в `src/app`.
+
+FSD-слой `widgets` намеренно не используется. В этом проекте слово «виджет»
+уже обозначает продуктовую сущность Winwidget и отдельные runtime-скрипты,
+поэтому архитектурный слой с тем же именем создавал бы двусмысленные пути и
+нейминг. Крупные экранные композиции находятся в `screens`, бизнес-сущность —
+в `entities/site-widget`, а пользовательские сценарии — в `features`. Набор
+слоёв FSD может быть неполным; важны их границы и направление зависимостей.
+
+## Основные slices
+
+### Screens
+
+- `admin`;
+- `auth`;
+- `cabinet`;
+- `home`;
+- `legal-documentation`;
+- `payment`;
+- `widget-leads`;
+- `widget-preview`.
+
+### Entities
+
+- `affiliate`;
+- `home-page-content`;
+- `legal-page`;
+- `note`;
+- `site-settings`;
+- `site-widget`;
+- `subscription`;
+- `user`.
+
+### Features
+
+- `admin-monitoring`;
+- `auth`;
+- `bind-profile-identity`;
+- `cookie-consent`;
+- `create-widget`;
+- `edit-profile`;
+- `edit-widget-settings`;
+- `manage-payments`;
+- `manage-subscriptions`;
+- `manage-telegram-bot`;
+- `manage-users`;
+- `manage-widgets`;
+- `mobile-navigation`;
+- `network-status`;
+- `run-admin-task`;
+- `send-mailing`;
+- `upload-file`;
+- `view-event-log`.
+
+## Правила архитектуры
+
+- Нижний слой не импортирует верхний.
+- Slices одного слоя не зависят друг от друга напрямую.
+- Внешний код импортирует slice через его публичный API.
+- Связи между entities оформляются через явный cross-import API в `@x`.
+- `shared` не зависит от бизнес-логики.
+- Доменные типы находятся в соответствующей entity или feature.
+- Базовая HTTP-инфраструктура находится в `shared/api`.
+- Доменные запросы находятся в `api` соответствующего slice.
+- Server-only модули не импортируются в Client Components.
+- Query keys, queries и mutations размещаются рядом с владельцем данных.
+- Циклические зависимости запрещены.
+
+Server entrypoints и server actions экспортируются отдельно от клиентского
+`index.ts`, например через `server.ts` и `actions.ts`. Это не позволяет
+случайно включить server-only код в клиентский bundle.
+
+## Next.js routes
+
+`src/app` отвечает за URL, layouts, metadata и инициализацию приложения.
+Route-файлы остаются тонкими и подключают экраны из `src/screens`.
+
+Публичные preview-маршруты:
+
+- `/page-wheel/[key]`;
+- `/page-quiz/[key]`;
+- `/page-callback/[key]`;
+- `/page-timer/[key]`;
+- `/page-stop-offer/[key]`;
+- `/page-online-consultant/[key]`;
+- `/page-calculator/[key]`.
+
+Все типы виджетов используют единую композицию страницы заявок в
+`screens/widget-leads`.
+
+---
+
+# Установка и запуск
 
 ## Требования
 
@@ -35,38 +183,54 @@ backend через HTTP API.
 - запущенный backend на `http://localhost:4200` для полного локального
   сценария.
 
-Версии Node.js и pnpm совпадают с используемыми в Docker и CI/CD.
-
-## Локальная установка
+## Установка зависимостей
 
 ```bash
 corepack enable
 corepack prepare pnpm@9.15.9 --activate
 pnpm install --frozen-lockfile
+```
+
+## Настройка окружения
+
+```bash
 cp .env.example .env.local
+```
+
+Для авторизованных маршрутов добавьте в `.env.local` серверную переменную
+`JWT_SECRET` с тем же значением, что и на backend. Не добавляйте к ней префикс
+`NEXT_PUBLIC_`.
+
+## Запуск development-сервера
+
+```bash
 pnpm dev
 ```
 
-Frontend будет доступен на [http://localhost:3000](http://localhost:3000).
+Frontend будет доступен на
+[http://localhost:3000](http://localhost:3000).
 
-Для корректной проверки авторизованных маршрутов добавьте в `.env.local`
-серверную переменную `JWT_SECRET` с тем же значением, что и на backend.
-Не добавляйте к ней префикс `NEXT_PUBLIC_`.
+## Production build
+
+```bash
+pnpm build
+pnpm start
+```
 
 ## Переменные окружения
 
-| Переменная                       | Назначение                                                            |
-| -------------------------------- | --------------------------------------------------------------------- |
-| `NEXT_PUBLIC_MODE`               | Режим выбора frontend/backend-адресов: `development` или `production` |
-| `NEXT_PUBLIC_SITE_URL`           | Публичный адрес frontend для генерируемых ссылок                      |
-| `NEXT_PUBLIC_PRODUCTION_HOST`    | Публичный адрес production backend                                    |
-| `NEXT_PUBLIC_DEVELOPMENT_HOST`   | Адрес локального backend                                              |
-| `NEXT_PUBLIC_API_URL`            | Полный базовый URL API с `/api`                                       |
-| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | Публичный ключ reCAPTCHA v3                                           |
-| `NEXT_PUBLIC_RECAPTCHA_HOST`     | Хост загрузки reCAPTCHA                                               |
-| `JWT_SECRET`                     | Серверный секрет проверки JWT; должен совпадать с backend             |
+| Переменная                       | Назначение                                                |
+| -------------------------------- | --------------------------------------------------------- |
+| `NEXT_PUBLIC_MODE`               | Режим выбора адресов: `development` или `production`      |
+| `NEXT_PUBLIC_SITE_URL`           | Публичный адрес frontend                                  |
+| `NEXT_PUBLIC_PRODUCTION_HOST`    | Публичный адрес production backend                        |
+| `NEXT_PUBLIC_DEVELOPMENT_HOST`   | Адрес локального backend                                  |
+| `NEXT_PUBLIC_API_URL`            | Полный базовый URL API с `/api`                           |
+| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | Публичный ключ reCAPTCHA v3                               |
+| `NEXT_PUBLIC_RECAPTCHA_HOST`     | Хост загрузки reCAPTCHA                                   |
+| `JWT_SECRET`                     | Серверный секрет проверки JWT; должен совпадать с backend |
 
-Не коммитьте реальные секреты. Переменные `NEXT_PUBLIC_*` встраиваются в
+Не коммитьте реальные секреты. Переменные `NEXT_PUBLIC_*` встраиваются во
 frontend во время сборки, поэтому после их изменения production image нужно
 пересобрать.
 
@@ -74,208 +238,92 @@ frontend во время сборки, поэтому после их измен
 
 | Команда                  | Назначение                                  |
 | ------------------------ | ------------------------------------------- |
-| `pnpm dev`               | Запуск Next.js в development-режиме         |
+| `pnpm dev`               | Запуск development-сервера                  |
 | `pnpm build`             | Production-сборка                           |
 | `pnpm start`             | Запуск предварительно собранного приложения |
 | `pnpm lint`              | Проверка ESLint                             |
 | `pnpm exec tsc --noEmit` | Проверка TypeScript без генерации файлов    |
-| `pnpm format`            | Форматирование исходников через Prettier    |
+| `pnpm format`            | Форматирование файлов через Prettier        |
 
-Команд `preview`, `test` и `coverage` в проекте сейчас нет.
+`pnpm format` изменяет файлы.
 
-## Текущая структура
+---
 
-До архитектурного рефакторинга основные части frontend расположены так:
+# Работа с API и данными
 
-```text
-src/
-├── app/          # маршруты, layouts и middleware-адаптеры Next.js
-├── api/          # Axios clients и interceptors
-├── components/   # экраны и UI-компоненты
-├── config/       # API и конфигурация маршрутов
-├── hooks/        # общие React hooks
-├── providers/    # глобальные providers
-├── services/     # API и типы бизнес-областей
-├── shared/       # отдельные общие типы и утилиты
-├── store/        # Zustand stores
-└── utils/        # клиентские и серверные утилиты
-```
+- `shared/api` создаёт публичный и авторизованный Axios clients.
+- Access token хранится в cookie `accessToken`.
+- Refresh выполняется через `/auth/access-token` с защитой от параллельных
+  дублирующих запросов.
+- API конкретной бизнес-области находится внутри её entity или feature.
+- Серверные запросы Next.js отделены от браузерных API-модулей.
+- Запросы из UI выполняются через React Query hooks или API соответствующего
+  slice.
+- Не выполняйте необёрнутые HTTP-запросы непосредственно в UI-компонентах.
 
-Эта структура остаётся рабочей до атомарного перехода, но не является FSD.
+---
 
-## Целевая архитектура
-
-Проект переходит на адаптированную под Next.js App Router FSD-like
-структуру:
-
-```text
-src/
-├── app/                  # маршруты Next.js, layouts и app-level providers
-├── screens/              # композиция полноценных экранов
-├── features/             # пользовательские действия и сценарии
-├── entities/             # бизнес-сущности и их model/api/ui
-├── shared/
-│   ├── api/              # базовые HTTP clients и общая инфраструктура API
-│   ├── assets/           # общие изображения и шрифты
-│   ├── config/           # общая конфигурация
-│   ├── lib/              # независимые helpers и hooks
-│   ├── types/            # только общие, не доменные типы
-│   └── ui/               # переиспользуемые UI-примитивы
-└── middleware.ts         # обязательная точка входа Next.js middleware
-```
-
-Стандартный слой FSD `pages` заменён на `screens`, потому что маршрутизация
-принадлежит Next.js App Router в `src/app`. Слой `widgets` не используется,
-чтобы не смешивать FSD-композиции с бизнес-сущностью «виджет Winwidget».
-
-Примеры целевых slices:
-
-- `entities/user`, `entities/site-widget`, `entities/subscription`,
-  `entities/lead`;
-- `features/auth`, `features/create-widget`,
-  `features/edit-widget-settings`, `features/manage-leads`;
-- `screens/home`, `screens/cabinet`, `screens/admin`,
-  `screens/widget-preview`.
-
-Названия slices уточняются по фактическим бизнес-границам во время
-архитектурного аудита. Нельзя создавать slice только ради перемещения одного
-файла.
-
-## Правила зависимостей
-
-Допустимое направление зависимостей:
-
-```text
-app -> screens -> features -> entities -> shared
-```
-
-При этом верхний слой может обращаться к любому нижнему слою, например
-`screens` может импортировать `entities` и `shared` напрямую.
-
-Обязательные правила:
-
-- нижний слой не импортирует верхний;
-- slices одного слоя не зависят друг от друга напрямую;
-- внешний импорт slice выполняется через его публичный API;
-- доменные типы размещаются в соответствующей entity или feature, а не в
-  `shared`;
-- UI-компоненты не создают необёрнутые Axios-запросы;
-- query keys, queries и mutations принадлежат соответствующему slice;
-- server-only код не импортируется в Client Components;
-- состояние Zustand размещается рядом с владельцем состояния, а глобальные
-  providers — на уровне `app`;
-- циклические зависимости запрещены.
-
-## Атомарный переход
-
-Выбран разовый атомарный переход без сохранения внутренней совместимости
-старой структуры.
-
-Это означает:
-
-- рефакторинг выполняется в отдельной ветке от проверенного состояния;
-- на время переноса приостанавливаются параллельные изменения структуры
-  frontend;
-- старая структура не попадает в production одновременно с новой;
-- временные aliases и `re-export` старых импортов не добавляются;
-- все импорты переводятся на новую структуру в рамках одного изменения;
-- после переноса удаляются старые каталоги, дубли, неиспользуемые стили и
-  остаточный код;
-- в `prod` изменение попадает одним согласованным релизом только после полного
-  набора проверок.
-
-Внутри рабочей ветки перенос можно выполнять последовательными шагами, но
-каждый промежуточный этап не должен выпускаться отдельно.
-
-### Что сохраняется без изменений
-
-Архитектурный рефакторинг не должен менять внешнее поведение:
-
-- существующие URL, route params, redirects и query-параметры;
-- API endpoints, методы, payload и response contracts;
-- cookies `accessToken` и `refreshToken`, а также login, logout, OAuth и
-  refresh flow;
-- используемые localStorage keys;
-- публичные страницы предпросмотра виджетов;
-- embed-коды и адреса widget scripts;
-- единую страницу заявок для всех типов виджетов;
-- пользовательские и административные сценарии.
-
-React Query keys являются внутренней деталью и могут быть переорганизованы,
-но queries, mutations и invalidation должны быть обновлены согласованно в том
-же атомарном изменении.
-
-### Что не входит в переход
-
-- изменение backend и его API;
-- изменение схемы базы данных или Prisma migrations;
-- изменение runtime-кода виджетов в backend `widgets-src`;
-- визуальный редизайн;
-- добавление новых пользовательских функций.
-
-Такие изменения выполняются только отдельными согласованными задачами.
-
-## Порядок архитектурного рефакторинга
-
-1. Зафиксировать чистое исходное состояние и результаты baseline-проверок.
-2. Зафиксировать карту маршрутов, API, cookies, storage keys и критических
-   пользовательских сценариев.
-3. Определить окончательные slices и публичные API модулей.
-4. Перенести независимую инфраструктуру в `shared`.
-5. Выделить бизнес-сущности в `entities`.
-6. Разделить пользовательские сценарии по `features`.
-7. Декомпозировать крупные компоненты и собрать страницы в `screens`.
-8. Оставить в `app` только маршрутизацию, layouts, metadata и app-level
-   инициализацию.
-9. Обновить импорты и удалить старые каталоги без compatibility-слоя.
-10. Выполнить полный набор проверок и только после этого выпускать изменение.
-
-## API и данные
-
-- Базовые Axios clients и interceptors после перехода размещаются в
-  `shared/api`.
-- Запросы конкретной бизнес-области размещаются в `api` соответствующей
-  entity или feature.
-- React Query hooks, query keys и invalidation размещаются рядом с владельцем
-  данных.
-- Серверные запросы Next.js отделяются от клиентских API-модулей.
-- Компоненты отображения получают данные и callbacks через props либо через
-  публичный API своего slice.
-
-## Формы и уведомления
+# Формы и уведомления
 
 - Для форм используется React Hook Form.
-- Схемы, типы и преобразование данных находятся рядом с соответствующей
-  feature.
-- Ошибки frontend и backend должны отображаться понятным пользователю текстом.
-- Результаты пользовательских действий логируются через react-hot-toast.
-- Yup сейчас не установлен и не должен упоминаться как используемый
-  валидатор.
+- Типы, валидация и преобразование данных размещаются рядом с feature.
+- Для телефонных полей используется `libphonenumber-js` и общий phone hook.
+- Результаты пользовательских действий отображаются через `react-hot-toast`.
+- Ошибки frontend и backend должны отображаться понятным пользователю
+  текстом.
+
+---
+
+# Стили и изображения
 
 ## Стили
 
 - Компонентные стили размещаются в SCSS Modules.
 - Tailwind-директивы в SCSS оформляются через `@apply`.
-- При переносе файлов `content` в `tailwind.config.ts` должен охватывать
-  `screens`, `features`, `entities` и `shared`, иначе используемые там
-  utility-классы могут не попасть в production CSS.
-- Глобальные стили добавляются только при реальной необходимости.
-- При декомпозиции компонентов удаляются неиспользуемые и остаточные стили.
-- Новые UI-примитивы добавляются в `shared/ui`, если они не содержат доменной
-  логики и действительно переиспользуются.
+- `tailwind.config.ts` сканирует весь `src`.
+- Глобальные стили добавляются только при необходимости.
+- После рефакторинга удаляйте неиспользуемые и остаточные стили.
+- При кастомной стрелке `select` отключайте системную через
+  `@apply appearance-none` и оставляйте достаточный правый отступ.
 
-## Code style
+## SVG
+
+Для оптимизации SVG использовать:
+
+[SVGOMG](https://svgomg.net/privacy)
+
+Рекомендуется удалять лишние metadata, уменьшать precision и включать cleanup
+IDs.
+
+## PNG
+
+Для оптимизации PNG использовать:
+
+[SVGOMG PNG Optimization](https://svgomg.net/privacy)
+
+Перед добавлением изображений уменьшайте размер файлов, избегайте oversized
+assets и по возможности используйте WebP или AVIF.
+
+---
+
+# Code style
 
 - Используйте alias `@/*` для импортов из `src`.
 - Следуйте существующим настройкам ESLint и Prettier.
 - Не добавляйте `any` без обоснованной необходимости.
-- Не смешивайте UI, сетевой запрос, преобразование DTO и бизнес-правила в одном
-  крупном компоненте.
-- Не создавайте новые файлы и абстракции без практической необходимости.
+- Сохраняйте существующий naming и code style затрагиваемого slice.
+- Не смешивайте UI, сетевые запросы, преобразование DTO и бизнес-правила в
+  одном модуле без необходимости.
+- Не создавайте глобальные utils и новые абстракции без практической пользы.
 
-## Проверки перед релизом
+Перед commit Husky и lint-staged форматируют затронутые файлы и запускают
+ESLint для TypeScript-кода.
 
-Минимальный набор локальных проверок:
+---
+
+# Проверки и тестирование
+
+Минимальный набор проверок:
 
 ```bash
 pnpm lint
@@ -283,41 +331,51 @@ pnpm exec tsc --noEmit
 pnpm build
 ```
 
-Автоматический test runner сейчас отсутствует, поэтому для атомарного перехода
-обязателен ручной smoke-test как минимум следующих сценариев:
+Перед релизом выполните ручной smoke-test:
 
-- главная и публичные страницы;
-- регистрация, вход, refresh и выход;
-- кабинет пользователя;
-- создание, редактирование, включение и удаление каждого типа виджета;
-- публичные страницы предпросмотра;
-- единая страница заявок;
-- критические разделы административной панели;
-- оплата и изменение подписки.
+- главной и публичных страниц;
+- регистрации, входа, refresh и выхода;
+- личного кабинета;
+- создания, редактирования, включения и удаления каждого типа виджета;
+- публичных preview-страниц;
+- единой страницы заявок;
+- критических разделов административной панели;
+- оплаты и изменения подписки.
 
-## CI/CD и production
+---
+
+# CI/CD и production
+
+Workflow `.github/workflows/deploy-production.yml` запускается вручную или при
+push в ветку `prod`.
+
+Verify-этап выполняет:
+
+```text
+pnpm install --frozen-lockfile
+pnpm exec tsc --noEmit
+pnpm build
+```
+
+После успешной проверки deploy выполняется по SSH. Скрипт
+`scripts/deploy-production.sh` собирает standalone Docker container и
+проверяет healthcheck.
 
 Production flow:
 
 ```text
 локальные проверки
--> commit/push в prod
+-> commit и push
 -> GitHub Actions verify
 -> GitHub Actions deploy
 -> production smoke-test
 ```
 
-GitHub Actions выполняет установку через frozen lockfile, TypeScript-проверку
-и production build. Деплой запускает standalone Next.js container и проверяет
-его healthcheck.
-
-Связанные файлы:
+Связанные файлы и каталоги:
 
 - [`.env.example`](.env.example);
 - [`Dockerfile`](Dockerfile);
 - [`.github/workflows/deploy-production.yml`](.github/workflows/deploy-production.yml);
-- [`scripts/deploy-production.sh`](scripts/deploy-production.sh).
-
-В общем checkout проекта дополнительная документация находится в
-`../DOCUMENTATION`, а production-конфигурация frontend — в
-`../deploy/frontend`.
+- [`scripts/deploy-production.sh`](scripts/deploy-production.sh);
+- `../deploy/frontend` — production-конфигурация frontend;
+- `../DOCUMENTATION` — общая документация проекта c аналитическими артефактами.

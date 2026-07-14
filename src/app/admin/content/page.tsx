@@ -1,4 +1,4 @@
-import AdminContentSettings from '@/components/screens/admin/content-settings/AdminContentSettings'
+import { AdminContentSettings } from '@/screens/admin'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

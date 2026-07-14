@@ -1,4 +1,4 @@
-import { getAuthWithRefresh } from '@/utils/server/refresh-middleware-token'
+import { getAuthWithRefresh } from '@/features/auth/server/refresh-middleware-token'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const authMiddleware = async (request: NextRequest) => {

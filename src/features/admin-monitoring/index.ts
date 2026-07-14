@@ -1,0 +1,6 @@
+export { default as adminAlertsService } from './api/admin-alerts.api'
+export type * from './api/admin-alerts.api'
+export { default as adminHealthService } from './api/admin-health.api'
+export type * from './api/admin-health.api'
+export { default as statisticsService } from './api/statistics.api'
+export type * from './api/statistics.api'

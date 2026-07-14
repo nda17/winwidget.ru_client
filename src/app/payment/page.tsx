@@ -1,7 +1,7 @@
-import Pricing from '@/components/screens/payment/Pricing'
-import { getHomePageContent } from '@/services/home-page-content/home-page-content.server'
-import { getSiteSettings } from '@/services/site-settings/site-settings.server'
-import { getTariffPrices } from '@/services/tariff-prices/tariff-prices.server'
+import { Pricing } from '@/screens/payment'
+import { getHomePageContent } from '@/entities/home-page-content/server'
+import { getSiteSettings } from '@/entities/site-settings/server'
+import { getTariffPrices } from '@/entities/subscription/server'
 import { Metadata } from 'next'
 
 export const generateMetadata = async (): Promise<Metadata> => {

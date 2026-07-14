@@ -1,4 +1,4 @@
-import WidgetLeads from '@/components/screens/widgets/WidgetLeads'
+import { WidgetLeads } from '@/screens/widget-leads'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {

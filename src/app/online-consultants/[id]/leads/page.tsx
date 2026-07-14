@@ -1,4 +1,4 @@
-import OnlineConsultantLeads from '@/components/screens/widgets/OnlineConsultantLeads'
+import { OnlineConsultantLeads } from '@/screens/widget-leads'
 
 interface Props {
 	params: { id: string }

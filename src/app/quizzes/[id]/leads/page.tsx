@@ -1,4 +1,4 @@
-import QuizLeads from '@/components/screens/widgets/QuizLeads'
+import { QuizLeads } from '@/screens/widget-leads'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {

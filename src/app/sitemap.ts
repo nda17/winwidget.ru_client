@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next'
-import { DEFAULT_HOME_PAGE_TECHNICAL_SEO_CONTENT } from '@/services/home-page-content/home-page-content.defaults'
-import { getHomePageContent } from '@/services/home-page-content/home-page-content.server'
+import { DEFAULT_HOME_PAGE_TECHNICAL_SEO_CONTENT } from '@/entities/home-page-content'
+import { getHomePageContent } from '@/entities/home-page-content/server'
 
 const buildUrl = (baseUrl: string, path: string) => {
 	const base = baseUrl.replace(/\/+$/, '')

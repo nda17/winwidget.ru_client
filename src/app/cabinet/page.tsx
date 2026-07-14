@@ -1,4 +1,4 @@
-import Cabinet from '@/components/screens/cabinet/Cabinet'
+import { Cabinet } from '@/screens/cabinet'
 import { Metadata } from 'next'
 import { Suspense } from 'react'
 

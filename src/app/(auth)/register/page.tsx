@@ -1,4 +1,4 @@
-import SignUp from '@/components/screens/(auth)/register/SignUp'
+import { SignUp } from '@/screens/auth'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

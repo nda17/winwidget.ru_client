@@ -1,7 +1,7 @@
-import Home from '@/components/screens/home/Home'
-import { getAffiliatePublicSettings } from '@/services/affiliate/affiliate.server'
-import { getHomePageContent } from '@/services/home-page-content/home-page-content.server'
-import { getTariffPrices } from '@/services/tariff-prices/tariff-prices.server'
+import { Home } from '@/screens/home'
+import { getAffiliatePublicSettings } from '@/entities/affiliate/server'
+import { getHomePageContent } from '@/entities/home-page-content/server'
+import { getTariffPrices } from '@/entities/subscription/server'
 import { Metadata } from 'next'
 
 export const generateMetadata = async (): Promise<Metadata> => {

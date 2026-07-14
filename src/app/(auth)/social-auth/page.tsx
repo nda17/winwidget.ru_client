@@ -1,4 +1,4 @@
-import SocialAuth from '@/components/screens/(auth)/social-auth/SocialAuth'
+import { SocialAuth } from '@/screens/auth'
 import { Suspense } from 'react'
 
 const SocialAuthPage = () => {

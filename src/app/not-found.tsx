@@ -1,4 +1,4 @@
-import styles from '@/assets/styles/not-found.module.scss'
+import styles from '@/app/styles/not-found.module.scss'
 import { Metadata } from 'next'
 import Link from 'next/link'
 

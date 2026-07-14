@@ -1,4 +1,4 @@
-import UserEdit from '@/components/screens/admin/user/edit/UserEdit'
+import { UserEdit } from '@/screens/admin'
 import { IParamsUrl } from '@/shared/types/params-url.types'
 import { NextPage } from 'next'
 

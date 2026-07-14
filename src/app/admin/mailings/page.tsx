@@ -1,4 +1,4 @@
-import AdminMailings from '@/components/screens/admin/mailings/AdminMailings'
+import { AdminMailings } from '@/screens/admin'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

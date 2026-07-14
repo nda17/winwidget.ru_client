@@ -1,4 +1,4 @@
-import CallbackLeads from '@/components/screens/widgets/CallbackLeads'
+import { CallbackLeads } from '@/screens/widget-leads'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {

@@ -1,4 +1,4 @@
-import AdminNotes from '@/components/screens/admin/notes/AdminNotes'
+import { AdminNotes } from '@/screens/admin'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

@@ -1,4 +1,4 @@
-import StopOfferLeads from '@/components/screens/widgets/StopOfferLeads'
+import { StopOfferLeads } from '@/screens/widget-leads'
 
 interface Props {
 	params: { id: string }

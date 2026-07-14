@@ -1,4 +1,4 @@
-import AdminPayments from '@/components/screens/admin/payments/AdminPayments'
+import { AdminPayments } from '@/screens/admin'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

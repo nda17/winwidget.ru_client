@@ -1,4 +1,4 @@
-import SignIn from '@/components/screens/(auth)/login/SignIn'
+import { SignIn } from '@/screens/auth'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

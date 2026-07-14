@@ -1,10 +1,10 @@
-import { criticalRoboto, criticalUnbounded } from '@/app/fonts'
-import '@/assets/styles/globals.scss'
-import Layout from '@/components/layout/Layout'
-import MainProvider from '@/providers/Main-provider/MainProvider'
-import { EnumTokens } from '@/services/auth/auth.service'
-import { getHomePageContent } from '@/services/home-page-content/home-page-content.server'
-import { getSiteSettings } from '@/services/site-settings/site-settings.server'
+import Layout from '@/app/_ui/layout/Layout'
+import { criticalRoboto, criticalUnbounded } from '@/app/config/fonts'
+import AppProviders from '@/app/providers/AppProviders'
+import '@/app/styles/globals.scss'
+import { EnumTokens } from '@/shared/api/token-names'
+import { getHomePageContent } from '@/entities/home-page-content/server'
+import { getSiteSettings } from '@/entities/site-settings/server'
 import type { Metadata } from 'next'
 import { cookies, headers } from 'next/headers'
 import type { PropsWithChildren } from 'react'
@@ -54,14 +54,14 @@ const RootLayout = async ({ children }: PropsWithChildren<unknown>) => {
 		>
 			{headHtml && <head dangerouslySetInnerHTML={{ __html: headHtml }} />}
 			<body>
-				<MainProvider hasSessionHint={hasSessionHint}>
+				<AppProviders hasSessionHint={hasSessionHint}>
 					<Layout
 						siteSettings={siteSettings}
 						footerContent={homePageContent.footer}
 					>
 						{children}
 					</Layout>
-				</MainProvider>
+				</AppProviders>
 				{bodyHtml && (
 					<div
 						data-body-html

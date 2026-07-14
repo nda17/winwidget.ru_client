@@ -1,4 +1,4 @@
-import RestorePassword from '@/components/screens/(auth)/restore-password/RestorePassword'
+import { RestorePassword } from '@/screens/auth'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

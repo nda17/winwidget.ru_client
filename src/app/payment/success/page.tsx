@@ -1,4 +1,4 @@
-import PaymentSuccess from '@/components/screens/payment-success/PaymentSuccess'
+import { PaymentSuccess } from '@/screens/payment'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
