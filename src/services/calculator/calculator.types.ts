@@ -2,7 +2,11 @@ import { Subscription } from '@/services/widget/widget.types'
 
 export type CalculatorContactPosition = 'BEFORE_RESULT' | 'AFTER_RESULT'
 export type CalculatorDataType = 'PHONE' | 'EMAIL' | 'PHONE_AND_EMAIL'
-export type CalculatorFieldType = 'select' | 'number' | 'checkbox'
+export type CalculatorFieldType =
+	| 'select'
+	| 'number'
+	| 'radio'
+	| 'checkbox'
 
 export interface CalculatorOption {
 	id: string

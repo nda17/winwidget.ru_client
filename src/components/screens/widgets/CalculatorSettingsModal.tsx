@@ -11,7 +11,13 @@ import {
 } from '@/services/calculator/calculator.types'
 import { useMutation } from '@tanstack/react-query'
 import Image from 'next/image'
-import { ChangeEvent, useId, useState } from 'react'
+import {
+	ChangeEvent,
+	InputHTMLAttributes,
+	useEffect,
+	useId,
+	useState
+} from 'react'
 import toast from 'react-hot-toast'
 import styles from './CalculatorSettingsModal.module.scss'
 import DirectLinkQr from './DirectLinkQr'
@@ -48,6 +54,17 @@ const makeOption = (label = 'Вариант'): CalculatorOption => ({
 	multiplier: 1
 })
 
+const isBooleanOptionPair = (options: CalculatorOption[] = []) => {
+	if (options.length !== 2) return false
+	const labels = new Set(
+		options.map(option => option.label.trim().toLocaleLowerCase('ru-RU'))
+	)
+	return (
+		(labels.has('да') && labels.has('нет')) ||
+		(labels.has('yes') && labels.has('no'))
+	)
+}
+
 const makeField = (
 	type: CalculatorFieldType = 'select'
 ): CalculatorField => {
@@ -62,6 +79,13 @@ const makeField = (
 		return {
 			...common,
 			options: [makeOption('Вариант 1'), makeOption('Вариант 2')]
+		}
+	}
+
+	if (type === 'radio') {
+		return {
+			...common,
+			options: [makeOption('Да'), makeOption('Нет')]
 		}
 	}
 
@@ -157,16 +181,66 @@ const normalizeConfig = (config: CalculatorConfig): CalculatorConfig => ({
 	...cloneConfig(DEFAULT_CONFIG),
 	...config,
 	fields: config.fields?.length
-		? config.fields.map(field => ({
-				...field,
-				options: field.options?.map(option => ({ ...option }))
-			}))
+		? config.fields.map(field => {
+				const options = field.options?.map(option => ({ ...option }))
+				return {
+					...field,
+					type:
+						field.type === 'checkbox' && isBooleanOptionPair(options)
+							? 'radio'
+							: field.type,
+					options
+				}
+			})
 		: cloneConfig(DEFAULT_CONFIG).fields,
 	integrations: {
 		...DEFAULT_CONFIG.integrations,
 		...(config.integrations || {})
 	}
 })
+
+interface NumericInputProps extends Omit<
+	InputHTMLAttributes<HTMLInputElement>,
+	'type' | 'value' | 'onChange'
+> {
+	value: number
+	onValueChange: (value: number) => void
+}
+
+const NumericInput = ({
+	value,
+	onValueChange,
+	onBlur,
+	...props
+}: NumericInputProps) => {
+	const [draft, setDraft] = useState(String(value))
+
+	useEffect(() => {
+		setDraft(String(value))
+	}, [value])
+
+	return (
+		<input
+			{...props}
+			type="number"
+			value={draft}
+			onChange={event => {
+				const nextDraft = event.target.value
+				setDraft(nextDraft)
+				if (
+					nextDraft !== '' &&
+					Number.isFinite(event.target.valueAsNumber)
+				) {
+					onValueChange(event.target.valueAsNumber)
+				}
+			}}
+			onBlur={event => {
+				if (event.target.value === '') setDraft(String(value))
+				onBlur?.(event)
+			}}
+		/>
+	)
+}
 
 interface Props {
 	calculator: Calculator
@@ -395,9 +469,13 @@ const CalculatorSettingsModal = ({
 				return false
 			}
 
-			if (field.type === 'select' || field.type === 'checkbox') {
+			if (
+				field.type === 'select' ||
+				field.type === 'radio' ||
+				field.type === 'checkbox'
+			) {
 				if (!field.options || field.options.length < 2) {
-					if (field.type === 'select') {
+					if (field.type === 'select' || field.type === 'radio') {
 						toast.error(
 							`Поле «${field.label}»: добавьте минимум 2 варианта`
 						)
@@ -658,15 +736,12 @@ const CalculatorSettingsModal = ({
 									).map(([key, label, min, max]) => (
 										<div key={key} className={styles.field}>
 											<p className={styles.label}>{label}</p>
-											<input
-												type="number"
+											<NumericInput
 												className={styles.input}
 												min={min}
 												max={max}
 												value={config[key]}
-												onChange={event =>
-													setField(key, Number(event.target.value))
-												}
+												onValueChange={value => setField(key, value)}
 											/>
 										</div>
 									))}
@@ -930,7 +1005,10 @@ const CalculatorSettingsModal = ({
 											>
 												<option value="select">Выбор</option>
 												<option value="number">Число</option>
-												<option value="checkbox">Чекбокс</option>
+												<option value="radio">Один вариант</option>
+												<option value="checkbox">
+													Несколько вариантов
+												</option>
 											</select>
 										</div>
 									</div>
@@ -948,6 +1026,7 @@ const CalculatorSettingsModal = ({
 									</label>
 
 									{(field.type === 'select' ||
+										field.type === 'radio' ||
 										field.type === 'checkbox') && (
 										<div className={styles.optionList}>
 											{(field.options || []).map((option, optionIndex) => (
@@ -962,34 +1041,34 @@ const CalculatorSettingsModal = ({
 															})
 														}
 													/>
-													<label className={styles.compactField}>
+													<div className={styles.compactField}>
 														<span>Надбавка</span>
-														<input
-															type="number"
+														<NumericInput
 															className={styles.input}
+															aria-label={`Надбавка для варианта ${option.label}`}
 															value={option.add}
-															onChange={event =>
+															onValueChange={value =>
 																updateOption(fieldIndex, optionIndex, {
-																	add: Number(event.target.value)
+																	add: value
 																})
 															}
 														/>
-													</label>
-													<label className={styles.compactField}>
+													</div>
+													<div className={styles.compactField}>
 														<span>Множитель</span>
-														<input
-															type="number"
+														<NumericInput
 															min={0.01}
 															step={0.01}
 															className={styles.input}
+															aria-label={`Множитель для варианта ${option.label}`}
 															value={option.multiplier}
-															onChange={event =>
+															onValueChange={value =>
 																updateOption(fieldIndex, optionIndex, {
-																	multiplier: Number(event.target.value)
+																	multiplier: value
 																})
 															}
 														/>
-													</label>
+													</div>
 													<button
 														type="button"
 														className={styles.removeBtn}
@@ -1025,13 +1104,12 @@ const CalculatorSettingsModal = ({
 											).map(([key, label]) => (
 												<div key={key} className={styles.field}>
 													<p className={styles.label}>{label}</p>
-													<input
-														type="number"
+													<NumericInput
 														className={styles.input}
 														value={field[key] ?? 0}
-														onChange={event =>
+														onValueChange={value =>
 															updateCalculatorField(fieldIndex, {
-																[key]: Number(event.target.value)
+																[key]: value
 															})
 														}
 													/>
@@ -1075,14 +1153,11 @@ const CalculatorSettingsModal = ({
 								<div className={styles.gridThree}>
 									<div className={styles.field}>
 										<p className={styles.label}>Базовая стоимость</p>
-										<input
-											type="number"
+										<NumericInput
 											min={0}
 											className={styles.input}
 											value={config.basePrice}
-											onChange={event =>
-												setField('basePrice', Number(event.target.value))
-											}
+											onValueChange={value => setField('basePrice', value)}
 										/>
 									</div>
 									<div className={styles.field}>
@@ -1099,17 +1174,13 @@ const CalculatorSettingsModal = ({
 									</div>
 									<div className={styles.field}>
 										<p className={styles.label}>Шаг округления</p>
-										<input
-											type="number"
+										<NumericInput
 											min={0.01}
 											step={0.01}
 											className={styles.input}
 											value={config.roundingStep}
-											onChange={event =>
-												setField(
-													'roundingStep',
-													Number(event.target.value)
-												)
+											onValueChange={value =>
+												setField('roundingStep', value)
 											}
 										/>
 									</div>
