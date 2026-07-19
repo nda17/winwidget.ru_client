@@ -104,6 +104,7 @@ export interface HomePageHeroContent {
 	subtitle: string
 	primaryButtonText: string
 	faqButtonLabel: string
+	benefits: HomePageTextCard[]
 }
 
 export interface HomePageAnalysisContent {

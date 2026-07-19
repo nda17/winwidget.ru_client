@@ -82,7 +82,7 @@
 		}
 
 		.buttons {
-			@apply flex flex-col items-center gap-[6rem];
+			@apply flex flex-col items-center;
 
 			.buttonLink {
 				@apply max-w-[440px] h-[80px] bg-white flex justify-between items-center pl-[1.5rem] text-[#2F2F2F] rounded-[3rem] cursor-pointer;
@@ -117,7 +117,7 @@
 			}
 
 			.buttonArrow {
-				@apply w-[60px] h-[60px] lg:w-[80px] lg:h-[80px] bg-no-repeat rounded-full bg-center cursor-pointer;
+				@apply mt-16 w-[60px] h-[60px] lg:w-[80px] lg:h-[80px] bg-no-repeat rounded-full bg-center cursor-pointer;
 				background-image: url('/arrow-2.svg');
 				box-shadow: 0 4px 20px rgb(0 0 0 / 0.25);
 				transition:
@@ -132,6 +132,28 @@
 				&:active {
 					transform: translateY(0) scale(0.95);
 					box-shadow: 0 2px 8px rgb(0 0 0 / 0.18);
+				}
+			}
+		}
+
+		.heroBenefits {
+			@apply mt-10 flex w-[calc(100vw-2rem)] max-w-[960px] flex-wrap items-center justify-center gap-x-10 gap-y-4 text-left;
+
+			li {
+				@apply flex items-center gap-3 whitespace-nowrap text-[18px] font-semibold leading-[1.4] text-white/70;
+				font-family: var(--second-family);
+				text-shadow: 0 1px 10px rgb(0 0 0 / 0.24);
+			}
+
+			span {
+				@apply text-[24px] font-bold leading-none text-[#ffd166];
+			}
+
+			@media (max-width: 767px) {
+				@apply mx-auto w-fit max-w-[calc(100vw-2rem)] flex-col items-start gap-3 self-center;
+
+				li {
+					@apply text-[16px];
 				}
 			}
 		}

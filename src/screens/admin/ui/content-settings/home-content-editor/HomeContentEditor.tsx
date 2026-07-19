@@ -356,6 +356,10 @@ const prepareContentForSave = (
 	content: HomePageContent
 ): HomePageContent => ({
 	...content,
+	hero: {
+		...content.hero,
+		benefits: cleanTextCards(content.hero.benefits)
+	},
 	seo: {
 		...content.seo,
 		keywords: cleanStringList(content.seo.keywords)
@@ -692,6 +696,12 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 				...prev[section],
 				[section === 'analysis' ? 'cards' : 'items']: items
 			}
+		}))
+
+	const updateHeroBenefits = (benefits: HomePageTextCard[]) =>
+		updateDraft(prev => ({
+			...prev,
+			hero: { ...prev.hero, benefits }
 		}))
 
 	const updateSubscriptionBundleItems = (items: HomePageTextCard[]) =>
@@ -1617,6 +1627,65 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 								}
 							/>
 						</div>
+						<div className={styles.list}>
+							{draft.hero.benefits.map((benefit, index) => (
+								<div
+									key={`hero-benefit-${index}`}
+									className={styles.itemCard}
+								>
+									<div className={styles.itemHeader}>
+										<span className={styles.itemTitle}>
+											Преимущество {index + 1}
+										</span>
+										<ListActions
+											onMoveUp={() =>
+												updateHeroBenefits(
+													moveItem(draft.hero.benefits, index, -1)
+												)
+											}
+											onMoveDown={() =>
+												updateHeroBenefits(
+													moveItem(draft.hero.benefits, index, 1)
+												)
+											}
+											onRemove={() =>
+												updateHeroBenefits(
+													removeItem(draft.hero.benefits, index)
+												)
+											}
+											disableUp={index === 0}
+											disableDown={
+												index === draft.hero.benefits.length - 1
+											}
+										/>
+									</div>
+									<TextField
+										id={`hero-benefit-${index}`}
+										label="Текст преимущества"
+										value={benefit.text}
+										onChange={value =>
+											updateHeroBenefits(
+												updateItem(draft.hero.benefits, index, {
+													text: value
+												})
+											)
+										}
+									/>
+								</div>
+							))}
+						</div>
+						<button
+							type="button"
+							className={styles.addBtn}
+							onClick={() =>
+								updateHeroBenefits([
+									...draft.hero.benefits,
+									{ text: 'Новое преимущество' }
+								])
+							}
+						>
+							Добавить преимущество
+						</button>
 					</section>
 
 					<section className={styles.panel}>

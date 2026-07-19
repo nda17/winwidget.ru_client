@@ -360,7 +360,12 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 		titleAfterAccent: 'с помощью умных виджетов',
 		subtitle: 'Простая интеграция, заметный результат.',
 		primaryButtonText: 'Попробовать бесплатно 7 дней',
-		faqButtonLabel: 'Прокрутить к вопросам и ответам'
+		faqButtonLabel: 'Прокрутить к вопросам и ответам',
+		benefits: [
+			{ text: '7 дней бесплатно' },
+			{ text: 'Без привязки карты' },
+			{ text: 'Установка за 10 минут' }
+		]
 	},
 	analysis: {
 		enabled: true,
@@ -1087,7 +1092,13 @@ export const normalizeHomePageContent = (
 					: {})
 			}
 		},
-		hero: mergeObject(defaultContent.hero, content.hero),
+		hero: {
+			...mergeObject(defaultContent.hero, content.hero),
+			benefits: mergeSimpleArray(
+				isRecord(content.hero) ? content.hero.benefits : undefined,
+				defaultContent.hero.benefits
+			)
+		},
 		analysis: {
 			...defaultContent.analysis,
 			...(isRecord(content.analysis) ? content.analysis : {}),

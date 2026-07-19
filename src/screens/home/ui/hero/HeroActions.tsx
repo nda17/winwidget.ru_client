@@ -7,7 +7,7 @@ import styles from './HeroSection.module.scss'
 interface Props {
 	content: Pick<
 		HomePageHeroContent,
-		'primaryButtonText' | 'faqButtonLabel'
+		'primaryButtonText' | 'faqButtonLabel' | 'benefits'
 	>
 }
 
@@ -22,6 +22,16 @@ const HeroActions = ({ content }: Props) => {
 				{content.primaryButtonText}
 				<span className={styles.arrowBtn}></span>
 			</HomeStartTrialLink>
+			{content.benefits.length > 0 && (
+				<ul className={styles.heroBenefits} aria-label="Преимущества">
+					{content.benefits.map((benefit, index) => (
+						<li key={`${benefit.text}-${index}`}>
+							<span aria-hidden="true">✓</span>
+							{benefit.text}
+						</li>
+					))}
+				</ul>
+			)}
 			<button
 				className={styles.buttonArrow}
 				type="button"
