@@ -7,6 +7,7 @@ import Heading from '@/shared/ui/heading/Heading'
 import SkeletonLoader from '@/shared/ui/skeleton-loader/SkeletonLoader'
 import {
 	adminTelegramBotService,
+	type AdminTelegramBotSettings,
 	type TelegramWebhookBot
 } from '@/features/manage-telegram-bot'
 import {
@@ -15,7 +16,7 @@ import {
 	useQueryClient
 } from '@tanstack/react-query'
 import { NextPage } from 'next'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import styles from './AdminTelegramBot.module.scss'
 
@@ -23,6 +24,62 @@ const SETTINGS_QUERY_KEY = ['admin-telegram-bot-settings']
 const WEBHOOKS_QUERY_KEY = ['admin-telegram-bot-webhooks']
 const WEBHOOK_BOTS: TelegramWebhookBot[] = ['info', 'auth', 'support']
 const MIN_TASK_TIME_GAP_MINUTES = 5
+const MAX_TELEGRAM_TOPIC_ID = 2147483647
+const TELEGRAM_TOPIC_FIELDS = [
+	{
+		key: 'supportThreadId',
+		label: 'Support_chat',
+		description: 'Переписка техподдержки с пользователями'
+	},
+	{
+		key: 'databaseBackupThreadId',
+		label: 'Backups',
+		description: 'Ручные и автоматические backup базы данных'
+	},
+	{
+		key: 'paymentsThreadId',
+		label: 'Payments',
+		description: 'Уведомления о новых успешных платежах'
+	},
+	{
+		key: 'reportsThreadId',
+		label: 'Reports',
+		description: 'Ежедневные сводки и отчёты'
+	}
+] as const
+
+type TelegramTopicField = (typeof TELEGRAM_TOPIC_FIELDS)[number]['key']
+type TelegramTopicInputs = Record<TelegramTopicField, string>
+
+const EMPTY_TELEGRAM_TOPIC_INPUTS: TelegramTopicInputs = {
+	supportThreadId: '',
+	databaseBackupThreadId: '',
+	paymentsThreadId: '',
+	reportsThreadId: ''
+}
+
+const getTelegramTopicInputs = (
+	settings: AdminTelegramBotSettings
+): TelegramTopicInputs => ({
+	supportThreadId: settings.supportThreadId?.toString() ?? '',
+	databaseBackupThreadId:
+		settings.databaseBackupThreadId?.toString() ?? '',
+	paymentsThreadId: settings.paymentsThreadId?.toString() ?? '',
+	reportsThreadId: settings.reportsThreadId?.toString() ?? ''
+})
+
+const parseTelegramTopicId = (value: string) => {
+	const normalizedValue = value.trim()
+
+	if (!normalizedValue) return null
+
+	const topicId = Number(normalizedValue)
+	return Number.isSafeInteger(topicId) &&
+		topicId > 0 &&
+		topicId <= MAX_TELEGRAM_TOPIC_ID
+		? topicId
+		: undefined
+}
 
 const formatDate = (value: string) =>
 	new Intl.DateTimeFormat('ru-RU', {
@@ -65,8 +122,13 @@ const getTaskTimeGapMinutes = (first: string, second: string) => {
 const AdminTelegramBot: NextPage = () => {
 	const queryClient = useQueryClient()
 	const [chatId, setChatId] = useState('')
+	const [topicIds, setTopicIds] = useState<TelegramTopicInputs>(
+		EMPTY_TELEGRAM_TOPIC_INPUTS
+	)
 	const [summaryTime, setSummaryTime] = useState('')
 	const [backupTime, setBackupTime] = useState('')
+	const isTelegramRoutingDraftDirty = useRef(false)
+	const isScheduleDraftDirty = useRef(false)
 
 	const { data: settings, isLoading } = useQuery({
 		queryKey: SETTINGS_QUERY_KEY,
@@ -85,17 +147,35 @@ const AdminTelegramBot: NextPage = () => {
 	useEffect(() => {
 		if (!settings) return
 
-		setChatId(settings.dailySummaryChatId)
-		setSummaryTime(settings.dailySummaryTime)
-		setBackupTime(settings.databaseBackupTime)
+		if (!isTelegramRoutingDraftDirty.current) {
+			setChatId(settings.dailySummaryChatId)
+			setTopicIds(getTelegramTopicInputs(settings))
+		}
+
+		if (!isScheduleDraftDirty.current) {
+			setSummaryTime(settings.dailySummaryTime)
+			setBackupTime(settings.databaseBackupTime)
+		}
 	}, [settings])
 
 	const mutation = useMutation({
 		mutationFn: adminTelegramBotService.update,
-		onSuccess: async result => {
-			setChatId(result.dailySummaryChatId)
-			setSummaryTime(result.dailySummaryTime)
-			setBackupTime(result.databaseBackupTime)
+		onSuccess: async (result, patch) => {
+			if (
+				'dailySummaryChatId' in patch ||
+				TELEGRAM_TOPIC_FIELDS.some(field => field.key in patch)
+			) {
+				isTelegramRoutingDraftDirty.current = false
+				setChatId(result.dailySummaryChatId)
+				setTopicIds(getTelegramTopicInputs(result))
+			}
+
+			if ('dailySummaryTime' in patch || 'databaseBackupTime' in patch) {
+				isScheduleDraftDirty.current = false
+				setSummaryTime(result.dailySummaryTime)
+				setBackupTime(result.databaseBackupTime)
+			}
+
 			await queryClient.invalidateQueries({
 				queryKey: SETTINGS_QUERY_KEY
 			})
@@ -169,27 +249,23 @@ const AdminTelegramBot: NextPage = () => {
 		})
 	}
 
-	const getChatIdPatch = () => {
-		const normalizedChatId = chatId.trim()
-
-		return normalizedChatId === settings?.dailySummaryChatId
-			? {}
-			: { dailySummaryChatId: normalizedChatId }
-	}
-
 	const handleToggleSummary = () => {
 		if (!settings) return
 
-		if (!settings.dailySummaryEnabled && !chatId.trim()) {
-			toast.error('Сначала укажите ID группы Telegram')
-			return
+		if (!settings.dailySummaryEnabled) {
+			if (!settings.dailySummaryChatId.trim()) {
+				toast.error('Сначала сохраните ID группы Telegram')
+				return
+			}
+
+			if (!settings.reportsThreadId) {
+				toast.error('Сначала сохраните ID топика Reports')
+				return
+			}
 		}
 
 		saveWithToast(
-			{
-				dailySummaryEnabled: !settings.dailySummaryEnabled,
-				...getChatIdPatch()
-			},
+			{ dailySummaryEnabled: !settings.dailySummaryEnabled },
 			'Применяем настройку...'
 		)
 	}
@@ -197,33 +273,84 @@ const AdminTelegramBot: NextPage = () => {
 	const handleToggleDatabaseBackup = () => {
 		if (!settings) return
 
-		if (!settings.databaseBackupEnabled && !chatId.trim()) {
-			toast.error('Сначала укажите ID группы Telegram')
+		if (!settings.databaseBackupEnabled) {
+			if (!settings.dailySummaryChatId.trim()) {
+				toast.error('Сначала сохраните ID группы Telegram')
+				return
+			}
+
+			if (!settings.databaseBackupThreadId) {
+				toast.error('Сначала сохраните ID топика Backups')
+				return
+			}
+		}
+
+		saveWithToast(
+			{ databaseBackupEnabled: !settings.databaseBackupEnabled },
+			'Применяем настройку backup...'
+		)
+	}
+
+	const handleSaveTelegramRouting = () => {
+		if (!settings) return
+
+		const normalizedChatId = chatId.trim()
+		const normalizedTopicIds = {} as Record<
+			TelegramTopicField,
+			number | null
+		>
+
+		for (const field of TELEGRAM_TOPIC_FIELDS) {
+			const topicId = parseTelegramTopicId(topicIds[field.key])
+
+			if (topicId === undefined) {
+				toast.error(
+					`ID топика ${field.label} должен быть целым числом от 1 до ${MAX_TELEGRAM_TOPIC_ID}`
+				)
+				return
+			}
+
+			normalizedTopicIds[field.key] = topicId
+		}
+
+		if (
+			(settings.dailySummaryEnabled || settings.databaseBackupEnabled) &&
+			!normalizedChatId
+		) {
+			toast.error('Укажите ID группы Telegram')
+			return
+		}
+
+		if (
+			!normalizedChatId &&
+			Object.values(normalizedTopicIds).some(topicId => topicId !== null)
+		) {
+			toast.error('Укажите ID Telegram-группы для настроенных топиков')
+			return
+		}
+
+		if (
+			settings.dailySummaryEnabled &&
+			normalizedTopicIds.reportsThreadId === null
+		) {
+			toast.error('Для включённой сводки укажите ID топика Reports')
+			return
+		}
+
+		if (
+			settings.databaseBackupEnabled &&
+			normalizedTopicIds.databaseBackupThreadId === null
+		) {
+			toast.error('Для включённого backup укажите ID топика Backups')
 			return
 		}
 
 		saveWithToast(
 			{
-				databaseBackupEnabled: !settings.databaseBackupEnabled,
-				...getChatIdPatch()
+				dailySummaryChatId: normalizedChatId,
+				...normalizedTopicIds
 			},
-			'Применяем настройку backup...'
-		)
-	}
-
-	const handleSaveChatId = () => {
-		if (!settings) return
-
-		const normalizedChatId = chatId.trim()
-
-		if (settings.dailySummaryEnabled && !normalizedChatId) {
-			toast.error('Укажите ID группы Telegram')
-			return
-		}
-
-		saveWithToast(
-			{ dailySummaryChatId: normalizedChatId },
-			'Сохраняем ID группы...'
+			'Сохраняем маршрутизацию Telegram...'
 		)
 	}
 
@@ -272,6 +399,15 @@ const AdminTelegramBot: NextPage = () => {
 		: 'Ещё не отправлялся'
 	const isWebhookActionPending =
 		webhookMutation.isPending || allWebhooksMutation.isPending
+	const isTelegramRoutingChanged = Boolean(
+		settings &&
+		(chatId.trim() !== settings.dailySummaryChatId ||
+			TELEGRAM_TOPIC_FIELDS.some(
+				field =>
+					topicIds[field.key].trim() !==
+					(settings[field.key]?.toString() ?? '')
+			))
+	)
 	const statusByBot = new Map(
 		webhookStatuses?.items.map(status => [status.bot, status]) ?? []
 	)
@@ -290,10 +426,10 @@ const AdminTelegramBot: NextPage = () => {
 
 			<AdminSectionHeading
 				text="Telegram-боты"
-				title="Webhook и ежедневная сводка"
-				description="Настраивает webhook Auth_bot, @winwidget_info_bot и @winwidget_support_bot, а также отправку ежедневной операционной сводки в Telegram-группу администраторов."
+				title="Webhook и сообщения в Telegram"
+				description="Настраивает webhook Auth_bot, @winwidget_info_bot и @winwidget_support_bot, а также распределение служебных сообщений по топикам Telegram-группы администраторов."
 				risk="medium"
-				riskText="Если указать неверный ID группы, сводка и обращения пользователей не уйдут. @winwidget_info_bot и @winwidget_support_bot должны быть добавлены в группу, а токены должны быть настроены на сервере."
+				riskText="Группа должна быть супергруппой с включёнными Topics. Если ID группы или нужного топика указан неверно, соответствующие сообщения не отправятся. @winwidget_info_bot и @winwidget_support_bot должны быть добавлены в группу, а токены должны быть настроены на сервере."
 			/>
 
 			<div className={styles.card}>
@@ -605,7 +741,7 @@ const AdminTelegramBot: NextPage = () => {
 								<p className={styles.hint}>
 									@winwidget_info_bot отправляет сводку каждый день в{' '}
 									{settings.dailySummaryTimeLabel} и явно показывает период
-									отчёта
+									отчёта. Сообщение приходит в топик Reports.
 								</p>
 							</div>
 							<button
@@ -628,8 +764,8 @@ const AdminTelegramBot: NextPage = () => {
 								<p className={styles.label}>Отправка backup</p>
 								<p className={styles.hint}>
 									@winwidget_info_bot отправляет backup базы каждый день в{' '}
-									{settings.databaseBackupTimeLabel}. Файл приходит в ту же
-									Telegram-группу, что и сводка.
+									{settings.databaseBackupTimeLabel}. Файл приходит в топик
+									Backups.
 								</p>
 							</div>
 							<button
@@ -655,7 +791,11 @@ const AdminTelegramBot: NextPage = () => {
 										type="time"
 										className={styles.input}
 										value={summaryTime}
-										onChange={event => setSummaryTime(event.target.value)}
+										disabled={mutation.isPending}
+										onChange={event => {
+											isScheduleDraftDirty.current = true
+											setSummaryTime(event.target.value)
+										}}
 									/>
 								</label>
 								<label className={styles.field}>
@@ -664,7 +804,11 @@ const AdminTelegramBot: NextPage = () => {
 										type="time"
 										className={styles.input}
 										value={backupTime}
-										onChange={event => setBackupTime(event.target.value)}
+										disabled={mutation.isPending}
+										onChange={event => {
+											isScheduleDraftDirty.current = true
+											setBackupTime(event.target.value)
+										}}
 									/>
 								</label>
 								<button
@@ -686,44 +830,81 @@ const AdminTelegramBot: NextPage = () => {
 							</p>
 						</div>
 
-						<div className={styles.field}>
-							<label htmlFor="telegram-group-id" className={styles.label}>
-								ID группы Telegram
-							</label>
-							<input
-								id="telegram-group-id"
-								className={styles.input}
-								value={chatId}
-								onChange={event => setChatId(event.target.value)}
-								placeholder="-1001234567890"
-								maxLength={100}
-							/>
-							<p className={styles.hint}>
-								Укажите chat_id группы, куда @winwidget_info_bot будет
-								отправлять ежедневную сводку, а @winwidget_support_bot
-								будет пересылать обращения пользователей
-							</p>
-						</div>
+						<div className={styles.schedulePanel}>
+							<div className={styles.field}>
+								<label
+									htmlFor="telegram-group-id"
+									className={styles.label}
+								>
+									ID группы Telegram
+								</label>
+								<input
+									id="telegram-group-id"
+									className={styles.input}
+									value={chatId}
+									disabled={mutation.isPending}
+									onChange={event => {
+										isTelegramRoutingDraftDirty.current = true
+										setChatId(event.target.value)
+									}}
+									placeholder="-1001234567890"
+									maxLength={100}
+								/>
+							</div>
 
-						<button
-							type="button"
-							className={styles.saveBtn}
-							onClick={handleSaveChatId}
-							disabled={
-								mutation.isPending ||
-								chatId.trim() === settings.dailySummaryChatId
-							}
-						>
-							Сохранить ID группы
-						</button>
+							<div className={styles.statusGrid}>
+								{TELEGRAM_TOPIC_FIELDS.map(field => (
+									<label key={field.key} className={styles.field}>
+										<span className={styles.label}>{field.label}</span>
+										<input
+											type="number"
+											className={styles.input}
+											value={topicIds[field.key]}
+											disabled={mutation.isPending}
+											onChange={event => {
+												isTelegramRoutingDraftDirty.current = true
+												setTopicIds(current => ({
+													...current,
+													[field.key]: event.target.value
+												}))
+											}}
+											placeholder="123"
+											min={1}
+											max={MAX_TELEGRAM_TOPIC_ID}
+											step={1}
+											inputMode="numeric"
+										/>
+										<span className={styles.hint}>
+											{field.description}
+										</span>
+									</label>
+								))}
+							</div>
+
+							<p className={styles.hint}>
+								Группа должна быть супергруппой с включёнными Topics. Для
+								каждого назначения укажите его message_thread_id. Если ID
+								топика не заполнен, сообщения этого типа не отправляются;
+								fallback в General не используется.
+							</p>
+
+							<button
+								type="button"
+								className={styles.saveBtn}
+								onClick={handleSaveTelegramRouting}
+								disabled={mutation.isPending || !isTelegramRoutingChanged}
+							>
+								Сохранить маршрутизацию
+							</button>
+						</div>
 
 						<div className={styles.backupPanel}>
 							<div className={styles.backupHeader}>
 								<div>
 									<p className={styles.label}>Backup базы данных</p>
 									<p className={styles.hint}>
-										Можно отправить вне расписания. Файл приходит в ту же
-										Telegram-группу, что и сводка.
+										Можно отправить вне расписания. Файл приходит в топик
+										Backups.
 									</p>
 								</div>
 								<button
@@ -733,7 +914,8 @@ const AdminTelegramBot: NextPage = () => {
 									disabled={
 										databaseBackupMutation.isPending ||
 										!settings.telegramBotTokenConfigured ||
-										!settings.dailySummaryChatId.trim()
+										!settings.dailySummaryChatId.trim() ||
+										!settings.databaseBackupThreadId
 									}
 								>
 									Отправить backup

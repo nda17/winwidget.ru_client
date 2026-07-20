@@ -3,6 +3,10 @@ import { axiosInterceptorsRequest } from '@/shared/api'
 export interface AdminTelegramBotSettings {
 	dailySummaryEnabled: boolean
 	dailySummaryChatId: string
+	supportThreadId: number | null
+	databaseBackupThreadId: number | null
+	paymentsThreadId: number | null
+	reportsThreadId: number | null
 	dailySummaryTime: string
 	dailySummaryTimeLabel: string
 	dailySummaryLastSentPeriodStart: string | null
@@ -27,6 +31,10 @@ export interface AdminTelegramBotSettings {
 export interface UpdateAdminTelegramBotSettings {
 	dailySummaryEnabled?: boolean
 	dailySummaryChatId?: string
+	supportThreadId?: number | null
+	databaseBackupThreadId?: number | null
+	paymentsThreadId?: number | null
+	reportsThreadId?: number | null
 	dailySummaryTime?: string
 	databaseBackupEnabled?: boolean
 	databaseBackupTime?: string
