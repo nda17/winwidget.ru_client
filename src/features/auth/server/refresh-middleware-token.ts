@@ -85,13 +85,6 @@ export const getAuthWithRefresh = async (
 			path: '/'
 		})
 
-		// Проброс Set-Cookie от бэка (новый refresh при ротации)
-		res.headers.getSetCookie?.().forEach(cookie => {
-			if (cookie.startsWith(EnumTokens.REFRESH_TOKEN + '=')) {
-				baseResponse.headers.append('Set-Cookie', cookie)
-			}
-		})
-
 		return { user: transformUserToState(payload), response: baseResponse }
 	} catch {
 		return { user: null, response: null }
