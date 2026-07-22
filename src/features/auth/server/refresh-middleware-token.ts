@@ -38,7 +38,7 @@ export const getAuthWithRefresh = async (
 				accessToken,
 				new TextEncoder().encode(jwtSecret)
 			)
-			if (payload) {
+			if (payload?.sessionId) {
 				return { user: transformUserToState(payload), response: null }
 			}
 		} catch {
@@ -73,7 +73,7 @@ export const getAuthWithRefresh = async (
 			new TextEncoder().encode(jwtSecret)
 		)
 
-		if (!payload) {
+		if (!payload?.sessionId) {
 			return { user: null, response: null }
 		}
 

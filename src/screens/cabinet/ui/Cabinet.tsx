@@ -3,6 +3,7 @@
 import styles from '@/screens/cabinet/ui/Cabinet.module.scss'
 import CabinetAffiliate from '@/screens/cabinet/ui/CabinetAffiliate'
 import CabinetProfile from '@/screens/cabinet/ui/CabinetProfile'
+import CabinetSessions from '@/screens/cabinet/ui/CabinetSessions'
 import CabinetWidgets from '@/screens/cabinet/ui/CabinetWidgets'
 import SkeletonLoader from '@/shared/ui/skeleton-loader/SkeletonLoader'
 import { useUser } from '@/entities/user'
@@ -14,7 +15,7 @@ import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
 import { FC, useEffect, useState } from 'react'
 
-type Tab = 'widgets' | 'profile' | 'affiliate'
+type Tab = 'widgets' | 'profile' | 'sessions' | 'affiliate'
 
 const planLabel: Record<string, string> = {
 	TRIAL: 'Тест-драйв',
@@ -34,8 +35,11 @@ const formatSubscriptionExpiresAt = (value: string) =>
 
 const Cabinet: FC = () => {
 	const searchParams = useSearchParams()
+	const requestedTab = searchParams.get('tab')
 	const initialTab: Tab =
-		searchParams.get('tab') === 'profile' ? 'profile' : 'widgets'
+		requestedTab === 'profile' || requestedTab === 'sessions'
+			? requestedTab
+			: 'widgets'
 	const [tab, setTab] = useState<Tab>(initialTab)
 	const auth = useAuthStore(state => state.auth)
 	const { user, isLoading } = useUser()
@@ -139,6 +143,12 @@ const Cabinet: FC = () => {
 				>
 					Профиль
 				</button>
+				<button
+					className={`${styles.tab} ${tab === 'sessions' ? styles.tabActive : ''}`}
+					onClick={() => setTab('sessions')}
+				>
+					Активные сессии
+				</button>
 				{isAffiliateEnabled && (
 					<button
 						className={`${styles.tab} ${tab === 'affiliate' ? styles.tabActive : ''}`}
@@ -153,6 +163,7 @@ const Cabinet: FC = () => {
 			<div className={styles.content}>
 				{tab === 'widgets' && <CabinetWidgets />}
 				{tab === 'profile' && <CabinetProfile />}
+				{tab === 'sessions' && <CabinetSessions />}
 				{tab === 'affiliate' && isAffiliateEnabled && <CabinetAffiliate />}
 			</div>
 		</div>

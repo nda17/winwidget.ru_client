@@ -1,5 +1,6 @@
 import {
 	axiosClassicRequest,
+	axiosInterceptorsRequest,
 	refreshAccessToken,
 	removeFromStorage,
 	saveTokenStorage
@@ -68,6 +69,20 @@ export type ITelegramAuthCompleteResponse =
 			user: IUser
 	  }
 
+export interface IUserSession {
+	id: string
+	userAgent: string | null
+	ipAddress: string | null
+	createdAt: string
+	lastUsedAt: string
+	expiresAt: string
+	isCurrent: boolean
+}
+
+export interface IRevokeSessionResponse {
+	currentSessionRevoked: boolean
+}
+
 class AuthService {
 	async main(type: 'login', data: IFormData, token?: string | null) {
 		const response = await axiosClassicRequest.post<IAuthResponse>(
@@ -128,6 +143,29 @@ class AuthService {
 		}
 
 		return response
+	}
+
+	async getSessions() {
+		const { data } =
+			await axiosInterceptorsRequest.get<IUserSession[]>('/auth/sessions')
+
+		return data
+	}
+
+	async revokeSession(sessionId: string) {
+		const { data } =
+			await axiosInterceptorsRequest.delete<IRevokeSessionResponse>(
+				`/auth/sessions/${sessionId}`
+			)
+
+		return data
+	}
+
+	async revokeAllSessions() {
+		const { data } =
+			await axiosInterceptorsRequest.delete<boolean>('/auth/sessions')
+
+		return data
 	}
 
 	async sendEmailCode(data: IEmailCodePayload, token?: string | null) {

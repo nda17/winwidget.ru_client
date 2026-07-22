@@ -6,9 +6,13 @@ export enum UserRole {
 
 export interface ITokenInside {
 	id: string
+	sessionId: string
 	rights: UserRole[]
 	iat: number
 	exp: number
 }
 
-export type TProtectUserData = Omit<ITokenInside, 'iat' | 'exp'>
+export type TProtectUserData = Omit<
+	ITokenInside,
+	'iat' | 'exp' | 'sessionId'
+>
