@@ -1,22 +1,19 @@
 'use client'
 
-import { errorCatch } from '@/shared/api'
+import { useAuthStore } from '@/entities/user'
+import {
+	adminMailingsService,
+	type AdminMailingAudience,
+	type AdminMailingCampaignStatus,
+	type AdminMailingChannel,
+	type IAdminMailingCampaign
+} from '@/features/send-mailing'
 import AdminNavigation from '@/screens/admin/ui/common/admin-navigation/AdminNavigation'
 import AdminSectionHeading from '@/screens/admin/ui/common/admin-section-heading/AdminSectionHeading'
+import { errorCatch } from '@/shared/api'
 import ConfirmDialog from '@/shared/ui/confirm-dialog/ConfirmDialog'
 import Heading from '@/shared/ui/heading/Heading'
 import Pagination from '@/shared/ui/pagination/Pagination'
-import {
-	adminEventLogService,
-	IAdminEventLogItem
-} from '@/features/view-event-log'
-import {
-	adminMailingsService,
-	AdminMailingAudience,
-	AdminMailingChannel,
-	IAdminBroadcastResult
-} from '@/features/send-mailing'
-import { useAuthStore } from '@/entities/user'
 import {
 	useMutation,
 	useQuery,
@@ -30,7 +27,7 @@ import styles from './AdminMailings.module.scss'
 const AUDIENCE_LABELS: Record<AdminMailingAudience, string> = {
 	ACTIVE_SUBSCRIPTION:
 		'активным подписчикам с контактом для выбранного канала',
-	ALL: 'всем пользователям с контактом для выбранного канала, без фильтра по подписке'
+	ALL: 'всем активным аккаунтам с контактом для выбранного канала'
 }
 
 const CHANNEL_LABELS: Record<AdminMailingChannel, string> = {
@@ -39,62 +36,27 @@ const CHANNEL_LABELS: Record<AdminMailingChannel, string> = {
 	BOTH: 'Email + Telegram'
 }
 
-const CHANNEL_HINTS: Record<AdminMailingChannel, string> = {
-	EMAIL: 'Письмо уйдёт пользователям, у которых есть email.',
-	TELEGRAM:
-		'Сообщение уйдёт через @winwidget_info_bot пользователям с подключёнными Telegram-уведомлениями.',
-	BOTH: 'Отправим email и Telegram тем пользователям, у кого подключён соответствующий контакт.'
+const STATUS_LABELS: Record<AdminMailingCampaignStatus, string> = {
+	QUEUED: 'В очереди',
+	RUNNING: 'Выполняется',
+	COMPLETED: 'Завершена',
+	PARTIAL_FAILED: 'Завершена с ошибками',
+	CANCELLED: 'Отменена'
 }
 
-const getAudienceHint = (
-	isActiveAudience: boolean,
-	channel: AdminMailingChannel
-) => {
-	const contactText =
-		channel === 'EMAIL'
-			? 'email'
-			: channel === 'TELEGRAM'
-				? 'подключенный Telegram'
-				: 'email и/или подключенный Telegram'
+const TERMINAL_STATUSES: AdminMailingCampaignStatus[] = [
+	'COMPLETED',
+	'PARTIAL_FAILED',
+	'CANCELLED'
+]
 
-	return isActiveAudience
-		? `Получат только активные пользователи с действующей подпиской, у которых есть ${contactText}.`
-		: `Получат все активные аккаунты, у которых есть ${contactText}. Активность подписки не учитывается.`
-}
-
-const formatExecutedAt = (value: string) =>
-	new Intl.DateTimeFormat('ru-RU', {
-		dateStyle: 'short',
-		timeStyle: 'medium'
-	}).format(new Date(value))
-
-const getMetadataValue = (item: IAdminEventLogItem, key: string) => {
-	const value = item.metadata?.[key]
-
-	if (
-		typeof value === 'string' ||
-		typeof value === 'number' ||
-		typeof value === 'boolean'
-	) {
-		return String(value)
-	}
-
-	return '—'
-}
-
-const formatHistoryAudience = (item: IAdminEventLogItem) =>
-	getMetadataValue(item, 'audience') === 'ACTIVE_SUBSCRIPTION'
-		? 'Активные подписчики'
-		: 'Все без фильтра подписки'
-
-const formatHistoryChannel = (item: IAdminEventLogItem) => {
-	const channel = getMetadataValue(item, 'channel')
-
-	return CHANNEL_LABELS[channel as AdminMailingChannel] || channel
-}
-
-const formatHistoryActor = (item: IAdminEventLogItem) =>
-	item.adminName || item.adminEmail || item.adminId || 'Администратор'
+const formatDate = (value: string | null) =>
+	value
+		? new Intl.DateTimeFormat('ru-RU', {
+				dateStyle: 'short',
+				timeStyle: 'medium'
+			}).format(new Date(value))
+		: '—'
 
 const AdminMailings: NextPage = () => {
 	const auth = useAuthStore(state => state.auth)
@@ -106,365 +68,284 @@ const AdminMailings: NextPage = () => {
 	)
 	const [channel, setChannel] = useState<AdminMailingChannel>('EMAIL')
 	const [confirmOpened, setConfirmOpened] = useState(false)
-	const [lastResult, setLastResult] =
-		useState<IAdminBroadcastResult | null>(null)
-	const [historyPage, setHistoryPage] = useState(1)
-	const historyLimit = 10
+	const [cancelCampaign, setCancelCampaign] =
+		useState<IAdminMailingCampaign | null>(null)
+	const [page, setPage] = useState(1)
+	const limit = 10
 
-	const mailingMutation = useMutation({
-		mutationKey: ['admin-mailing-broadcast'],
+	const campaigns = useQuery({
+		queryKey: ['admin-mailing-campaigns', page, limit],
+		queryFn: () => adminMailingsService.getCampaigns(page, limit),
+		enabled: auth,
+		refetchInterval: query =>
+			query.state.data?.items.some(item =>
+				['QUEUED', 'RUNNING'].includes(item.status)
+			)
+				? 2000
+				: 10000
+	})
+
+	const createMutation = useMutation({
 		mutationFn: adminMailingsService.sendBroadcast,
-		onSuccess: result => {
-			setLastResult(result)
+		onSuccess: async campaign => {
 			setConfirmOpened(false)
-			setHistoryPage(1)
-			void queryClient.invalidateQueries({
-				queryKey: ['admin-mailing-history']
+			setPage(1)
+			await queryClient.invalidateQueries({
+				queryKey: ['admin-mailing-campaigns']
 			})
 		}
 	})
 
-	const {
-		data: historyData,
-		isLoading: isHistoryLoading,
-		isFetching: isHistoryFetching
-	} = useQuery({
-		queryKey: ['admin-mailing-history', historyPage, historyLimit],
-		queryFn: () =>
-			adminEventLogService.getAll(historyPage, historyLimit, {
-				section: 'MAILINGS',
-				action: 'MAILING_BROADCAST_SEND'
-			}),
-		enabled: auth
+	const cancelMutation = useMutation({
+		mutationFn: adminMailingsService.cancelCampaign,
+		onSuccess: async () => {
+			setCancelCampaign(null)
+			await queryClient.invalidateQueries({
+				queryKey: ['admin-mailing-campaigns']
+			})
+		}
 	})
 
-	const isActiveAudience = audience === 'ACTIVE_SUBSCRIPTION'
 	const trimmedSubject = subject.trim()
 	const trimmedMessage = message.trim()
-	const historyItems = historyData?.items ?? []
-	const historyTotalPages = historyData?.totalPages ?? 1
-	const historyPages = Array.from(
-		{ length: historyTotalPages },
-		(_, index) => index + 1
-	)
+	const totalPages = campaigns.data?.totalPages || 1
+	const pages = Array.from({ length: totalPages }, (_, index) => index + 1)
 
-	const validate = () => {
+	const submit = (event: FormEvent<HTMLFormElement>) => {
+		event.preventDefault()
 		if (trimmedSubject.length < 3) {
 			toast.error('Введите тему рассылки')
-			return false
+			return
 		}
-
 		if (trimmedMessage.length < 10) {
 			toast.error('Введите текст оповещения')
-			return false
+			return
 		}
-
-		return true
-	}
-
-	const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-		event.preventDefault()
-		if (!validate()) return
 		setConfirmOpened(true)
 	}
 
-	const confirmSending = () => {
-		if (mailingMutation.isPending) return
+	const startCampaign = () => {
+		if (createMutation.isPending) return
 		setConfirmOpened(false)
-
-		const promise = mailingMutation.mutateAsync({
-			subject: trimmedSubject,
-			message: trimmedMessage,
-			audience,
-			channel
-		})
-
-		toast.promise(promise, {
-			loading: 'Отправляем рассылку...',
-			success: result =>
-				`Рассылка завершена. Отправлено: ${result.sentCount}`,
-			error: error => `Ошибка рассылки: ${errorCatch(error)}`
-		})
+		toast.promise(
+			createMutation.mutateAsync({
+				subject: trimmedSubject,
+				message: trimmedMessage,
+				audience,
+				channel
+			}),
+			{
+				loading: 'Создаём рассылку...',
+				success: campaign =>
+					`Рассылка поставлена в очередь. Получателей: ${campaign.recipientCount}`,
+				error: error => `Ошибка запуска: ${errorCatch(error)}`
+			}
+		)
 	}
 
-	const prevHistoryPage = () =>
-		setHistoryPage(page => Math.max(1, page - 1))
-	const nextHistoryPage = () =>
-		setHistoryPage(page => Math.min(historyTotalPages, page + 1))
-	const changeHistoryPage = (page: number) => setHistoryPage(page)
+	const confirmCancel = () => {
+		if (!cancelCampaign || cancelMutation.isPending) return
+		toast.promise(cancelMutation.mutateAsync(cancelCampaign.id), {
+			loading: 'Отменяем рассылку...',
+			success: 'Рассылка отменена',
+			error: error => `Ошибка отмены: ${errorCatch(error)}`
+		})
+	}
 
 	return (
 		<section className={styles.wrapper}>
 			{confirmOpened && (
 				<ConfirmDialog
-					title="Отправить рассылку?"
-					message={`${CHANNEL_LABELS[channel]}-рассылка уйдёт ${AUDIENCE_LABELS[audience]}. Действие нельзя отменить после отправки.`}
-					confirmLabel="Отправить"
+					title="Запустить рассылку?"
+					message={`${CHANNEL_LABELS[channel]}-рассылка будет поставлена в очередь и отправлена ${AUDIENCE_LABELS[audience]}. После запуска её можно остановить, но уже отправленные сообщения отозвать нельзя.`}
+					confirmLabel="Запустить"
 					cancelLabel="Назад"
-					onConfirm={confirmSending}
+					onConfirm={startCampaign}
 					onCancel={() => setConfirmOpened(false)}
+				/>
+			)}
+			{cancelCampaign && (
+				<ConfirmDialog
+					title="Остановить рассылку?"
+					message={`Новые сообщения кампании «${cancelCampaign.subject}» отправляться не будут. Уже отправленные сообщения отозвать нельзя.`}
+					confirmLabel="Остановить"
+					cancelLabel="Назад"
+					onConfirm={confirmCancel}
+					onCancel={() => setCancelCampaign(null)}
 				/>
 			)}
 
 			<Heading text="Панель администратора" />
 			<AdminNavigation />
-
 			<AdminSectionHeading
 				text="Рассылки"
 				title="Массовая рассылка"
-				description="Отправляет массовое оповещение пользователям по email, в Telegram через @winwidget_info_bot или сразу в оба канала."
+				description="Создаёт фоновую email/Telegram-кампанию через PostgreSQL Outbox и RabbitMQ. Прогресс сохраняется и продолжается после перезапуска."
 				risk="high"
-				riskText="Рассылка отправляется сразу выбранной аудитории. Перед отправкой проверь канал, тему, текст и режим аудитории."
+				riskText="Проверь канал, аудиторию и текст. Отмена останавливает только ещё не начатые доставки."
 			/>
 
-			<form className={styles.card} onSubmit={handleSubmit}>
+			<form className={styles.card} onSubmit={submit}>
 				<div className={styles.field}>
 					<label htmlFor="mailing-subject" className={styles.label}>
 						Тема
 					</label>
 					<input
 						id="mailing-subject"
-						name="mailing-subject"
 						className={styles.input}
 						value={subject}
 						onChange={event => setSubject(event.target.value)}
-						placeholder="Например: Важное обновление WinWidget"
 						maxLength={120}
 					/>
 					<p className={styles.counter}>{subject.length}/120</p>
 				</div>
-
 				<div className={styles.channelBlock}>
-					<div>
-						<p className={styles.label}>Канал</p>
-						<p className={styles.hint}>{CHANNEL_HINTS[channel]}</p>
-					</div>
+					<p className={styles.label}>Канал</p>
 					<div className={styles.channelOptions}>
-						{(
-							[
-								['EMAIL', 'Email'],
-								['TELEGRAM', 'Telegram'],
-								['BOTH', 'Email + Telegram']
-							] as const
-						).map(([value, label]) => (
+						{(['EMAIL', 'TELEGRAM', 'BOTH'] as const).map(value => (
 							<button
 								key={value}
 								type="button"
 								className={`${styles.optionBtn} ${channel === value ? styles.optionBtnActive : ''}`}
 								onClick={() => setChannel(value)}
 							>
-								{label}
+								{CHANNEL_LABELS[value]}
 							</button>
 						))}
 					</div>
 				</div>
-
 				<div className={styles.field}>
 					<label htmlFor="mailing-message" className={styles.label}>
 						Текст оповещения
 					</label>
 					<textarea
 						id="mailing-message"
-						name="mailing-message"
 						className={styles.textarea}
 						value={message}
 						onChange={event => setMessage(event.target.value)}
-						placeholder="Введите текст письма"
 						maxLength={5000}
 						rows={9}
 					/>
 					<p className={styles.counter}>{message.length}/5000</p>
 				</div>
-
-				<div className={styles.audienceRow}>
-					<div>
-						<p className={styles.label}>Аудитория</p>
-						<p className={styles.hint}>
-							{getAudienceHint(isActiveAudience, channel)}
-						</p>
-					</div>
-					<button
-						type="button"
-						className={`${styles.toggle} ${isActiveAudience ? styles.toggleOn : ''}`}
-						onClick={() =>
-							setAudience(isActiveAudience ? 'ALL' : 'ACTIVE_SUBSCRIPTION')
-						}
-						aria-pressed={isActiveAudience}
-					>
-						<span className={styles.toggleThumb} />
-					</button>
-				</div>
-
 				<div className={styles.audienceOptions}>
-					<button
-						type="button"
-						className={`${styles.optionBtn} ${isActiveAudience ? styles.optionBtnActive : ''}`}
-						onClick={() => setAudience('ACTIVE_SUBSCRIPTION')}
-					>
-						Активные подписчики
-					</button>
-					<button
-						type="button"
-						className={`${styles.optionBtn} ${!isActiveAudience ? styles.optionBtnActive : ''}`}
-						onClick={() => setAudience('ALL')}
-					>
-						Все без фильтра подписки
-					</button>
+					{(['ACTIVE_SUBSCRIPTION', 'ALL'] as const).map(value => (
+						<button
+							key={value}
+							type="button"
+							className={`${styles.optionBtn} ${audience === value ? styles.optionBtnActive : ''}`}
+							onClick={() => setAudience(value)}
+						>
+							{value === 'ACTIVE_SUBSCRIPTION'
+								? 'Активные подписчики'
+								: 'Все без фильтра подписки'}
+						</button>
+					))}
 				</div>
-
+				<p className={styles.hint}>{AUDIENCE_LABELS[audience]}</p>
 				<button
 					type="submit"
 					className={styles.sendBtn}
-					disabled={mailingMutation.isPending}
+					disabled={createMutation.isPending}
 				>
-					{mailingMutation.isPending ? 'Отправляем...' : 'Отправить'}
+					{createMutation.isPending ? 'Создаём...' : 'Запустить рассылку'}
 				</button>
 			</form>
-
-			{lastResult && (
-				<div className={styles.resultCard}>
-					<p className={styles.resultTitle}>Последняя рассылка</p>
-					<div className={styles.resultGrid}>
-						<div>
-							<span className={styles.resultLabel}>Аудитория</span>
-							<span className={styles.resultValue}>
-								{lastResult.audience === 'ACTIVE_SUBSCRIPTION'
-									? 'Активные подписчики'
-									: 'Все без фильтра подписки'}
-							</span>
-						</div>
-						<div>
-							<span className={styles.resultLabel}>Канал</span>
-							<span className={styles.resultValue}>
-								{CHANNEL_LABELS[lastResult.channel]}
-							</span>
-						</div>
-						<div>
-							<span className={styles.resultLabel}>Получателей</span>
-							<span className={styles.resultValue}>
-								{lastResult.recipientCount}
-							</span>
-						</div>
-						<div>
-							<span className={styles.resultLabel}>Отправлено</span>
-							<span className={styles.resultValue}>
-								{lastResult.sentCount}
-							</span>
-						</div>
-						<div>
-							<span className={styles.resultLabel}>Ошибок</span>
-							<span className={styles.resultValue}>
-								{lastResult.failedCount}
-							</span>
-						</div>
-						<div>
-							<span className={styles.resultLabel}>Email</span>
-							<span className={styles.resultValue}>
-								{lastResult.emailSentCount}/
-								{lastResult.emailRecipientCount}
-							</span>
-						</div>
-						<div>
-							<span className={styles.resultLabel}>Telegram</span>
-							<span className={styles.resultValue}>
-								{lastResult.telegramSentCount}/
-								{lastResult.telegramRecipientCount}
-							</span>
-						</div>
-					</div>
-					<p className={styles.resultTime}>
-						{formatExecutedAt(lastResult.executedAt)}
-					</p>
-				</div>
-			)}
 
 			<div className={styles.historyCard}>
 				<div className={styles.historyHeader}>
 					<div>
-						<p className={styles.resultTitle}>История запусков</p>
+						<p className={styles.resultTitle}>Кампании</p>
 						<p className={styles.hint}>
-							Последние ручные рассылки из журнала событий: кто запускал,
-							канал, аудитория, результат и ошибки.
+							Текущий прогресс, ошибки и отменённые доставки.
 						</p>
 					</div>
-					{isHistoryFetching && (
+					{campaigns.isFetching && (
 						<span className={styles.historyStatus}>Обновляем...</span>
 					)}
 				</div>
-
-				{isHistoryLoading ? (
-					<p className={styles.historyEmpty}>Загружаем историю...</p>
-				) : historyItems.length ? (
+				{campaigns.isLoading ? (
+					<p className={styles.historyEmpty}>Загружаем кампании...</p>
+				) : campaigns.data?.items.length ? (
 					<>
 						<div className={styles.historyList}>
-							{historyItems.map(item => (
-								<div className={styles.historyItem} key={item.id}>
-									<div>
-										<span className={styles.resultLabel}>Запуск</span>
-										<span className={styles.resultValue}>
-											{formatExecutedAt(item.createdAt)}
-										</span>
+							{campaigns.data.items.map(campaign => {
+								const processed =
+									campaign.sentCount +
+									campaign.failedCount +
+									campaign.cancelledCount
+								const progress = campaign.recipientCount
+									? Math.round((processed / campaign.recipientCount) * 100)
+									: 100
+								return (
+									<div className={styles.historyItem} key={campaign.id}>
+										<div>
+											<span className={styles.resultLabel}>Тема</span>
+											<span className={styles.resultValue}>
+												{campaign.subject}
+											</span>
+										</div>
+										<div>
+											<span className={styles.resultLabel}>Статус</span>
+											<span className={styles.resultValue}>
+												{STATUS_LABELS[campaign.status]}
+											</span>
+										</div>
+										<div>
+											<span className={styles.resultLabel}>Прогресс</span>
+											<span className={styles.resultValue}>
+												{processed}/{campaign.recipientCount} ({progress}%)
+											</span>
+										</div>
+										<div>
+											<span className={styles.resultLabel}>Результат</span>
+											<span className={styles.resultValue}>
+												{campaign.sentCount} отправлено ·{' '}
+												{campaign.failedCount} ошибок ·{' '}
+												{campaign.cancelledCount} отменено
+											</span>
+										</div>
+										<div>
+											<span className={styles.resultLabel}>Канал</span>
+											<span className={styles.resultValue}>
+												{CHANNEL_LABELS[campaign.requestedChannel]}
+											</span>
+										</div>
+										<div>
+											<span className={styles.resultLabel}>Создана</span>
+											<span className={styles.resultValue}>
+												{formatDate(campaign.createdAt)}
+											</span>
+										</div>
+										{!TERMINAL_STATUSES.includes(campaign.status) && (
+											<div>
+												<button
+													type="button"
+													className={styles.cancelBtn}
+													onClick={() => setCancelCampaign(campaign)}
+												>
+													Остановить
+												</button>
+											</div>
+										)}
 									</div>
-									<div>
-										<span className={styles.resultLabel}>Админ</span>
-										<span className={styles.resultValue}>
-											{formatHistoryActor(item)}
-										</span>
-									</div>
-									<div>
-										<span className={styles.resultLabel}>Канал</span>
-										<span className={styles.resultValue}>
-											{formatHistoryChannel(item)}
-										</span>
-									</div>
-									<div>
-										<span className={styles.resultLabel}>Аудитория</span>
-										<span className={styles.resultValue}>
-											{formatHistoryAudience(item)}
-										</span>
-									</div>
-									<div>
-										<span className={styles.resultLabel}>Получателей</span>
-										<span className={styles.resultValue}>
-											{getMetadataValue(item, 'recipientCount')}
-										</span>
-									</div>
-									<div>
-										<span className={styles.resultLabel}>Отправлено</span>
-										<span className={styles.resultValue}>
-											{getMetadataValue(item, 'sentCount')}
-										</span>
-									</div>
-									<div>
-										<span className={styles.resultLabel}>Ошибок</span>
-										<span className={styles.resultValue}>
-											{getMetadataValue(item, 'failedCount')}
-										</span>
-									</div>
-									<div>
-										<span className={styles.resultLabel}>Тема</span>
-										<span className={styles.resultValue}>
-											{item.entityLabel || item.description}
-										</span>
-									</div>
-								</div>
-							))}
+								)
+							})}
 						</div>
-
-						{historyTotalPages > 1 && (
+						{totalPages > 1 && (
 							<Pagination
-								listPage={historyPages}
-								currentPage={historyPage}
-								prevPage={prevHistoryPage}
-								nextPage={nextHistoryPage}
-								changeActivePage={changeHistoryPage}
+								listPage={pages}
+								currentPage={page}
+								prevPage={() => setPage(value => Math.max(1, value - 1))}
+								nextPage={() =>
+									setPage(value => Math.min(totalPages, value + 1))
+								}
+								changeActivePage={setPage}
 							/>
 						)}
 					</>
 				) : (
-					<p className={styles.historyEmpty}>
-						Запусков ручных рассылок пока нет.
-					</p>
+					<p className={styles.historyEmpty}>Кампаний пока нет.</p>
 				)}
 			</div>
 		</section>

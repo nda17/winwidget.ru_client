@@ -6,6 +6,12 @@ export type MessagingIntegration =
 	| 'telegram'
 	| 'bitrix24'
 	| 'amo-crm'
+	| 'payment-email'
+	| 'payment-telegram'
+	| 'mailing-email'
+	| 'mailing-telegram'
+	| 'limit-email'
+	| 'limit-telegram'
 
 export interface MessagingOverview {
 	generatedAt: string

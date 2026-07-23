@@ -40,6 +40,7 @@ const ACTION_LABELS: Record<AdminEventLogAction, string> = {
 	PAYMENT_MANUAL_CHECK: 'Проверка платежа',
 	PAYMENT_CLEANUP_RUN: 'Очистка платежей',
 	MAILING_BROADCAST_SEND: 'Ручная рассылка',
+	MAILING_BROADCAST_CANCEL: 'Отмена рассылки',
 	SUBSCRIPTION_ACTIVATE: 'Активация подписки',
 	SUBSCRIPTION_EXTEND_DAYS: 'Бонусные дни',
 	SUBSCRIPTION_CANCEL: 'Отмена подписки',

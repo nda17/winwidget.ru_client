@@ -1,6 +1,6 @@
 'use client'
 
-import { useAuthStore } from '@/entities/user'
+import { UserRole, useAuthStore, useUser } from '@/entities/user'
 import {
 	messagingService,
 	type MessagingFailure,
@@ -27,7 +27,13 @@ const integrationLabels: Record<MessagingIntegration, string> = {
 	webhook: 'Webhook',
 	telegram: 'Telegram',
 	bitrix24: 'Битрикс24',
-	'amo-crm': 'amoCRM'
+	'amo-crm': 'amoCRM',
+	'payment-email': 'Email после оплаты',
+	'payment-telegram': 'Telegram после оплаты',
+	'mailing-email': 'Email-рассылка',
+	'mailing-telegram': 'Telegram-рассылка',
+	'limit-email': 'Email о лимите',
+	'limit-telegram': 'Telegram о лимите'
 }
 
 const formatDate = (value: string | null) =>
@@ -40,6 +46,8 @@ const formatDate = (value: string | null) =>
 
 export default function AdminMessaging() {
 	const auth = useAuthStore(state => state.auth)
+	const { user } = useUser()
+	const isDev = Boolean(user?.rights?.includes(UserRole.DEV))
 	const queryClient = useQueryClient()
 	const [page, setPage] = useState(1)
 	const [integration, setIntegration] = useState('ALL')
@@ -48,7 +56,7 @@ export default function AdminMessaging() {
 	const overview = useQuery({
 		queryKey: ['admin-messaging-overview'],
 		queryFn: messagingService.getOverview,
-		enabled: auth,
+		enabled: auth && isDev,
 		refetchInterval: 15000
 	})
 	const failures = useQuery({
@@ -60,7 +68,7 @@ export default function AdminMessaging() {
 				integration: integration === 'ALL' ? undefined : integration,
 				status
 			}),
-		enabled: auth,
+		enabled: auth && isDev,
 		refetchInterval: 15000
 	})
 	const retryMutation = useMutation({
@@ -95,6 +103,20 @@ export default function AdminMessaging() {
 	const totalPages = failures.data?.totalPages || 1
 	const pages = Array.from({ length: totalPages }, (_, index) => index + 1)
 
+	if (user && !isDev) {
+		return (
+			<section className={styles.wrapper}>
+				<Heading text="Панель администратора" />
+				<AdminNavigation />
+				<div className={styles.section}>
+					<p className={styles.empty}>
+						Раздел доступен только пользователям с ролью DEV.
+					</p>
+				</div>
+			</section>
+		)
+	}
+
 	return (
 		<section className={styles.wrapper}>
 			<Heading text="Панель администратора" />
@@ -122,7 +144,23 @@ export default function AdminMessaging() {
 					</button>
 				</div>
 				{overview.isLoading ? (
-					<SkeletonLoader count={1} className="h-[150px]" />
+					<>
+						<div className={styles.cards}>
+							{Array.from({ length: 5 }, (_, index) => (
+								<SkeletonLoader
+									key={index}
+									count={1}
+									className="h-[86px]"
+								/>
+							))}
+						</div>
+						<div className={styles.heartbeats}>
+							<SkeletonLoader count={1} className="h-[32px] w-[180px]" />
+							<SkeletonLoader count={1} className="h-[32px] w-[180px]" />
+						</div>
+						<SkeletonLoader count={1} className="h-[44px]" />
+						<SkeletonLoader count={1} className="h-[44px]" />
+					</>
 				) : overview.data ? (
 					<>
 						<div className={styles.cards}>
@@ -189,7 +227,8 @@ export default function AdminMessaging() {
 					</>
 				) : (
 					<p className={styles.empty}>
-						Не удалось получить состояние очередей
+						Не удалось получить состояние очередей:{' '}
+						{errorCatch(overview.error)}
 					</p>
 				)}
 			</div>
@@ -203,36 +242,49 @@ export default function AdminMessaging() {
 						</p>
 					</div>
 					<div className={styles.filters}>
-						<select
-							value={integration}
-							onChange={event => {
-								setIntegration(event.target.value)
-								setPage(1)
-							}}
-						>
-							<option value="ALL">Все интеграции</option>
-							{Object.entries(integrationLabels).map(([value, label]) => (
-								<option key={value} value={value}>
-									{label}
-								</option>
-							))}
-						</select>
-						<select
-							value={status}
-							onChange={event => {
-								setStatus(event.target.value)
-								setPage(1)
-							}}
-						>
-							<option value="FAILED">Требуют внимания</option>
-							<option value="RETRYING">Повторяются</option>
-							<option value="RESOLVED">Решённые</option>
-							<option value="ALL">Все</option>
-						</select>
+						<label className={styles.selectWrap}>
+							<span className="sr-only">Интеграция</span>
+							<select
+								value={integration}
+								onChange={event => {
+									setIntegration(event.target.value)
+									setPage(1)
+								}}
+							>
+								<option value="ALL">Все интеграции</option>
+								{Object.entries(integrationLabels).map(
+									([value, label]) => (
+										<option key={value} value={value}>
+											{label}
+										</option>
+									)
+								)}
+							</select>
+						</label>
+						<label className={styles.selectWrap}>
+							<span className="sr-only">Статус</span>
+							<select
+								value={status}
+								onChange={event => {
+									setStatus(event.target.value)
+									setPage(1)
+								}}
+							>
+								<option value="FAILED">Требуют внимания</option>
+								<option value="RETRYING">Повторяются</option>
+								<option value="RESOLVED">Решённые</option>
+								<option value="ALL">Все</option>
+							</select>
+						</label>
 					</div>
 				</div>
 				{failures.isLoading ? (
-					<SkeletonLoader count={1} className="h-[220px]" />
+					<div className={styles.failureSkeletons}>
+						<SkeletonLoader count={1} className="h-[46px]" />
+						<SkeletonLoader count={1} className="h-[58px]" />
+						<SkeletonLoader count={1} className="h-[58px]" />
+						<SkeletonLoader count={1} className="h-[58px]" />
+					</div>
 				) : failures.data?.items.length ? (
 					<>
 						<div className={styles.tableWrap}>
@@ -284,6 +336,11 @@ export default function AdminMessaging() {
 							/>
 						)}
 					</>
+				) : failures.isError ? (
+					<p className={styles.empty}>
+						Не удалось получить ошибки доставки:{' '}
+						{errorCatch(failures.error)}
+					</p>
 				) : (
 					<p className={styles.empty}>По выбранным фильтрам ошибок нет</p>
 				)}

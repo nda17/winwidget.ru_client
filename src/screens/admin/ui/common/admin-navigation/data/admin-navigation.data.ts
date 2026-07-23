@@ -61,7 +61,8 @@ export const navItems: INavItem[] = [
 	},
 	{
 		title: 'Очереди',
-		link: ADMIN_PAGES.MESSAGING
+		link: ADMIN_PAGES.MESSAGING,
+		devOnly: true
 	},
 	{
 		title: 'DEV',

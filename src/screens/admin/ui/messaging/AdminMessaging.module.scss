@@ -79,8 +79,21 @@
 	@apply flex flex-wrap gap-2;
 
 	select {
-		@apply appearance-none rounded-lg border border-[#d7c4ee] bg-white py-2 pl-3 pr-8 text-sm text-[#4e3b5e];
+		@apply appearance-none rounded-lg border border-[#d7c4ee] bg-white py-2 pl-3 pr-9 text-sm text-[#4e3b5e] cursor-pointer;
 	}
+}
+
+.selectWrap {
+	@apply relative inline-flex items-center;
+
+	&::after {
+		content: '';
+		@apply pointer-events-none absolute right-3 size-2 rotate-45 border-b-2 border-r-2 border-[#6b2d8f] -translate-y-0.5;
+	}
+}
+
+.failureSkeletons {
+	@apply flex flex-col gap-3;
 }
 
 .tableWrap {

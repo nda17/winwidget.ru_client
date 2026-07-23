@@ -2,6 +2,12 @@ import { axiosInterceptorsRequest } from '@/shared/api'
 
 export type AdminMailingAudience = 'ACTIVE_SUBSCRIPTION' | 'ALL'
 export type AdminMailingChannel = 'EMAIL' | 'TELEGRAM' | 'BOTH'
+export type AdminMailingCampaignStatus =
+	| 'QUEUED'
+	| 'RUNNING'
+	| 'COMPLETED'
+	| 'PARTIAL_FAILED'
+	| 'CANCELLED'
 
 export interface IAdminBroadcastInput {
 	subject: string
@@ -10,28 +16,57 @@ export interface IAdminBroadcastInput {
 	channel: AdminMailingChannel
 }
 
-export interface IAdminBroadcastResult {
+export interface IAdminMailingCampaign {
+	id: string
+	subject: string
+	message: string
 	audience: AdminMailingAudience
-	channel: AdminMailingChannel
+	requestedChannel: AdminMailingChannel
+	status: AdminMailingCampaignStatus
 	recipientCount: number
 	sentCount: number
 	failedCount: number
+	cancelledCount: number
 	emailRecipientCount: number
-	emailSentCount: number
-	emailFailedCount: number
 	telegramRecipientCount: number
-	telegramSentCount: number
-	telegramFailedCount: number
-	executedAt: string
+	startedAt: string | null
+	completedAt: string | null
+	cancelRequestedAt: string | null
+	createdAt: string
+	updatedAt: string
+}
+
+export interface IAdminMailingCampaignsResponse {
+	items: IAdminMailingCampaign[]
+	total: number
+	page: number
+	limit: number
+	totalPages: number
 }
 
 const adminMailingsService = {
 	async sendBroadcast(
 		payload: IAdminBroadcastInput
-	): Promise<IAdminBroadcastResult> {
+	): Promise<IAdminMailingCampaign> {
 		const { data } = await axiosInterceptorsRequest.post(
 			'/mailings/admin/broadcast',
 			payload
+		)
+		return data
+	},
+
+	async getCampaigns(page: number, limit: number) {
+		const { data } =
+			await axiosInterceptorsRequest.get<IAdminMailingCampaignsResponse>(
+				'/mailings/admin/campaigns',
+				{ params: { page, limit } }
+			)
+		return data
+	},
+
+	async cancelCampaign(id: string): Promise<IAdminMailingCampaign> {
+		const { data } = await axiosInterceptorsRequest.post(
+			`/mailings/admin/campaigns/${id}/cancel`
 		)
 		return data
 	}
