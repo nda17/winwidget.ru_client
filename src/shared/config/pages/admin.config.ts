@@ -15,6 +15,7 @@ class AdminPages {
 	BACKLOG = '/admin/backlog'
 	SUBSCRIPTIONS = '/admin/subscriptions'
 	SYSTEM = '/admin/system'
+	MESSAGING = '/admin/messaging'
 	DEV_TOOLS = '/admin/dev-tools'
 }
 

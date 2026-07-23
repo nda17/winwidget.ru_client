@@ -64,7 +64,8 @@ const EVENT_SECTION_LABELS: Record<string, string> = {
 	TASKS: 'Задачи',
 	SUBSCRIPTIONS: 'Подписки',
 	USERS: 'Пользователи',
-	BACKLOG: 'Бэклог'
+	BACKLOG: 'Бэклог',
+	MESSAGING: 'Очереди'
 }
 
 const EVENT_ACTION_LABELS: Record<string, string> = {
@@ -81,7 +82,8 @@ const EVENT_ACTION_LABELS: Record<string, string> = {
 	USER_DELETE: 'Удаление',
 	BACKLOG_TASK_CREATE: 'Создание задачи',
 	BACKLOG_TASK_UPDATE: 'Обновление задачи',
-	BACKLOG_TASK_DELETE: 'Удаление задачи'
+	BACKLOG_TASK_DELETE: 'Удаление задачи',
+	MESSAGING_FAILURE_RETRY: 'Повтор интеграции'
 }
 
 const formatOptionalPattern = (

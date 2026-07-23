@@ -11,6 +11,7 @@ export type AdminEventLogSection =
 	| 'TELEGRAM_BOT'
 	| 'AFFILIATE'
 	| 'DEV_TOOLS'
+	| 'MESSAGING'
 
 export type AdminEventLogAction =
 	| 'PAYMENT_MANUAL_CHECK'
@@ -34,6 +35,7 @@ export type AdminEventLogAction =
 	| 'TELEGRAM_DATABASE_BACKUP_CREATE'
 	| 'TELEGRAM_DATABASE_RESTORE'
 	| 'DEV_DATABASE_RESTORE'
+	| 'MESSAGING_FAILURE_RETRY'
 
 export interface IAdminEventLogItem {
 	id: string

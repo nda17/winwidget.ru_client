@@ -32,7 +32,8 @@ const SECTION_LABELS: Record<AdminEventLogSection, string> = {
 	SITE_SETTINGS: 'Настройки сайта',
 	TELEGRAM_BOT: 'Telegram-бот',
 	AFFILIATE: 'Партнёрка',
-	DEV_TOOLS: 'DEV'
+	DEV_TOOLS: 'DEV',
+	MESSAGING: 'Очереди'
 }
 
 const ACTION_LABELS: Record<AdminEventLogAction, string> = {
@@ -56,7 +57,8 @@ const ACTION_LABELS: Record<AdminEventLogAction, string> = {
 	TELEGRAM_BOT_WEBHOOK_REINSTALL: 'Webhook Telegram-бота',
 	TELEGRAM_DATABASE_BACKUP_CREATE: 'Backup базы данных',
 	TELEGRAM_DATABASE_RESTORE: 'Восстановление базы',
-	DEV_DATABASE_RESTORE: 'DEV-восстановление базы'
+	DEV_DATABASE_RESTORE: 'DEV-восстановление базы',
+	MESSAGING_FAILURE_RETRY: 'Повтор интеграции'
 }
 
 type EventLogSectionFilter = AdminEventLogSection | 'ALL'

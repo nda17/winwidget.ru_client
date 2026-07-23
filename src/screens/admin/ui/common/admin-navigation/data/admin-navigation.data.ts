@@ -60,6 +60,10 @@ export const navItems: INavItem[] = [
 		link: ADMIN_PAGES.SYSTEM
 	},
 	{
+		title: 'Очереди',
+		link: ADMIN_PAGES.MESSAGING
+	},
+	{
 		title: 'DEV',
 		link: ADMIN_PAGES.DEV_TOOLS,
 		devOnly: true

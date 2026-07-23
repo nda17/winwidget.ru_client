@@ -5,6 +5,7 @@ export { default as AdminContentSettings } from './ui/content-settings/AdminCont
 export { default as AdminDevTools } from './ui/dev-tools/AdminDevTools'
 export { default as AdminEventLog } from './ui/event-log/AdminEventLog'
 export { default as AdminMailings } from './ui/mailings/AdminMailings'
+export { default as AdminMessaging } from './ui/messaging/AdminMessaging'
 export { default as AdminNotes } from './ui/notes/AdminNotes'
 export { default as AdminPayments } from './ui/payments/AdminPayments'
 export { default as AdminSettings } from './ui/settings/AdminSettings'
