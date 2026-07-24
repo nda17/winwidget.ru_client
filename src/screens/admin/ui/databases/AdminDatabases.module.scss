@@ -1,0 +1,123 @@
+.wrapper {
+	@apply relative mx-auto flex w-full max-w-[88rem] flex-col items-center px-4;
+}
+
+.card {
+	@apply mx-auto mb-6 flex w-full max-w-[920px] flex-col gap-5 rounded-xl border border-[#e0d6f0] bg-white p-5;
+
+	@media (max-width: 480px) {
+		@apply gap-[14px] rounded-[10px] p-3;
+	}
+}
+
+.backupPanel {
+	@apply flex flex-col gap-3 rounded-xl border border-[#efe8fb] bg-[#fcfaff] p-4;
+}
+
+.backupHeader {
+	@apply flex items-start justify-between gap-4;
+
+	@media (max-width: 640px) {
+		@apply flex-col;
+	}
+}
+
+.backupMetaGrid {
+	@apply grid grid-cols-3 gap-3;
+
+	@media (max-width: 760px) {
+		@apply grid-cols-1;
+	}
+}
+
+.statusItem {
+	@apply flex min-h-[76px] flex-col items-start justify-between gap-2 rounded-xl border border-[#efe8fb] bg-[#faf8ff] p-4;
+}
+
+.statusLabel {
+	@apply text-[0.78rem] font-semibold text-[#777];
+}
+
+.statusValue {
+	@apply text-[0.9rem] font-semibold text-[#1a1a1a];
+}
+
+.badge {
+	@apply rounded-full px-3 py-[5px] text-[0.75rem] font-semibold;
+}
+
+.badgeOk {
+	@apply bg-[#e7f8ee] text-[#168044];
+}
+
+.badgeProgress {
+	@apply bg-[#eee6f8] text-[#6b2d8f];
+}
+
+.badgeError {
+	@apply bg-[#fdebec] text-[#a92d46];
+}
+
+.label {
+	@apply text-[0.9rem] font-semibold text-[#1a1a1a];
+}
+
+.hint {
+	@apply mt-[2px] text-[0.8rem] leading-[1.4] text-[#777];
+}
+
+.actionBtn {
+	@apply cursor-pointer rounded-lg border border-[#e0d6f0] bg-[#f3eeff] px-4 py-[10px] text-sm font-semibold text-[#7b3fa0] transition-colors duration-200;
+}
+
+.actionBtn:hover {
+	@apply bg-[#e0d6f0];
+}
+
+.actionBtn:disabled {
+	@apply cursor-not-allowed opacity-50;
+}
+
+.restoreGrid {
+	@apply grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-3;
+
+	@media (max-width: 760px) {
+		@apply grid-cols-1;
+	}
+}
+
+.fileInputLabel {
+	@apply flex min-w-0 flex-col gap-[6px] text-[0.9rem] font-semibold text-[#1a1a1a];
+}
+
+.fileInputLabel input {
+	@apply w-full rounded-lg border border-[#e0d6f0] bg-[#f8f5ff] px-[14px] py-[9px] text-[0.85rem] text-[#777];
+}
+
+.input {
+	@apply w-full rounded-lg border border-[#e0d6f0] bg-[#f8f5ff] px-[14px] py-[10px] text-[0.9rem] text-[#1a1a1a] outline-none transition-[border-color] duration-200;
+}
+
+.input:focus {
+	@apply border-[#c4a8e8];
+}
+
+.input::placeholder {
+	@apply text-[#bbb];
+}
+
+.dangerBtn {
+	@apply cursor-pointer rounded-lg border-none bg-[#b42318] px-5 py-[10px] text-sm font-semibold text-white transition-opacity duration-200;
+}
+
+.dangerBtn:hover {
+	@apply opacity-90;
+}
+
+.dangerBtn:disabled {
+	@apply cursor-not-allowed opacity-50;
+}
+
+.empty {
+	@apply py-4 text-center text-sm text-[#777];
+}

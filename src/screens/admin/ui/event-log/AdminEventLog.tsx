@@ -32,7 +32,7 @@ const SECTION_LABELS: Record<AdminEventLogSection, string> = {
 	SITE_SETTINGS: 'Настройки сайта',
 	TELEGRAM_BOT: 'Telegram-бот',
 	AFFILIATE: 'Партнёрка',
-	DEV_TOOLS: 'DEV',
+	DEV_TOOLS: 'Базы данных',
 	MESSAGING: 'Очереди'
 }
 

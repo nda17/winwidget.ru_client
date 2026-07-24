@@ -16,7 +16,7 @@ class AdminPages {
 	SUBSCRIPTIONS = '/admin/subscriptions'
 	SYSTEM = '/admin/system'
 	MESSAGING = '/admin/messaging'
-	DEV_TOOLS = '/admin/dev-tools'
+	DATABASES = '/admin/databases'
 }
 
 export const ADMIN_PAGES = new AdminPages()

@@ -65,9 +65,8 @@ export const navItems: INavItem[] = [
 		devOnly: true
 	},
 	{
-		title: 'DEV',
-		link: ADMIN_PAGES.DEV_TOOLS,
-		devOnly: true
+		title: 'Базы данных',
+		link: ADMIN_PAGES.DATABASES
 	},
 	{
 		title: 'Бэклог',

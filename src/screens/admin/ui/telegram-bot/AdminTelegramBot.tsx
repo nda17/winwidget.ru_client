@@ -1,6 +1,5 @@
 'use client'
 
-import { useUser } from '@/entities/user'
 import { errorCatch } from '@/shared/api'
 import AdminNavigation from '@/screens/admin/ui/common/admin-navigation/AdminNavigation'
 import AdminSectionHeading from '@/screens/admin/ui/common/admin-section-heading/AdminSectionHeading'
@@ -9,7 +8,6 @@ import SkeletonLoader from '@/shared/ui/skeleton-loader/SkeletonLoader'
 import {
 	adminTelegramBotService,
 	type AdminTelegramBotSettings,
-	type TelegramDatabaseBackupJobStatus,
 	type TelegramWebhookBot
 } from '@/features/manage-telegram-bot'
 import {
@@ -17,7 +15,6 @@ import {
 	useQuery,
 	useQueryClient
 } from '@tanstack/react-query'
-import { isAxiosError } from 'axios'
 import { NextPage } from 'next'
 import { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
@@ -28,96 +25,6 @@ const WEBHOOKS_QUERY_KEY = ['admin-telegram-bot-webhooks']
 const WEBHOOK_BOTS: TelegramWebhookBot[] = ['info', 'auth', 'support']
 const MIN_TASK_TIME_GAP_MINUTES = 5
 const MAX_TELEGRAM_TOPIC_ID = 2147483647
-const DATABASE_BACKUP_JOB_POLL_INTERVAL_MS = 2500
-const DATABASE_BACKUP_STORAGE_KEY_PREFIX =
-	'winwidget:admin:database-backup:active'
-const UUID_PATTERN =
-	/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-const TERMINAL_DATABASE_BACKUP_JOB_STATUSES: ReadonlySet<TelegramDatabaseBackupJobStatus> =
-	new Set<TelegramDatabaseBackupJobStatus>([
-		'SUCCEEDED',
-		'FAILED',
-		'CANCELLED'
-	])
-const DATABASE_BACKUP_JOB_STATUS_LABELS: Record<
-	TelegramDatabaseBackupJobStatus,
-	string
-> = {
-	QUEUED: 'Ожидает запуска',
-	PROCESSING: 'Выполняется',
-	SUCCEEDED: 'Завершён',
-	FAILED: 'Ошибка',
-	CANCELLED: 'Отменён'
-}
-
-interface DatabaseBackupActiveMarker {
-	idempotencyKey: string | null
-	jobId: string | null
-}
-
-const getDatabaseBackupMarker = (
-	storageKey: string | null
-): DatabaseBackupActiveMarker | null => {
-	if (!storageKey || typeof window === 'undefined') return null
-
-	try {
-		const rawMarker = window.localStorage.getItem(storageKey)
-		if (!rawMarker) return null
-
-		const marker = JSON.parse(
-			rawMarker
-		) as Partial<DatabaseBackupActiveMarker>
-		const idempotencyKey =
-			typeof marker.idempotencyKey === 'string' &&
-			UUID_PATTERN.test(marker.idempotencyKey)
-				? marker.idempotencyKey.toLowerCase()
-				: null
-		const jobId =
-			typeof marker.jobId === 'string' && UUID_PATTERN.test(marker.jobId)
-				? marker.jobId.toLowerCase()
-				: null
-
-		return idempotencyKey || jobId ? { idempotencyKey, jobId } : null
-	} catch {
-		return null
-	}
-}
-
-const saveDatabaseBackupMarker = (
-	storageKey: string,
-	marker: DatabaseBackupActiveMarker
-) => {
-	try {
-		window.localStorage.setItem(storageKey, JSON.stringify(marker))
-	} catch {
-		// Серверная идемпотентность и active-job endpoint остаются fallback.
-	}
-}
-
-const clearDatabaseBackupMarker = (
-	storageKey: string | null,
-	jobId: string
-) => {
-	if (!storageKey || typeof window === 'undefined') return
-	const marker = getDatabaseBackupMarker(storageKey)
-	if (!marker?.jobId || marker.jobId === jobId) {
-		try {
-			window.localStorage.removeItem(storageKey)
-		} catch {
-			// Marker безопасно очистится при следующем доступном storage.
-		}
-	}
-}
-
-const getDatabaseBackupJobBadgeClass = (
-	status: TelegramDatabaseBackupJobStatus
-) => {
-	if (status === 'SUCCEEDED') return styles.badgeOk
-	if (status === 'FAILED' || status === 'CANCELLED') {
-		return styles.badgeError
-	}
-	return styles.badgeProgress
-}
 const TELEGRAM_TOPIC_FIELDS = [
 	{
 		key: 'supportThreadId',
@@ -180,11 +87,6 @@ const formatDate = (value: string) =>
 		timeStyle: 'medium'
 	}).format(new Date(value))
 
-const formatFileSize = (value: number) => {
-	if (value < 1024 * 1024) return `${Math.round(value / 1024)} КБ`
-	return `${(value / 1024 / 1024).toFixed(1)} МБ`
-}
-
 const getTimeMinutes = (value: string) => {
 	const [hour, minute] = value.split(':').map(Number)
 
@@ -214,23 +116,14 @@ const getTaskTimeGapMinutes = (first: string, second: string) => {
 
 const AdminTelegramBot: NextPage = () => {
 	const queryClient = useQueryClient()
-	const { user } = useUser()
 	const [chatId, setChatId] = useState('')
 	const [topicIds, setTopicIds] = useState<TelegramTopicInputs>(
 		EMPTY_TELEGRAM_TOPIC_INPUTS
 	)
 	const [summaryTime, setSummaryTime] = useState('')
 	const [backupTime, setBackupTime] = useState('')
-	const [databaseBackupJobId, setDatabaseBackupJobId] = useState<
-		string | null
-	>(null)
 	const isTelegramRoutingDraftDirty = useRef(false)
 	const isScheduleDraftDirty = useRef(false)
-	const notifiedDatabaseBackupJob = useRef<string | null>(null)
-	const checkedStaleDatabaseBackupJob = useRef<string | null>(null)
-	const databaseBackupStorageKey = user.id
-		? `${DATABASE_BACKUP_STORAGE_KEY_PREFIX}:${user.id}`
-		: null
 
 	const { data: settings, isLoading } = useQuery({
 		queryKey: SETTINGS_QUERY_KEY,
@@ -291,177 +184,6 @@ const AdminTelegramBot: NextPage = () => {
 	const allWebhooksMutation = useMutation({
 		mutationFn: adminTelegramBotService.reinstallWebhooks
 	})
-
-	const latestActiveDatabaseBackupJob = useQuery({
-		queryKey: ['admin-telegram-database-backup-active', user.id ?? null],
-		queryFn: adminTelegramBotService.getLatestActiveDatabaseBackupJob,
-		enabled: Boolean(user.id)
-	})
-	const refetchLatestActiveDatabaseBackupJob =
-		latestActiveDatabaseBackupJob.refetch
-
-	const databaseBackupMutation = useMutation({
-		mutationFn: adminTelegramBotService.sendDatabaseBackup,
-		onSuccess: (result, idempotencyKey) => {
-			notifiedDatabaseBackupJob.current = null
-			checkedStaleDatabaseBackupJob.current = null
-			setDatabaseBackupJobId(result.jobId)
-			if (databaseBackupStorageKey) {
-				saveDatabaseBackupMarker(databaseBackupStorageKey, {
-					idempotencyKey,
-					jobId: result.jobId
-				})
-			}
-		}
-	})
-
-	const databaseBackupJob = useQuery({
-		queryKey: ['admin-telegram-database-backup-job', databaseBackupJobId],
-		queryFn: () =>
-			adminTelegramBotService.getDatabaseBackupJob(databaseBackupJobId!),
-		enabled: Boolean(databaseBackupJobId),
-		refetchInterval: query => {
-			const job = query.state.data
-			return job && TERMINAL_DATABASE_BACKUP_JOB_STATUSES.has(job.status)
-				? false
-				: DATABASE_BACKUP_JOB_POLL_INTERVAL_MS
-		}
-	})
-
-	useEffect(() => {
-		setDatabaseBackupJobId(null)
-		checkedStaleDatabaseBackupJob.current = null
-		const marker = getDatabaseBackupMarker(databaseBackupStorageKey)
-		if (marker?.jobId) {
-			setDatabaseBackupJobId(marker.jobId)
-		}
-	}, [databaseBackupStorageKey])
-
-	useEffect(() => {
-		const activeJob = latestActiveDatabaseBackupJob.data
-		if (!activeJob || !databaseBackupStorageKey) return
-
-		notifiedDatabaseBackupJob.current = null
-		setDatabaseBackupJobId(activeJob.jobId)
-		queryClient.setQueryData(
-			['admin-telegram-database-backup-job', activeJob.jobId],
-			activeJob
-		)
-		const marker = getDatabaseBackupMarker(databaseBackupStorageKey)
-		saveDatabaseBackupMarker(databaseBackupStorageKey, {
-			idempotencyKey: marker?.idempotencyKey ?? null,
-			jobId: activeJob.jobId
-		})
-	}, [
-		databaseBackupStorageKey,
-		latestActiveDatabaseBackupJob.data,
-		queryClient
-	])
-
-	useEffect(() => {
-		if (!databaseBackupStorageKey) return
-
-		const handleStorage = (event: StorageEvent) => {
-			if (event.key !== databaseBackupStorageKey) return
-			const marker = getDatabaseBackupMarker(databaseBackupStorageKey)
-			if (marker?.jobId) {
-				notifiedDatabaseBackupJob.current = null
-				checkedStaleDatabaseBackupJob.current = null
-				setDatabaseBackupJobId(marker.jobId)
-				return
-			}
-
-			void refetchLatestActiveDatabaseBackupJob().then(result => {
-				if (result.isSuccess && result.data === null) {
-					setDatabaseBackupJobId(null)
-				}
-			})
-		}
-
-		window.addEventListener('storage', handleStorage)
-		return () => window.removeEventListener('storage', handleStorage)
-	}, [databaseBackupStorageKey, refetchLatestActiveDatabaseBackupJob])
-
-	useEffect(() => {
-		const jobId = databaseBackupJobId
-		const status = isAxiosError(databaseBackupJob.error)
-			? databaseBackupJob.error.response?.status
-			: undefined
-		if (
-			!jobId ||
-			!databaseBackupJob.isError ||
-			(status !== 403 && status !== 404) ||
-			checkedStaleDatabaseBackupJob.current === jobId
-		) {
-			return
-		}
-
-		checkedStaleDatabaseBackupJob.current = jobId
-		void refetchLatestActiveDatabaseBackupJob().then(result => {
-			if (!result.isSuccess) {
-				checkedStaleDatabaseBackupJob.current = null
-				return
-			}
-			if (result.data !== null) return
-
-			clearDatabaseBackupMarker(databaseBackupStorageKey, jobId)
-			setDatabaseBackupJobId(currentJobId =>
-				currentJobId === jobId ? null : currentJobId
-			)
-			toast.error(
-				'Задание backup больше не доступно. Активных запусков нет.'
-			)
-		})
-	}, [
-		databaseBackupJob.error,
-		databaseBackupJob.isError,
-		databaseBackupJobId,
-		databaseBackupStorageKey,
-		refetchLatestActiveDatabaseBackupJob
-	])
-
-	useEffect(() => {
-		const job = databaseBackupJob.data
-		if (
-			!job ||
-			!TERMINAL_DATABASE_BACKUP_JOB_STATUSES.has(job.status) ||
-			notifiedDatabaseBackupJob.current === job.jobId
-		) {
-			return
-		}
-
-		notifiedDatabaseBackupJob.current = job.jobId
-		clearDatabaseBackupMarker(databaseBackupStorageKey, job.jobId)
-		queryClient.setQueryData(
-			['admin-telegram-database-backup-active', user.id ?? null],
-			null
-		)
-
-		if (job.status === 'SUCCEEDED') {
-			const fileSize = job.result?.fileSize
-			toast.success(
-				fileSize === undefined
-					? 'Backup создан и отправлен в Telegram'
-					: `Backup отправлен в Telegram: ${formatFileSize(fileSize)}`
-			)
-			void queryClient.invalidateQueries({
-				queryKey: SETTINGS_QUERY_KEY
-			})
-			return
-		}
-
-		if (job.status === 'CANCELLED') {
-			toast.error('Создание backup отменено')
-			return
-		}
-
-		toast.error(`Ошибка backup: ${job.lastError || 'неизвестная ошибка'}`)
-	}, [
-		databaseBackupJob.data,
-		databaseBackupStorageKey,
-		queryClient,
-		user.id
-	])
 
 	const saveWithToast = (
 		patch: Parameters<typeof adminTelegramBotService.update>[0],
@@ -644,58 +366,11 @@ const AdminTelegramBot: NextPage = () => {
 		)
 	}
 
-	const handleSendDatabaseBackup = () => {
-		if (!databaseBackupStorageKey) {
-			toast.error('Не удалось определить администратора')
-			return
-		}
-
-		const activeJob = latestActiveDatabaseBackupJob.data
-		if (activeJob) {
-			setDatabaseBackupJobId(activeJob.jobId)
-			toast.success('Активный backup уже выполняется')
-			return
-		}
-
-		const marker = getDatabaseBackupMarker(databaseBackupStorageKey)
-		const idempotencyKey =
-			marker?.idempotencyKey ?? window.crypto.randomUUID()
-		saveDatabaseBackupMarker(databaseBackupStorageKey, {
-			idempotencyKey,
-			jobId: marker?.jobId ?? null
-		})
-		const promise = databaseBackupMutation.mutateAsync(idempotencyKey)
-
-		toast.promise(promise, {
-			loading: 'Ставим backup в очередь...',
-			success: result =>
-				result.created
-					? 'Backup поставлен в очередь'
-					: result.status === 'SUCCEEDED'
-						? 'Этот backup уже был успешно завершён'
-						: 'Активный backup уже поставлен в очередь',
-			error: error => `Ошибка backup: ${errorCatch(error)}`
-		})
-	}
-
 	const lastSentText = settings?.dailySummaryLastSentAt
 		? formatDate(settings.dailySummaryLastSentAt)
 		: 'Ещё не отправлялась'
-	const lastBackupText = settings?.databaseBackupLastSentAt
-		? formatDate(settings.databaseBackupLastSentAt)
-		: 'Ещё не отправлялся'
 	const isWebhookActionPending =
 		webhookMutation.isPending || allWebhooksMutation.isPending
-	const isDatabaseBackupJobActive = Boolean(
-		databaseBackupJobId &&
-		(!databaseBackupJob.data ||
-			!TERMINAL_DATABASE_BACKUP_JOB_STATUSES.has(
-				databaseBackupJob.data.status
-			))
-	)
-	const isDatabaseBackupAvailabilityUnknown =
-		latestActiveDatabaseBackupJob.isLoading ||
-		latestActiveDatabaseBackupJob.isError
 	const isTelegramRoutingChanged = Boolean(
 		settings &&
 		(chatId.trim() !== settings.dailySummaryChatId ||
@@ -1193,82 +868,6 @@ const AdminTelegramBot: NextPage = () => {
 							>
 								Сохранить маршрутизацию
 							</button>
-						</div>
-
-						<div className={styles.backupPanel}>
-							<div className={styles.backupHeader}>
-								<div>
-									<p className={styles.label}>Backup базы данных</p>
-									<p className={styles.hint}>
-										Можно отправить вне расписания. Файл приходит в топик
-										Backups.
-									</p>
-								</div>
-								<button
-									type="button"
-									className={styles.actionBtn}
-									onClick={handleSendDatabaseBackup}
-									disabled={
-										databaseBackupMutation.isPending ||
-										isDatabaseBackupJobActive ||
-										isDatabaseBackupAvailabilityUnknown ||
-										!databaseBackupStorageKey ||
-										!settings.telegramBotTokenConfigured ||
-										!settings.dailySummaryChatId.trim() ||
-										!settings.databaseBackupThreadId
-									}
-								>
-									Отправить backup
-								</button>
-							</div>
-							<div className={styles.backupMetaGrid}>
-								<div className={styles.statusItem}>
-									<p className={styles.statusLabel}>Последний backup</p>
-									<p className={styles.statusValue}>{lastBackupText}</p>
-								</div>
-								<div className={styles.statusItem}>
-									<p className={styles.statusLabel}>Формат</p>
-									<p className={styles.statusValue}>PostgreSQL .dump</p>
-								</div>
-								<div className={styles.statusItem} aria-live="polite">
-									<p className={styles.statusLabel}>Ручной backup</p>
-									{databaseBackupJob.data ? (
-										<>
-											<span
-												className={`${styles.badge} ${getDatabaseBackupJobBadgeClass(databaseBackupJob.data.status)}`}
-											>
-												{
-													DATABASE_BACKUP_JOB_STATUS_LABELS[
-														databaseBackupJob.data.status
-													]
-												}
-											</span>
-											{databaseBackupJob.data.status === 'FAILED' &&
-												databaseBackupJob.data.lastError && (
-													<p className={styles.hint}>
-														{databaseBackupJob.data.lastError}
-													</p>
-												)}
-										</>
-									) : databaseBackupJob.isError ? (
-										<p className={styles.hint}>
-											Не удалось получить статус:{' '}
-											{errorCatch(databaseBackupJob.error)}
-										</p>
-									) : databaseBackupJobId ? (
-										<p className={styles.statusValue}>
-											Проверяем статус...
-										</p>
-									) : latestActiveDatabaseBackupJob.isError ? (
-										<p className={styles.hint}>
-											Не удалось проверить активный backup:{' '}
-											{errorCatch(latestActiveDatabaseBackupJob.error)}
-										</p>
-									) : (
-										<p className={styles.statusValue}>Не запускался</p>
-									)}
-								</div>
-							</div>
 						</div>
 					</>
 				) : (

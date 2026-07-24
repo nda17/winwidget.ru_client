@@ -6,16 +6,6 @@ export const adminMiddleware = async (request: NextRequest) => {
 	const { user, response } = await getAuthWithRefresh(request, next)
 
 	const isAdmin = user?.isLoggedIn && user?.isAdmin
-	const isDevToolsRoute =
-		request.nextUrl.pathname.startsWith('/admin/dev-tools')
-
-	if (isDevToolsRoute && user?.isLoggedIn && user?.isDev) {
-		return response ?? next
-	}
-
-	if (isDevToolsRoute && user?.isLoggedIn) {
-		return NextResponse.redirect(new URL('/admin', request.url))
-	}
 
 	if (isAdmin) {
 		return response ?? next
