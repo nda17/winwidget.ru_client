@@ -137,3 +137,19 @@
 .empty {
 	@apply py-6 text-center text-sm text-[#aaa];
 }
+
+.lockedSection {
+	@apply relative overflow-visible;
+}
+
+.lockedPreview {
+	@apply pointer-events-none flex select-none flex-col gap-4 opacity-55 blur-[1px];
+}
+
+.lockedOverlay {
+	@apply absolute inset-0 z-20 flex items-center justify-center gap-2 rounded-xl bg-white/30;
+}
+
+.lockedBadge {
+	@apply rounded-full border border-[#d7c4ee] bg-white px-4 py-2 text-sm font-semibold text-[#6b2d8f] shadow-sm;
+}

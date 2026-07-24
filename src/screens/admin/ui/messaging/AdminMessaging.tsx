@@ -50,8 +50,13 @@ const formatDate = (value: string | null) =>
 
 export default function AdminMessaging() {
 	const auth = useAuthStore(state => state.auth)
-	const { user } = useUser()
+	const { user, isLoading: isUserLoading } = useUser()
 	const isDev = Boolean(user?.rights?.includes(UserRole.DEV))
+	const canViewOverview = Boolean(
+		user?.rights?.some(
+			role => role === UserRole.ADMIN || role === UserRole.DEV
+		)
+	)
 	const queryClient = useQueryClient()
 	const [page, setPage] = useState(1)
 	const [integration, setIntegration] = useState('ALL')
@@ -63,7 +68,7 @@ export default function AdminMessaging() {
 	const overview = useQuery({
 		queryKey: ['admin-messaging-overview'],
 		queryFn: messagingService.getOverview,
-		enabled: auth && isDev,
+		enabled: auth && canViewOverview,
 		refetchInterval: 15000
 	})
 	const failures = useQuery({
@@ -107,23 +112,9 @@ export default function AdminMessaging() {
 	const totalPages = failures.data?.totalPages || 1
 	const pages = Array.from({ length: totalPages }, (_, index) => index + 1)
 
-	if (user && !isDev) {
-		return (
-			<section className={styles.wrapper}>
-				<Heading text="Панель администратора" />
-				<AdminNavigation />
-				<div className={styles.section}>
-					<p className={styles.empty}>
-						Раздел доступен только пользователям с ролью DEV.
-					</p>
-				</div>
-			</section>
-		)
-	}
-
 	return (
 		<section className={styles.wrapper}>
-			{retryTarget && (
+			{isDev && retryTarget && (
 				<ConfirmDialog
 					title="Повторить доставку?"
 					message={`Повторно отправить ${integrationLabels[retryTarget.integration]} для события ${retryTarget.eventId}? Если внешний сервис уже обработал предыдущий запрос, действие может выполниться повторно.`}
@@ -138,9 +129,17 @@ export default function AdminMessaging() {
 			<AdminSectionHeading
 				text="Очереди"
 				title="Интеграции, фоновые задачи и Outbox"
-				description="Состояние PostgreSQL Outbox, RabbitMQ, publisher и workers. Здесь можно повторить доставку событий из DLQ."
-				risk="medium"
-				riskText="Повторная отправка может повторно вызвать внешнюю интеграцию, если она обработала прошлый запрос, но не вернула успешный ответ."
+				description={
+					isDev
+						? 'Состояние PostgreSQL Outbox, RabbitMQ, publisher и workers. Здесь можно повторить доставку событий из DLQ.'
+						: 'Мониторинг PostgreSQL Outbox, RabbitMQ, publisher и workers доступен только для просмотра. Подробный DLQ и ручной retry доступны только DEV.'
+				}
+				risk={isDev ? 'medium' : undefined}
+				riskText={
+					isDev
+						? 'Повторная отправка может повторно вызвать внешнюю интеграцию, если она обработала прошлый запрос, но не вернула успешный ответ.'
+						: undefined
+				}
 			/>
 
 			<div className={styles.section}>
@@ -157,7 +156,7 @@ export default function AdminMessaging() {
 						Обновить
 					</button>
 				</div>
-				{overview.isLoading ? (
+				{isUserLoading || overview.isLoading ? (
 					<>
 						<div className={styles.cards}>
 							{Array.from({ length: 5 }, (_, index) => (
@@ -192,7 +191,7 @@ export default function AdminMessaging() {
 							<Metric
 								title="DLQ не решено"
 								value={overview.data.unresolvedFailures}
-								description="Доставки, исчерпавшие автоматические попытки. Ошибка уже сохранена в PostgreSQL и отображается ниже в блоке «Ошибки доставки» для диагностики и ручного retry."
+								description="Доставки, исчерпавшие автоматические попытки. Ошибки уже сохранены в PostgreSQL; подробности и ручной retry доступны DEV в блоке ниже."
 							/>
 							<Metric
 								title="Повторяется"
@@ -264,127 +263,212 @@ export default function AdminMessaging() {
 				)}
 			</div>
 
-			<div className={styles.section}>
-				<div className={styles.header}>
-					<div>
-						<div className={styles.titleWithHelp}>
-							<p className={styles.title}>Ошибки доставки</p>
-							<AdminTooltip
-								title="Ошибки доставки"
-								description="Здесь находятся окончательные ошибки, перенесённые consumer из RabbitMQ DLQ в PostgreSQL. После диагностики DEV может запустить повтор только для выбранной интеграции."
-								risk="medium"
-								riskText="При неопределённом результате внешнего запроса ручной retry теоретически может повторить уже выполненное действие."
-							/>
-						</div>
-						<p className={styles.hint}>
-							Сообщения, перенесённые из DLQ в PostgreSQL
-						</p>
-					</div>
-					<div className={styles.filters}>
-						<label className={styles.selectWrap}>
-							<span className="sr-only">Обработчик</span>
-							<select
-								value={integration}
-								onChange={event => {
-									setIntegration(event.target.value)
-									setPage(1)
-								}}
-							>
-								<option value="ALL">Все обработчики</option>
-								{Object.entries(integrationLabels).map(
-									([value, label]) => (
-										<option key={value} value={value}>
-											{label}
-										</option>
-									)
-								)}
-							</select>
-						</label>
-						<label className={styles.selectWrap}>
-							<span className="sr-only">Статус</span>
-							<select
-								value={status}
-								onChange={event => {
-									setStatus(event.target.value)
-									setPage(1)
-								}}
-							>
-								<option value="FAILED">Требуют внимания</option>
-								<option value="RETRYING">Повторяются</option>
-								<option value="RESOLVED">Решённые</option>
-								<option value="ALL">Все</option>
-							</select>
-						</label>
-					</div>
-				</div>
-				{failures.isLoading ? (
+			{isUserLoading ? (
+				<div className={styles.section}>
 					<div className={styles.failureSkeletons}>
 						<SkeletonLoader count={1} className="h-[46px]" />
 						<SkeletonLoader count={1} className="h-[58px]" />
 						<SkeletonLoader count={1} className="h-[58px]" />
 						<SkeletonLoader count={1} className="h-[58px]" />
 					</div>
-				) : failures.data?.items.length ? (
-					<>
-						<div className={styles.tableWrap}>
-							<table>
-								<thead>
-									<tr>
-										<th>Обработчик</th>
-										<th>Объект</th>
-										<th>Ошибка</th>
-										<th>Попытки</th>
-										<th>Дата</th>
-										<th>Действие</th>
-									</tr>
-								</thead>
-								<tbody>
-									{failures.data.items.map(item => (
-										<tr key={item.id}>
-											<td>{integrationLabels[item.integration]}</td>
-											<td>{item.entity?.name || item.lead?.id || '—'}</td>
-											<td className={styles.error}>{item.lastError}</td>
-											<td>{item.attempts}</td>
-											<td>{formatDate(item.failedAt)}</td>
-											<td>
-												<button
-													className={styles.retry}
-													onClick={() => setRetryTarget(item)}
-													disabled={
-														Boolean(item.resolvedAt || item.retryingAt) ||
-														retryMutation.isPending
-													}
-												>
-													Повторить
-												</button>
-											</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
+				</div>
+			) : isDev ? (
+				<div className={styles.section}>
+					<div className={styles.header}>
+						<div>
+							<div className={styles.titleWithHelp}>
+								<p className={styles.title}>Ошибки доставки</p>
+								<AdminTooltip
+									title="Ошибки доставки"
+									description="Здесь находятся окончательные ошибки, перенесённые consumer из RabbitMQ DLQ в PostgreSQL. После диагностики DEV может запустить повтор только для выбранной интеграции."
+									risk="medium"
+									riskText="При неопределённом результате внешнего запроса ручной retry теоретически может повторить уже выполненное действие."
+								/>
+							</div>
+							<p className={styles.hint}>
+								Сообщения, перенесённые из DLQ в PostgreSQL
+							</p>
 						</div>
-						{totalPages > 1 && (
-							<Pagination
-								listPage={pages}
-								currentPage={page}
-								prevPage={() => setPage(value => Math.max(1, value - 1))}
-								nextPage={() =>
-									setPage(value => Math.min(totalPages, value + 1))
-								}
-								changeActivePage={setPage}
-							/>
-						)}
-					</>
-				) : failures.isError ? (
-					<p className={styles.empty}>
-						Не удалось получить ошибки доставки:{' '}
-						{errorCatch(failures.error)}
-					</p>
-				) : (
-					<p className={styles.empty}>По выбранным фильтрам ошибок нет</p>
-				)}
-			</div>
+						<div className={styles.filters}>
+							<label className={styles.selectWrap}>
+								<span className="sr-only">Обработчик</span>
+								<select
+									value={integration}
+									onChange={event => {
+										setIntegration(event.target.value)
+										setPage(1)
+									}}
+								>
+									<option value="ALL">Все обработчики</option>
+									{Object.entries(integrationLabels).map(
+										([value, label]) => (
+											<option key={value} value={value}>
+												{label}
+											</option>
+										)
+									)}
+								</select>
+							</label>
+							<label className={styles.selectWrap}>
+								<span className="sr-only">Статус</span>
+								<select
+									value={status}
+									onChange={event => {
+										setStatus(event.target.value)
+										setPage(1)
+									}}
+								>
+									<option value="FAILED">Требуют внимания</option>
+									<option value="RETRYING">Повторяются</option>
+									<option value="RESOLVED">Решённые</option>
+									<option value="ALL">Все</option>
+								</select>
+							</label>
+						</div>
+					</div>
+					{failures.isLoading ? (
+						<div className={styles.failureSkeletons}>
+							<SkeletonLoader count={1} className="h-[46px]" />
+							<SkeletonLoader count={1} className="h-[58px]" />
+							<SkeletonLoader count={1} className="h-[58px]" />
+							<SkeletonLoader count={1} className="h-[58px]" />
+						</div>
+					) : failures.data?.items.length ? (
+						<>
+							<div className={styles.tableWrap}>
+								<table>
+									<thead>
+										<tr>
+											<th>Обработчик</th>
+											<th>Объект</th>
+											<th>Ошибка</th>
+											<th>Попытки</th>
+											<th>Дата</th>
+											<th>Действие</th>
+										</tr>
+									</thead>
+									<tbody>
+										{failures.data.items.map(item => (
+											<tr key={item.id}>
+												<td>{integrationLabels[item.integration]}</td>
+												<td>
+													{item.entity?.name || item.lead?.id || '—'}
+												</td>
+												<td className={styles.error}>{item.lastError}</td>
+												<td>{item.attempts}</td>
+												<td>{formatDate(item.failedAt)}</td>
+												<td>
+													<button
+														className={styles.retry}
+														onClick={() => setRetryTarget(item)}
+														disabled={
+															Boolean(
+																item.resolvedAt || item.retryingAt
+															) || retryMutation.isPending
+														}
+													>
+														Повторить
+													</button>
+												</td>
+											</tr>
+										))}
+									</tbody>
+								</table>
+							</div>
+							{totalPages > 1 && (
+								<Pagination
+									listPage={pages}
+									currentPage={page}
+									prevPage={() => setPage(value => Math.max(1, value - 1))}
+									nextPage={() =>
+										setPage(value => Math.min(totalPages, value + 1))
+									}
+									changeActivePage={setPage}
+								/>
+							)}
+						</>
+					) : failures.isError ? (
+						<p className={styles.empty}>
+							Не удалось получить ошибки доставки:{' '}
+							{errorCatch(failures.error)}
+						</p>
+					) : (
+						<p className={styles.empty}>
+							По выбранным фильтрам ошибок нет
+						</p>
+					)}
+				</div>
+			) : (
+				<LockedFailuresPreview />
+			)}
 		</section>
+	)
+}
+
+function LockedFailuresPreview() {
+	return (
+		<div
+			className={`${styles.section} ${styles.lockedSection}`}
+			aria-disabled="true"
+		>
+			<div className={styles.lockedPreview} aria-hidden="true">
+				<div className={styles.header}>
+					<div>
+						<p className={styles.title}>Ошибки доставки</p>
+						<p className={styles.hint}>
+							Сообщения, перенесённые из DLQ в PostgreSQL
+						</p>
+					</div>
+					<div className={styles.filters}>
+						<label className={styles.selectWrap}>
+							<select disabled aria-label="Обработчик">
+								<option>Все обработчики</option>
+							</select>
+						</label>
+						<label className={styles.selectWrap}>
+							<select disabled aria-label="Статус">
+								<option>Требуют внимания</option>
+							</select>
+						</label>
+					</div>
+				</div>
+				<div className={styles.tableWrap}>
+					<table>
+						<thead>
+							<tr>
+								<th>Обработчик</th>
+								<th>Объект</th>
+								<th>Ошибка</th>
+								<th>Попытки</th>
+								<th>Дата</th>
+								<th>Действие</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td>Интеграция</td>
+								<td>—</td>
+								<td>Детали ошибки доступны DEV</td>
+								<td>—</td>
+								<td>—</td>
+								<td>
+									<button className={styles.retry} disabled>
+										Повторить
+									</button>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+			<div className={styles.lockedOverlay}>
+				<span className={styles.lockedBadge}>Только для DEV</span>
+				<AdminTooltip
+					title="DLQ и ручной retry заблокированы"
+					description="Подробные ошибки доставки и повторная отправка доступны только пользователям с ролью DEV. Мониторинг очередей выше остаётся доступен только для просмотра."
+				/>
+			</div>
+		</div>
 	)
 }
 

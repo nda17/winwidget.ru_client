@@ -6,6 +6,7 @@ import type { TelegramDatabaseBackupJobStatus } from '@/features/manage-telegram
 import { devToolsService } from '@/features/run-admin-task'
 import AdminNavigation from '@/screens/admin/ui/common/admin-navigation/AdminNavigation'
 import AdminSectionHeading from '@/screens/admin/ui/common/admin-section-heading/AdminSectionHeading'
+import AdminTooltip from '@/screens/admin/ui/common/admin-tooltip/AdminTooltip'
 import { errorCatch } from '@/shared/api'
 import Heading from '@/shared/ui/heading/Heading'
 import SkeletonLoader from '@/shared/ui/skeleton-loader/SkeletonLoader'
@@ -126,7 +127,7 @@ const getDatabaseBackupJobBadgeClass = (
 
 const AdminDatabases: NextPage = () => {
 	const queryClient = useQueryClient()
-	const { user } = useUser()
+	const { user, isLoading: isUserLoading } = useUser()
 	const isDev = Boolean(user?.rights?.includes(UserRole.DEV))
 	const [databaseBackupJobId, setDatabaseBackupJobId] = useState<
 		string | null
@@ -519,7 +520,12 @@ const AdminDatabases: NextPage = () => {
 				)}
 			</div>
 
-			{isDev && (
+			{isUserLoading ? (
+				<div className={styles.card}>
+					<SkeletonLoader count={1} className="h-[52px]" />
+					<SkeletonLoader count={1} className="h-[52px]" />
+				</div>
+			) : isDev ? (
 				<div className={styles.card}>
 					{databaseRestoreSettings.isLoading ? (
 						<>
@@ -579,6 +585,46 @@ const AdminDatabases: NextPage = () => {
 								: ''}
 						</p>
 					)}
+				</div>
+			) : (
+				<div
+					className={`${styles.card} ${styles.lockedCard}`}
+					aria-disabled="true"
+				>
+					<div className={styles.lockedContent} aria-hidden="true">
+						<div>
+							<p className={styles.label}>Восстановление из backup</p>
+							<p className={styles.hint}>
+								Операция принимает PostgreSQL `.dump` и запускает restore
+								через серверный инструмент. Действие логируется в журнале
+								событий.
+							</p>
+						</div>
+						<div className={styles.restoreGrid}>
+							<label className={styles.fileInputLabel}>
+								<span>Файл .dump</span>
+								<input type="file" accept=".dump" disabled />
+							</label>
+							<input
+								className={styles.input}
+								placeholder="RESTORE DATABASE"
+								disabled
+							/>
+							<button type="button" className={styles.dangerBtn} disabled>
+								Восстановить БД
+							</button>
+						</div>
+						<p className={styles.hint}>
+							Для подтверждения потребуется контрольная фраза.
+						</p>
+					</div>
+					<div className={styles.lockedOverlay}>
+						<span className={styles.lockedBadge}>Только для DEV</span>
+						<AdminTooltip
+							title="Восстановление заблокировано"
+							description="Данный функционал доступен только пользователям с ролью DEV."
+						/>
+					</div>
 				</div>
 			)}
 		</section>
