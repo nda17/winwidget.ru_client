@@ -7,7 +7,20 @@ export interface DatabaseRestoreResult {
 	restoredAt: string
 }
 
+export interface DatabaseRestoreSettings {
+	confirmation: string
+}
+
 const devToolsService = {
+	async getDatabaseRestoreSettings(): Promise<DatabaseRestoreSettings> {
+		const { data } =
+			await axiosInterceptorsRequest.get<DatabaseRestoreSettings>(
+				'/dev-tools/database-backup/restore-settings'
+			)
+
+		return data
+	},
+
 	async restoreDatabaseBackup(
 		file: File,
 		confirmation: string

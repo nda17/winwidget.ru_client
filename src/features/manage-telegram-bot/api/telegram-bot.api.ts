@@ -16,7 +16,6 @@ export interface AdminTelegramBotSettings {
 	databaseBackupTimeLabel: string
 	databaseBackupLastSentPeriodStart: string | null
 	databaseBackupLastSentAt: string | null
-	databaseRestoreConfirmation: string
 	telegramBotTokenConfigured: boolean
 	telegramBotUsernameConfigured: boolean
 	authTelegramBotTokenConfigured: boolean

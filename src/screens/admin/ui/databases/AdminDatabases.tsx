@@ -21,6 +21,7 @@ import toast from 'react-hot-toast'
 import styles from './AdminDatabases.module.scss'
 
 const SETTINGS_QUERY_KEY = ['admin-telegram-bot-settings']
+const RESTORE_SETTINGS_QUERY_KEY = ['admin-database-restore-settings']
 const DATABASE_BACKUP_JOB_POLL_INTERVAL_MS = 2500
 const DATABASE_BACKUP_STORAGE_KEY_PREFIX =
 	'winwidget:admin:database-backup:active'
@@ -134,6 +135,7 @@ const AdminDatabases: NextPage = () => {
 	const [restoreConfirmation, setRestoreConfirmation] = useState('')
 	const notifiedDatabaseBackupJob = useRef<string | null>(null)
 	const checkedStaleDatabaseBackupJob = useRef<string | null>(null)
+	const restoreFileInput = useRef<HTMLInputElement | null>(null)
 	const databaseBackupStorageKey = user.id
 		? `${DATABASE_BACKUP_STORAGE_KEY_PREFIX}:${user.id}`
 		: null
@@ -141,6 +143,12 @@ const AdminDatabases: NextPage = () => {
 	const { data: settings, isLoading } = useQuery({
 		queryKey: SETTINGS_QUERY_KEY,
 		queryFn: adminTelegramBotService.get
+	})
+
+	const databaseRestoreSettings = useQuery({
+		queryKey: RESTORE_SETTINGS_QUERY_KEY,
+		queryFn: devToolsService.getDatabaseRestoreSettings,
+		enabled: isDev
 	})
 
 	const latestActiveDatabaseBackupJob = useQuery({
@@ -190,6 +198,9 @@ const AdminDatabases: NextPage = () => {
 		onSuccess: () => {
 			setRestoreFile(null)
 			setRestoreConfirmation('')
+			if (restoreFileInput.current) {
+				restoreFileInput.current.value = ''
+			}
 		}
 	})
 
@@ -510,12 +521,12 @@ const AdminDatabases: NextPage = () => {
 
 			{isDev && (
 				<div className={styles.card}>
-					{isLoading ? (
+					{databaseRestoreSettings.isLoading ? (
 						<>
 							<SkeletonLoader count={1} className="h-[52px]" />
 							<SkeletonLoader count={1} className="h-[52px]" />
 						</>
-					) : settings ? (
+					) : databaseRestoreSettings.data ? (
 						<>
 							<div>
 								<p className={styles.label}>Восстановление из backup</p>
@@ -529,6 +540,7 @@ const AdminDatabases: NextPage = () => {
 								<label className={styles.fileInputLabel}>
 									<span>Файл .dump</span>
 									<input
+										ref={restoreFileInput}
 										type="file"
 										accept=".dump"
 										onChange={event =>
@@ -542,7 +554,7 @@ const AdminDatabases: NextPage = () => {
 									onChange={event =>
 										setRestoreConfirmation(event.target.value)
 									}
-									placeholder={settings.databaseRestoreConfirmation}
+									placeholder={databaseRestoreSettings.data.confirmation}
 								/>
 								<button
 									type="button"
@@ -555,12 +567,17 @@ const AdminDatabases: NextPage = () => {
 							</div>
 							<p className={styles.hint}>
 								Для подтверждения введите:{' '}
-								<b>{settings.databaseRestoreConfirmation}</b>
+								<b>{databaseRestoreSettings.data.confirmation}</b>
 								{restoreFile ? `; выбран файл ${restoreFile.name}` : ''}
 							</p>
 						</>
 					) : (
-						<p className={styles.empty}>Не удалось загрузить настройки</p>
+						<p className={styles.empty}>
+							Не удалось загрузить настройки восстановления
+							{databaseRestoreSettings.error
+								? `: ${errorCatch(databaseRestoreSettings.error)}`
+								: ''}
+						</p>
 					)}
 				</div>
 			)}
