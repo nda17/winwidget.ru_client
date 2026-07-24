@@ -10,6 +10,7 @@ import { errorCatch } from '@/shared/api'
 import AdminNavigation from '@/screens/admin/ui/common/admin-navigation/AdminNavigation'
 import AdminSectionHeading from '@/screens/admin/ui/common/admin-section-heading/AdminSectionHeading'
 import AdminTooltip from '@/screens/admin/ui/common/admin-tooltip/AdminTooltip'
+import ConfirmDialog from '@/shared/ui/confirm-dialog/ConfirmDialog'
 import Heading from '@/shared/ui/heading/Heading'
 import Pagination from '@/shared/ui/pagination/Pagination'
 import SkeletonLoader from '@/shared/ui/skeleton-loader/SkeletonLoader'
@@ -55,6 +56,9 @@ export default function AdminMessaging() {
 	const [page, setPage] = useState(1)
 	const [integration, setIntegration] = useState('ALL')
 	const [status, setStatus] = useState('FAILED')
+	const [retryTarget, setRetryTarget] = useState<MessagingFailure | null>(
+		null
+	)
 
 	const overview = useQuery({
 		queryKey: ['admin-messaging-overview'],
@@ -88,15 +92,12 @@ export default function AdminMessaging() {
 		}
 	})
 
-	const retry = (failure: MessagingFailure) => {
-		if (
-			!window.confirm(
-				`Повторно отправить ${integrationLabels[failure.integration]} для события ${failure.eventId}?`
-			)
-		) {
-			return
-		}
-		toast.promise(retryMutation.mutateAsync(failure.id), {
+	const confirmRetry = () => {
+		if (!retryTarget || retryMutation.isPending) return
+
+		const failureId = retryTarget.id
+		setRetryTarget(null)
+		toast.promise(retryMutation.mutateAsync(failureId), {
 			loading: 'Ставим событие в очередь...',
 			success: 'Событие повторно поставлено в очередь',
 			error: error => `Ошибка повтора: ${errorCatch(error)}`
@@ -122,6 +123,16 @@ export default function AdminMessaging() {
 
 	return (
 		<section className={styles.wrapper}>
+			{retryTarget && (
+				<ConfirmDialog
+					title="Повторить доставку?"
+					message={`Повторно отправить ${integrationLabels[retryTarget.integration]} для события ${retryTarget.eventId}? Если внешний сервис уже обработал предыдущий запрос, действие может выполниться повторно.`}
+					confirmLabel="Повторить"
+					cancelLabel="Назад"
+					onConfirm={confirmRetry}
+					onCancel={() => setRetryTarget(null)}
+				/>
+			)}
 			<Heading text="Панель администратора" />
 			<AdminNavigation />
 			<AdminSectionHeading
@@ -338,7 +349,7 @@ export default function AdminMessaging() {
 											<td>
 												<button
 													className={styles.retry}
-													onClick={() => retry(item)}
+													onClick={() => setRetryTarget(item)}
 													disabled={
 														Boolean(item.resolvedAt || item.retryingAt) ||
 														retryMutation.isPending
