@@ -127,9 +127,8 @@ const DEFAULT_CONFIG: CalculatorConfig = {
 	subtitle: 'Ответьте на несколько вопросов и получите расчёт',
 	calculateButtonText: 'Рассчитать',
 	contactTitle: 'Оставьте контакт, чтобы получить расчёт',
-	contactPosition: 'AFTER_RESULT',
 	resultTitle: 'Ориентировочная стоимость',
-	dataType: 'PHONE',
+	dataType: 'NONE',
 	privacyUrl:
 		'https://winwidget.ru/legal-documentation/consent-processing',
 	developInfoActive: true,
@@ -809,7 +808,6 @@ const CalculatorSettingsModal = ({
 										['title', 'Заголовок'],
 										['subtitle', 'Подзаголовок'],
 										['calculateButtonText', 'Текст кнопки расчёта'],
-										['contactTitle', 'Заголовок формы контакта'],
 										['resultTitle', 'Заголовок результата'],
 										['bubbleText', 'Текст подсказки у кнопки']
 									] as const
@@ -823,6 +821,20 @@ const CalculatorSettingsModal = ({
 										/>
 									</div>
 								))}
+								{config.dataType !== 'NONE' && (
+									<div className={styles.field}>
+										<p className={styles.label}>
+											Заголовок формы контакта
+										</p>
+										<input
+											className={styles.input}
+											value={config.contactTitle}
+											onChange={event =>
+												setField('contactTitle', event.target.value)
+											}
+										/>
+									</div>
+								)}
 								<div className={styles.gridTwo}>
 									<div className={styles.field}>
 										<p className={styles.label}>Автооткрытие, секунд</p>
@@ -859,69 +871,57 @@ const CalculatorSettingsModal = ({
 								<h3 className={styles.settingsGroupTitle}>
 									Сбор контакта
 								</h3>
-								<div className={styles.gridTwo}>
-									<div className={styles.field}>
-										<p className={styles.label}>Когда собирать контакт</p>
-										<select
-											className={styles.input}
-											value={config.contactPosition}
-											onChange={event =>
-												setField(
-													'contactPosition',
-													event.target
-														.value as CalculatorConfig['contactPosition']
-												)
-											}
-										>
-											<option value="BEFORE_RESULT">
-												Перед результатом
-											</option>
-											<option value="AFTER_RESULT">
-												После результата
-											</option>
-										</select>
-									</div>
-									<div className={styles.field}>
-										<p className={styles.label}>Какие контакты собирать</p>
-										<select
-											className={styles.input}
-											value={config.dataType}
-											onChange={event =>
-												setField(
-													'dataType',
-													event.target
-														.value as CalculatorConfig['dataType']
-												)
-											}
-										>
-											<option value="PHONE">Телефон</option>
-											<option value="EMAIL">Email</option>
-											<option value="PHONE_AND_EMAIL">
-												Телефон и Email
-											</option>
-										</select>
-									</div>
-								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>Ссылка на согласие</p>
-									<input
+									<p className={styles.label}>Какие контакты собирать</p>
+									<select
 										className={styles.input}
-										value={config.privacyUrl}
+										value={config.dataType}
 										onChange={event =>
-											setField('privacyUrl', event.target.value)
+											setField(
+												'dataType',
+												event.target.value as CalculatorConfig['dataType']
+											)
 										}
-									/>
+									>
+										<option value="NONE">Не собирать контакты</option>
+										<option value="PHONE">Телефон</option>
+										<option value="EMAIL">Email</option>
+										<option value="PHONE_AND_EMAIL">
+											Телефон и Email
+										</option>
+									</select>
+									<p className={styles.hint}>
+										Если сбор включён, контакт запрашивается перед показом
+										результата.
+									</p>
 								</div>
-								<label className={styles.checkRow}>
-									<input
-										type="checkbox"
-										checked={config.filterDuplicates}
-										onChange={event =>
-											setField('filterDuplicates', event.target.checked)
-										}
-									/>
-									<span>Не сохранять повторные контакты</span>
-								</label>
+								{config.dataType !== 'NONE' && (
+									<>
+										<div className={styles.field}>
+											<p className={styles.label}>Ссылка на согласие</p>
+											<input
+												className={styles.input}
+												value={config.privacyUrl}
+												onChange={event =>
+													setField('privacyUrl', event.target.value)
+												}
+											/>
+										</div>
+										<label className={styles.checkRow}>
+											<input
+												type="checkbox"
+												checked={config.filterDuplicates}
+												onChange={event =>
+													setField(
+														'filterDuplicates',
+														event.target.checked
+													)
+												}
+											/>
+											<span>Не сохранять повторные контакты</span>
+										</label>
+									</>
+								)}
 								<label className={styles.checkRow}>
 									<input
 										type="checkbox"

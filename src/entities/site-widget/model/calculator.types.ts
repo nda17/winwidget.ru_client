@@ -1,7 +1,10 @@
 import type { Subscription } from '@/entities/subscription/@x/site-widget'
 
-export type CalculatorContactPosition = 'BEFORE_RESULT' | 'AFTER_RESULT'
-export type CalculatorDataType = 'PHONE' | 'EMAIL' | 'PHONE_AND_EMAIL'
+export type CalculatorDataType =
+	| 'NONE'
+	| 'PHONE'
+	| 'EMAIL'
+	| 'PHONE_AND_EMAIL'
 export type CalculatorFieldType =
 	| 'select'
 	| 'number'
@@ -61,7 +64,6 @@ export interface CalculatorConfig {
 	subtitle: string
 	calculateButtonText: string
 	contactTitle: string
-	contactPosition: CalculatorContactPosition
 	resultTitle: string
 	dataType: CalculatorDataType
 	privacyUrl: string

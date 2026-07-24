@@ -301,7 +301,6 @@ const buildPreviewPublicConfig = (props: WidgetLivePreviewProps) => {
 			contactTitle:
 				props.config.contactTitle ||
 				'Оставьте контакт, чтобы получить расчёт',
-			contactPosition: props.config.contactPosition || 'AFTER_RESULT',
 			resultTitle: props.config.resultTitle || 'Ориентировочная стоимость',
 			dataType: getDataType(props.config.dataType),
 			privacyUrl: props.config.privacyUrl || null,
