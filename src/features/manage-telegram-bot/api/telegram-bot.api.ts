@@ -79,11 +79,35 @@ export interface TelegramWebhookStatusResponse {
 	items: TelegramWebhookStatus[]
 }
 
-export interface TelegramDatabaseBackupResult {
+export type TelegramDatabaseBackupJobStatus =
+	| 'QUEUED'
+	| 'PROCESSING'
+	| 'SUCCEEDED'
+	| 'FAILED'
+	| 'CANCELLED'
+
+export interface TelegramDatabaseBackupJobResult {
 	fileName: string
 	fileSize: number
 	createdAt: string
-	sent: boolean
+	telegramSent: boolean
+}
+
+export interface TelegramDatabaseBackupAcceptedJob {
+	jobId: string
+	status: TelegramDatabaseBackupJobStatus
+	queuedAt: string
+	created: boolean
+}
+
+export interface TelegramDatabaseBackupJob {
+	jobId: string
+	status: TelegramDatabaseBackupJobStatus
+	queuedAt: string
+	startedAt: string | null
+	completedAt: string | null
+	lastError: string | null
+	result: TelegramDatabaseBackupJobResult | null
 }
 
 const adminTelegramBotService = {
@@ -127,10 +151,36 @@ const adminTelegramBotService = {
 		return data
 	},
 
-	async sendDatabaseBackup(): Promise<TelegramDatabaseBackupResult> {
+	async sendDatabaseBackup(
+		idempotencyKey: string
+	): Promise<TelegramDatabaseBackupAcceptedJob> {
 		const { data } = await axiosInterceptorsRequest.post(
-			'/telegram-bot/admin/database-backup/send'
+			'/telegram-bot/admin/database-backup/send',
+			undefined,
+			{
+				headers: {
+					'Idempotency-Key': idempotencyKey
+				}
+			}
 		)
+		return data
+	},
+
+	async getLatestActiveDatabaseBackupJob(): Promise<TelegramDatabaseBackupJob | null> {
+		const { data } =
+			await axiosInterceptorsRequest.get<TelegramDatabaseBackupJob | null>(
+				'/telegram-bot/admin/database-backup/jobs/active'
+			)
+		return data
+	},
+
+	async getDatabaseBackupJob(
+		jobId: string
+	): Promise<TelegramDatabaseBackupJob> {
+		const { data } =
+			await axiosInterceptorsRequest.get<TelegramDatabaseBackupJob>(
+				`/telegram-bot/admin/database-backup/jobs/${jobId}`
+			)
 		return data
 	}
 }

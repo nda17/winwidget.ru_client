@@ -8,8 +8,8 @@ export type AdminTooltipRisk = 'low' | 'medium' | 'high'
 export interface AdminTooltipProps {
 	title: string
 	description: string
-	risk: AdminTooltipRisk
-	riskText: string
+	risk?: AdminTooltipRisk
+	riskText?: string
 }
 
 const riskLabel: Record<AdminTooltipRisk, string> = {
@@ -75,12 +75,16 @@ const AdminTooltip = ({
 				<span id={tooltipId} role="tooltip" className={styles.tooltip}>
 					<span className={styles.tooltipTitle}>{title}</span>
 					<span className={styles.tooltipText}>{description}</span>
-					<span
-						className={`${styles.riskBadge} ${styles[`risk-${risk}`]}`}
-					>
-						{riskLabel[risk]}
-					</span>
-					<span className={styles.tooltipRisk}>{riskText}</span>
+					{risk && riskText && (
+						<>
+							<span
+								className={`${styles.riskBadge} ${styles[`risk-${risk}`]}`}
+							>
+								{riskLabel[risk]}
+							</span>
+							<span className={styles.tooltipRisk}>{riskText}</span>
+						</>
+					)}
 				</span>
 			)}
 		</span>

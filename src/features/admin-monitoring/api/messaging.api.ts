@@ -12,6 +12,8 @@ export type MessagingIntegration =
 	| 'mailing-telegram'
 	| 'limit-email'
 	| 'limit-telegram'
+	| 'daily-summary-telegram'
+	| 'database-backup'
 
 export interface MessagingOverview {
 	generatedAt: string

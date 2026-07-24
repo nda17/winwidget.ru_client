@@ -55,8 +55,22 @@
 	}
 }
 
+.metricTitle,
+.titleWithHelp,
+.queueHeading {
+	@apply flex items-center gap-2;
+}
+
+.metricTitle {
+	@apply min-h-5;
+}
+
+.queueHeading {
+	@apply text-sm font-semibold text-[#5b426d];
+}
+
 .heartbeats {
-	@apply flex flex-wrap gap-3;
+	@apply flex flex-wrap items-center gap-3;
 }
 
 .heartbeat {

@@ -42,6 +42,14 @@
 	@apply bg-[#fff6dd] text-[#9a6a00];
 }
 
+.badgeProgress {
+	@apply bg-[#eee6f8] text-[#6b2d8f];
+}
+
+.badgeError {
+	@apply bg-[#fdebec] text-[#a92d46];
+}
+
 .toggleRow {
 	@apply flex items-center justify-between gap-4 border border-[#efe8fb] rounded-xl p-4 bg-[#fcfaff];
 
@@ -131,9 +139,9 @@
 }
 
 .backupMetaGrid {
-	@apply grid grid-cols-2 gap-3;
+	@apply grid grid-cols-3 gap-3;
 
-	@media (max-width: 640px) {
+	@media (max-width: 760px) {
 		@apply grid-cols-1;
 	}
 }

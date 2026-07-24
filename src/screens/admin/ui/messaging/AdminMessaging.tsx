@@ -9,6 +9,7 @@ import {
 import { errorCatch } from '@/shared/api'
 import AdminNavigation from '@/screens/admin/ui/common/admin-navigation/AdminNavigation'
 import AdminSectionHeading from '@/screens/admin/ui/common/admin-section-heading/AdminSectionHeading'
+import AdminTooltip from '@/screens/admin/ui/common/admin-tooltip/AdminTooltip'
 import Heading from '@/shared/ui/heading/Heading'
 import Pagination from '@/shared/ui/pagination/Pagination'
 import SkeletonLoader from '@/shared/ui/skeleton-loader/SkeletonLoader'
@@ -33,7 +34,9 @@ const integrationLabels: Record<MessagingIntegration, string> = {
 	'mailing-email': 'Email-рассылка',
 	'mailing-telegram': 'Telegram-рассылка',
 	'limit-email': 'Email о лимите',
-	'limit-telegram': 'Telegram о лимите'
+	'limit-telegram': 'Telegram о лимите',
+	'daily-summary-telegram': 'Ежедневная Telegram-сводка',
+	'database-backup': 'Backup PostgreSQL'
 }
 
 const formatDate = (value: string | null) =>
@@ -123,8 +126,8 @@ export default function AdminMessaging() {
 			<AdminNavigation />
 			<AdminSectionHeading
 				text="Очереди"
-				title="Интеграции и Outbox"
-				description="Состояние PostgreSQL Outbox, RabbitMQ, publisher и worker. Здесь можно повторить доставку событий из DLQ."
+				title="Интеграции, фоновые задачи и Outbox"
+				description="Состояние PostgreSQL Outbox, RabbitMQ, publisher и workers. Здесь можно повторить доставку событий из DLQ."
 				risk="medium"
 				riskText="Повторная отправка может повторно вызвать внешнюю интеграцию, если она обработала прошлый запрос, но не вернула успешный ответ."
 			/>
@@ -157,6 +160,7 @@ export default function AdminMessaging() {
 						<div className={styles.heartbeats}>
 							<SkeletonLoader count={1} className="h-[32px] w-[180px]" />
 							<SkeletonLoader count={1} className="h-[32px] w-[180px]" />
+							<SkeletonLoader count={1} className="h-[32px] w-[180px]" />
 						</div>
 						<SkeletonLoader count={1} className="h-[44px]" />
 						<SkeletonLoader count={1} className="h-[44px]" />
@@ -167,22 +171,27 @@ export default function AdminMessaging() {
 							<Metric
 								title="Outbox ожидает"
 								value={overview.data.outbox.PENDING}
+								description="События уже сохранены в PostgreSQL, но ещё не опубликованы в RabbitMQ. Кратковременное значение допустимо; постоянный рост означает задержку publisher или недоступность RabbitMQ."
 							/>
 							<Metric
 								title="Outbox ошибок"
 								value={overview.data.outbox.FAILED}
+								description="События, публикация которых завершилась ошибкой и будет автоматически повторена после задержки. Если значение долго не уменьшается, нужно проверить publisher и RabbitMQ."
 							/>
 							<Metric
 								title="DLQ не решено"
 								value={overview.data.unresolvedFailures}
+								description="Доставки, исчерпавшие автоматические попытки. Ошибка уже сохранена в PostgreSQL и отображается ниже в блоке «Ошибки доставки» для диагностики и ручного retry."
 							/>
 							<Metric
 								title="Повторяется"
 								value={overview.data.retryingFailures}
+								description="Ошибки из DLQ, для которых DEV запустил ручную повторную отправку, но успешная доставка ещё не подтверждена."
 							/>
 							<Metric
 								title="Доставлено за 24 часа"
 								value={overview.data.deliveredLast24Hours}
+								description="Количество успешных обработок отдельными consumers и завершённых backup, а не уникальных бизнес-событий. Например, одна оплата с успешными email и Telegram даст две доставки."
 							/>
 						</div>
 						<div className={styles.heartbeats}>
@@ -196,12 +205,23 @@ export default function AdminMessaging() {
 									{item.service}: {item.activeInstances}
 								</span>
 							))}
+							<AdminTooltip
+								title="Состояние процессов"
+								description="Зелёный индикатор означает, что процесс присылал heartbeat в последние 30 секунд. Число показывает количество активных экземпляров. Heartbeat подтверждает, что publisher, integration-worker или maintenance-worker жив, но не проверяет доступность SMTP, Telegram, CRM или PostgreSQL."
+							/>
 						</div>
 						{overview.data.rabbitMqError && (
 							<p className={styles.error}>
 								RabbitMQ: {overview.data.rabbitMqError}
 							</p>
 						)}
+						<div className={styles.queueHeading}>
+							<span>Очереди RabbitMQ</span>
+							<AdminTooltip
+								title="Как читать таблицу очередей"
+								description="«Готово» — сообщения ожидают обработки. «В работе» — уже переданы consumer, но ещё не подтверждены через ack. «Consumers» — подключённые обработчики. Для retry-v2 значение Consumers = 0 нормально: RabbitMQ сам вернёт сообщение после задержки. Dead-letter хранит окончательные ошибки до переноса в PostgreSQL, а пустые retry.1–3 — старые очереди, которые больше не используются."
+							/>
+						</div>
 						<div className={styles.tableWrap}>
 							<table>
 								<thead>
@@ -236,14 +256,22 @@ export default function AdminMessaging() {
 			<div className={styles.section}>
 				<div className={styles.header}>
 					<div>
-						<p className={styles.title}>Ошибки доставки</p>
+						<div className={styles.titleWithHelp}>
+							<p className={styles.title}>Ошибки доставки</p>
+							<AdminTooltip
+								title="Ошибки доставки"
+								description="Здесь находятся окончательные ошибки, перенесённые consumer из RabbitMQ DLQ в PostgreSQL. После диагностики DEV может запустить повтор только для выбранной интеграции."
+								risk="medium"
+								riskText="При неопределённом результате внешнего запроса ручной retry теоретически может повторить уже выполненное действие."
+							/>
+						</div>
 						<p className={styles.hint}>
 							Сообщения, перенесённые из DLQ в PostgreSQL
 						</p>
 					</div>
 					<div className={styles.filters}>
 						<label className={styles.selectWrap}>
-							<span className="sr-only">Интеграция</span>
+							<span className="sr-only">Обработчик</span>
 							<select
 								value={integration}
 								onChange={event => {
@@ -251,7 +279,7 @@ export default function AdminMessaging() {
 									setPage(1)
 								}}
 							>
-								<option value="ALL">Все интеграции</option>
+								<option value="ALL">Все обработчики</option>
 								{Object.entries(integrationLabels).map(
 									([value, label]) => (
 										<option key={value} value={value}>
@@ -291,8 +319,8 @@ export default function AdminMessaging() {
 							<table>
 								<thead>
 									<tr>
-										<th>Интеграция</th>
-										<th>Заявка</th>
+										<th>Обработчик</th>
+										<th>Объект</th>
 										<th>Ошибка</th>
 										<th>Попытки</th>
 										<th>Дата</th>
@@ -349,10 +377,21 @@ export default function AdminMessaging() {
 	)
 }
 
-function Metric({ title, value }: { title: string; value: number }) {
+function Metric({
+	title,
+	value,
+	description
+}: {
+	title: string
+	value: number
+	description: string
+}) {
 	return (
 		<div className={styles.metric}>
-			<span>{title}</span>
+			<div className={styles.metricTitle}>
+				<span>{title}</span>
+				<AdminTooltip title={title} description={description} />
+			</div>
 			<strong>{value}</strong>
 		</div>
 	)
