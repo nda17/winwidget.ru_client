@@ -12,6 +12,7 @@ const FOCUSABLE_ELEMENTS_SELECTOR = [
 	'[tabindex]:not([tabindex="-1"])'
 ].join(',')
 const activeDialogIds: symbol[] = []
+let bodyOverflowBeforeFirstDialog = ''
 
 interface IConfirmDialogProps {
 	title: string
@@ -63,6 +64,10 @@ const ConfirmDialog: FC<IConfirmDialogProps> = ({
 		const isTopmostDialog = () =>
 			activeDialogIds[activeDialogIds.length - 1] === dialogId
 
+		if (activeDialogIds.length === 0) {
+			bodyOverflowBeforeFirstDialog = document.body.style.overflow
+			document.body.style.overflow = 'hidden'
+		}
 		activeDialogIds.push(dialogId)
 		cancelButtonRef.current?.focus()
 
@@ -121,6 +126,10 @@ const ConfirmDialog: FC<IConfirmDialogProps> = ({
 			const dialogIndex = activeDialogIds.lastIndexOf(dialogId)
 			if (dialogIndex !== -1) {
 				activeDialogIds.splice(dialogIndex, 1)
+			}
+			if (activeDialogIds.length === 0) {
+				document.body.style.overflow = bodyOverflowBeforeFirstDialog
+				bodyOverflowBeforeFirstDialog = ''
 			}
 			if (
 				wasTopmostDialog &&
