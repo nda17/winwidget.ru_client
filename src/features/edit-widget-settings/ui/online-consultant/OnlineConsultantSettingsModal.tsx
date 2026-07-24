@@ -13,6 +13,7 @@ import toast from 'react-hot-toast'
 import DirectLinkQr from '../shared/DirectLinkQr'
 import styles from '../shared/WidgetSettingsModal.module.scss'
 import WidgetLivePreview from '../shared/WidgetLivePreview'
+import type { WidgetSettingsPersistence } from '../shared/WidgetSettingsPersistence'
 
 type Tab = 'main' | 'actions' | 'form' | 'integrations' | 'code' | 'info'
 const BUTTON_IMAGE_MAX_SIZE_BYTES = 200 * 1024
@@ -24,6 +25,10 @@ interface Props {
 	canUseCustomButtonImage: boolean
 	onClose: () => void
 	onSaved: (updated: OnlineConsultant) => void
+	persistence?: WidgetSettingsPersistence<
+		OnlineConsultant,
+		OnlineConsultantConfig
+	>
 }
 
 const TABS: { id: Tab; label: string }[] = [
@@ -191,7 +196,8 @@ const OnlineConsultantSettingsModal = ({
 	onlineConsultant,
 	canUseCustomButtonImage,
 	onClose,
-	onSaved
+	onSaved,
+	persistence
 }: Props) => {
 	const titleId = useId()
 	const buttonImageInputId = useId()
@@ -224,7 +230,14 @@ const OnlineConsultantSettingsModal = ({
 			installDomain?: string
 			config: OnlineConsultantConfig
 		}) =>
-			onlineConsultantService.updateOnlineConsultant(onlineConsultant.id, {
+			(
+				persistence?.update ??
+				(payload =>
+					onlineConsultantService.updateOnlineConsultant(
+						onlineConsultant.id,
+						payload
+					))
+			)({
 				name: data?.name ?? name,
 				installDomain: data?.installDomain ?? installDomain,
 				config: data?.config ?? cfg
@@ -258,10 +271,12 @@ const OnlineConsultantSettingsModal = ({
 		mutationFn: (file: File) => {
 			const formData = new FormData()
 			formData.append('file', file)
-			return onlineConsultantService.uploadButtonImage(
-				onlineConsultant.id,
-				formData
-			)
+			return persistence?.uploadButtonImage
+				? persistence.uploadButtonImage(formData)
+				: onlineConsultantService.uploadButtonImage(
+						onlineConsultant.id,
+						formData
+					)
 		},
 		onMutate: () => toast.loading('Загружаем картинку кнопки...'),
 		onSuccess: (updated, _, toastId) => {

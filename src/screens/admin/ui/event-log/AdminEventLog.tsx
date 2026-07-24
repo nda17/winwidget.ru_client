@@ -28,6 +28,7 @@ const SECTION_LABELS: Record<AdminEventLogSection, string> = {
 	TASKS: 'Ручные задачи',
 	SUBSCRIPTIONS: 'Подписки',
 	USERS: 'Пользователи',
+	WIDGETS: 'Виджеты',
 	BACKLOG: 'Бэклог',
 	SITE_SETTINGS: 'Настройки сайта',
 	TELEGRAM_BOT: 'Telegram-бот',
@@ -49,6 +50,8 @@ const ACTION_LABELS: Record<AdminEventLogAction, string> = {
 	USER_UPDATE: 'Редактирование пользователя',
 	USER_TOGGLE_ACTIVATION: 'Активация пользователя',
 	USER_DELETE: 'Удаление пользователя',
+	WIDGET_UPDATE: 'Редактирование виджета',
+	WIDGET_BUTTON_IMAGE_UPDATE: 'Изображение кнопки виджета',
 	BACKLOG_TASK_CREATE: 'Создание задачи',
 	BACKLOG_TASK_UPDATE: 'Обновление задачи',
 	BACKLOG_TASK_DELETE: 'Удаление задачи',
@@ -178,7 +181,7 @@ const formatMetadata = (item: IAdminEventLogItem) => {
 		item,
 		'dailySummaryEnabled'
 	)
-	const updatedFields = metadata.updatedFields
+	const changedFields = metadata.changedFields ?? metadata.updatedFields
 
 	if (affectedCount) parts.push(`Затронуто: ${affectedCount}`)
 	if (recipientCount) parts.push(`Получателей: ${recipientCount}`)
@@ -195,8 +198,8 @@ const formatMetadata = (item: IAdminEventLogItem) => {
 			`Сводка: ${dailySummaryEnabled === 'true' ? 'включена' : 'выключена'}`
 		)
 	}
-	if (Array.isArray(updatedFields) && updatedFields.length) {
-		parts.push(`Поля: ${updatedFields.join(', ')}`)
+	if (Array.isArray(changedFields) && changedFields.length) {
+		parts.push(`Поля: ${changedFields.join(', ')}`)
 	}
 	if (metadata.passwordChanged === true) {
 		parts.push('Пароль изменён')

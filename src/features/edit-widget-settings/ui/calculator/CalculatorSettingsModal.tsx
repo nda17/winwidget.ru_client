@@ -22,6 +22,7 @@ import toast from 'react-hot-toast'
 import styles from './CalculatorSettingsModal.module.scss'
 import DirectLinkQr from '../shared/DirectLinkQr'
 import WidgetLivePreview from '../shared/WidgetLivePreview'
+import type { WidgetSettingsPersistence } from '../shared/WidgetSettingsPersistence'
 
 type Tab =
 	| 'main'
@@ -246,13 +247,15 @@ interface Props {
 	canUseCustomButtonImage: boolean
 	onClose: () => void
 	onSaved: (updated: Calculator) => void
+	persistence?: WidgetSettingsPersistence<Calculator, CalculatorConfig>
 }
 
 const CalculatorSettingsModal = ({
 	calculator,
 	canUseCustomButtonImage,
 	onClose,
-	onSaved
+	onSaved,
+	persistence
 }: Props) => {
 	const titleId = useId()
 	const buttonImageInputId = useId()
@@ -280,7 +283,9 @@ const CalculatorSettingsModal = ({
 			name: string
 			installDomain?: string
 			config: CalculatorConfig
-		}) => calculatorService.updateCalculator(calculator.id, payload),
+		}) =>
+			persistence?.update(payload) ??
+			calculatorService.updateCalculator(calculator.id, payload),
 		onMutate: () =>
 			toast.loading('Сохраняем настройки, пожалуйста подождите...'),
 		onSuccess: (updated: Calculator, _, toastId) => {
@@ -309,7 +314,9 @@ const CalculatorSettingsModal = ({
 		mutationFn: (file: File) => {
 			const formData = new FormData()
 			formData.append('file', file)
-			return calculatorService.uploadButtonImage(calculator.id, formData)
+			return persistence?.uploadButtonImage
+				? persistence.uploadButtonImage(formData)
+				: calculatorService.uploadButtonImage(calculator.id, formData)
 		},
 		onMutate: () =>
 			toast.loading('Загружаем картинку кнопки, пожалуйста подождите...'),

@@ -1,5 +1,14 @@
 import { axiosInterceptorsRequest } from '@/shared/api'
 import type { Plan, SubscriptionStatus } from '@/entities/subscription'
+import type {
+	Calculator,
+	Callback,
+	CountdownTimer,
+	OnlineConsultant,
+	Quiz,
+	StopOffer,
+	Widget
+} from '@/entities/site-widget'
 
 export type AdminWidgetType =
 	| 'WHEEL'
@@ -50,6 +59,41 @@ export interface IAdminWidgetMonitoringFilters {
 	search?: string
 }
 
+export interface AdminWidgetEntityMap {
+	WHEEL: Widget
+	QUIZ: Quiz
+	CALLBACK: Callback
+	TIMER: CountdownTimer
+	STOP_OFFER: StopOffer
+	ONLINE_CONSULTANT: OnlineConsultant
+	CALCULATOR: Calculator
+}
+
+export type AdminWidgetEntity =
+	AdminWidgetEntityMap[keyof AdminWidgetEntityMap]
+
+export type AdminWidgetDetails = {
+	[TType in AdminWidgetType]: {
+		type: TType
+		entity: AdminWidgetEntityMap[TType]
+		owner: IAdminWidgetOwner
+	}
+}[AdminWidgetType]
+
+export interface IAdminWidgetUpdatePayload<TType extends AdminWidgetType> {
+	name?: string
+	isActive?: boolean
+	installDomain?: string
+	config?: Partial<AdminWidgetEntityMap[TType]['config']>
+}
+
+export interface IAdminWidgetMutationResponse<
+	TType extends AdminWidgetType
+> {
+	type: TType
+	entity: AdminWidgetEntityMap[TType]
+}
+
 const adminWidgetsService = {
 	async getMonitoring(
 		page: number,
@@ -60,6 +104,47 @@ const adminWidgetsService = {
 			'/widgets/admin/monitoring',
 			{
 				params: { page, limit, ...filters }
+			}
+		)
+		return data
+	},
+
+	async getById<TType extends AdminWidgetType>(
+		type: TType,
+		id: string
+	): Promise<Extract<AdminWidgetDetails, { type: TType }>> {
+		const { data } = await axiosInterceptorsRequest.get(
+			`/widgets/admin/${type}/${id}`
+		)
+		return data
+	},
+
+	async update<TType extends AdminWidgetType>(
+		type: TType,
+		id: string,
+		payload: IAdminWidgetUpdatePayload<TType>
+	): Promise<IAdminWidgetMutationResponse<TType>> {
+		const { data } = await axiosInterceptorsRequest.patch(
+			`/widgets/admin/${type}/${id}`,
+			payload
+		)
+		return data
+	},
+
+	async uploadButtonImage<
+		TType extends Exclude<AdminWidgetType, 'STOP_OFFER'>
+	>(
+		type: TType,
+		id: string,
+		file: FormData
+	): Promise<IAdminWidgetMutationResponse<TType>> {
+		const { data } = await axiosInterceptorsRequest.post(
+			`/widgets/admin/${type}/${id}/button-image`,
+			file,
+			{
+				headers: {
+					'Content-Type': 'multipart/form-data'
+				}
 			}
 		)
 		return data

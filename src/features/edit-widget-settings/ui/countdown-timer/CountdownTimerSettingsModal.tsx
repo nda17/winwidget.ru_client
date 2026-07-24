@@ -12,6 +12,7 @@ import toast from 'react-hot-toast'
 import DirectLinkQr from '../shared/DirectLinkQr'
 import styles from '../shared/WidgetSettingsModal.module.scss'
 import WidgetLivePreview from '../shared/WidgetLivePreview'
+import type { WidgetSettingsPersistence } from '../shared/WidgetSettingsPersistence'
 
 type Tab = 'main' | 'timer' | 'form' | 'integrations' | 'code' | 'info'
 const BUTTON_IMAGE_MAX_SIZE_BYTES = 200 * 1024
@@ -21,6 +22,10 @@ interface Props {
 	canUseCustomButtonImage: boolean
 	onClose: () => void
 	onSaved: (updated: CountdownTimer) => void
+	persistence?: WidgetSettingsPersistence<
+		CountdownTimer,
+		CountdownTimerConfig
+	>
 }
 
 const TABS: { id: Tab; label: string }[] = [
@@ -140,7 +145,8 @@ const CountdownTimerSettingsModal = ({
 	timer,
 	canUseCustomButtonImage,
 	onClose,
-	onSaved
+	onSaved,
+	persistence
 }: Props) => {
 	const titleId = useId()
 	const buttonImageInputId = useId()
@@ -174,7 +180,11 @@ const CountdownTimerSettingsModal = ({
 			installDomain?: string
 			config: CountdownTimerConfig
 		}) =>
-			countdownTimerService.updateCountdownTimer(timer.id, {
+			(
+				persistence?.update ??
+				(payload =>
+					countdownTimerService.updateCountdownTimer(timer.id, payload))
+			)({
 				name: data?.name ?? name,
 				installDomain: data?.installDomain ?? installDomain,
 				config: data?.config ?? cfg
@@ -207,7 +217,9 @@ const CountdownTimerSettingsModal = ({
 		mutationFn: (file: File) => {
 			const formData = new FormData()
 			formData.append('file', file)
-			return countdownTimerService.uploadButtonImage(timer.id, formData)
+			return persistence?.uploadButtonImage
+				? persistence.uploadButtonImage(formData)
+				: countdownTimerService.uploadButtonImage(timer.id, formData)
 		},
 		onMutate: () =>
 			toast.loading('Загружаем картинку кнопки, пожалуйста подождите...'),

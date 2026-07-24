@@ -8,6 +8,7 @@ import toast from 'react-hot-toast'
 import DirectLinkQr from '../shared/DirectLinkQr'
 import styles from '../shared/WidgetSettingsModal.module.scss'
 import WidgetLivePreview from '../shared/WidgetLivePreview'
+import type { WidgetSettingsPersistence } from '../shared/WidgetSettingsPersistence'
 
 type Tab = 'main' | 'trigger' | 'form' | 'integrations' | 'code' | 'info'
 
@@ -16,6 +17,7 @@ interface Props {
 	canUseCustomButtonImage: boolean
 	onClose: () => void
 	onSaved: (updated: StopOffer) => void
+	persistence?: WidgetSettingsPersistence<StopOffer, StopOfferConfig>
 }
 
 const TABS: { id: Tab; label: string }[] = [
@@ -136,7 +138,8 @@ const StopOfferSettingsModal = ({
 	stopOffer,
 	canUseCustomButtonImage,
 	onClose,
-	onSaved
+	onSaved,
+	persistence
 }: Props) => {
 	const titleId = useId()
 	const [tab, setTab] = useState<Tab>('main')
@@ -171,7 +174,11 @@ const StopOfferSettingsModal = ({
 			installDomain?: string
 			config: StopOfferConfig
 		}) =>
-			stopOfferService.updateStopOffer(stopOffer.id, {
+			(
+				persistence?.update ??
+				(payload =>
+					stopOfferService.updateStopOffer(stopOffer.id, payload))
+			)({
 				name: data?.name ?? name,
 				installDomain: data?.installDomain ?? installDomain,
 				config: data?.config ?? cfg
