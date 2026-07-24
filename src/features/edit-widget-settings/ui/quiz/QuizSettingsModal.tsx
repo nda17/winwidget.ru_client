@@ -14,6 +14,7 @@ import { ChangeEvent, useId, useState } from 'react'
 import toast from 'react-hot-toast'
 import DirectLinkQr from '../shared/DirectLinkQr'
 import WidgetLivePreview from '../shared/WidgetLivePreview'
+import type { WidgetSettingsPersistence } from '../shared/WidgetSettingsPersistence'
 import styles from './QuizSettingsModal.module.scss'
 
 type Tab =
@@ -32,6 +33,7 @@ interface Props {
 	canUseCustomButtonImage: boolean
 	onClose: () => void
 	onSaved: (updated: Quiz) => void
+	persistence?: WidgetSettingsPersistence<Quiz, QuizConfig>
 }
 
 const makeId = () => Math.random().toString(36).slice(2, 9)
@@ -433,7 +435,8 @@ const QuizSettingsModal = ({
 	quiz,
 	canUseCustomButtonImage,
 	onClose,
-	onSaved
+	onSaved,
+	persistence
 }: Props) => {
 	const [tab, setTab] = useState<Tab>('main')
 	const [config, setConfig] = useState<QuizConfig>({ ...quiz.config })
@@ -465,7 +468,10 @@ const QuizSettingsModal = ({
 			installDomain?: string
 			config: QuizConfig
 		}) =>
-			quizService.updateQuiz(quiz.id, {
+			(
+				persistence?.update ??
+				(payload => quizService.updateQuiz(quiz.id, payload))
+			)({
 				...data,
 				installDomain: data.installDomain ?? installDomain
 			}),
@@ -494,7 +500,10 @@ const QuizSettingsModal = ({
 
 	const resetAttemptsMutation = useMutation({
 		mutationFn: (newToken: string) =>
-			quizService.updateQuiz(quiz.id, {
+			(
+				persistence?.update ??
+				(payload => quizService.updateQuiz(quiz.id, payload))
+			)({
 				name,
 				config: { ...config, quizResetToken: newToken }
 			}),
@@ -524,7 +533,9 @@ const QuizSettingsModal = ({
 		mutationFn: (file: File) => {
 			const formData = new FormData()
 			formData.append('file', file)
-			return quizService.uploadButtonImage(quiz.id, formData)
+			return persistence?.uploadButtonImage
+				? persistence.uploadButtonImage(formData)
+				: quizService.uploadButtonImage(quiz.id, formData)
 		},
 		onMutate: () =>
 			toast.loading('Загружаем картинку кнопки, пожалуйста подождите...'),

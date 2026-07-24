@@ -9,6 +9,7 @@ import toast from 'react-hot-toast'
 import styles from './CallbackSettingsModal.module.scss'
 import DirectLinkQr from '../shared/DirectLinkQr'
 import WidgetLivePreview from '../shared/WidgetLivePreview'
+import type { WidgetSettingsPersistence } from '../shared/WidgetSettingsPersistence'
 
 type Tab = 'main' | 'form' | 'integrations' | 'code' | 'info'
 const BUTTON_IMAGE_MAX_SIZE_BYTES = 200 * 1024
@@ -18,6 +19,7 @@ interface Props {
 	canUseCustomButtonImage: boolean
 	onClose: () => void
 	onSaved: (updated: Callback) => void
+	persistence?: WidgetSettingsPersistence<Callback, CallbackConfig>
 }
 
 const TABS: { id: Tab; label: string }[] = [
@@ -88,7 +90,8 @@ const CallbackSettingsModal = ({
 	callback,
 	canUseCustomButtonImage,
 	onClose,
-	onSaved
+	onSaved,
+	persistence
 }: Props) => {
 	const titleId = useId()
 	const buttonImageInputId = useId()
@@ -119,7 +122,10 @@ const CallbackSettingsModal = ({
 			installDomain?: string
 			config: CallbackConfig
 		}) =>
-			callbackService.updateCallback(callback.id, {
+			(
+				persistence?.update ??
+				(payload => callbackService.updateCallback(callback.id, payload))
+			)({
 				name: data?.name ?? name,
 				installDomain: data?.installDomain ?? installDomain,
 				config: data?.config ?? cfg
@@ -150,7 +156,9 @@ const CallbackSettingsModal = ({
 		mutationFn: (file: File) => {
 			const formData = new FormData()
 			formData.append('file', file)
-			return callbackService.uploadButtonImage(callback.id, formData)
+			return persistence?.uploadButtonImage
+				? persistence.uploadButtonImage(formData)
+				: callbackService.uploadButtonImage(callback.id, formData)
 		},
 		onMutate: () =>
 			toast.loading('Загружаем картинку кнопки, пожалуйста подождите...'),

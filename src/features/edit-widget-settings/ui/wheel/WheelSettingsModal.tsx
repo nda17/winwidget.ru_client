@@ -8,6 +8,7 @@ import { ChangeEvent, useId, useState } from 'react'
 import toast from 'react-hot-toast'
 import DirectLinkQr from '../shared/DirectLinkQr'
 import WidgetLivePreview from '../shared/WidgetLivePreview'
+import type { WidgetSettingsPersistence } from '../shared/WidgetSettingsPersistence'
 import styles from './WheelSettingsModal.module.scss'
 
 type Tab = 'main' | 'bonuses' | 'integrations' | 'code' | 'info'
@@ -85,13 +86,15 @@ interface Props {
 	canUseCustomButtonImage: boolean
 	onClose: () => void
 	onSaved: (updated: Widget) => void
+	persistence?: WidgetSettingsPersistence<Widget, WidgetConfig>
 }
 
 const WheelSettingsModal = ({
 	widget,
 	canUseCustomButtonImage,
 	onClose,
-	onSaved
+	onSaved,
+	persistence
 }: Props) => {
 	const [tab, setTab] = useState<Tab>('main')
 	const [config, setConfig] = useState<WidgetConfig>({ ...widget.config })
@@ -226,7 +229,10 @@ const WheelSettingsModal = ({
 			installDomain?: string
 			config: WidgetConfig
 		}) =>
-			widgetService.updateWidget(widget.id, {
+			(
+				persistence?.update ??
+				(payload => widgetService.updateWidget(widget.id, payload))
+			)({
 				...data,
 				installDomain: data.installDomain ?? installDomain
 			}),
@@ -256,7 +262,10 @@ const WheelSettingsModal = ({
 
 	const resetAttemptsMutation = useMutation({
 		mutationFn: (newToken: string) =>
-			widgetService.updateWidget(widget.id, {
+			(
+				persistence?.update ??
+				(payload => widgetService.updateWidget(widget.id, payload))
+			)({
 				name,
 				config: { ...config, spinResetToken: newToken }
 			}),
@@ -287,7 +296,9 @@ const WheelSettingsModal = ({
 		mutationFn: (file: File) => {
 			const formData = new FormData()
 			formData.append('file', file)
-			return widgetService.uploadButtonImage(widget.id, formData)
+			return persistence?.uploadButtonImage
+				? persistence.uploadButtonImage(formData)
+				: widgetService.uploadButtonImage(widget.id, formData)
 		},
 		onMutate: () =>
 			toast.loading('Загружаем картинку кнопки, пожалуйста подождите...'),
