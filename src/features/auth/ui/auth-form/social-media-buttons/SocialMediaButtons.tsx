@@ -1,9 +1,9 @@
 import styles from '@/features/auth/ui/auth-form/social-media-buttons/SocialMediaButtons.module.scss'
+import { API_URL } from '@/shared/config/api.config'
 import AppIcon from '@/shared/ui/icons/AppIcon'
 import SkeletonLoader from '@/shared/ui/skeleton-loader/SkeletonLoader'
 import { siteSettingsService } from '@/entities/site-settings'
 import { useQuery } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 
 const AFFILIATE_REFERRER_STORAGE_KEY = 'affiliateReferrerId'
@@ -18,7 +18,6 @@ const SocialMediaButtons = ({
 	onTelegramAuthStart,
 	isTelegramAuthLoading = false
 }: SocialMediaButtonsProps) => {
-	const router = useRouter()
 	const { data: siteSettings, isPending: isSiteSettingsPending } =
 		useQuery({
 			queryKey: ['site-settings'],
@@ -48,7 +47,7 @@ const SocialMediaButtons = ({
 			: path
 
 		toast.loading('Загрузка...', { id: 'social-auth' })
-		router.push(targetPath)
+		window.location.assign(targetPath)
 	}
 
 	if (isSiteSettingsPending) {
@@ -84,7 +83,7 @@ const SocialMediaButtons = ({
 			<div className={styles.wrapper}>
 				{googleAuthEnabled && (
 					<button
-						onClick={() => handleSocialAuth('/auth/google')}
+						onClick={() => handleSocialAuth(`${API_URL}/auth/google`)}
 						className={styles.button}
 						type="button"
 					>
@@ -94,7 +93,7 @@ const SocialMediaButtons = ({
 				)}
 				{yandexAuthEnabled && (
 					<button
-						onClick={() => handleSocialAuth('/auth/yandex')}
+						onClick={() => handleSocialAuth(`${API_URL}/auth/yandex`)}
 						className={styles.button}
 						type="button"
 					>
@@ -115,7 +114,7 @@ const SocialMediaButtons = ({
 				)}
 				{vkAuthEnabled && (
 					<button
-						onClick={() => handleSocialAuth('/auth/vk')}
+						onClick={() => handleSocialAuth(`${API_URL}/auth/vk`)}
 						className={styles.button}
 						type="button"
 					>
@@ -125,7 +124,7 @@ const SocialMediaButtons = ({
 				)}
 				{githubAuthEnabled && (
 					<button
-						onClick={() => handleSocialAuth('/auth/github')}
+						onClick={() => handleSocialAuth(`${API_URL}/auth/github`)}
 						className={styles.button}
 						type="button"
 					>

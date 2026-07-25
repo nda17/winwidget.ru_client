@@ -5,4 +5,4 @@ const apiHost =
 
 export const API_URL =
 	process.env.NEXT_PUBLIC_API_URL ||
-	(apiHost ? `${apiHost}/api` : 'http://localhost:4200/api')
+	(apiHost ? `${apiHost}/api/v1` : 'http://localhost:4200/api/v1')

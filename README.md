@@ -225,7 +225,7 @@ pnpm start
 | `NEXT_PUBLIC_SITE_URL`           | Публичный адрес frontend                                  |
 | `NEXT_PUBLIC_PRODUCTION_HOST`    | Публичный адрес production backend                        |
 | `NEXT_PUBLIC_DEVELOPMENT_HOST`   | Адрес локального backend                                  |
-| `NEXT_PUBLIC_API_URL`            | Полный базовый URL API с `/api`                           |
+| `NEXT_PUBLIC_API_URL`            | Полный базовый URL API с `/api/v1`                        |
 | `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | Публичный ключ reCAPTCHA v3                               |
 | `NEXT_PUBLIC_RECAPTCHA_HOST`     | Хост загрузки reCAPTCHA                                   |
 | `JWT_SECRET`                     | Серверный секрет проверки JWT; должен совпадать с backend |
@@ -253,7 +253,7 @@ frontend во время сборки, поэтому после их измен
 
 - `shared/api` создаёт публичный и авторизованный Axios clients.
 - Access token хранится в cookie `accessToken`.
-- Refresh выполняется через `/auth/access-token` с защитой от параллельных
+- Refresh выполняется через `/api/v1/auth/access-token` с защитой от параллельных
   дублирующих запросов.
 - API конкретной бизнес-области находится внутри её entity или feature.
 - Серверные запросы Next.js отделены от браузерных API-модулей.

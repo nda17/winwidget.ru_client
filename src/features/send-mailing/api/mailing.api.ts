@@ -46,11 +46,17 @@ export interface IAdminMailingCampaignsResponse {
 
 const adminMailingsService = {
 	async sendBroadcast(
-		payload: IAdminBroadcastInput
+		payload: IAdminBroadcastInput,
+		idempotencyKey: string
 	): Promise<IAdminMailingCampaign> {
 		const { data } = await axiosInterceptorsRequest.post(
 			'/mailings/admin/broadcast',
-			payload
+			payload,
+			{
+				headers: {
+					'Idempotency-Key': idempotencyKey
+				}
+			}
 		)
 		return data
 	},

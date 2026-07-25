@@ -673,7 +673,9 @@ const buildPreviewSandboxDocument = (
 
 				if (
 					url &&
-					url.indexOf('/api/' + configPath + '/' + previewKey + '/config') !== -1
+					url.indexOf(
+						'/api/v1/' + configPath + '/' + previewKey + '/config'
+					) !== -1
 				) {
 					return Promise.resolve(
 						new Response(JSON.stringify(publicConfig), {
@@ -687,7 +689,7 @@ const buildPreviewSandboxDocument = (
 					url &&
 					(
 						url.indexOf('/' + previewKey + '/lead') !== -1 ||
-						(method !== 'GET' && url.indexOf('/api/') !== -1)
+						(method !== 'GET' && url.indexOf('/api/v1/') !== -1)
 					)
 				) {
 					schedulePreviewRestart();

@@ -50,22 +50,6 @@ const nextConfig = {
 	rewrites: () => {
 		return [
 			{
-				source: '/auth/google',
-				destination: `${apiBase}/auth/google`
-			},
-			{
-				source: '/auth/github',
-				destination: `${apiBase}/auth/github`
-			},
-			{
-				source: '/auth/yandex',
-				destination: `${apiBase}/auth/yandex`
-			},
-			{
-				source: '/auth/vk',
-				destination: `${apiBase}/auth/vk`
-			},
-			{
 				source: '/uploads/:path*',
 				destination: `${apiBase}/uploads/:path*`
 			}

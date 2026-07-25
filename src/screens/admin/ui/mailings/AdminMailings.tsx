@@ -6,6 +6,7 @@ import {
 	type AdminMailingAudience,
 	type AdminMailingCampaignStatus,
 	type AdminMailingChannel,
+	type IAdminBroadcastInput,
 	type IAdminMailingCampaign
 } from '@/features/send-mailing'
 import AdminNavigation from '@/screens/admin/ui/common/admin-navigation/AdminNavigation'
@@ -20,7 +21,7 @@ import {
 	useQueryClient
 } from '@tanstack/react-query'
 import { NextPage } from 'next'
-import { FormEvent, useState } from 'react'
+import { FormEvent, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import styles from './AdminMailings.module.scss'
 
@@ -71,6 +72,10 @@ const AdminMailings: NextPage = () => {
 	const [cancelCampaign, setCancelCampaign] =
 		useState<IAdminMailingCampaign | null>(null)
 	const [page, setPage] = useState(1)
+	const pendingCreateRef = useRef<{
+		fingerprint: string
+		idempotencyKey: string
+	} | null>(null)
 	const limit = 10
 
 	const campaigns = useQuery({
@@ -86,8 +91,15 @@ const AdminMailings: NextPage = () => {
 	})
 
 	const createMutation = useMutation({
-		mutationFn: adminMailingsService.sendBroadcast,
+		mutationFn: ({
+			payload,
+			idempotencyKey
+		}: {
+			payload: IAdminBroadcastInput
+			idempotencyKey: string
+		}) => adminMailingsService.sendBroadcast(payload, idempotencyKey),
 		onSuccess: async campaign => {
+			pendingCreateRef.current = null
 			setConfirmOpened(false)
 			setPage(1)
 			await queryClient.invalidateQueries({
@@ -126,13 +138,24 @@ const AdminMailings: NextPage = () => {
 
 	const startCampaign = () => {
 		if (createMutation.isPending) return
+		const payload: IAdminBroadcastInput = {
+			subject: trimmedSubject,
+			message: trimmedMessage,
+			audience,
+			channel
+		}
+		const fingerprint = JSON.stringify(payload)
+		const pending = pendingCreateRef.current
+		const idempotencyKey =
+			pending?.fingerprint === fingerprint
+				? pending.idempotencyKey
+				: window.crypto.randomUUID()
+		pendingCreateRef.current = { fingerprint, idempotencyKey }
 		setConfirmOpened(false)
 		toast.promise(
 			createMutation.mutateAsync({
-				subject: trimmedSubject,
-				message: trimmedMessage,
-				audience,
-				channel
+				payload,
+				idempotencyKey
 			}),
 			{
 				loading: 'Создаём рассылку...',
