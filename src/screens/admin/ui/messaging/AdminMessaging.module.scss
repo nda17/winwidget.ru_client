@@ -27,7 +27,8 @@
 }
 
 .button,
-.retry {
+.retry,
+.close {
 	@apply rounded-lg border border-[#d7c4ee] bg-white text-[#6b2d8f] text-sm font-semibold cursor-pointer py-2 px-4 transition-opacity;
 
 	&:hover {
@@ -130,8 +131,61 @@
 	@apply max-w-[360px] break-words text-[#a92d46] text-xs;
 }
 
-.retry {
+.errorDetails {
+	@apply flex max-w-[360px] flex-col items-start gap-1.5;
+}
+
+.errorCode {
+	@apply break-all rounded bg-[#f4f0f8] px-1.5 py-1 text-[0.7rem] text-[#5b426d];
+}
+
+.resolution {
+	@apply break-words text-xs text-[#587064];
+}
+
+.categoryBadge {
+	@apply inline-flex max-w-[190px] rounded-full px-2.5 py-1 text-center text-[0.7rem] font-semibold leading-tight;
+}
+
+.categoryTransient {
+	@apply bg-[#eef5ff] text-[#35608f];
+}
+
+.categoryRateLimit {
+	@apply bg-[#fff5dc] text-[#8a6217];
+}
+
+.categoryPermanent {
+	@apply bg-[#fff0f2] text-[#a12f46];
+}
+
+.categoryAuthConfiguration {
+	@apply bg-[#f4edff] text-[#6b2d8f];
+}
+
+.categoryLegacy {
+	@apply bg-[#f1f1f1] text-[#666];
+}
+
+.failureActions {
+	@apply flex min-w-[175px] flex-col items-stretch gap-2;
+}
+
+.retry,
+.close {
 	@apply py-1.5 px-3 text-xs;
+}
+
+.close {
+	@apply border-[#e4b9c1] text-[#a12f46];
+}
+
+.commentField {
+	@apply flex flex-col gap-2 text-sm font-medium text-gray-700;
+
+	textarea {
+		@apply min-h-24 w-full resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm font-normal text-gray-700 outline-none transition-colors placeholder:text-gray-400 focus:border-[#6b2d8f] disabled:cursor-not-allowed disabled:bg-gray-100;
+	}
 }
 
 .empty {

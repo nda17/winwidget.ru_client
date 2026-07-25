@@ -15,6 +15,17 @@ export type MessagingIntegration =
 	| 'daily-summary-telegram'
 	| 'database-backup'
 
+export type MessagingFailureCategory =
+	| 'TRANSIENT'
+	| 'RATE_LIMIT'
+	| 'PERMANENT'
+	| 'AUTH_CONFIGURATION'
+
+export type MessagingFailureResolution =
+	| 'DELIVERED'
+	| 'CLOSED_NO_RETRY'
+	| null
+
 export interface MessagingOverview {
 	generatedAt: string
 	outbox: Record<'PENDING' | 'PUBLISHING' | 'PUBLISHED' | 'FAILED', number>
@@ -45,10 +56,15 @@ export interface MessagingFailure {
 	integration: MessagingIntegration
 	attempts: number
 	lastError: string
+	category: MessagingFailureCategory | null
+	normalizedCode: string | null
+	safeReason: string | null
 	failedAt: string
 	retryingAt: string | null
 	resolvedAt: string | null
-	source?: { type?: string }
+	resolution: MessagingFailureResolution
+	resolutionComment: string | null
+	source: string | null
 	entity?: { id?: string; name?: string }
 	lead?: {
 		id?: string | null
@@ -80,6 +96,7 @@ class MessagingService {
 		page: number
 		limit: number
 		integration?: string
+		category?: MessagingFailureCategory
 		status?: string
 	}) {
 		const { data } =
@@ -93,6 +110,14 @@ class MessagingService {
 	async retryFailure(id: string) {
 		const { data } = await axiosInterceptorsRequest.post(
 			`/messaging/admin/failures/${id}/retry`
+		)
+		return data
+	}
+
+	async closeFailure(id: string, comment: string) {
+		const { data } = await axiosInterceptorsRequest.post(
+			`/messaging/admin/failures/${id}/close`,
+			{ comment }
 		)
 		return data
 	}
