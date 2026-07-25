@@ -4,6 +4,7 @@ import { UserRole, useAuthStore, useUser } from '@/entities/user'
 import {
 	messagingService,
 	type MessagingFailure,
+	type MessagingFailureCategory,
 	type MessagingIntegration
 } from '@/features/admin-monitoring'
 import { errorCatch } from '@/shared/api'
@@ -19,11 +20,12 @@ import {
 	useQuery,
 	useQueryClient
 } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import styles from './AdminMessaging.module.scss'
 
 const LIMIT = 20
+const RETRY_LEASE_MS = 5 * 60 * 1000
 const integrationLabels: Record<MessagingIntegration, string> = {
 	email: 'Email',
 	webhook: 'Webhook',
@@ -40,6 +42,13 @@ const integrationLabels: Record<MessagingIntegration, string> = {
 	'database-backup': 'Backup PostgreSQL'
 }
 
+const categoryLabels: Record<MessagingFailureCategory, string> = {
+	TRANSIENT: 'Временная',
+	RATE_LIMIT: 'Ограничение частоты',
+	PERMANENT: 'Постоянная',
+	AUTH_CONFIGURATION: 'Авторизация или настройка'
+}
+
 const formatDate = (value: string | null) =>
 	value
 		? new Intl.DateTimeFormat('ru-RU', {
@@ -47,6 +56,32 @@ const formatDate = (value: string | null) =>
 				timeStyle: 'medium'
 			}).format(new Date(value))
 		: '—'
+
+const getCategoryClassName = (
+	category: MessagingFailureCategory | null
+): string => {
+	switch (category) {
+		case 'TRANSIENT':
+			return styles.categoryTransient
+		case 'RATE_LIMIT':
+			return styles.categoryRateLimit
+		case 'PERMANENT':
+			return styles.categoryPermanent
+		case 'AUTH_CONFIGURATION':
+			return styles.categoryAuthConfiguration
+		default:
+			return styles.categoryLegacy
+	}
+}
+
+const isRetryLeaseActive = (retryingAt: string | null): boolean => {
+	if (!retryingAt) return false
+
+	const retryStartedAt = Date.parse(retryingAt)
+	if (Number.isNaN(retryStartedAt)) return true
+
+	return retryStartedAt >= Date.now() - RETRY_LEASE_MS
+}
 
 export default function AdminMessaging() {
 	const auth = useAuthStore(state => state.auth)
@@ -60,10 +95,17 @@ export default function AdminMessaging() {
 	const queryClient = useQueryClient()
 	const [page, setPage] = useState(1)
 	const [integration, setIntegration] = useState('ALL')
+	const [category, setCategory] = useState<
+		MessagingFailureCategory | 'ALL'
+	>('ALL')
 	const [status, setStatus] = useState('FAILED')
 	const [retryTarget, setRetryTarget] = useState<MessagingFailure | null>(
 		null
 	)
+	const [closeTarget, setCloseTarget] = useState<MessagingFailure | null>(
+		null
+	)
+	const [closeComment, setCloseComment] = useState('')
 
 	const overview = useQuery({
 		queryKey: ['admin-messaging-overview'],
@@ -72,12 +114,19 @@ export default function AdminMessaging() {
 		refetchInterval: 15000
 	})
 	const failures = useQuery({
-		queryKey: ['admin-messaging-failures', page, integration, status],
+		queryKey: [
+			'admin-messaging-failures',
+			page,
+			integration,
+			category,
+			status
+		],
 		queryFn: () =>
 			messagingService.getFailures({
 				page,
 				limit: LIMIT,
 				integration: integration === 'ALL' ? undefined : integration,
+				category: category === 'ALL' ? undefined : category,
 				status
 			}),
 		enabled: auth && isDev,
@@ -96,9 +145,24 @@ export default function AdminMessaging() {
 			])
 		}
 	})
+	const closeMutation = useMutation({
+		mutationFn: ({ id, comment }: { id: string; comment: string }) =>
+			messagingService.closeFailure(id, comment),
+		onSuccess: async () => {
+			await Promise.all([
+				queryClient.invalidateQueries({
+					queryKey: ['admin-messaging-overview']
+				}),
+				queryClient.invalidateQueries({
+					queryKey: ['admin-messaging-failures']
+				})
+			])
+		}
+	})
 
 	const confirmRetry = () => {
-		if (!retryTarget || retryMutation.isPending) return
+		if (!retryTarget || retryMutation.isPending || closeMutation.isPending)
+			return
 
 		const failureId = retryTarget.id
 		setRetryTarget(null)
@@ -109,8 +173,54 @@ export default function AdminMessaging() {
 		})
 	}
 
+	const openCloseDialog = (failure: MessagingFailure) => {
+		setRetryTarget(null)
+		setCloseComment('')
+		setCloseTarget(failure)
+	}
+
+	const closeCloseDialog = () => {
+		if (closeMutation.isPending) return
+		setCloseTarget(null)
+		setCloseComment('')
+	}
+
+	const confirmClose = () => {
+		const comment = closeComment.trim()
+		if (
+			!closeTarget ||
+			comment.length < 3 ||
+			closeMutation.isPending ||
+			retryMutation.isPending
+		) {
+			return
+		}
+
+		const promise = closeMutation.mutateAsync({
+			id: closeTarget.id,
+			comment
+		})
+		toast.promise(promise, {
+			loading: 'Закрываем ошибку без повторной доставки...',
+			success: 'Ошибка закрыта без повтора',
+			error: error => `Ошибка закрытия: ${errorCatch(error)}`
+		})
+		void promise
+			.then(() => {
+				setCloseTarget(null)
+				setCloseComment('')
+			})
+			.catch(() => undefined)
+	}
+
 	const totalPages = failures.data?.totalPages || 1
 	const pages = Array.from({ length: totalPages }, (_, index) => index + 1)
+
+	useEffect(() => {
+		if (page > totalPages) {
+			setPage(totalPages)
+		}
+	}, [page, totalPages])
 
 	return (
 		<section className={styles.wrapper}>
@@ -124,6 +234,35 @@ export default function AdminMessaging() {
 					onCancel={() => setRetryTarget(null)}
 				/>
 			)}
+			{isDev && closeTarget && (
+				<ConfirmDialog
+					title="Закрыть ошибку без повтора?"
+					message={`Событие ${closeTarget.eventId} больше не будет отправлено автоматически. Исходная ошибка и комментарий останутся в истории.`}
+					confirmLabel="Закрыть без повтора"
+					cancelLabel="Назад"
+					confirmDisabled={
+						closeComment.trim().length < 3 ||
+						closeMutation.isPending ||
+						retryMutation.isPending
+					}
+					onConfirm={confirmClose}
+					onCancel={closeCloseDialog}
+				>
+					<label className={styles.commentField}>
+						<span>Причина закрытия</span>
+						<textarea
+							value={closeComment}
+							onChange={event => setCloseComment(event.target.value)}
+							rows={4}
+							placeholder="Опишите, почему повторная доставка не требуется"
+							minLength={3}
+							maxLength={1000}
+							disabled={closeMutation.isPending}
+							required
+						/>
+					</label>
+				</ConfirmDialog>
+			)}
 			<Heading text="Панель администратора" />
 			<AdminNavigation />
 			<AdminSectionHeading
@@ -131,13 +270,13 @@ export default function AdminMessaging() {
 				title="Интеграции, фоновые задачи и Outbox"
 				description={
 					isDev
-						? 'Состояние PostgreSQL Outbox, RabbitMQ, publisher и workers. Здесь можно повторить доставку событий из DLQ.'
-						: 'Мониторинг PostgreSQL Outbox, RabbitMQ, publisher и workers доступен только для просмотра. Подробный DLQ и ручной retry доступны только DEV.'
+						? 'Состояние PostgreSQL Outbox, RabbitMQ, publisher и workers. Здесь можно повторить доставку из DLQ или закрыть ошибку без повтора.'
+						: 'Мониторинг PostgreSQL Outbox, RabbitMQ, publisher и workers доступен только для просмотра. Подробный DLQ и действия с ошибками доступны только DEV.'
 				}
 				risk={isDev ? 'medium' : undefined}
 				riskText={
 					isDev
-						? 'Повторная отправка может повторно вызвать внешнюю интеграцию, если она обработала прошлый запрос, но не вернула успешный ответ.'
+						? 'Повторная отправка может повторно вызвать внешнюю интеграцию, а закрытие без повтора окончательно исключает автоматическую доставку события.'
 						: undefined
 				}
 			/>
@@ -191,7 +330,7 @@ export default function AdminMessaging() {
 							<Metric
 								title="DLQ не решено"
 								value={overview.data.unresolvedFailures}
-								description="Доставки, исчерпавшие автоматические попытки. Ошибки уже сохранены в PostgreSQL; подробности и ручной retry доступны DEV в блоке ниже."
+								description="Доставки, исчерпавшие автоматические попытки. Ошибки уже сохранены в PostgreSQL; подробности и действия с ними доступны DEV в блоке ниже."
 							/>
 							<Metric
 								title="Повторяется"
@@ -280,9 +419,9 @@ export default function AdminMessaging() {
 								<p className={styles.title}>Ошибки доставки</p>
 								<AdminTooltip
 									title="Ошибки доставки"
-									description="Здесь находятся окончательные ошибки, перенесённые consumer из RabbitMQ DLQ в PostgreSQL. После диагностики DEV может запустить повтор только для выбранной интеграции."
+									description="Здесь находятся окончательные ошибки, перенесённые consumer из RabbitMQ DLQ в PostgreSQL. После диагностики DEV может повторить доставку или закрыть ошибку без повтора."
 									risk="medium"
-									riskText="При неопределённом результате внешнего запроса ручной retry теоретически может повторить уже выполненное действие."
+									riskText="При неопределённом результате внешнего запроса ручной retry может повторить уже выполненное действие. Закрытие без повтора требует обязательного комментария."
 								/>
 							</div>
 							<p className={styles.hint}>
@@ -310,6 +449,27 @@ export default function AdminMessaging() {
 								</select>
 							</label>
 							<label className={styles.selectWrap}>
+								<span className="sr-only">Категория</span>
+								<select
+									value={category}
+									onChange={event => {
+										setCategory(
+											event.target.value as
+												| MessagingFailureCategory
+												| 'ALL'
+										)
+										setPage(1)
+									}}
+								>
+									<option value="ALL">Все категории</option>
+									{Object.entries(categoryLabels).map(([value, label]) => (
+										<option key={value} value={value}>
+											{label}
+										</option>
+									))}
+								</select>
+							</label>
+							<label className={styles.selectWrap}>
 								<span className="sr-only">Статус</span>
 								<select
 									value={status}
@@ -321,6 +481,7 @@ export default function AdminMessaging() {
 									<option value="FAILED">Требуют внимания</option>
 									<option value="RETRYING">Повторяются</option>
 									<option value="RESOLVED">Решённые</option>
+									<option value="CLOSED">Закрытые без повтора</option>
 									<option value="ALL">Все</option>
 								</select>
 							</label>
@@ -340,6 +501,7 @@ export default function AdminMessaging() {
 									<thead>
 										<tr>
 											<th>Обработчик</th>
+											<th>Категория</th>
 											<th>Объект</th>
 											<th>Ошибка</th>
 											<th>Попытки</th>
@@ -348,30 +510,88 @@ export default function AdminMessaging() {
 										</tr>
 									</thead>
 									<tbody>
-										{failures.data.items.map(item => (
-											<tr key={item.id}>
-												<td>{integrationLabels[item.integration]}</td>
-												<td>
-													{item.entity?.name || item.lead?.id || '—'}
-												</td>
-												<td className={styles.error}>{item.lastError}</td>
-												<td>{item.attempts}</td>
-												<td>{formatDate(item.failedAt)}</td>
-												<td>
-													<button
-														className={styles.retry}
-														onClick={() => setRetryTarget(item)}
-														disabled={
-															Boolean(
-																item.resolvedAt || item.retryingAt
-															) || retryMutation.isPending
-														}
-													>
-														Повторить
-													</button>
-												</td>
-											</tr>
-										))}
+										{failures.data.items.map(item => {
+											const isUnresolved = Boolean(
+												!item.resolvedAt && !item.resolution
+											)
+											const hasActiveRetryLease = isRetryLeaseActive(
+												item.retryingAt
+											)
+
+											return (
+												<tr key={item.id}>
+													<td>{integrationLabels[item.integration]}</td>
+													<td>
+														<span
+															className={`${styles.categoryBadge} ${getCategoryClassName(item.category)}`}
+														>
+															{item.category
+																? categoryLabels[item.category]
+																: 'Без классификации'}
+														</span>
+													</td>
+													<td>
+														{item.entity?.name || item.lead?.id || '—'}
+													</td>
+													<td>
+														<div className={styles.errorDetails}>
+															<p className={styles.error}>
+																{item.safeReason || item.lastError}
+															</p>
+															{item.normalizedCode && (
+																<code className={styles.errorCode}>
+																	Код: {item.normalizedCode}
+																</code>
+															)}
+															{item.resolution === 'DELIVERED' && (
+																<span className={styles.resolution}>
+																	Доставлено
+																</span>
+															)}
+															{item.resolution === 'CLOSED_NO_RETRY' && (
+																<span className={styles.resolution}>
+																	Закрыто без повтора
+																	{item.resolutionComment
+																		? `: ${item.resolutionComment}`
+																		: ''}
+																</span>
+															)}
+														</div>
+													</td>
+													<td>{item.attempts}</td>
+													<td>{formatDate(item.failedAt)}</td>
+													<td>
+														<div className={styles.failureActions}>
+															<button
+																className={styles.retry}
+																onClick={() => setRetryTarget(item)}
+																disabled={
+																	!isUnresolved ||
+																	hasActiveRetryLease ||
+																	retryMutation.isPending ||
+																	closeMutation.isPending
+																}
+															>
+																Повторить
+															</button>
+															{isUnresolved && (
+																<button
+																	className={styles.close}
+																	onClick={() => openCloseDialog(item)}
+																	disabled={
+																		Boolean(item.retryingAt) ||
+																		closeMutation.isPending ||
+																		retryMutation.isPending
+																	}
+																>
+																	Закрыть без повтора
+																</button>
+															)}
+														</div>
+													</td>
+												</tr>
+											)
+										})}
 									</tbody>
 								</table>
 							</div>
@@ -426,6 +646,11 @@ function LockedFailuresPreview() {
 							</select>
 						</label>
 						<label className={styles.selectWrap}>
+							<select disabled aria-label="Категория">
+								<option>Все категории</option>
+							</select>
+						</label>
+						<label className={styles.selectWrap}>
 							<select disabled aria-label="Статус">
 								<option>Требуют внимания</option>
 							</select>
@@ -437,6 +662,7 @@ function LockedFailuresPreview() {
 						<thead>
 							<tr>
 								<th>Обработчик</th>
+								<th>Категория</th>
 								<th>Объект</th>
 								<th>Ошибка</th>
 								<th>Попытки</th>
@@ -447,6 +673,7 @@ function LockedFailuresPreview() {
 						<tbody>
 							<tr>
 								<td>Интеграция</td>
+								<td>Без классификации</td>
 								<td>—</td>
 								<td>Детали ошибки доступны DEV</td>
 								<td>—</td>
@@ -464,8 +691,8 @@ function LockedFailuresPreview() {
 			<div className={styles.lockedOverlay}>
 				<span className={styles.lockedBadge}>Только для DEV</span>
 				<AdminTooltip
-					title="DLQ и ручной retry заблокированы"
-					description="Подробные ошибки доставки и повторная отправка доступны только пользователям с ролью DEV. Мониторинг очередей выше остаётся доступен только для просмотра."
+					title="DLQ и действия с ошибками заблокированы"
+					description="Подробные ошибки доставки, повторная отправка и закрытие без повтора доступны только пользователям с ролью DEV. Мониторинг очередей выше остаётся доступен только для просмотра."
 				/>
 			</div>
 		</div>

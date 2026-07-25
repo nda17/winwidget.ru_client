@@ -1,6 +1,6 @@
 'use client'
 
-import { FC, useEffect, useId, useRef } from 'react'
+import { FC, ReactNode, useEffect, useId, useRef } from 'react'
 import styles from './ConfirmDialog.module.scss'
 
 const FOCUSABLE_ELEMENTS_SELECTOR = [
@@ -19,6 +19,8 @@ interface IConfirmDialogProps {
 	message: string
 	confirmLabel?: string
 	cancelLabel?: string
+	children?: ReactNode
+	confirmDisabled?: boolean
 	onConfirm: () => void
 	onCancel: () => void
 }
@@ -28,6 +30,8 @@ const ConfirmDialog: FC<IConfirmDialogProps> = ({
 	message,
 	confirmLabel = 'Подтвердить',
 	cancelLabel = 'Отмена',
+	children,
+	confirmDisabled = false,
 	onConfirm,
 	onCancel
 }) => {
@@ -164,6 +168,7 @@ const ConfirmDialog: FC<IConfirmDialogProps> = ({
 				<p id={messageId} className={styles.message}>
 					{message}
 				</p>
+				{children}
 				<div className={styles.actions}>
 					<button
 						ref={cancelButtonRef}
@@ -177,6 +182,7 @@ const ConfirmDialog: FC<IConfirmDialogProps> = ({
 						type="button"
 						className={styles.confirmBtn}
 						onClick={onConfirm}
+						disabled={confirmDisabled}
 					>
 						{confirmLabel}
 					</button>
