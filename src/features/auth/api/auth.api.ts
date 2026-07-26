@@ -106,20 +106,6 @@ class AuthService {
 		return refreshAccessToken()
 	}
 
-	async getNewTokensByRefresh(refreshToken: string) {
-		const response = await axiosClassicRequest.post<IAuthResponse>(
-			'/auth/access-token',
-			{},
-			{
-				headers: {
-					Cookie: `refreshToken=${refreshToken}`
-				}
-			}
-		)
-
-		return response.data
-	}
-
 	async getRestorePassword(data: IEmail, token?: string | null) {
 		const response = await axiosClassicRequest.patch<IEmail>(
 			'/auth/restore-password',

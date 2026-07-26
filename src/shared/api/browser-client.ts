@@ -30,11 +30,13 @@ export const refreshAccessToken = () => {
 	}
 
 	refreshPromise = axiosClassicRequest
-		.post<IAccessTokenResponse>('/auth/access-token')
+		.post<IAccessTokenResponse>('/auth/refresh')
 		.then(response => {
-			if (response.data.accessToken) {
-				saveTokenStorage(response.data.accessToken)
+			if (!response.data?.accessToken) {
+				throw new Error('Refresh response does not contain access token')
 			}
+
+			saveTokenStorage(response.data.accessToken)
 
 			return response
 		})

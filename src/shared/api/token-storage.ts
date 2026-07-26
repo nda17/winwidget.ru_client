@@ -2,8 +2,6 @@ import { decodeJwt } from 'jose'
 import Cookies from 'js-cookie'
 import { EnumTokens } from './token-names'
 
-const ACCESS_TOKEN_FALLBACK_EXPIRES_IN_MS = 60 * 60 * 1000
-
 const accessTokenCookieOptions = {
 	sameSite: 'strict' as const,
 	secure: process.env.NODE_ENV === 'production',
@@ -13,11 +11,6 @@ const accessTokenCookieOptions = {
 export const getAccessToken = () => {
 	const accessToken = Cookies.get(EnumTokens.ACCESS_TOKEN)
 	return accessToken || null
-}
-
-export const getRefreshToken = () => {
-	const refreshToken = Cookies.get(EnumTokens.REFRESH_TOKEN)
-	return refreshToken || null
 }
 
 export const getAccessTokenExpiresAt = (accessToken: string) => {
@@ -48,9 +41,12 @@ export const isAccessTokenValid = (
 }
 
 export const saveTokenStorage = (accessToken: string) => {
-	const expiresAt =
-		getAccessTokenExpiresAt(accessToken) ||
-		Date.now() + ACCESS_TOKEN_FALLBACK_EXPIRES_IN_MS
+	const expiresAt = getAccessTokenExpiresAt(accessToken)
+
+	if (!expiresAt || expiresAt <= Date.now()) {
+		removeFromStorage()
+		return
+	}
 
 	Cookies.set(EnumTokens.ACCESS_TOKEN, accessToken, {
 		...accessTokenCookieOptions,

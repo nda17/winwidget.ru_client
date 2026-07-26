@@ -180,8 +180,8 @@ Route-файлы остаются тонкими и подключают экр�
 
 - Node.js 20;
 - pnpm 9;
-- запущенный backend на `http://localhost:4200` для полного локального
-  сценария.
+- запущенные backend API на `http://localhost:4200` и API Gateway на
+  `http://localhost:4100` для полного локального сценария.
 
 ## Установка зависимостей
 
@@ -197,9 +197,25 @@ pnpm install --frozen-lockfile
 cp .env.example .env.local
 ```
 
-Для авторизованных маршрутов добавьте в `.env.local` серверную переменную
-`JWT_SECRET` с тем же значением, что и на backend. Не добавляйте к ней префикс
+Для авторизованных маршрутов настройте серверную проверку access token:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:4100/api/v1
+JWT_JWKS_URL=http://localhost:4100/api/v1/auth/.well-known/jwks.json
+JWT_ISSUER=http://localhost:4100/auth
+JWT_AUDIENCE=http://localhost:4100
+JWT_CLOCK_TOLERANCE_SECONDS=5
+JWT_MAX_TOKEN_LIFETIME_SECONDS=900
+```
+
+Значения issuer и audience должны совпадать с backend. Эти переменные
+используются только Next.js middleware, поэтому не добавляйте к ним префикс
 `NEXT_PUBLIC_`.
+
+Gateway разрешает credentialed CORS только для точных development-origin
+`http://localhost:3000` и `http://127.0.0.1:3000`. Поэтому локальный frontend
+обращается к API через `:4100`; `NEXT_PUBLIC_DEVELOPMENT_HOST=:4200` остаётся
+только для unversioned runtime-виджетов, uploads и preview.
 
 ## Запуск development-сервера
 
@@ -219,20 +235,25 @@ pnpm start
 
 ## Переменные окружения
 
-| Переменная                       | Назначение                                                |
-| -------------------------------- | --------------------------------------------------------- |
-| `NEXT_PUBLIC_MODE`               | Режим выбора адресов: `development` или `production`      |
-| `NEXT_PUBLIC_SITE_URL`           | Публичный адрес frontend                                  |
-| `NEXT_PUBLIC_PRODUCTION_HOST`    | Публичный адрес production backend                        |
-| `NEXT_PUBLIC_DEVELOPMENT_HOST`   | Адрес локального backend                                  |
-| `NEXT_PUBLIC_API_URL`            | Полный базовый URL API с `/api/v1`                        |
-| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | Публичный ключ reCAPTCHA v3                               |
-| `NEXT_PUBLIC_RECAPTCHA_HOST`     | Хост загрузки reCAPTCHA                                   |
-| `JWT_SECRET`                     | Серверный секрет проверки JWT; должен совпадать с backend |
+| Переменная                       | Назначение                                                                  |
+| -------------------------------- | --------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_MODE`               | Режим выбора адресов: `development` или `production`                        |
+| `NEXT_PUBLIC_SITE_URL`           | Публичный адрес frontend                                                    |
+| `NEXT_PUBLIC_PRODUCTION_HOST`    | Публичный адрес production backend                                          |
+| `NEXT_PUBLIC_DEVELOPMENT_HOST`   | Адрес локального backend                                                    |
+| `NEXT_PUBLIC_API_URL`            | Полный базовый URL API с `/api/v1`                                          |
+| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | Публичный ключ reCAPTCHA v3                                                 |
+| `NEXT_PUBLIC_RECAPTCHA_HOST`     | Хост загрузки reCAPTCHA                                                     |
+| `JWT_JWKS_URL`                   | Server-only URL набора публичных RS256-ключей backend                       |
+| `JWT_ISSUER`                     | Server-only ожидаемый issuer access token; должен совпадать с backend       |
+| `JWT_AUDIENCE`                   | Server-only ожидаемый audience access token; должен совпадать с backend     |
+| `JWT_CLOCK_TOLERANCE_SECONDS`    | Server-only допустимое расхождение часов, целое число секунд от `0` до `60` |
+| `JWT_MAX_TOKEN_LIFETIME_SECONDS` | Server-only максимальное время жизни access token, от `60` до `1800` секунд |
 
 Не коммитьте реальные секреты. Переменные `NEXT_PUBLIC_*` встраиваются во
 frontend во время сборки, поэтому после их изменения production image нужно
-пересобрать.
+пересобрать. JWT-переменные без этого префикса остаются на сервере и передаются
+в runtime-окружение frontend-контейнера.
 
 ## Команды
 
@@ -253,8 +274,14 @@ frontend во время сборки, поэтому после их измен
 
 - `shared/api` создаёт публичный и авторизованный Axios clients.
 - Access token хранится в cookie `accessToken`.
-- Refresh выполняется через `/api/v1/auth/access-token` с защитой от параллельных
-  дублирующих запросов.
+- Next.js middleware проверяет access token только по RS256 через публичные ключи
+  из JWKS. Приватный ключ подписи frontend не получает.
+- Refresh выполняется через `/api/v1/auth/refresh` с защитой от параллельных
+  дублирующих запросов. Backend при каждом успешном refresh ротирует opaque
+  refresh token и возвращает новую cookie через `Set-Cookie`.
+- Refresh cookie имеет флаг `HttpOnly`: браузерный JavaScript не может её
+  прочитать. Axios отправляет cookie автоматически с `withCredentials`, а
+  server-side middleware переносит полученный `Set-Cookie` в итоговый ответ.
 - API конкретной бизнес-области находится внутри её entity или feature.
 - Серверные запросы Next.js отделены от браузерных API-модулей.
 - Запросы из UI выполняются через React Query hooks или API соответствующего

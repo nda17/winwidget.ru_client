@@ -1,4 +1,5 @@
 import {
+	type ITokenInside,
 	UserRole,
 	type TProtectUserData
 } from '@/entities/user/model/auth.types'
@@ -12,12 +13,16 @@ export type TUserDataState = {
 }
 
 export const transformUserToState = (
-	user: TProtectUserData
+	user: TProtectUserData | ITokenInside
 ): TUserDataState | null => {
+	const id = 'sub' in user ? user.sub : user.id
+	const rights = 'roles' in user ? user.roles : user.rights
+
 	return {
-		...user,
+		id,
+		rights,
 		isLoggedIn: true,
-		isAdmin: user.rights.includes(UserRole.ADMIN),
-		isDev: user.rights.includes(UserRole.DEV)
+		isAdmin: rights.includes(UserRole.ADMIN),
+		isDev: rights.includes(UserRole.DEV)
 	}
 }

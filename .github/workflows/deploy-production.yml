@@ -18,12 +18,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
+      APP_REVISION: ${{ github.sha }}
+      APP_VERSION: git-${{ github.sha }}
       NEXT_PUBLIC_MODE: production
+      NEXT_PUBLIC_SITE_URL: https://winwidget.ru
       NEXT_PUBLIC_PRODUCTION_HOST: https://api.winwidget.ru
       NEXT_PUBLIC_API_URL: https://api.winwidget.ru/api/v1
       NEXT_PUBLIC_RECAPTCHA_SITE_KEY: ci-placeholder-site-key
       NEXT_PUBLIC_RECAPTCHA_HOST: https://www.recaptcha.net
-      JWT_SECRET: ci-jwt-secret
+      JWT_JWKS_URL: https://api.winwidget.ru/api/v1/auth/.well-known/jwks.json
+      JWT_ISSUER: https://api.winwidget.ru/auth
+      JWT_AUDIENCE: https://api.winwidget.ru
+      JWT_CLOCK_TOLERANCE_SECONDS: 5
+      JWT_MAX_TOKEN_LIFETIME_SECONDS: 900
 
     steps:
       - name: Checkout repository
@@ -32,7 +39,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: 9
+          version: 9.15.9
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -48,8 +55,73 @@ jobs:
       - name: Type check
         run: pnpm exec tsc --noEmit
 
+      - name: Validate production compose
+        run: |
+          docker compose --env-file .env.example -f deploy/docker-compose.prod.yml config --quiet
+          docker compose --env-file .env.example -f deploy/docker-compose.prod.yml config --format json |
+            node -e '
+              const config = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
+              const client = config.services?.client;
+              if (config.name !== "winwidget" || !client) {
+                throw new Error("Invalid frontend production Compose");
+              }
+              if (JSON.stringify(Object.keys(config.services).sort()) !== JSON.stringify(["client"])) {
+                throw new Error("Frontend Compose must contain only the client service");
+              }
+              for (const key of [
+                "JWT_JWKS_URL",
+                "JWT_ISSUER",
+                "JWT_AUDIENCE",
+                "JWT_CLOCK_TOLERANCE_SECONDS",
+                "JWT_MAX_TOKEN_LIFETIME_SECONDS",
+              ]) {
+                if (!client.environment?.[key]) {
+                  throw new Error(`Missing frontend runtime ${key}`);
+                }
+              }
+              for (const key of [
+                "JWT_SECRET",
+                "JWT_ACCESS_PRIVATE_KEY_BASE64",
+                "JWT_ACCESS_JWKS_BASE64",
+              ]) {
+                if (key in (client.environment ?? {})) {
+                  throw new Error(`Frontend must not receive ${key}`);
+                }
+              }
+              const expectedBuildArgs = {
+                NEXT_PUBLIC_MODE: "production",
+                NEXT_PUBLIC_SITE_URL: "https://winwidget.ru",
+                NEXT_PUBLIC_PRODUCTION_HOST: "https://api.winwidget.ru",
+                NEXT_PUBLIC_API_URL: "https://api.winwidget.ru/api/v1",
+                NEXT_PUBLIC_RECAPTCHA_HOST: "https://www.recaptcha.net",
+              };
+              for (const [key, value] of Object.entries(expectedBuildArgs)) {
+                if (client.build?.args?.[key] !== value) {
+                  throw new Error(`Unexpected frontend build argument ${key}`);
+                }
+              }
+              if (
+                !client.build?.args?.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ||
+                client.build.args.NEXT_PUBLIC_RECAPTCHA_SITE_KEY.startsWith("change_me")
+              ) {
+                throw new Error("Frontend production reCAPTCHA site key is missing");
+              }
+              if (client.build?.args?.APP_REVISION !== process.env.APP_REVISION) {
+                throw new Error("Frontend build revision is not pinned");
+              }
+              if (client.image !== `winwidget-client:${process.env.APP_VERSION}`) {
+                throw new Error("Frontend image tag is not pinned");
+              }
+            '
+
       - name: Build
-        run: pnpm build
+        run: |
+          pnpm build
+          docker compose --env-file .env.example -f deploy/docker-compose.prod.yml build client
+          test "$(
+            docker image inspect "winwidget-client:$APP_VERSION" \
+              --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}'
+          )" = "$APP_REVISION"
 
   deploy:
     needs: verify
@@ -76,11 +148,14 @@ jobs:
       - name: Deploy frontend on VPS
         env:
           APP_ROOT: /opt/winwidget
+          DEPLOY_REVISION: ${{ github.sha }}
           SSH_HOST: ${{ secrets.PRODUCTION_SSH_HOST }}
           SSH_PORT: ${{ secrets.PRODUCTION_SSH_PORT }}
           SSH_USER: ${{ secrets.PRODUCTION_SSH_USER }}
         run: |
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" <<EOF
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -p "$SSH_PORT" \
+            "$SSH_USER@$SSH_HOST" \
+            "APP_ROOT='$APP_ROOT' EXPECTED_REVISION='$DEPLOY_REVISION' bash -s" <<'EOF'
           set -euo pipefail
           cd "$APP_ROOT/winwidget.ru_client"
           git fetch origin prod

@@ -1,4 +1,7 @@
-import { getAuthWithRefresh } from '@/features/auth/server/refresh-middleware-token'
+import {
+	copySetCookieHeaders,
+	getAuthWithRefresh
+} from '@/features/auth/server/refresh-middleware-token'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const adminMiddleware = async (request: NextRequest) => {
@@ -12,8 +15,22 @@ export const adminMiddleware = async (request: NextRequest) => {
 	}
 
 	if (user?.isLoggedIn) {
-		return NextResponse.redirect(new URL('/cabinet', request.url))
+		const redirect = NextResponse.redirect(
+			new URL('/cabinet', request.url)
+		)
+
+		if (response) {
+			copySetCookieHeaders(response, redirect)
+		}
+
+		return redirect
 	}
 
-	return NextResponse.redirect(new URL('/login', request.url))
+	const redirect = NextResponse.redirect(new URL('/login', request.url))
+
+	if (response) {
+		copySetCookieHeaders(response, redirect)
+	}
+
+	return redirect
 }

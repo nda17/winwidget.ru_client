@@ -1,0 +1,29 @@
+name: winwidget
+
+services:
+  client:
+    image: winwidget-client:${APP_VERSION:-latest}
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        APP_REVISION: ${APP_REVISION:-unknown}
+        NEXT_PUBLIC_MODE: ${NEXT_PUBLIC_MODE:-production}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+        NEXT_PUBLIC_PRODUCTION_HOST: ${NEXT_PUBLIC_PRODUCTION_HOST}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_RECAPTCHA_SITE_KEY: ${NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+        NEXT_PUBLIC_RECAPTCHA_HOST: ${NEXT_PUBLIC_RECAPTCHA_HOST:-https://www.recaptcha.net}
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      JWT_JWKS_URL: ${JWT_JWKS_URL}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_AUDIENCE: ${JWT_AUDIENCE}
+      JWT_CLOCK_TOLERANCE_SECONDS: ${JWT_CLOCK_TOLERANCE_SECONDS:-5}
+      JWT_MAX_TOKEN_LIFETIME_SECONDS: ${JWT_MAX_TOKEN_LIFETIME_SECONDS:-900}
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${CLIENT_HOST_PORT:-3000}:3000"

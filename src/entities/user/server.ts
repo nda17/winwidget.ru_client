@@ -1,4 +1,4 @@
-export type { ITokenInside } from './model/auth.types'
+export { UserRole, type ITokenInside } from './model/auth.types'
 export {
 	transformUserToState,
 	type TUserDataState

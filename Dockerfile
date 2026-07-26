@@ -42,10 +42,15 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
+ARG APP_REVISION=unknown
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+ENV APP_REVISION=${APP_REVISION}
+
+LABEL org.opencontainers.image.revision="${APP_REVISION}"
 
 RUN addgroup -S -g 1001 nodejs \
 	&& adduser -S -D -H -u 1001 -G nodejs nextjs

@@ -8,7 +8,6 @@ export { EnumTokens } from './token-names'
 export {
 	getAccessToken,
 	getAccessTokenExpiresAt,
-	getRefreshToken,
 	isAccessTokenValid,
 	removeFromStorage,
 	saveTokenStorage
