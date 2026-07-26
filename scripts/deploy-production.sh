@@ -217,8 +217,14 @@ compose() {
 }
 
 compose config --quiet
+compose build client
 compose config --format json |
-	node -e '
+	docker run --rm -i --network none \
+		-e APP_REVISION \
+		-e APP_VERSION \
+		--entrypoint node \
+		"winwidget-client:$APP_VERSION" \
+		-e '
 		const config = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
 		const services = config.services ?? {};
 		if (config.name !== "winwidget") {
@@ -286,7 +292,7 @@ compose config --format json |
 		}
 	'
 
-compose up -d --build client
+compose up -d --no-build client
 
 for ((attempt = 1; attempt <= HEALTHCHECK_ATTEMPTS; attempt++)); do
 	if curl -fsS "$HEALTHCHECK_URL" > /dev/null; then
