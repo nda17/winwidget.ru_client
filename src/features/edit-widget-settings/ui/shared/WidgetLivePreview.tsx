@@ -98,6 +98,10 @@ const MOBILE_PREVIEW_FRAME = {
 	width: 390,
 	height: 680
 }
+const PREVIEW_DEVICE_HORIZONTAL_INSET: Record<PreviewDevice, number> = {
+	desktop: 52,
+	mobile: 68
+}
 const MOBILE_PREVIEW_BREAKPOINT = 600
 const DEFAULT_PREVIEW_SCALE = 0.62
 const DEFAULT_PREVIEW_LAYOUT = {
@@ -126,7 +130,11 @@ const getPreviewLayout = (
 ) => {
 	const frame =
 		device === 'mobile' ? MOBILE_PREVIEW_FRAME : DESKTOP_PREVIEW_FRAME
-	const scale = Math.min(1, containerWidth / frame.width)
+	const availableFrameWidth = Math.max(
+		0,
+		containerWidth - PREVIEW_DEVICE_HORIZONTAL_INSET[device]
+	)
+	const scale = Math.min(1, availableFrameWidth / frame.width)
 
 	return {
 		frameWidth: frame.width,
@@ -989,25 +997,69 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 			{!isCollapsed && (
 				<>
 					<div className={styles.previewViewport} ref={previewViewportRef}>
-						{canRestartPreview && surface === 'dialog' && (
-							<button
-								type="button"
-								className={styles.previewRestart}
-								onClick={restartPreview}
+						<div
+							className={`${styles.previewDevice} ${
+								device === 'mobile' ? styles.previewDeviceMobile : ''
+							}`}
+						>
+							{device === 'mobile' && (
+								<>
+									<span
+										className={styles.mobileControlsLeft}
+										aria-hidden="true"
+									/>
+									<span
+										className={styles.mobileControlsRight}
+										aria-hidden="true"
+									/>
+								</>
+							)}
+							{device === 'desktop' && (
+								<span
+									className={styles.desktopCamera}
+									aria-hidden="true"
+								/>
+							)}
+							<div
+								className={`${styles.deviceScreen} ${
+									device === 'mobile'
+										? styles.deviceScreenMobile
+										: styles.deviceScreenDesktop
+								}`}
 							>
-								Попробовать снова
-							</button>
-						)}
-						<div className={styles.previewCrop} style={cropStyle}>
-							<iframe
-								key={previewKey}
-								className={styles.previewFrame}
-								title={`Предпросмотр: ${getTypeLabel(props.type)}`}
-								srcDoc={previewDocument}
-								sandbox="allow-scripts"
-								scrolling="no"
-								style={frameStyle}
-							/>
+								{device === 'mobile' && (
+									<span
+										className={styles.mobileDynamicIsland}
+										aria-hidden="true"
+									/>
+								)}
+								{canRestartPreview && surface === 'dialog' && (
+									<button
+										type="button"
+										className={styles.previewRestart}
+										onClick={restartPreview}
+									>
+										Попробовать снова
+									</button>
+								)}
+								<div className={styles.previewCrop} style={cropStyle}>
+									<iframe
+										key={previewKey}
+										className={styles.previewFrame}
+										title={`Предпросмотр: ${getTypeLabel(props.type)}`}
+										srcDoc={previewDocument}
+										sandbox="allow-scripts"
+										scrolling="no"
+										style={frameStyle}
+									/>
+								</div>
+							</div>
+							{device === 'desktop' && (
+								<div className={styles.desktopStand} aria-hidden="true">
+									<span className={styles.desktopStandNeck} />
+									<span className={styles.desktopStandBase} />
+								</div>
+							)}
 						</div>
 					</div>
 					<p className={styles.previewNotice}>

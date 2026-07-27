@@ -45,11 +45,64 @@
 }
 
 .previewViewport {
-	@apply flex items-start justify-center overflow-hidden rounded-lg border border-[#e0d6f0] bg-[#0d0d1a] relative;
+	@apply relative flex items-center justify-center overflow-hidden rounded-lg border border-[#e0d6f0] bg-[#ebe8f0] p-4;
+}
+
+.previewDevice {
+	@apply relative flex w-fit max-w-full flex-col items-center;
+}
+
+.previewDeviceMobile {
+	@apply mx-1;
+}
+
+.deviceScreen {
+	@apply relative isolate w-fit overflow-hidden bg-[#0d0d1a];
+}
+
+.deviceScreenDesktop {
+	@apply rounded-[18px] border-[8px] border-[#202126] shadow-[0_18px_45px_rgb(13_13_26_/_0.24)];
+}
+
+.deviceScreenMobile {
+	@apply rounded-[42px] border-[10px] border-[#202126] shadow-[0_20px_45px_rgb(13_13_26_/_0.28)];
+}
+
+.desktopCamera {
+	@apply pointer-events-none absolute left-1/2 top-[3px] z-20 h-[5px] w-[5px] -translate-x-1/2 rounded-full border border-white/10 bg-[#08090c];
+}
+
+.mobileDynamicIsland {
+	@apply pointer-events-none absolute left-1/2 top-3 z-20 h-6 w-[5.5rem] -translate-x-1/2 rounded-full border border-white/10 bg-[#050509] shadow-sm;
+}
+
+.mobileControlsLeft,
+.mobileControlsRight {
+	@apply pointer-events-none absolute z-10 w-[3px] bg-[#16171b];
+}
+
+.mobileControlsLeft {
+	@apply -left-[3px] top-[6.5rem] h-14 rounded-l;
+}
+
+.mobileControlsRight {
+	@apply -right-[3px] top-[8rem] h-16 rounded-r;
+}
+
+.desktopStand {
+	@apply flex h-12 w-[32%] flex-col items-center;
+}
+
+.desktopStandNeck {
+	@apply h-9 w-[38%] rounded-b-md bg-gradient-to-r from-[#aeb0b5] via-[#eff0f2] to-[#aeb0b5];
+}
+
+.desktopStandBase {
+	@apply h-2 w-full rounded-full bg-gradient-to-b from-[#e8e9eb] to-[#9b9da3] shadow-[0_5px_12px_rgb(13_13_26_/_0.18)];
 }
 
 .previewRestart {
-	@apply absolute bottom-[10px] z-10 rounded-xl font-bold text-sm tracking-[0.05em] cursor-pointer border-none text-white transition-[opacity,transform] duration-200 py-[0.1rem] px-[0.7rem];
+	@apply absolute bottom-[10px] left-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-xl font-bold text-sm tracking-[0.05em] cursor-pointer border-none text-white transition-[opacity,transform] duration-200 py-[0.1rem] px-[0.7rem];
 	background: linear-gradient(
 		87.12deg,
 		#470b58 1.98%,
