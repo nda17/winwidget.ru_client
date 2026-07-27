@@ -14,7 +14,7 @@
 }
 
 .modal {
-	@apply relative flex w-full max-w-[520px] flex-col overflow-y-auto rounded-[24px] border border-white/10 bg-[#130824] px-6 pb-5 pt-9 text-white outline-none;
+	@apply relative flex w-full max-w-[520px] flex-col overflow-y-auto rounded-[24px] border border-white/10 bg-[#130824] px-6 pb-5 pt-9 font-sans text-white outline-none;
 	max-height: calc(100svh - 24px);
 	box-shadow:
 		0 32px 90px rgba(0, 0, 0, 0.58),

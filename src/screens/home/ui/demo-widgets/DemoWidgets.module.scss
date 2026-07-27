@@ -6,7 +6,7 @@
 /* ── Bubble cloud ─────────────────────────────────────────── */
 
 .bubble {
-	@apply absolute;
+	@apply absolute font-sans;
 	top: 50%;
 	right: calc(100% + 14px);
 	transform: translateY(-50%);
@@ -19,10 +19,6 @@
 	box-shadow:
 		0 16px 40px rgba(71, 5, 251, 0.18),
 		0 8px 18px rgba(15, 23, 42, 0.08);
-	font-family:
-		system-ui,
-		-apple-system,
-		sans-serif;
 	animation: bubbleIn 350ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 

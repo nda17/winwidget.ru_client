@@ -54,7 +54,7 @@
 
 		.title {
 			@apply leading-[1.45] text-[1.8rem] md:text-[2.5rem] lg:text-[48px] text-center text-[#fdfdfd] relative font-semibold;
-			font-family: var(--font-family);
+			@apply font-display;
 			text-shadow:
 				0 2px 24px rgb(0 0 0 / 0.35),
 				0 1px 4px rgb(0 0 0 / 0.2);
@@ -141,7 +141,7 @@
 
 			li {
 				@apply flex items-center gap-3 whitespace-nowrap text-[18px] font-semibold leading-[1.4] text-white/70;
-				font-family: var(--second-family);
+				@apply font-sans;
 				text-shadow: 0 1px 10px rgb(0 0 0 / 0.24);
 			}
 

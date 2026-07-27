@@ -59,7 +59,7 @@
 
 /* ── Card ── */
 .card {
-	@apply relative flex flex-col items-center rounded-[20px] overflow-hidden gap-7 min-h-[calc(100dvh-24px)] justify-center w-full;
+	@apply relative flex min-h-[calc(100dvh-24px)] w-full flex-col items-center justify-center gap-7 overflow-hidden rounded-[20px] font-sans;
 	padding: 28px 20px 24px;
 	background: #130824;
 	box-shadow:

@@ -24,7 +24,7 @@
 
 .title {
 	@apply text-[32px] font-semibold text-center mb-[2.5rem] text-[#22155c];
-	font-family: var(--font-family);
+	@apply font-display;
 
 	@media (max-width: 640px) {
 		@apply text-2xl mb-[1.8rem];
@@ -33,7 +33,7 @@
 
 .subtitle {
 	@apply text-center text-[1rem] font-semibold leading-[1.45] text-[#7b3fa0] md:text-[1.1rem];
-	font-family: var(--font-family);
+	@apply font-display;
 }
 
 .card {
@@ -80,7 +80,7 @@
 
 .cardTitle {
 	@apply relative z-[1] mx-auto max-w-[720px] text-[1.08rem] font-semibold leading-[1.36] text-[#15183d] md:text-[1.35rem];
-	font-family: var(--font-family);
+	@apply font-display;
 }
 
 .items {
@@ -161,5 +161,5 @@
 
 .itemText {
 	@apply relative z-[1] max-w-full text-center text-[1rem] font-semibold leading-[1.25] text-[#15183d];
-	font-family: var(--second-family);
+	@apply font-sans;
 }

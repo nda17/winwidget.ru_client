@@ -14,7 +14,7 @@
 }
 
 .card {
-	@apply relative flex flex-col rounded-[20px] overflow-hidden w-full;
+	@apply relative flex w-full flex-col overflow-hidden rounded-[20px] font-sans;
 	padding: 44px 24px 32px;
 	background: #130824;
 	box-shadow:

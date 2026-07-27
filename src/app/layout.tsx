@@ -1,5 +1,5 @@
 import Layout from '@/app/_ui/layout/Layout'
-import { criticalRoboto, criticalUnbounded } from '@/app/config/fonts'
+import { brandUnbounded } from '@/app/config/fonts'
 import AppProviders from '@/app/providers/AppProviders'
 import '@/app/styles/globals.scss'
 import { EnumTokens } from '@/shared/api/token-names'
@@ -48,10 +48,7 @@ const RootLayout = async ({ children }: PropsWithChildren<unknown>) => {
 	)
 
 	return (
-		<html
-			lang="ru"
-			className={`${criticalRoboto.variable} ${criticalUnbounded.variable}`}
-		>
+		<html lang="ru" className={brandUnbounded.variable}>
 			{headHtml && <head dangerouslySetInnerHTML={{ __html: headHtml }} />}
 			<body>
 				<AppProviders hasSessionHint={hasSessionHint}>

@@ -16,7 +16,7 @@
 
 .title {
 	@apply text-[32px] font-semibold text-center mb-[2.5rem] text-[#22155c];
-	font-family: var(--font-family);
+	@apply font-display;
 
 	@media (max-width: 640px) {
 		@apply text-2xl mb-[1.8rem];
@@ -106,7 +106,7 @@
 .comingSoon {
 	@apply absolute top-[14px] right-[14px] z-[2] px-3 py-1 rounded-full text-[11px] font-bold uppercase text-[#7b3fa0] bg-[#f0e8ff] border border-[#d4b8f5];
 	letter-spacing: 0.5px;
-	font-family: var(--second-family);
+	@apply font-sans;
 }
 
 /* Wheel preview */
@@ -294,7 +294,7 @@
 .cardTitle {
 	@apply font-bold text-[#1a1a1a] leading-[1.2] mb-[0.4rem];
 	font-size: 20px;
-	font-family: var(--font-family);
+	@apply font-display;
 
 	@media (max-width: 900px) {
 		@apply text-[17px];
@@ -303,7 +303,7 @@
 
 .cardDesc {
 	@apply text-[#888] text-[14px] leading-[1.45] whitespace-pre-line;
-	font-family: var(--second-family);
+	@apply font-sans;
 }
 
 /* Dots (mobile) */
@@ -365,7 +365,7 @@
 
 .ctaButton {
 	@apply inline-flex items-center gap-3 text-[16px] font-semibold text-white rounded-full py-[0.85rem] pr-[1.2rem] pl-[2.4rem];
-	font-family: var(--font-family);
+	@apply font-display;
 	background: linear-gradient(
 		90deg,
 		#6d28d9 0%,

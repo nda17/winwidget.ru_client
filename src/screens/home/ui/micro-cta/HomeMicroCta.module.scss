@@ -12,7 +12,7 @@
 
 .text {
 	@apply whitespace-pre-line text-[1rem] font-semibold leading-[1.35] text-[#22155c];
-	font-family: var(--font-family);
+	@apply font-display;
 }
 
 .button {

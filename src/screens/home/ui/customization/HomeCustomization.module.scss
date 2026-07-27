@@ -24,7 +24,7 @@
 
 .title {
 	@apply text-[32px] font-semibold text-center mb-[2.5rem] text-[#22155c];
-	font-family: var(--font-family);
+	@apply font-display;
 
 	@media (max-width: 640px) {
 		@apply text-2xl mb-[1.8rem];
@@ -33,7 +33,7 @@
 
 .subtitle {
 	@apply max-w-[760px] text-[1rem] font-medium leading-[1.55] text-[#4d466c] md:text-[1.12rem];
-	font-family: var(--second-family);
+	@apply font-sans;
 }
 
 .cards {
@@ -76,12 +76,12 @@
 
 .cardTitle {
 	@apply relative z-[1] mb-2 text-[1rem] font-semibold leading-[1.22] text-[#15183d];
-	font-family: var(--font-family);
+	@apply font-display;
 }
 
 .cardText {
 	@apply relative z-[1] text-[0.88rem] leading-[1.45] text-[#4f4864];
-	font-family: var(--second-family);
+	@apply font-sans;
 }
 
 .featureBar {
@@ -112,7 +112,7 @@
 
 .featureItem {
 	@apply flex min-h-[78px] items-center justify-center gap-3 px-4 text-center text-[1rem] font-semibold leading-[1.25];
-	font-family: var(--font-family);
+	@apply font-display;
 
 	&:not(:last-child) {
 		@apply border-r border-white/[0.24];
@@ -130,5 +130,5 @@
 
 .bottomText {
 	@apply text-center text-[1rem] font-semibold leading-[1.45] text-[#7b3fa0] md:text-[1.1rem];
-	font-family: var(--font-family);
+	@apply font-display;
 }

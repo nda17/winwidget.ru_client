@@ -26,6 +26,12 @@ const config: Config = {
 		},
 
 		extend: {
+			fontFamily: {
+				sans: ['var(--font-sans)'],
+				display: ['var(--font-display)'],
+				mono: ['var(--font-mono)']
+			},
+
 			colors: {
 				primary: '#FF9902',
 				secondary: '#161D25',

@@ -21,10 +21,10 @@
 
 .title {
 	@apply whitespace-pre-line text-[1.35rem] font-semibold leading-[1.25] text-[#22155c];
-	font-family: var(--font-family);
+	@apply font-display;
 }
 
 .text {
 	@apply mt-4 whitespace-pre-line text-[0.95rem] font-medium leading-[1.65] text-[#675d76];
-	font-family: var(--second-family);
+	@apply font-sans;
 }

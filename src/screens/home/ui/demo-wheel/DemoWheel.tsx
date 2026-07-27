@@ -590,7 +590,8 @@ const DemoWheel = ({
 															dominantBaseline="middle"
 															transform={`rotate(${mid}, ${tx}, ${ty})`}
 															style={{
-																fontFamily: 'Arial, sans-serif',
+																fontFamily:
+																	'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
 																fontWeight: 700,
 																fontSize: 13,
 																fill: s.textColor

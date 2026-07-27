@@ -17,7 +17,7 @@
 		@apply flex flex-col gap-4 items-center;
 		.title {
 			@apply text-[28px] md:text-[30px] lg:text-[32px] font-semibold text-center mb-[2.5rem] text-[#22155c];
-			font-family: var(--font-family);
+			@apply font-display;
 		}
 		.subtitle {
 			@apply text-[18px] text-[#2F2F2F] mb-[50px];
@@ -115,7 +115,7 @@
 
 .cardBadge {
 	@apply inline-flex items-center shrink-0 rounded-full px-3 py-[0.42rem] text-[11px] leading-none font-semibold uppercase tracking-[0.08em];
-	font-family: var(--second-family);
+	@apply font-sans;
 	color: color-mix(in srgb, var(--card-accent) 88%, #3a2f49);
 	background: color-mix(in srgb, var(--card-accent) 10%, white);
 	border: 1px solid color-mix(in srgb, var(--card-accent) 22%, white);
@@ -148,7 +148,7 @@
 
 .text {
 	@apply flex-1 text-[18px] font-medium text-[#4d466c] max-w-[15ch] z-1;
-	font-family: var(--second-family);
+	@apply font-sans;
 	font-weight: 500;
 	letter-spacing: -0.015em;
 
@@ -159,7 +159,7 @@
 
 .num {
 	@apply absolute bottom-[0.2rem] right-[0.7rem] font-bold leading-none text-[58px];
-	font-family: var(--font-family);
+	@apply font-display;
 	color: color-mix(in srgb, var(--card-accent) 16%, white);
 	text-shadow: 0 1px 0 rgb(255 255 255 / 0.8);
 }

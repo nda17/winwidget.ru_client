@@ -20,7 +20,7 @@
 
 .headingTitle {
 	@apply text-[2xl] font-semibold text-center mb-[1.8rem] text-[#22155c];
-	font-family: var(--font-family);
+	@apply font-display;
 
 	@media (min-width: 641px) {
 		@apply text-[32px] mb-[2.5rem];
@@ -29,7 +29,7 @@
 
 .title {
 	@apply text-[32px] font-semibold text-center mb-[2.5rem] text-[#22155c];
-	font-family: var(--font-family);
+	@apply font-display;
 
 	@media (max-width: 640px) {
 		@apply text-2xl mb-[1.8rem];
@@ -251,7 +251,7 @@
 	box-shadow:
 		inset 0 1px 0 rgb(255 255 255 / 0.96),
 		0 10px 20px var(--card-accent-sheen);
-	font-family: var(--second-family);
+	@apply font-sans;
 	letter-spacing: 0.01em;
 	text-align: center;
 	white-space: nowrap;
@@ -259,20 +259,20 @@
 
 .title {
 	@apply mb-2 text-[1.08rem] font-bold leading-[1.14] text-[#120f1f];
-	font-family: var(--font-family);
+	@apply font-display;
 	letter-spacing: 0;
 	text-shadow: 0 1px 0 rgb(255 255 255 / 0.7);
 }
 
 .description {
 	@apply text-[0.82rem] leading-[1.5] text-[#4b4361];
-	font-family: var(--second-family);
+	@apply font-sans;
 	letter-spacing: 0;
 }
 
 .cardFooter {
 	@apply mt-4 flex items-center text-[0.68rem] font-medium text-[#6c637d];
-	font-family: var(--second-family);
+	@apply font-sans;
 	letter-spacing: 0;
 }
 

@@ -52,10 +52,10 @@
 
 .title {
 	@apply relative z-[1] text-[1.02rem] font-semibold leading-[1.25] text-[#15183d];
-	font-family: var(--font-family);
+	@apply font-display;
 }
 
 .text {
 	@apply relative z-[1] mt-3 whitespace-pre-line text-[0.93rem] font-medium leading-[1.45] text-[#675d76];
-	font-family: var(--second-family);
+	@apply font-sans;
 }

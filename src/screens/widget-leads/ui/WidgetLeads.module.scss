@@ -12,7 +12,7 @@
 }
 .title {
 	@apply relative z-[1] text-[2rem] font-bold mb-5 text-center text-[#11132f];
-	font-family: var(--font-family);
+	@apply font-display;
 }
 .loading,
 .empty {
@@ -51,11 +51,11 @@
 }
 .metricLabel {
 	@apply text-[0.82rem] leading-[1.2] text-[#9a8fb2];
-	font-family: var(--second-family);
+	@apply font-sans;
 }
 .metricValue {
 	@apply text-[1.8rem] font-bold leading-none text-[#7438d4];
-	font-family: var(--font-family);
+	@apply font-display;
 }
 .statsBlock {
 	@apply relative z-[1] w-full max-w-[64rem] bg-white/[0.76] border border-white/80 rounded-[24px] mb-6 px-6 py-5;

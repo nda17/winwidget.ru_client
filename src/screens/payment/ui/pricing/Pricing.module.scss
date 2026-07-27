@@ -3,7 +3,7 @@
 }
 .title {
 	@apply relative z-[1] text-[2rem] font-bold mb-6 text-center text-[#22155c];
-	font-family: var(--font-family);
+	@apply font-display;
 }
 .currentPlan {
 	@apply relative z-[1] flex items-center gap-4 mb-6 px-5 py-3 rounded-2xl text-sm bg-white/[0.76] border border-white/80 text-[#3b3354];

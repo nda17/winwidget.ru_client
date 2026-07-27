@@ -9,12 +9,12 @@
 
 .text {
 	@apply max-w-[720px] text-center text-[1rem] font-semibold leading-[1.45] text-[#22155c] md:text-[1.12rem];
-	font-family: var(--font-family);
+	@apply font-display;
 }
 
 .button {
 	@apply flex min-h-[64px] w-full max-w-[640px] flex-shrink-0 cursor-pointer items-center justify-center gap-4 whitespace-normal rounded-[1.35rem] px-6 py-[1rem] text-[1rem] font-semibold text-white sm:text-[1.18rem];
-	font-family: var(--font-family);
+	@apply font-display;
 	background: linear-gradient(
 		90deg,
 		#6d28d9 0%,
@@ -80,5 +80,5 @@
 
 .benefitText {
 	@apply text-[0.83rem] font-medium leading-[1.25] text-[#302954];
-	font-family: var(--second-family);
+	@apply font-sans;
 }

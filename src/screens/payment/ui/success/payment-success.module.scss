@@ -43,12 +43,12 @@
 
 .title {
 	@apply text-2xl font-bold text-[#22155c] mb-3 leading-[1.3];
-	font-family: var(--font-family);
+	@apply font-display;
 }
 
 .description {
 	@apply text-[0.9rem] text-[#888] leading-[1.6] mb-8;
-	font-family: var(--second-family);
+	@apply font-sans;
 }
 
 .planName {
@@ -62,7 +62,7 @@
 
 .button {
 	@apply flex items-center justify-center w-full py-[0.85rem] px-6 rounded-[12px] text-[0.9rem] font-semibold cursor-pointer border-none text-white no-underline transition-[opacity,transform] duration-200;
-	font-family: var(--font-family);
+	@apply font-display;
 	background: linear-gradient(
 		87.12deg,
 		#470b58 1.98%,
@@ -82,7 +82,7 @@
 
 .buttonSecondary {
 	@apply flex items-center justify-center w-full py-[0.85rem] px-6 rounded-[12px] text-[0.9rem] font-semibold cursor-pointer bg-transparent text-[#7b3fa0] no-underline border-[1.5px] border-[#e0d6f0] transition-[border-color,color] duration-200;
-	font-family: var(--font-family);
+	@apply font-display;
 
 	&:hover {
 		@apply border-[#c4a8e8] text-[#5a2d7a];

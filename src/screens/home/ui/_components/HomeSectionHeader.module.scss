@@ -13,7 +13,7 @@
 
 .title {
 	@apply whitespace-pre-line text-center text-[32px] font-semibold leading-[1.15] text-[#22155c];
-	font-family: var(--font-family);
+	@apply font-display;
 
 	@media (max-width: 640px) {
 		@apply text-2xl;
@@ -22,5 +22,5 @@
 
 .subtitle {
 	@apply whitespace-pre-line text-center text-[1rem] font-semibold leading-[1.45] text-[#7b3fa0] md:text-[1.08rem];
-	font-family: var(--font-family);
+	@apply font-display;
 }

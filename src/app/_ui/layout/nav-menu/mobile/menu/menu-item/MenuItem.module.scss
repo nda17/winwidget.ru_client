@@ -1,7 +1,7 @@
 .wrapper {
 	.link-button {
 		@apply text-[15px] bg-transparent text-[#444] font-medium flex items-center gap-[10px] w-full px-[14px] py-[11px] rounded-[12px] border border-transparent transition-[background,border-color,color] duration-200;
-		font-family: var(--second-family);
+		@apply font-sans;
 
 		> svg {
 			@apply w-[22px] h-[22px] shrink-0 text-[#c21b84] fill-[#c21b84];

@@ -3,7 +3,7 @@
 
 	.code {
 		@apply text-[5rem] sm:text-[8rem] lg:text-[9rem] font-bold leading-none mb-4 select-none;
-		font-family: var(--font-unbounded);
+		@apply font-display;
 		background: linear-gradient(
 			87.12deg,
 			#470b58 1.98%,
@@ -18,7 +18,7 @@
 
 	.title {
 		@apply text-2xl font-semibold mb-3 text-[#2a1540];
-		font-family: var(--font-unbounded);
+		@apply font-display;
 	}
 
 	.description {
