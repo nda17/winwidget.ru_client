@@ -50,6 +50,8 @@ export interface IAdminUserListFilters {
 	registeredFrom?: string
 	registeredTo?: string
 	subscription?: AdminUserSubscriptionFilter
+	includeDeleted?: boolean
+	deletedOnly?: boolean
 }
 
 export type AdminUserOverviewPaymentStatus =
@@ -190,8 +192,14 @@ class UserService {
 	}
 
 	async deleteUser(id: string) {
-		return axiosInterceptorsRequest.delete<string>(
+		return axiosInterceptorsRequest.delete<IUser>(
 			`${this._BASE_URL}/user/${id}`
+		)
+	}
+
+	async restoreUser(id: string) {
+		return axiosInterceptorsRequest.patch<IUser>(
+			`${this._BASE_URL}/user/${id}/restore`
 		)
 	}
 

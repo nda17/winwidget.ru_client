@@ -3,8 +3,17 @@
 
 	.item {
 		@apply transition-all;
-		&:hover {
+
+		&:hover:not(:disabled) {
 			@apply scale-110;
 		}
+
+		&:disabled {
+			@apply cursor-not-allowed opacity-50;
+		}
+	}
+
+	.restoreItem {
+		@apply text-green-700;
 	}
 }

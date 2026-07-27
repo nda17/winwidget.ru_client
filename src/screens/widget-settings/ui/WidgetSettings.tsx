@@ -33,7 +33,7 @@ import { errorCatch } from '@/shared/api'
 import SkeletonLoader from '@/shared/ui/skeleton-loader/SkeletonLoader'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import styles from './WidgetSettings.module.scss'
 
@@ -204,6 +204,8 @@ const WIDGET_TYPE_LABELS: Record<WidgetSettingsType, string> = {
 	calculator: 'Калькулятор стоимости'
 }
 
+const TWO_COLUMN_SETTINGS_MEDIA_QUERY = '(min-width: 1101px)'
+
 interface WidgetSettingsProps {
 	type: WidgetSettingsType
 	id: string
@@ -216,6 +218,8 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 	const isAuthResolved = useAuthStore(state => state.isAuthResolved)
 	const [previewPortalTarget, setPreviewPortalTarget] =
 		useState<HTMLDivElement | null>(null)
+	const previewColumnRef = useRef<HTMLElement | null>(null)
+	const editorColumnRef = useRef<HTMLElement | null>(null)
 	const source = WIDGET_SETTINGS_SOURCES[type]
 	const settingsQueryKey = [
 		source.ownerQueryKey,
@@ -243,6 +247,51 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 			{ id: `widget-settings-load-${type}-${id}` }
 		)
 	}, [error, id, isError, type])
+
+	useEffect(() => {
+		const previewColumn = previewColumnRef.current
+		const editorColumn = editorColumnRef.current
+
+		if (!previewPortalTarget || !previewColumn || !editorColumn) return
+
+		const twoColumnSettings = window.matchMedia(
+			TWO_COLUMN_SETTINGS_MEDIA_QUERY
+		)
+
+		const syncPreviewHeight = () => {
+			if (!twoColumnSettings.matches) {
+				previewColumn.style.removeProperty('height')
+				previewPortalTarget.dataset.constrainPreviewHeight = 'false'
+				return
+			}
+
+			const editorHeight = editorColumn.getBoundingClientRect().height
+
+			if (editorHeight > 0) {
+				previewColumn.style.height = `${editorHeight}px`
+				previewPortalTarget.dataset.constrainPreviewHeight = 'true'
+			}
+		}
+
+		syncPreviewHeight()
+		window.addEventListener('resize', syncPreviewHeight)
+		twoColumnSettings.addEventListener('change', syncPreviewHeight)
+
+		const resizeObserver =
+			typeof ResizeObserver === 'undefined'
+				? null
+				: new ResizeObserver(syncPreviewHeight)
+
+		resizeObserver?.observe(editorColumn)
+
+		return () => {
+			window.removeEventListener('resize', syncPreviewHeight)
+			twoColumnSettings.removeEventListener('change', syncPreviewHeight)
+			resizeObserver?.disconnect()
+			previewColumn.style.removeProperty('height')
+			delete previewPortalTarget.dataset.constrainPreviewHeight
+		}
+	}, [previewPortalTarget])
 
 	const closeSettings = () => {
 		router.push('/cabinet?tab=widgets')
@@ -366,6 +415,7 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 
 			<div className={styles.workspace}>
 				<aside
+					ref={previewColumnRef}
 					className={styles.previewColumn}
 					aria-label="Предпросмотр виджета"
 				>
@@ -376,6 +426,7 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 				</aside>
 
 				<section
+					ref={editorColumnRef}
 					className={styles.editorColumn}
 					aria-label="Параметры виджета"
 				>

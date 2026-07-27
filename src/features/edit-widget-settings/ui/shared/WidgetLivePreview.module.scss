@@ -1,5 +1,5 @@
 .preview {
-	@apply mb-5 rounded-lg border border-[#e0d6f0] bg-[#faf8ff] p-3;
+	@apply mb-5 flex min-h-0 flex-col rounded-lg border border-[#e0d6f0] bg-[#faf8ff] p-3;
 }
 
 .previewHeader {
@@ -45,7 +45,7 @@
 }
 
 .previewViewport {
-	@apply relative flex items-center justify-center overflow-hidden rounded-lg border border-[#e0d6f0] bg-[#ebe8f0] p-4;
+	@apply relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg border border-[#e0d6f0] bg-[#ebe8f0] p-4;
 }
 
 .previewDevice {

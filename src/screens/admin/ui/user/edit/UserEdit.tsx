@@ -81,6 +81,8 @@ const EVENT_ACTION_LABELS: Record<string, string> = {
 	USER_UPDATE: 'Редактирование',
 	USER_TOGGLE_ACTIVATION: 'Статус аккаунта',
 	USER_DELETE: 'Удаление',
+	USER_SOFT_DELETE: 'Soft delete',
+	USER_RESTORE: 'Восстановление',
 	WIDGET_UPDATE: 'Редактирование виджета',
 	WIDGET_DELETE: 'Удаление виджета',
 	WIDGET_BUTTON_IMAGE_UPDATE: 'Изображение кнопки виджета',
@@ -433,9 +435,25 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 	const isUserChecked = true
 	const isAdminChecked = Boolean(watch('isAdmin'))
 	const isDevChecked = Boolean(watch('isDev'))
-	const canManageDevRole = Boolean(
+	const currentUserIsDev = Boolean(
 		currentUser?.rights?.includes(UserRole.DEV)
 	)
+	const targetIsDev = Boolean(data?.rights.includes(UserRole.DEV))
+	const isEditingCurrentUser = Boolean(
+		data?.id && currentUser?.id === data.id
+	)
+	const devRoleRestriction = !currentUserIsDev
+		? 'Изменять роль DEV может только пользователь с ролью DEV.'
+		: isEditingCurrentUser && targetIsDev
+			? 'Нельзя снять роль DEV с собственной учётной записи.'
+			: null
+	const canManageDevRole = !devRoleRestriction
+	const activationRestriction =
+		targetIsDev && !currentUserIsDev
+			? 'Изменять статус пользователя с ролью DEV может только DEV.'
+			: !isDeactivated && isEditingCurrentUser
+				? 'Нельзя деактивировать собственную учётную запись.'
+				: null
 	const isPhoneVerifiedChecked = Boolean(watch('isPhoneVerified'))
 	const hasPhoneValue = Boolean(
 		(watch('phone') ?? data?.phone ?? '').trim()
@@ -869,8 +887,8 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 										<div>
 											<p className={styles.rightCardTitle}>DEV</p>
 											<p className={styles.rightCardDescription}>
-												Права разработчика с расширенными правами админа.
-												Включает ADMIN автоматически.
+												{devRoleRestriction ??
+													'Права разработчика с расширенными правами админа. Включает ADMIN автоматически.'}
 											</p>
 										</div>
 										<input
@@ -1092,8 +1110,8 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 										/>
 									</div>
 									<p className={styles.sectionHint}>
-										Текущий статус меняется отдельным подтверждаемым
-										действием и не зависит от сохранения формы.
+										{activationRestriction ??
+											'Текущий статус меняется отдельным подтверждаемым действием и не зависит от сохранения формы.'}
 									</p>
 								</div>
 
@@ -1123,7 +1141,10 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 												? styles.activateButton
 												: styles.deactivateButton
 										)}
-										disabled={isActivationUpdating}
+										disabled={
+											isActivationUpdating ||
+											Boolean(activationRestriction)
+										}
 										onClick={() => setIsActivationConfirmOpen(true)}
 									>
 										{isActivationUpdating

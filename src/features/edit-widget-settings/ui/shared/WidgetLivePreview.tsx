@@ -103,6 +103,10 @@ const PREVIEW_DEVICE_HORIZONTAL_INSET: Record<PreviewDevice, number> = {
 	desktop: 52,
 	mobile: 68
 }
+const PREVIEW_DEVICE_VERTICAL_INSET: Record<PreviewDevice, number> = {
+	desktop: 96,
+	mobile: 56
+}
 const MOBILE_PREVIEW_BREAKPOINT = 600
 const DEFAULT_PREVIEW_SCALE = 0.62
 const DEFAULT_PREVIEW_LAYOUT = {
@@ -127,6 +131,7 @@ const hashString = (value: string) => {
 
 const getPreviewLayout = (
 	containerWidth: number,
+	containerHeight: number | undefined,
 	device: PreviewDevice
 ) => {
 	const frame =
@@ -136,7 +141,18 @@ const getPreviewLayout = (
 		containerWidth - PREVIEW_DEVICE_HORIZONTAL_INSET[device]
 	)
 	const maxScale = device === 'mobile' ? MOBILE_PREVIEW_MAX_SCALE : 1
-	const scale = Math.min(maxScale, availableFrameWidth / frame.width)
+	const heightScale =
+		containerHeight === undefined
+			? maxScale
+			: Math.max(
+					0,
+					containerHeight - PREVIEW_DEVICE_VERTICAL_INSET[device]
+				) / frame.height
+	const scale = Math.min(
+		maxScale,
+		availableFrameWidth / frame.width,
+		heightScale
+	)
 
 	return {
 		frameWidth: frame.width,
@@ -1408,8 +1424,8 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 		surface
 	)
 	const cropStyle = {
-		width: `${Math.ceil(previewLayout.frameWidth * previewLayout.scale)}px`,
-		height: `${Math.ceil(previewLayout.frameHeight * previewLayout.scale)}px`
+		width: `${Math.floor(previewLayout.frameWidth * previewLayout.scale)}px`,
+		height: `${Math.floor(previewLayout.frameHeight * previewLayout.scale)}px`
 	} as CSSProperties
 	const frameStyle = {
 		width: `${previewLayout.frameWidth}px`,
@@ -1435,11 +1451,24 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 		if (isCollapsed) return
 
 		const updateLayout = () => {
-			const containerWidth = previewViewportRef.current?.clientWidth
+			const previewViewport = previewViewportRef.current
+			const containerWidth = previewViewport?.clientWidth
+			const shouldConstrainHeight = Boolean(
+				previewViewport?.closest('[data-constrain-preview-height="true"]')
+			)
+			const containerHeight = shouldConstrainHeight
+				? previewViewport?.clientHeight
+				: undefined
 
-			if (!containerWidth) return
+			if (!containerWidth || (shouldConstrainHeight && !containerHeight)) {
+				return
+			}
 
-			const nextLayout = getPreviewLayout(containerWidth, device)
+			const nextLayout = getPreviewLayout(
+				containerWidth,
+				containerHeight,
+				device
+			)
 
 			setPreviewLayout(currentLayout => {
 				if (

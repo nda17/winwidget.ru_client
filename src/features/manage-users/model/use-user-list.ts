@@ -4,44 +4,83 @@ import {
 	IAdminUserListFilters
 } from '@/entities/user'
 import { useAuthStore } from '@/entities/user'
+import { errorCatch } from '@/shared/api'
 import {
 	useMutation,
 	useQuery,
 	useQueryClient
 } from '@tanstack/react-query'
-import axios from 'axios'
 import { ChangeEvent, MouseEvent, useState } from 'react'
 import toast from 'react-hot-toast'
+
+const USER_SOFT_DELETE_TOAST_ID = 'admin-user-soft-delete'
+const USER_RESTORE_TOAST_ID = 'admin-user-restore'
 
 const useUserList = (
 	page: number,
 	limit: number,
-	filters?: IAdminUserListFilters
+	filters?: IAdminUserListFilters,
+	enabled = true,
+	searchTermOverride?: string
 ) => {
 	const auth = useAuthStore(state => state.auth)
 	const [searchTerm, setSearchTerm] = useState('')
 	const queryClient = useQueryClient()
 	const debouncedSearch = useDebounce(searchTerm, 500)
+	const querySearchTerm = searchTermOverride ?? debouncedSearch
 
 	const { data, isLoading } = useQuery({
-		queryKey: ['get-user-list', debouncedSearch, page, limit, filters],
+		queryKey: ['get-user-list', querySearchTerm, page, limit, filters],
 		queryFn: () =>
-			UserService.fetchUserList(debouncedSearch, page, limit, filters),
+			UserService.fetchUserList(querySearchTerm, page, limit, filters),
 		select: ({ data }) => data,
-		enabled: auth
+		enabled: auth && enabled
 	})
 
-	const { mutateAsync: deleteAsync } = useMutation({
-		mutationKey: ['delete-user'],
+	const { mutate: deleteUser, isPending: isDeleting } = useMutation({
+		mutationKey: ['soft-delete-user'],
 		mutationFn: (userId: string) => UserService.deleteUser(userId),
+		onMutate() {
+			toast.loading('Удаляем пользователя...', {
+				id: USER_SOFT_DELETE_TOAST_ID
+			})
+		},
 		onSuccess() {
-			toast.success('Удаление пользователя выполнено успешно')
-			queryClient.invalidateQueries({ queryKey: ['get-user-list'] })
+			toast.success('Пользователь помечен как удалённый', {
+				id: USER_SOFT_DELETE_TOAST_ID
+			})
+			void queryClient.invalidateQueries({
+				queryKey: ['get-user-list']
+			})
 		},
 		onError(error) {
-			if (axios.isAxiosError(error)) {
-				toast.error(error.response?.data?.message)
-			}
+			toast.error(errorCatch(error) || 'Не удалось удалить пользователя', {
+				id: USER_SOFT_DELETE_TOAST_ID
+			})
+		}
+	})
+
+	const { mutate: restoreUser, isPending: isRestoring } = useMutation({
+		mutationKey: ['restore-user'],
+		mutationFn: (userId: string) => UserService.restoreUser(userId),
+		onMutate() {
+			toast.loading('Восстанавливаем пользователя...', {
+				id: USER_RESTORE_TOAST_ID
+			})
+		},
+		onSuccess() {
+			toast.success('Пользователь восстановлен', {
+				id: USER_RESTORE_TOAST_ID
+			})
+			void queryClient.invalidateQueries({
+				queryKey: ['get-user-list']
+			})
+		},
+		onError(error) {
+			toast.error(
+				errorCatch(error) || 'Не удалось восстановить пользователя',
+				{ id: USER_RESTORE_TOAST_ID }
+			)
 		}
 	})
 
@@ -57,9 +96,13 @@ const useUserList = (
 		data,
 		isLoading,
 		searchTerm,
+		debouncedSearch,
 		handleClear,
 		handleSearch,
-		deleteAsync
+		deleteUser,
+		isDeleting,
+		restoreUser,
+		isRestoring
 	}
 }
 

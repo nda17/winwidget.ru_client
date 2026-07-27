@@ -29,11 +29,15 @@
 }
 
 .previewColumn {
-	@apply sticky top-[6.5rem] flex min-h-[calc(100vh-8rem)] min-w-0 items-center justify-center;
+	@apply sticky top-[6.5rem] flex min-h-0 min-w-0 items-center justify-center;
 }
 
 .previewPortalTarget {
-	@apply w-full max-w-[48rem];
+	@apply h-full min-h-0 w-full max-w-[48rem];
+}
+
+.previewPortalTarget > * {
+	@apply mb-0 h-full min-h-0;
 }
 
 .editorColumn {

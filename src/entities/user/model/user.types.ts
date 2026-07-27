@@ -22,6 +22,7 @@ export interface IUser {
 	avatarPath?: string
 	status: UserStatus
 	personalDataConsentRevokedAt?: string | null
+	deletedAt?: string | null
 	rights: UserRole[]
 	createdAt: string
 	updatedAt: string
