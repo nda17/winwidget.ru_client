@@ -72,10 +72,6 @@
 	@apply pointer-events-none absolute left-1/2 top-[3px] z-20 h-[5px] w-[5px] -translate-x-1/2 rounded-full border border-white/10 bg-[#08090c];
 }
 
-.mobileDynamicIsland {
-	@apply pointer-events-none absolute left-1/2 top-3 z-20 h-6 w-[5.5rem] -translate-x-1/2 rounded-full border border-white/10 bg-[#050509] shadow-sm;
-}
-
 .mobileControlsLeft,
 .mobileControlsRight {
 	@apply pointer-events-none absolute z-10 w-[3px] bg-[#16171b];

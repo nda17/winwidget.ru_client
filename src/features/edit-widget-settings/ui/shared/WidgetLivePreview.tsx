@@ -95,9 +95,10 @@ const DESKTOP_PREVIEW_FRAME = {
 	height: 520
 }
 const MOBILE_PREVIEW_FRAME = {
-	width: 390,
-	height: 680
+	width: 430,
+	height: 750
 }
+const MOBILE_PREVIEW_MAX_SCALE = 390 / MOBILE_PREVIEW_FRAME.width
 const PREVIEW_DEVICE_HORIZONTAL_INSET: Record<PreviewDevice, number> = {
 	desktop: 52,
 	mobile: 68
@@ -134,7 +135,8 @@ const getPreviewLayout = (
 		0,
 		containerWidth - PREVIEW_DEVICE_HORIZONTAL_INSET[device]
 	)
-	const scale = Math.min(1, availableFrameWidth / frame.width)
+	const maxScale = device === 'mobile' ? MOBILE_PREVIEW_MAX_SCALE : 1
+	const scale = Math.min(maxScale, availableFrameWidth / frame.width)
 
 	return {
 		frameWidth: frame.width,
@@ -446,13 +448,513 @@ const buildPreviewSandboxDocument = (
 			min-width: 100%;
 			height: 100%;
 			margin: 0;
-			background: #0d0d1a;
+			position: relative;
+			background: #f7f6fb;
 			overflow: hidden;
 			overscroll-behavior: none;
 		}
 
 		body::-webkit-scrollbar {
 			display: none;
+		}
+
+		.winwidget-preview-site {
+			position: absolute;
+			inset: 0;
+			z-index: 0;
+			box-sizing: border-box;
+			overflow: hidden;
+			color: #211f32;
+			background:
+				radial-gradient(circle at 86% 17%, rgba(120, 92, 246, 0.16), transparent 28%),
+				radial-gradient(circle at 9% 92%, rgba(255, 184, 112, 0.17), transparent 25%),
+				#f8f7fc;
+			font-family:
+				-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+			pointer-events: none;
+			user-select: none;
+		}
+
+		.winwidget-preview-site::before,
+		.winwidget-preview-site::after {
+			content: "";
+			position: absolute;
+			border-radius: 999px;
+			filter: blur(1px);
+		}
+
+		.winwidget-preview-site::before {
+			width: 230px;
+			height: 230px;
+			right: -92px;
+			top: 118px;
+			background: rgba(111, 76, 241, 0.08);
+		}
+
+		.winwidget-preview-site::after {
+			width: 170px;
+			height: 170px;
+			left: -78px;
+			bottom: -82px;
+			background: rgba(255, 174, 91, 0.1);
+		}
+
+		.winwidget-preview-site__header {
+			position: relative;
+			z-index: 1;
+			display: flex;
+			height: 72px;
+			box-sizing: border-box;
+			align-items: center;
+			justify-content: space-between;
+			padding: 0 54px;
+			border-bottom: 1px solid rgba(52, 45, 89, 0.08);
+			background: rgba(255, 255, 255, 0.72);
+			backdrop-filter: blur(16px);
+		}
+
+		.winwidget-preview-site__brand {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			font-size: 17px;
+			font-weight: 800;
+			letter-spacing: 0.08em;
+		}
+
+		.winwidget-preview-site__brand-mark {
+			display: grid;
+			width: 30px;
+			height: 30px;
+			place-items: center;
+			border-radius: 10px;
+			color: #fff;
+			background: linear-gradient(135deg, #7957f2, #4d2ac8);
+			box-shadow: 0 8px 18px rgba(91, 60, 211, 0.24);
+			font-size: 14px;
+			letter-spacing: 0;
+		}
+
+		.winwidget-preview-site__nav {
+			display: flex;
+			align-items: center;
+			gap: 30px;
+			color: #68647a;
+			font-size: 13px;
+			font-weight: 600;
+		}
+
+		.winwidget-preview-site__header-action {
+			padding: 10px 18px;
+			border: 1px solid rgba(101, 72, 224, 0.18);
+			border-radius: 12px;
+			color: #5d3dd1;
+			background: #fff;
+			box-shadow: 0 8px 24px rgba(48, 38, 92, 0.08);
+			font-size: 13px;
+			font-weight: 700;
+		}
+
+		.winwidget-preview-site__menu {
+			display: none;
+			width: 36px;
+			height: 36px;
+			align-items: center;
+			justify-content: center;
+			border-radius: 11px;
+			background: #fff;
+			box-shadow: 0 7px 20px rgba(45, 37, 85, 0.09);
+		}
+
+		.winwidget-preview-site__menu::before {
+			content: "";
+			width: 15px;
+			height: 10px;
+			border-top: 2px solid #4f4969;
+			border-bottom: 2px solid #4f4969;
+		}
+
+		.winwidget-preview-site__main {
+			position: relative;
+			z-index: 1;
+			box-sizing: border-box;
+			padding: 28px 54px 24px;
+		}
+
+		.winwidget-preview-site__hero {
+			display: grid;
+			min-height: 278px;
+			grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+			align-items: center;
+			gap: 38px;
+		}
+
+		.winwidget-preview-site__eyebrow {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			padding: 7px 11px;
+			border-radius: 999px;
+			color: #6343d5;
+			background: rgba(111, 76, 241, 0.1);
+			font-size: 11px;
+			font-weight: 800;
+			letter-spacing: 0.06em;
+			text-transform: uppercase;
+		}
+
+		.winwidget-preview-site__eyebrow-dot {
+			width: 7px;
+			height: 7px;
+			border-radius: 999px;
+			background: #7654ef;
+			box-shadow: 0 0 0 4px rgba(118, 84, 239, 0.12);
+		}
+
+		.winwidget-preview-site__title {
+			max-width: 470px;
+			margin: 17px 0 12px;
+			font-size: 42px;
+			font-weight: 800;
+			letter-spacing: -0.045em;
+			line-height: 1.03;
+		}
+
+		.winwidget-preview-site__title-accent {
+			color: #6946df;
+		}
+
+		.winwidget-preview-site__text {
+			max-width: 450px;
+			margin: 0;
+			color: #716d80;
+			font-size: 14px;
+			line-height: 1.55;
+		}
+
+		.winwidget-preview-site__actions {
+			display: flex;
+			align-items: center;
+			gap: 20px;
+			margin-top: 21px;
+		}
+
+		.winwidget-preview-site__primary-action {
+			padding: 12px 19px;
+			border-radius: 12px;
+			color: #fff;
+			background: linear-gradient(135deg, #7654ef, #5633cd);
+			box-shadow: 0 12px 25px rgba(91, 58, 207, 0.24);
+			font-size: 13px;
+			font-weight: 750;
+		}
+
+		.winwidget-preview-site__secondary-action {
+			color: #514b66;
+			font-size: 13px;
+			font-weight: 700;
+		}
+
+		.winwidget-preview-site__visual {
+			position: relative;
+			height: 260px;
+		}
+
+		.winwidget-preview-site__dashboard {
+			position: absolute;
+			inset: 14px 8px 8px 0;
+			box-sizing: border-box;
+			padding: 22px;
+			border: 1px solid rgba(67, 56, 119, 0.09);
+			border-radius: 25px;
+			background: rgba(255, 255, 255, 0.94);
+			box-shadow: 0 24px 55px rgba(58, 46, 110, 0.14);
+		}
+
+		.winwidget-preview-site__dashboard-head {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		.winwidget-preview-site__dashboard-avatar {
+			width: 34px;
+			height: 34px;
+			border-radius: 11px;
+			background: linear-gradient(145deg, #ffe2bd, #ffad75);
+		}
+
+		.winwidget-preview-site__dashboard-heading {
+			flex: 1;
+		}
+
+		.winwidget-preview-site__dashboard-heading strong,
+		.winwidget-preview-site__dashboard-heading span {
+			display: block;
+		}
+
+		.winwidget-preview-site__dashboard-heading strong {
+			font-size: 12px;
+		}
+
+		.winwidget-preview-site__dashboard-heading span {
+			margin-top: 3px;
+			color: #9691a5;
+			font-size: 9px;
+		}
+
+		.winwidget-preview-site__period {
+			padding: 7px 9px;
+			border-radius: 9px;
+			color: #777187;
+			background: #f5f3fa;
+			font-size: 9px;
+			font-weight: 700;
+		}
+
+		.winwidget-preview-site__chart {
+			display: flex;
+			height: 102px;
+			align-items: flex-end;
+			gap: 9px;
+			margin-top: 22px;
+			padding: 0 7px 11px;
+			border-bottom: 1px solid #ece9f3;
+		}
+
+		.winwidget-preview-site__chart-bar {
+			flex: 1;
+			min-width: 11px;
+			border-radius: 7px 7px 3px 3px;
+			background: linear-gradient(180deg, #8a6bf5, #6544db);
+		}
+
+		.winwidget-preview-site__chart-bar:nth-child(1) {
+			height: 34%;
+			opacity: 0.52;
+		}
+
+		.winwidget-preview-site__chart-bar:nth-child(2) {
+			height: 53%;
+			opacity: 0.67;
+		}
+
+		.winwidget-preview-site__chart-bar:nth-child(3) {
+			height: 45%;
+			opacity: 0.58;
+		}
+
+		.winwidget-preview-site__chart-bar:nth-child(4) {
+			height: 72%;
+			opacity: 0.78;
+		}
+
+		.winwidget-preview-site__chart-bar:nth-child(5) {
+			height: 62%;
+			opacity: 0.7;
+		}
+
+		.winwidget-preview-site__chart-bar:nth-child(6) {
+			height: 88%;
+		}
+
+		.winwidget-preview-site__metrics {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 8px;
+			margin-top: 13px;
+		}
+
+		.winwidget-preview-site__metric {
+			padding: 9px 10px;
+			border-radius: 10px;
+			background: #f7f5fb;
+		}
+
+		.winwidget-preview-site__metric strong,
+		.winwidget-preview-site__metric span {
+			display: block;
+		}
+
+		.winwidget-preview-site__metric strong {
+			font-size: 11px;
+		}
+
+		.winwidget-preview-site__metric span {
+			margin-top: 3px;
+			color: #9a95a8;
+			font-size: 8px;
+		}
+
+		.winwidget-preview-site__growth {
+			position: absolute;
+			right: -5px;
+			top: 0;
+			display: flex;
+			align-items: center;
+			gap: 7px;
+			padding: 9px 12px;
+			border: 1px solid rgba(101, 72, 224, 0.1);
+			border-radius: 12px;
+			color: #4d3b97;
+			background: #fff;
+			box-shadow: 0 12px 25px rgba(61, 47, 119, 0.13);
+			font-size: 10px;
+			font-weight: 800;
+		}
+
+		.winwidget-preview-site__growth-icon {
+			display: grid;
+			width: 22px;
+			height: 22px;
+			place-items: center;
+			border-radius: 8px;
+			color: #fff;
+			background: #7250e8;
+			font-size: 11px;
+		}
+
+		.winwidget-preview-site__features {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 12px;
+			margin-top: 17px;
+		}
+
+		.winwidget-preview-site__feature {
+			display: flex;
+			align-items: center;
+			gap: 11px;
+			padding: 13px 14px;
+			border: 1px solid rgba(61, 51, 104, 0.07);
+			border-radius: 15px;
+			background: rgba(255, 255, 255, 0.72);
+		}
+
+		.winwidget-preview-site__feature-icon {
+			display: grid;
+			width: 31px;
+			height: 31px;
+			flex: 0 0 31px;
+			place-items: center;
+			border-radius: 10px;
+			color: #6543d6;
+			background: #efebff;
+			font-size: 13px;
+			font-weight: 800;
+		}
+
+		.winwidget-preview-site__feature-copy strong,
+		.winwidget-preview-site__feature-copy span {
+			display: block;
+		}
+
+		.winwidget-preview-site__feature-copy strong {
+			font-size: 11px;
+		}
+
+		.winwidget-preview-site__feature-copy span {
+			margin-top: 3px;
+			color: #9691a5;
+			font-size: 8px;
+		}
+
+		@media (max-width: 600px) {
+			.winwidget-preview-site {
+				background:
+					radial-gradient(circle at 105% 12%, rgba(120, 92, 246, 0.18), transparent 33%),
+					radial-gradient(circle at -5% 94%, rgba(255, 184, 112, 0.16), transparent 29%),
+					#f8f7fc;
+			}
+
+			.winwidget-preview-site::before {
+				width: 170px;
+				height: 170px;
+				right: -92px;
+				top: 118px;
+			}
+
+			.winwidget-preview-site__header {
+				height: 68px;
+				padding: 0 25px;
+			}
+
+			.winwidget-preview-site__nav,
+			.winwidget-preview-site__header-action {
+				display: none;
+			}
+
+			.winwidget-preview-site__menu {
+				display: flex;
+			}
+
+			.winwidget-preview-site__main {
+				padding: 34px 25px 22px;
+			}
+
+			.winwidget-preview-site__hero {
+				display: block;
+				min-height: 0;
+			}
+
+			.winwidget-preview-site__eyebrow {
+				padding: 7px 10px;
+				font-size: 10px;
+			}
+
+			.winwidget-preview-site__title {
+				margin: 17px 0 13px;
+				font-size: 39px;
+				line-height: 1.05;
+			}
+
+			.winwidget-preview-site__text {
+				font-size: 14px;
+				line-height: 1.55;
+			}
+
+			.winwidget-preview-site__actions {
+				gap: 17px;
+				margin-top: 20px;
+			}
+
+			.winwidget-preview-site__primary-action {
+				padding: 12px 17px;
+			}
+
+			.winwidget-preview-site__visual {
+				height: 232px;
+				margin-top: 27px;
+			}
+
+			.winwidget-preview-site__dashboard {
+				inset: 12px 5px 0 0;
+				padding: 18px;
+				border-radius: 22px;
+			}
+
+			.winwidget-preview-site__chart {
+				height: 76px;
+				gap: 7px;
+				margin-top: 17px;
+			}
+
+			.winwidget-preview-site__metrics {
+				margin-top: 10px;
+			}
+
+			.winwidget-preview-site__metric {
+				padding: 8px;
+			}
+
+			.winwidget-preview-site__growth {
+				right: -2px;
+				padding: 8px 10px;
+			}
+
+			.winwidget-preview-site__features {
+				display: none;
+			}
 		}
 	</style>
 	<script>
@@ -764,6 +1266,108 @@ const buildPreviewSandboxDocument = (
 	</script>
 </head>
 <body>
+	<div class="winwidget-preview-site" aria-hidden="true">
+		<header class="winwidget-preview-site__header">
+			<div class="winwidget-preview-site__brand">
+				<span class="winwidget-preview-site__brand-mark">W</span>
+				<span>WEAVE</span>
+			</div>
+			<nav class="winwidget-preview-site__nav">
+				<span>Возможности</span>
+				<span>Решения</span>
+				<span>Тарифы</span>
+			</nav>
+			<span class="winwidget-preview-site__header-action">Попробовать</span>
+			<span class="winwidget-preview-site__menu"></span>
+		</header>
+		<main class="winwidget-preview-site__main">
+			<section class="winwidget-preview-site__hero">
+				<div>
+					<span class="winwidget-preview-site__eyebrow">
+						<span class="winwidget-preview-site__eyebrow-dot"></span>
+						Всё для роста бизнеса
+					</span>
+					<h1 class="winwidget-preview-site__title">
+						Больше клиентов.
+						<span class="winwidget-preview-site__title-accent">Меньше рутины.</span>
+					</h1>
+					<p class="winwidget-preview-site__text">
+						Помогаем бизнесу привлекать аудиторию, обрабатывать заявки
+						и расти каждый день.
+					</p>
+					<div class="winwidget-preview-site__actions">
+						<span class="winwidget-preview-site__primary-action">
+							Начать бесплатно
+						</span>
+						<span class="winwidget-preview-site__secondary-action">
+							Узнать больше →
+						</span>
+					</div>
+				</div>
+				<div class="winwidget-preview-site__visual">
+					<div class="winwidget-preview-site__dashboard">
+						<div class="winwidget-preview-site__dashboard-head">
+							<span class="winwidget-preview-site__dashboard-avatar"></span>
+							<div class="winwidget-preview-site__dashboard-heading">
+								<strong>Обзор показателей</strong>
+								<span>Актуальные данные</span>
+							</div>
+							<span class="winwidget-preview-site__period">30 дней</span>
+						</div>
+						<div class="winwidget-preview-site__chart">
+							<span class="winwidget-preview-site__chart-bar"></span>
+							<span class="winwidget-preview-site__chart-bar"></span>
+							<span class="winwidget-preview-site__chart-bar"></span>
+							<span class="winwidget-preview-site__chart-bar"></span>
+							<span class="winwidget-preview-site__chart-bar"></span>
+							<span class="winwidget-preview-site__chart-bar"></span>
+						</div>
+						<div class="winwidget-preview-site__metrics">
+							<div class="winwidget-preview-site__metric">
+								<strong>1 284</strong>
+								<span>Посетителей</span>
+							</div>
+							<div class="winwidget-preview-site__metric">
+								<strong>147</strong>
+								<span>Новых заявок</span>
+							</div>
+							<div class="winwidget-preview-site__metric">
+								<strong>11,4%</strong>
+								<span>Конверсия</span>
+							</div>
+						</div>
+					</div>
+					<div class="winwidget-preview-site__growth">
+						<span class="winwidget-preview-site__growth-icon">↗</span>
+						<span>Рост +24%</span>
+					</div>
+				</div>
+			</section>
+			<section class="winwidget-preview-site__features">
+				<div class="winwidget-preview-site__feature">
+					<span class="winwidget-preview-site__feature-icon">01</span>
+					<div class="winwidget-preview-site__feature-copy">
+						<strong>Быстрый запуск</strong>
+						<span>Без сложной настройки</span>
+					</div>
+				</div>
+				<div class="winwidget-preview-site__feature">
+					<span class="winwidget-preview-site__feature-icon">02</span>
+					<div class="winwidget-preview-site__feature-copy">
+						<strong>Живая аналитика</strong>
+						<span>Главное всегда под рукой</span>
+					</div>
+				</div>
+				<div class="winwidget-preview-site__feature">
+					<span class="winwidget-preview-site__feature-icon">03</span>
+					<div class="winwidget-preview-site__feature-copy">
+						<strong>Поддержка рядом</strong>
+						<span>Поможем на каждом этапе</span>
+					</div>
+				</div>
+			</section>
+		</main>
+	</div>
 	<script src="${scriptUrl}" data-key="${previewKey}" async></script>
 </body>
 </html>`
@@ -1027,12 +1631,6 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 										: styles.deviceScreenDesktop
 								}`}
 							>
-								{device === 'mobile' && (
-									<span
-										className={styles.mobileDynamicIsland}
-										aria-hidden="true"
-									/>
-								)}
 								{canRestartPreview && surface === 'dialog' && (
 									<button
 										type="button"
