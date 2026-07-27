@@ -3,7 +3,7 @@
 }
 
 .previewHeader {
-	@apply mb-3 flex items-center justify-between gap-3;
+	@apply mb-3 flex items-start justify-between gap-3;
 }
 
 .previewTitle {
@@ -11,7 +11,37 @@
 }
 
 .previewBadge {
-	@apply shrink-0 rounded-full bg-[#f3eeff] px-3 py-1 text-[11px] font-semibold text-[#7b3fa0];
+	@apply mt-1 inline-flex shrink-0 rounded-full bg-[#f3eeff] px-3 py-1 text-[11px] font-semibold text-[#7b3fa0];
+}
+
+.previewControls {
+	@apply flex flex-wrap items-center justify-end gap-2;
+}
+
+.previewSegmented {
+	@apply flex rounded-lg border border-[#e0d6f0] bg-white p-1;
+}
+
+.previewControlBtn,
+.previewToggle {
+	@apply rounded-md border-none bg-transparent px-2 py-1 text-[11px] font-semibold text-[#8b6aa8] cursor-pointer transition-colors duration-150;
+}
+
+.previewControlBtn:hover,
+.previewToggle:hover {
+	@apply bg-[#f3eeff] text-[#7b3fa0];
+}
+
+.previewControlBtnActive {
+	@apply bg-[#7b3fa0] text-white;
+}
+
+.previewControlBtnActive:hover {
+	@apply bg-[#7b3fa0] text-white;
+}
+
+.previewToggle {
+	@apply border border-[#e0d6f0] bg-white;
 }
 
 .previewViewport {
@@ -42,12 +72,25 @@
 	transform-origin: top left;
 }
 
+.previewNotice {
+	@apply mt-2 text-xs leading-5 text-[#8b6aa8];
+}
+
 @media (max-width: 600px) {
 	.preview {
 		@apply mb-4 p-2;
 	}
 
 	.previewHeader {
-		@apply mb-2;
+		@apply mb-2 flex-col;
+	}
+
+	.previewControls {
+		@apply w-full justify-start;
+	}
+
+	.previewControlBtn,
+	.previewToggle {
+		@apply min-h-8 px-3;
 	}
 }

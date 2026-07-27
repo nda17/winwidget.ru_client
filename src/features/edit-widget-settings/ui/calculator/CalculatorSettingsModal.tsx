@@ -11,6 +11,7 @@ import {
 } from '@/entities/site-widget'
 import { useMutation } from '@tanstack/react-query'
 import Image from 'next/image'
+import ConfirmDialog from '@/shared/ui/confirm-dialog/ConfirmDialog'
 import {
 	ChangeEvent,
 	InputHTMLAttributes,
@@ -21,8 +22,14 @@ import {
 import toast from 'react-hot-toast'
 import styles from './CalculatorSettingsModal.module.scss'
 import DirectLinkQr from '../shared/DirectLinkQr'
+import useWidgetSettingsCloseGuard from '../shared/useWidgetSettingsCloseGuard'
 import WidgetLivePreview from '../shared/WidgetLivePreview'
-import type { WidgetSettingsPersistence } from '../shared/WidgetSettingsPersistence'
+import pageStyles from '../shared/WidgetSettingsModal.module.scss'
+import type {
+	WidgetSettingsPersistence,
+	WidgetSettingsPresentationProps
+} from '../shared/WidgetSettingsPersistence'
+import WidgetSettingsPreviewPortal from '../shared/WidgetSettingsPreviewPortal'
 
 type Tab =
 	| 'main'
@@ -36,17 +43,86 @@ const BUTTON_IMAGE_MAX_SIZE_BYTES = 200 * 1024
 const DEFAULT_BUTTON_IMAGE_URL = '/images/tools/calculator-button.png'
 const MAX_FIELDS = 20
 const MAX_OPTIONS = 20
+const MAX_AUTO_OPEN_DELAY_SECONDS = 60
+
+type CalculatorColorField =
+	| 'color'
+	| 'bgColor'
+	| 'buttonColor'
+	| 'openButtonColor'
+	| 'textColor'
+
+interface CalculatorColorSetting {
+	key: CalculatorColorField
+	label: string
+	pickerFallback: string | 'primary'
+	placeholder: string
+	resetValue: string
+	hint: string
+}
+
+const CALCULATOR_COLOR_SETTINGS: CalculatorColorSetting[] = [
+	{
+		key: 'color',
+		label: 'Основной цвет:',
+		pickerFallback: '#4705fb',
+		placeholder: '#4705fb',
+		resetValue: '#4705fb',
+		hint: 'Акцент полей, результата и элементов калькулятора.'
+	},
+	{
+		key: 'bgColor',
+		label: 'Цвет фона виджета',
+		pickerFallback: '#1a0a2e',
+		placeholder: 'Стандартный градиент',
+		resetValue: '',
+		hint: 'Оставьте пустым, чтобы использовать стандартный тёмный градиент.'
+	},
+	{
+		key: 'textColor',
+		label: 'Цвет текста виджета:',
+		pickerFallback: '#ffffff',
+		placeholder: 'Стандартный светлый',
+		resetValue: '',
+		hint: 'Оставьте пустым, чтобы использовать стандартные цвета текста.'
+	},
+	{
+		key: 'buttonColor',
+		label: 'Цвет кнопки расчёта:',
+		pickerFallback: 'primary',
+		placeholder: 'Как основной цвет',
+		resetValue: '',
+		hint: 'Кнопка внутри калькулятора. По умолчанию используется основной цвет.'
+	},
+	{
+		key: 'openButtonColor',
+		label: 'Цвет кнопки открытия:',
+		pickerFallback: 'primary',
+		placeholder: 'Как основной цвет',
+		resetValue: '',
+		hint: 'Плавающая кнопка на сайте. По умолчанию используется основной цвет.'
+	}
+]
 
 const TABS: { id: Tab; label: string }[] = [
 	{ id: 'main', label: 'Главные' },
 	{ id: 'fields', label: 'Поля' },
 	{ id: 'calculation', label: 'Расчёт' },
 	{ id: 'integrations', label: 'Интеграции' },
-	{ id: 'code', label: 'Код' },
+	{ id: 'code', label: 'Установка' },
 	{ id: 'info', label: 'Инфо' }
 ]
 
 const makeId = () => Math.random().toString(36).slice(2, 10)
+
+const isHttpUrl = (value: string) => {
+	try {
+		const url = new URL(value)
+		return url.protocol === 'http:' || url.protocol === 'https:'
+	} catch {
+		return false
+	}
+}
 
 const makeOption = (label = 'Вариант'): CalculatorOption => ({
 	id: makeId(),
@@ -177,9 +253,63 @@ const DEFAULT_CONFIG: CalculatorConfig = {
 const cloneConfig = (config: CalculatorConfig): CalculatorConfig =>
 	JSON.parse(JSON.stringify(config)) as CalculatorConfig
 
+const clampNumber = (
+	value: number | null | undefined,
+	min: number,
+	max: number,
+	fallback: number
+) => {
+	const numeric = Number(value)
+
+	return Number.isFinite(numeric)
+		? Math.min(max, Math.max(min, numeric))
+		: fallback
+}
+
+const getColorPickerValue = (value: string, fallback: string) => {
+	const normalized = value.trim()
+	const shortHexMatch = /^#([0-9a-f]{3})$/i.exec(normalized)
+
+	if (shortHexMatch) {
+		return `#${shortHexMatch[1]
+			.split('')
+			.map(character => `${character}${character}`)
+			.join('')}`
+	}
+
+	return /^#[0-9a-f]{6}$/i.test(normalized) ? normalized : fallback
+}
+
 const normalizeConfig = (config: CalculatorConfig): CalculatorConfig => ({
 	...cloneConfig(DEFAULT_CONFIG),
 	...config,
+	buttonBottom: clampNumber(
+		config.buttonBottom,
+		1,
+		50,
+		DEFAULT_CONFIG.buttonBottom
+	),
+	buttonOffset: clampNumber(
+		config.buttonOffset,
+		1,
+		50,
+		DEFAULT_CONFIG.buttonOffset
+	),
+	buttonSize: clampNumber(
+		config.buttonSize,
+		40,
+		100,
+		DEFAULT_CONFIG.buttonSize
+	),
+	autoOpenDelay:
+		config.autoOpenDelay == null || Number(config.autoOpenDelay) <= 0
+			? null
+			: clampNumber(
+					config.autoOpenDelay,
+					1,
+					MAX_AUTO_OPEN_DELAY_SECONDS,
+					MAX_AUTO_OPEN_DELAY_SECONDS
+				),
 	fields: config.fields?.length
 		? config.fields.map(field => {
 				const options = field.options?.map(option => ({ ...option }))
@@ -242,7 +372,7 @@ const NumericInput = ({
 	)
 }
 
-interface Props {
+interface Props extends WidgetSettingsPresentationProps {
 	calculator: Calculator
 	canUseCustomButtonImage: boolean
 	onClose: () => void
@@ -250,12 +380,19 @@ interface Props {
 	persistence?: WidgetSettingsPersistence<Calculator, CalculatorConfig>
 }
 
+interface ValidationError {
+	targetId: string
+	message: string
+}
+
 const CalculatorSettingsModal = ({
 	calculator,
 	canUseCustomButtonImage,
 	onClose,
 	onSaved,
-	persistence
+	persistence,
+	presentation = 'modal',
+	previewPortalTarget
 }: Props) => {
 	const titleId = useId()
 	const buttonImageInputId = useId()
@@ -267,6 +404,9 @@ const CalculatorSettingsModal = ({
 	const [config, setConfig] = useState<CalculatorConfig>(() =>
 		normalizeConfig(calculator.config)
 	)
+	const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false)
+	const [validationError, setValidationError] =
+		useState<ValidationError | null>(null)
 	const [savedSnapshot, setSavedSnapshot] = useState(() =>
 		JSON.stringify({
 			name: calculator.name,
@@ -339,11 +479,66 @@ const CalculatorSettingsModal = ({
 			})
 		}
 	})
+	const isDangerActionPending =
+		saveMutation.isPending || buttonImageMutation.isPending
+	const { requestClose, closeGuardDialog } = useWidgetSettingsCloseGuard({
+		hasUnsavedChanges,
+		isBusy: isDangerActionPending,
+		onClose
+	})
+	const isPagePresentation = presentation === 'page'
+	const validationTargetId = (suffix: string) =>
+		`${titleId}-validation-${suffix}`
+	const isInvalidTarget = (targetId: string) =>
+		validationError?.targetId === targetId
+	const clearValidationError = (targetId?: string) =>
+		setValidationError(current =>
+			!current || (targetId && current.targetId !== targetId)
+				? current
+				: null
+		)
+	const renderFieldError = (targetId: string) =>
+		isInvalidTarget(targetId) ? (
+			<p
+				id={`${targetId}-error`}
+				className={pageStyles.fieldError}
+				role="alert"
+			>
+				{validationError?.message}
+			</p>
+		) : null
+	const showValidationError = (
+		nextTab: Tab,
+		targetId: string,
+		message: string
+	) => {
+		setValidationError({ targetId, message })
+		setTab(nextTab)
+		toast.error(message)
+
+		window.requestAnimationFrame(() => {
+			window.requestAnimationFrame(() => {
+				const target = document.getElementById(targetId)
+
+				target?.scrollIntoView({
+					behavior: 'smooth',
+					block: 'center'
+				})
+				target?.focus({ preventScroll: true })
+			})
+		})
+
+		return false
+	}
 
 	const setField = <K extends keyof CalculatorConfig>(
 		key: K,
-		value: CalculatorConfig[K]
-	) => setConfig(previous => ({ ...previous, [key]: value }))
+		value: CalculatorConfig[K],
+		targetId?: string
+	) => {
+		setConfig(previous => ({ ...previous, [key]: value }))
+		if (targetId) clearValidationError(targetId)
+	}
 
 	const setIntegration = <K extends keyof CalculatorIntegrations>(
 		key: K,
@@ -356,14 +551,17 @@ const CalculatorSettingsModal = ({
 
 	const updateCalculatorField = (
 		index: number,
-		patch: Partial<CalculatorField>
-	) =>
+		patch: Partial<CalculatorField>,
+		targetId?: string
+	) => {
 		setConfig(previous => ({
 			...previous,
 			fields: previous.fields.map((field, fieldIndex) =>
 				fieldIndex === index ? { ...field, ...patch } : field
 			)
 		}))
+		if (targetId) clearValidationError(targetId)
+	}
 
 	const changeFieldType = (index: number, type: CalculatorFieldType) => {
 		const next = makeField(type)
@@ -374,6 +572,7 @@ const CalculatorSettingsModal = ({
 			label: current.label,
 			required: current.required
 		})
+		clearValidationError()
 	}
 
 	const addCalculatorField = () => {
@@ -382,13 +581,16 @@ const CalculatorSettingsModal = ({
 			return
 		}
 		setField('fields', [...config.fields, makeField()])
+		clearValidationError()
 	}
 
-	const removeCalculatorField = (index: number) =>
+	const removeCalculatorField = (index: number) => {
 		setField(
 			'fields',
 			config.fields.filter((_, fieldIndex) => fieldIndex !== index)
 		)
+		clearValidationError()
+	}
 
 	const moveCalculatorField = (index: number, direction: -1 | 1) => {
 		const target = index + direction
@@ -396,6 +598,7 @@ const CalculatorSettingsModal = ({
 		const fields = [...config.fields]
 		;[fields[index], fields[target]] = [fields[target], fields[index]]
 		setField('fields', fields)
+		clearValidationError()
 	}
 
 	const addOption = (fieldIndex: number) => {
@@ -407,6 +610,7 @@ const CalculatorSettingsModal = ({
 		updateCalculatorField(fieldIndex, {
 			options: [...(field.options || []), makeOption()]
 		})
+		clearValidationError()
 	}
 
 	const updateOption = (
@@ -415,11 +619,28 @@ const CalculatorSettingsModal = ({
 		patch: Partial<CalculatorOption>
 	) => {
 		const field = config.fields[fieldIndex]
-		updateCalculatorField(fieldIndex, {
-			options: (field.options || []).map((option, index) =>
-				index === optionIndex ? { ...option, ...patch } : option
-			)
-		})
+		const option = field.options?.[optionIndex]
+		const changedKey =
+			'label' in patch
+				? 'label'
+				: 'add' in patch
+					? 'add'
+					: 'multiplier' in patch
+						? 'multiplier'
+						: null
+		updateCalculatorField(
+			fieldIndex,
+			{
+				options: (field.options || []).map((option, index) =>
+					index === optionIndex ? { ...option, ...patch } : option
+				)
+			},
+			changedKey && option
+				? validationTargetId(
+						`field-${field.id}-option-${option.id}-${changedKey}`
+					)
+				: undefined
+		)
 	}
 
 	const removeOption = (fieldIndex: number, optionIndex: number) => {
@@ -429,6 +650,7 @@ const CalculatorSettingsModal = ({
 				(_, index) => index !== optionIndex
 			)
 		})
+		clearValidationError()
 	}
 
 	const apiUrl =
@@ -443,36 +665,132 @@ const CalculatorSettingsModal = ({
 	).replace(/\/$/, '')
 	const scriptCode = `<script src="${apiUrl}/widgets/calculator.js" data-key="${calculator.publicKey}" async></script>`
 	const directLink = `${publicSiteUrl}/page-calculator/${calculator.publicKey}`
+	const savedInstallDomain = (
+		JSON.parse(savedSnapshot) as { installDomain: string }
+	).installDomain
+	const hasUnsavedInstallDomain =
+		installDomain.trim() !== savedInstallDomain.trim()
+	const copyToClipboard = async (
+		value: string,
+		successMessage: string,
+		requireSavedDomain = false
+	) => {
+		if (requireSavedDomain && hasUnsavedInstallDomain) {
+			setTab('code')
+			toast.error('Сначала сохраните домен установки')
+			return
+		}
+		try {
+			await navigator.clipboard.writeText(value)
+			toast.success(successMessage)
+		} catch {
+			toast.error('Не удалось скопировать')
+		}
+	}
 
 	const validate = () => {
+		if (!name.trim()) {
+			return showValidationError(
+				'main',
+				validationTargetId('name'),
+				'Укажите название виджета'
+			)
+		}
+
+		if (config.bubbleEnabled && !config.bubbleText.trim()) {
+			return showValidationError(
+				'main',
+				validationTargetId('bubble-text'),
+				'Укажите текст облачка или отключите его'
+			)
+		}
+
+		if (!config.title.trim()) {
+			return showValidationError(
+				'main',
+				validationTargetId('main-title'),
+				'Укажите заголовок виджета'
+			)
+		}
+
+		if (!config.calculateButtonText.trim()) {
+			return showValidationError(
+				'main',
+				validationTargetId('main-calculateButtonText'),
+				'Укажите текст кнопки расчёта'
+			)
+		}
+
+		if (!config.resultTitle.trim()) {
+			return showValidationError(
+				'main',
+				validationTargetId('main-resultTitle'),
+				'Укажите заголовок результата'
+			)
+		}
+
+		if (config.dataType !== 'NONE' && !config.contactTitle.trim()) {
+			return showValidationError(
+				'main',
+				validationTargetId('contact-title'),
+				'Укажите заголовок формы контакта'
+			)
+		}
+
+		if (
+			config.dataType !== 'NONE' &&
+			(!config.privacyUrl.trim() || !isHttpUrl(config.privacyUrl))
+		) {
+			return showValidationError(
+				'main',
+				validationTargetId('privacy-url'),
+				'Укажите полную ссылку на политику с http:// или https://'
+			)
+		}
+
 		if (!Number.isFinite(config.basePrice) || config.basePrice < 0) {
-			toast.error('Базовая стоимость должна быть не меньше 0')
-			return false
+			return showValidationError(
+				'calculation',
+				validationTargetId('calculation-base-price'),
+				'Базовая стоимость должна быть не меньше 0'
+			)
 		}
 
 		if (!/^[A-Z]{3}$/.test(config.currency.trim().toUpperCase())) {
-			toast.error('Укажите валюту трёхбуквенным кодом, например RUB')
-			return false
+			return showValidationError(
+				'calculation',
+				validationTargetId('calculation-currency'),
+				'Укажите валюту трёхбуквенным кодом, например RUB'
+			)
 		}
 
 		if (
 			!Number.isFinite(config.roundingStep) ||
 			config.roundingStep <= 0
 		) {
-			toast.error('Шаг округления должен быть больше 0')
-			return false
+			return showValidationError(
+				'calculation',
+				validationTargetId('calculation-rounding-step'),
+				'Шаг округления должен быть больше 0'
+			)
 		}
 
 		if (!config.fields.length) {
-			toast.error('Добавьте хотя бы одно поле калькулятора')
-			return false
+			return showValidationError(
+				'fields',
+				validationTargetId('fields-empty'),
+				'Добавьте хотя бы одно поле калькулятора'
+			)
 		}
 
 		for (let index = 0; index < config.fields.length; index += 1) {
 			const field = config.fields[index]
 			if (!field.label.trim()) {
-				toast.error(`Поле ${index + 1}: заполните название`)
-				return false
+				return showValidationError(
+					'fields',
+					validationTargetId(`field-${field.id}-label`),
+					`Поле ${index + 1}: заполните название`
+				)
 			}
 
 			if (
@@ -482,31 +800,61 @@ const CalculatorSettingsModal = ({
 			) {
 				if (!field.options || field.options.length < 2) {
 					if (field.type === 'select' || field.type === 'radio') {
-						toast.error(
+						return showValidationError(
+							'fields',
+							validationTargetId(`field-${field.id}-options`),
 							`Поле «${field.label}»: добавьте минимум 2 варианта`
 						)
-						return false
 					}
 					if (!field.options?.length) {
-						toast.error(
+						return showValidationError(
+							'fields',
+							validationTargetId(`field-${field.id}-options`),
 							`Поле «${field.label}»: добавьте хотя бы одну опцию`
 						)
-						return false
 					}
 				}
 
-				const invalidOption = field.options.findIndex(
-					option =>
-						!option.label.trim() ||
-						!Number.isFinite(option.add) ||
+				for (
+					let optionIndex = 0;
+					optionIndex < field.options.length;
+					optionIndex += 1
+				) {
+					const option = field.options[optionIndex]
+					const optionLabel = `Поле «${field.label}», вариант ${optionIndex + 1}`
+
+					if (!option.label.trim()) {
+						return showValidationError(
+							'fields',
+							validationTargetId(
+								`field-${field.id}-option-${option.id}-label`
+							),
+							`${optionLabel}: заполните название`
+						)
+					}
+
+					if (!Number.isFinite(option.add)) {
+						return showValidationError(
+							'fields',
+							validationTargetId(
+								`field-${field.id}-option-${option.id}-add`
+							),
+							`${optionLabel}: проверьте надбавку`
+						)
+					}
+
+					if (
 						!Number.isFinite(option.multiplier) ||
 						option.multiplier <= 0
-				)
-				if (invalidOption !== -1) {
-					toast.error(
-						`Поле «${field.label}», вариант ${invalidOption + 1}: проверьте название, надбавку и множитель`
-					)
-					return false
+					) {
+						return showValidationError(
+							'fields',
+							validationTargetId(
+								`field-${field.id}-option-${option.id}-multiplier`
+							),
+							`${optionLabel}: множитель должен быть больше 0`
+						)
+					}
 				}
 			}
 
@@ -515,36 +863,57 @@ const CalculatorSettingsModal = ({
 				const max = field.max ?? 0
 				const step = field.step ?? 0
 				const defaultValue = field.defaultValue ?? min
-				if (
-					max < min ||
-					step <= 0 ||
-					defaultValue < min ||
-					defaultValue > max
-				) {
-					toast.error(
-						`Поле «${field.label}»: проверьте минимум, максимум, шаг и значение по умолчанию`
+
+				if (max < min) {
+					return showValidationError(
+						'fields',
+						validationTargetId(`field-${field.id}-max`),
+						`Поле «${field.label}»: максимум не может быть меньше минимума`
 					)
-					return false
 				}
+
+				if (step <= 0) {
+					return showValidationError(
+						'fields',
+						validationTargetId(`field-${field.id}-step`),
+						`Поле «${field.label}»: шаг должен быть больше 0`
+					)
+				}
+
+				if (defaultValue < min || defaultValue > max) {
+					return showValidationError(
+						'fields',
+						validationTargetId(`field-${field.id}-defaultValue`),
+						`Поле «${field.label}»: значение по умолчанию должно быть между минимумом и максимумом`
+					)
+				}
+
 				if (!Number.isFinite(field.unitPrice ?? 0)) {
-					toast.error(`Поле «${field.label}»: проверьте цену за единицу`)
-					return false
+					return showValidationError(
+						'fields',
+						validationTargetId(`field-${field.id}-unitPrice`),
+						`Поле «${field.label}»: проверьте цену за единицу`
+					)
 				}
 			}
 		}
 
 		if (config.buttonBottom < 1 || config.buttonBottom > 50) {
-			toast.error('Высота кнопки: введите число от 1 до 50')
-			return false
+			return showValidationError(
+				'main',
+				validationTargetId('button-bottom'),
+				'Высота кнопки должна быть от 1 до 50%'
+			)
 		}
 
+		setValidationError(null)
 		return true
 	}
 
 	const handleSave = () => {
 		if (!validate()) return
 
-		const sanitizedName = name.trim() || 'Калькулятор стоимости'
+		const sanitizedName = name.trim()
 		const sanitizedConfig: CalculatorConfig = {
 			...config,
 			currency: config.currency.trim().toUpperCase(),
@@ -606,39 +975,69 @@ const CalculatorSettingsModal = ({
 		})
 	}
 
+	const resetSettings = () => {
+		const nextConfig = cloneConfig(DEFAULT_CONFIG)
+
+		setConfig(nextConfig)
+		setValidationError(null)
+		setIsResetConfirmOpen(false)
+		saveMutation.mutate({
+			name: name.trim() || 'Калькулятор стоимости',
+			installDomain,
+			config: nextConfig
+		})
+	}
+
 	return (
-		<div className={styles.overlay}>
-			<button
-				type="button"
-				className={styles.backdrop}
-				onClick={onClose}
-				aria-label="Закрыть настройки калькулятора"
-			/>
-			<div
-				className={styles.modal}
-				role="dialog"
-				aria-modal="true"
-				aria-labelledby={titleId}
-			>
+		<div
+			className={
+				isPagePresentation ? pageStyles.pageEditor : styles.overlay
+			}
+		>
+			{!isPagePresentation && (
 				<button
 					type="button"
-					className={styles.closeBtn}
-					onClick={onClose}
-					aria-label="Закрыть"
-				>
-					✕
-				</button>
+					className={styles.backdrop}
+					onClick={requestClose}
+					aria-label="Закрыть настройки калькулятора"
+				/>
+			)}
+			<div
+				className={
+					isPagePresentation ? pageStyles.pagePanel : styles.modal
+				}
+				role={isPagePresentation ? 'region' : 'dialog'}
+				aria-modal={isPagePresentation ? undefined : true}
+				aria-labelledby={titleId}
+			>
+				{!isPagePresentation && (
+					<button
+						type="button"
+						className={styles.closeBtn}
+						onClick={requestClose}
+						aria-label="Закрыть настройки"
+					>
+						✕
+					</button>
+				)}
 				<h2 id={titleId} className={styles.modalTitle}>
 					Настройки калькулятора
 				</h2>
 
-				<div className={styles.tabs} role="tablist">
+				<div
+					className={styles.tabs}
+					role="tablist"
+					aria-label="Разделы настроек калькулятора"
+				>
 					{TABS.map(item => (
 						<button
 							key={item.id}
 							type="button"
+							id={`${titleId}-tab-${item.id}`}
 							role="tab"
 							aria-selected={tab === item.id}
+							aria-controls={`${titleId}-panel-${item.id}`}
+							tabIndex={tab === item.id ? 0 : -1}
 							className={`${styles.tab} ${tab === item.id ? styles.tabActive : ''}`}
 							onClick={() => setTab(item.id)}
 						>
@@ -647,220 +1046,256 @@ const CalculatorSettingsModal = ({
 					))}
 				</div>
 
-				<WidgetLivePreview
-					type="calculator"
-					config={config}
-					isHardPlan={canUseCustomButtonImage}
-				/>
+				<WidgetSettingsPreviewPortal
+					inline={!isPagePresentation}
+					target={previewPortalTarget}
+				>
+					<WidgetLivePreview
+						type="calculator"
+						config={config}
+						isHardPlan={canUseCustomButtonImage}
+						autoCollapse={
+							!isPagePresentation &&
+							['integrations', 'code', 'info'].includes(tab)
+						}
+					/>
+				</WidgetSettingsPreviewPortal>
 
-				<div className={styles.tabContent}>
+				<div
+					id={`${titleId}-panel-${tab}`}
+					className={styles.tabContent}
+					role="tabpanel"
+					aria-labelledby={`${titleId}-tab-${tab}`}
+				>
 					{tab === 'main' && (
 						<div className={styles.fields}>
 							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>Внешний вид</h3>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Внешний вид
+									</h3>
+								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>Название виджета</p>
+									<p className={styles.label}>Название виджета:</p>
 									<input
-										className={styles.input}
+										id={validationTargetId('name')}
+										className={`${styles.input} ${
+											isInvalidTarget(validationTargetId('name'))
+												? pageStyles.inputError
+												: ''
+										}`}
 										value={name}
-										onChange={event => setName(event.target.value)}
+										onChange={event => {
+											setName(event.target.value)
+											clearValidationError(validationTargetId('name'))
+										}}
+										placeholder="Калькулятор стоимости"
 										maxLength={50}
-									/>
-								</div>
-								<div className={styles.gridTwo}>
-									{(
-										[
-											['color', 'Основной цвет', '#4705fb'],
-											['bgColor', 'Фон виджета', '#ffffff'],
-											['buttonColor', 'Кнопка расчёта', '#4705fb'],
-											['openButtonColor', 'Кнопка открытия', '#4705fb'],
-											['textColor', 'Цвет текста', '#1a1a1a']
-										] as const
-									).map(([key, label, fallback]) => (
-										<div key={key} className={styles.field}>
-											<p className={styles.label}>{label}</p>
-											<div className={styles.colorRow}>
-												<input
-													type="color"
-													className={styles.colorPicker}
-													value={config[key] || fallback}
-													onChange={event =>
-														setField(key, event.target.value)
-													}
-												/>
-												<input
-													className={styles.input}
-													value={config[key]}
-													placeholder={fallback}
-													onChange={event =>
-														setField(key, event.target.value)
-													}
-												/>
-											</div>
-										</div>
-									))}
-								</div>
-								<label className={styles.checkRow}>
-									<input
-										type="checkbox"
-										checked={config.glassEffect}
-										onChange={event =>
-											setField('glassEffect', event.target.checked)
+										aria-invalid={isInvalidTarget(
+											validationTargetId('name')
+										)}
+										aria-describedby={
+											isInvalidTarget(validationTargetId('name'))
+												? `${validationTargetId('name')}-error`
+												: undefined
 										}
 									/>
-									<span>Стеклянный эффект фона</span>
-								</label>
+									{renderFieldError(validationTargetId('name'))}
+									<p className={styles.hint}>
+										Название видно только вам в личном кабинете.
+									</p>
+								</div>
+								<div className={styles.gridTwo}>
+									{CALCULATOR_COLOR_SETTINGS.map(setting => {
+										const pickerFallback =
+											setting.pickerFallback === 'primary'
+												? getColorPickerValue(
+														config.color,
+														DEFAULT_CONFIG.color
+													)
+												: setting.pickerFallback
+										const value = config[setting.key]
+
+										return (
+											<div key={setting.key} className={styles.field}>
+												<p className={styles.label}>{setting.label}</p>
+												<div className={styles.colorRow}>
+													<input
+														type="color"
+														className={styles.colorPicker}
+														value={getColorPickerValue(
+															value,
+															pickerFallback
+														)}
+														onChange={event =>
+															setField(setting.key, event.target.value)
+														}
+														aria-label={`${setting.label} выбор цвета`}
+													/>
+													<input
+														className={styles.input}
+														value={value}
+														placeholder={setting.placeholder}
+														maxLength={7}
+														onChange={event =>
+															setField(setting.key, event.target.value)
+														}
+													/>
+													{value !== setting.resetValue && (
+														<button
+															type="button"
+															className={styles.clearColorBtn}
+															onClick={() =>
+																setField(setting.key, setting.resetValue)
+															}
+															title="Сбросить к стандартному"
+															aria-label={`Сбросить настройку «${setting.label}»`}
+														>
+															✕
+														</button>
+													)}
+												</div>
+												<p className={styles.hint}>{setting.hint}</p>
+											</div>
+										)
+									})}
+								</div>
+								<div className={styles.field}>
+									<label className={styles.checkRow}>
+										<input
+											type="checkbox"
+											checked={config.glassEffect}
+											onChange={event =>
+												setField('glassEffect', event.target.checked)
+											}
+										/>
+										<span className={styles.checkLabel}>
+											Стеклянный эффект фона
+										</span>
+									</label>
+									<p className={styles.hint}>
+										Добавляет полупрозрачность и размытие стандартному
+										фону. При заданном цвете фона используется сплошная
+										заливка.
+									</p>
+								</div>
 							</div>
 
 							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>
-									Кнопка открытия
-								</h3>
-								<div className={styles.gridTwo}>
-									<div className={styles.field}>
-										<p className={styles.label}>Сторона</p>
-										<select
-											className={styles.input}
-											value={config.buttonSide}
-											onChange={event =>
-												setField(
-													'buttonSide',
-													event.target.value as 'left' | 'right'
-												)
-											}
-										>
-											<option value="left">Слева</option>
-											<option value="right">Справа</option>
-										</select>
-									</div>
-									{(
-										[
-											['buttonBottom', 'Высота от низа, %', 1, 50],
-											['buttonOffset', 'Отступ от края, %', 1, 50],
-											['buttonSize', 'Размер кнопки, px', 40, 100]
-										] as const
-									).map(([key, label, min, max]) => (
-										<div key={key} className={styles.field}>
-											<p className={styles.label}>{label}</p>
-											<NumericInput
-												className={styles.input}
-												min={min}
-												max={max}
-												value={config[key]}
-												onValueChange={value => setField(key, value)}
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Кнопка открытия
+									</h3>
+								</div>
+								<div className={styles.field}>
+									<p className={styles.label}>Картинка кнопки открытия:</p>
+									<div className={styles.buttonImageBox}>
+										<div className={styles.buttonImagePreview}>
+											<Image
+												src={
+													config.buttonImageUrl || DEFAULT_BUTTON_IMAGE_URL
+												}
+												alt="Кнопка калькулятора"
+												width={64}
+												height={64}
+												unoptimized={Boolean(config.buttonImageUrl)}
 											/>
 										</div>
-									))}
-								</div>
-								<label className={styles.checkRow}>
-									<input
-										type="checkbox"
-										checked={config.buttonPulse}
-										onChange={event =>
-											setField('buttonPulse', event.target.checked)
-										}
-									/>
-									<span>Пульсация кнопки</span>
-								</label>
-								<div className={styles.buttonImageBox}>
-									<div className={styles.buttonImagePreview}>
-										<Image
-											src={
-												config.buttonImageUrl || DEFAULT_BUTTON_IMAGE_URL
-											}
-											alt="Кнопка калькулятора"
-											width={64}
-											height={64}
-											unoptimized={Boolean(config.buttonImageUrl)}
-										/>
-									</div>
-									<div className={styles.buttonImageContent}>
-										<p className={styles.hint}>
-											Своя PNG-картинка до 200 КБ доступна на тарифе Hard.
-										</p>
-										<div className={styles.buttonImageActions}>
-											<label
-												htmlFor={buttonImageInputId}
-												className={`${styles.secondaryBtn} ${!canUseCustomButtonImage || hasUnsavedChanges ? styles.disabled : ''}`}
-											>
-												Загрузить PNG
-											</label>
-											<input
-												id={buttonImageInputId}
-												type="file"
-												accept="image/png"
-												className={styles.fileInput}
-												onChange={handleButtonImageUpload}
-											/>
-											{config.buttonImageUrl && (
-												<button
-													type="button"
-													className={styles.secondaryBtn}
-													onClick={resetButtonImage}
+										<div className={styles.buttonImageContent}>
+											<p className={styles.hint}>
+												PNG с прозрачным фоном, до 200 КБ.
+											</p>
+											<div className={styles.buttonImageActions}>
+												<label
+													htmlFor={buttonImageInputId}
+													className={`${styles.secondaryBtn} ${
+														!canUseCustomButtonImage || hasUnsavedChanges
+															? styles.disabled
+															: ''
+													}`}
 												>
-													Сбросить
-												</button>
+													Загрузить PNG
+												</label>
+												<input
+													id={buttonImageInputId}
+													type="file"
+													accept="image/png"
+													className={styles.fileInput}
+													onChange={handleButtonImageUpload}
+												/>
+												{config.buttonImageUrl && (
+													<button
+														type="button"
+														className={styles.secondaryBtn}
+														onClick={resetButtonImage}
+														disabled={isDangerActionPending}
+													>
+														Вернуть стандартную
+													</button>
+												)}
+											</div>
+											{!canUseCustomButtonImage && (
+												<p className={styles.domainHint}>
+													Своя картинка доступна только на активном тарифе
+													Hard.
+												</p>
+											)}
+											{canUseCustomButtonImage && hasUnsavedChanges && (
+												<p className={styles.hint}>
+													Перед загрузкой картинки сохраните текущие
+													настройки.
+												</p>
 											)}
 										</div>
 									</div>
 								</div>
-							</div>
 
-							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>
-									Тексты и запуск
-								</h3>
-								{(
-									[
-										['title', 'Заголовок'],
-										['subtitle', 'Подзаголовок'],
-										['calculateButtonText', 'Текст кнопки расчёта'],
-										['resultTitle', 'Заголовок результата'],
-										['bubbleText', 'Текст подсказки у кнопки']
-									] as const
-								).map(([key, label]) => (
-									<div key={key} className={styles.field}>
-										<p className={styles.label}>{label}</p>
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Кнопка открытия — пульсация
+									</p>
+									<label className={styles.checkRow}>
 										<input
-											className={styles.input}
-											value={config[key]}
-											onChange={event => setField(key, event.target.value)}
-										/>
-									</div>
-								))}
-								{config.dataType !== 'NONE' && (
-									<div className={styles.field}>
-										<p className={styles.label}>
-											Заголовок формы контакта
-										</p>
-										<input
-											className={styles.input}
-											value={config.contactTitle}
+											type="checkbox"
+											checked={config.buttonPulse}
 											onChange={event =>
-												setField('contactTitle', event.target.value)
+												setField('buttonPulse', event.target.checked)
 											}
 										/>
-									</div>
-								)}
-								<div className={styles.gridTwo}>
-									<div className={styles.field}>
-										<p className={styles.label}>Автооткрытие, секунд</p>
-										<input
-											type="number"
-											min={0}
-											className={styles.input}
-											value={config.autoOpenDelay ?? ''}
-											placeholder="Не открывать автоматически"
-											onChange={event =>
-												setField(
-													'autoOpenDelay',
-													event.target.value === ''
-														? null
-														: Math.max(0, Number(event.target.value))
-												)
-											}
-										/>
-									</div>
+										<span className={styles.checkLabel}>
+											Включить пульсацию кнопки
+										</span>
+									</label>
+									<p className={styles.hint}>
+										Добавляет мягкое свечение, чтобы кнопка была заметнее.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Сторона расположения кнопки для открытия виджета на
+										вашем сайте:
+									</p>
+									<select
+										className={styles.input}
+										value={config.buttonSide}
+										onChange={event =>
+											setField(
+												'buttonSide',
+												event.target.value as 'left' | 'right'
+											)
+										}
+									>
+										<option value="right">Справа</option>
+										<option value="left">Слева</option>
+									</select>
+									<p className={styles.hint}>
+										С какой стороны экрана показывать плавающую кнопку.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>Отображение облачка</p>
 									<label className={styles.checkRow}>
 										<input
 											type="checkbox"
@@ -869,17 +1304,275 @@ const CalculatorSettingsModal = ({
 												setField('bubbleEnabled', event.target.checked)
 											}
 										/>
-										<span>Показывать подсказку</span>
+										<span className={styles.checkLabel}>
+											Показывать облачко рядом с кнопкой
+										</span>
 									</label>
+									<p className={styles.hint}>
+										Если выключить, на сайте останется только плавающая
+										кнопка.
+									</p>
+								</div>
+
+								{config.bubbleEnabled && (
+									<div className={styles.field}>
+										<p className={styles.label}>Текст облачка:</p>
+										<input
+											id={validationTargetId('bubble-text')}
+											className={`${styles.input} ${
+												isInvalidTarget(validationTargetId('bubble-text'))
+													? pageStyles.inputError
+													: ''
+											}`}
+											value={config.bubbleText}
+											onChange={event =>
+												setField(
+													'bubbleText',
+													event.target.value,
+													validationTargetId('bubble-text')
+												)
+											}
+											placeholder="Рассчитать стоимость"
+											maxLength={100}
+											aria-invalid={isInvalidTarget(
+												validationTargetId('bubble-text')
+											)}
+											aria-describedby={
+												isInvalidTarget(validationTargetId('bubble-text'))
+													? `${validationTargetId('bubble-text')}-error`
+													: undefined
+											}
+										/>
+										{renderFieldError(validationTargetId('bubble-text'))}
+										<p className={styles.hint}>
+											Короткий призыв рядом с плавающей кнопкой.
+										</p>
+									</div>
+								)}
+
+								<div className={styles.field}>
+									<div className={pageStyles.rangeHeader}>
+										<p className={styles.label}>
+											Высота кнопки от низа экрана:
+										</p>
+										<span className={pageStyles.rangeValue}>
+											{config.buttonBottom}%
+										</span>
+									</div>
+									<input
+										id={validationTargetId('button-bottom')}
+										type="range"
+										aria-label="Высота кнопки от низа экрана"
+										min={1}
+										max={50}
+										step={1}
+										value={config.buttonBottom}
+										className={`${pageStyles.rangeInput} ${
+											isInvalidTarget(validationTargetId('button-bottom'))
+												? pageStyles.inputError
+												: ''
+										}`}
+										aria-invalid={isInvalidTarget(
+											validationTargetId('button-bottom')
+										)}
+										aria-describedby={
+											isInvalidTarget(validationTargetId('button-bottom'))
+												? `${validationTargetId('button-bottom')}-error`
+												: undefined
+										}
+										onChange={event =>
+											setField(
+												'buttonBottom',
+												Number(event.target.value),
+												validationTargetId('button-bottom')
+											)
+										}
+									/>
+									{renderFieldError(validationTargetId('button-bottom'))}
+									<p className={styles.hint}>
+										1% — почти у нижнего края, 50% — по центру экрана.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<div className={pageStyles.rangeHeader}>
+										<p className={styles.label}>
+											Отступ кнопки от края экрана:
+										</p>
+										<span className={pageStyles.rangeValue}>
+											{config.buttonOffset}%
+										</span>
+									</div>
+									<input
+										type="range"
+										aria-label="Отступ кнопки от края экрана"
+										min={1}
+										max={50}
+										step={1}
+										value={config.buttonOffset}
+										className={pageStyles.rangeInput}
+										onChange={event =>
+											setField('buttonOffset', Number(event.target.value))
+										}
+									/>
+									<p className={styles.hint}>
+										Отступ от выбранного левого или правого края.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<div className={pageStyles.rangeHeader}>
+										<p className={styles.label}>Размер кнопки открытия:</p>
+										<span className={pageStyles.rangeValue}>
+											{config.buttonSize}px
+										</span>
+									</div>
+									<input
+										type="range"
+										aria-label="Размер кнопки открытия"
+										min={40}
+										max={100}
+										step={1}
+										value={config.buttonSize}
+										className={pageStyles.rangeInput}
+										onChange={event =>
+											setField('buttonSize', Number(event.target.value))
+										}
+									/>
+									<p className={styles.hint}>
+										Размер плавающей кнопки на сайте. Стандартное значение
+										— 60 px.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<label className={styles.checkRow}>
+										<input
+											type="checkbox"
+											checked={config.autoOpenDelay != null}
+											onChange={event =>
+												setField(
+													'autoOpenDelay',
+													event.target.checked ? 5 : null
+												)
+											}
+										/>
+										<span className={styles.checkLabel}>
+											Открывать виджет автоматически
+										</span>
+									</label>
+									{config.autoOpenDelay != null && (
+										<>
+											<div className={pageStyles.rangeHeader}>
+												<p className={styles.label}>Автооткрытие через:</p>
+												<span className={pageStyles.rangeValue}>
+													{config.autoOpenDelay} сек.
+												</span>
+											</div>
+											<input
+												type="range"
+												aria-label="Автооткрытие через"
+												min={1}
+												max={MAX_AUTO_OPEN_DELAY_SECONDS}
+												step={1}
+												value={config.autoOpenDelay}
+												className={pageStyles.rangeInput}
+												onChange={event =>
+													setField(
+														'autoOpenDelay',
+														Number(event.target.value)
+													)
+												}
+											/>
+										</>
+									)}
+									<p className={styles.hint}>
+										Калькулятор откроется через выбранное число секунд
+										после загрузки страницы.
+									</p>
 								</div>
 							</div>
 
 							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>
-									Сбор контакта
-								</h3>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Тексты и запуск
+									</h3>
+								</div>
+								{(
+									[
+										[
+											'title',
+											'Заголовок виджета:',
+											'Рассчитайте стоимость',
+											100,
+											'Главный заголовок на первом шаге.'
+										],
+										[
+											'subtitle',
+											'Подзаголовок виджета:',
+											'Ответьте на несколько вопросов и получите расчёт',
+											300,
+											'Кратко объясните посетителю, что нужно сделать.'
+										],
+										[
+											'calculateButtonText',
+											'Текст кнопки расчёта:',
+											'Рассчитать',
+											50,
+											'Кнопка после заполнения параметров.'
+										],
+										[
+											'resultTitle',
+											'Заголовок результата:',
+											'Ориентировочная стоимость',
+											100,
+											'Подпись над рассчитанной суммой.'
+										]
+									] as const
+								).map(([key, label, placeholder, maxLength, hint]) => (
+									<div key={key} className={styles.field}>
+										<p className={styles.label}>{label}</p>
+										<input
+											id={validationTargetId(`main-${key}`)}
+											className={`${styles.input} ${
+												isInvalidTarget(validationTargetId(`main-${key}`))
+													? pageStyles.inputError
+													: ''
+											}`}
+											value={config[key]}
+											onChange={event =>
+												setField(
+													key,
+													event.target.value,
+													validationTargetId(`main-${key}`)
+												)
+											}
+											placeholder={placeholder}
+											maxLength={maxLength}
+											aria-invalid={isInvalidTarget(
+												validationTargetId(`main-${key}`)
+											)}
+											aria-describedby={
+												isInvalidTarget(validationTargetId(`main-${key}`))
+													? `${validationTargetId(`main-${key}`)}-error`
+													: undefined
+											}
+										/>
+										{renderFieldError(validationTargetId(`main-${key}`))}
+										<p className={styles.hint}>{hint}</p>
+									</div>
+								))}
+							</div>
+
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Сбор данных клиента
+									</h3>
+								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>Какие контакты собирать</p>
+									<p className={styles.label}>Сбор данных клиента:</p>
 									<select
 										className={styles.input}
 										value={config.dataType}
@@ -890,55 +1583,167 @@ const CalculatorSettingsModal = ({
 											)
 										}
 									>
-										<option value="NONE">Не собирать контакты</option>
-										<option value="PHONE">Телефон</option>
+										<option value="PHONE">Номер телефона</option>
 										<option value="EMAIL">Email</option>
 										<option value="PHONE_AND_EMAIL">
-											Телефон и Email
+											Номер телефона и Email
 										</option>
+										<option value="NONE">Ничего не собираем</option>
 									</select>
 									<p className={styles.hint}>
-										Если сбор включён, контакт запрашивается перед показом
-										результата.
+										Если сбор включён, контакт запрашивается перед
+										результатом. Без сбора результат показывается сразу, а
+										заявка не создаётся.
 									</p>
 								</div>
 								{config.dataType !== 'NONE' && (
 									<>
 										<div className={styles.field}>
-											<p className={styles.label}>Ссылка на согласие</p>
+											<p className={styles.label}>
+												Заголовок формы контакта:
+											</p>
 											<input
-												className={styles.input}
-												value={config.privacyUrl}
-												onChange={event =>
-													setField('privacyUrl', event.target.value)
-												}
-											/>
-										</div>
-										<label className={styles.checkRow}>
-											<input
-												type="checkbox"
-												checked={config.filterDuplicates}
+												id={validationTargetId('contact-title')}
+												className={`${styles.input} ${
+													isInvalidTarget(
+														validationTargetId('contact-title')
+													)
+														? pageStyles.inputError
+														: ''
+												}`}
+												value={config.contactTitle}
 												onChange={event =>
 													setField(
-														'filterDuplicates',
-														event.target.checked
+														'contactTitle',
+														event.target.value,
+														validationTargetId('contact-title')
 													)
 												}
+												placeholder="Оставьте контакт, чтобы получить расчёт"
+												maxLength={150}
+												aria-invalid={isInvalidTarget(
+													validationTargetId('contact-title')
+												)}
+												aria-describedby={
+													isInvalidTarget(
+														validationTargetId('contact-title')
+													)
+														? `${validationTargetId('contact-title')}-error`
+														: undefined
+												}
 											/>
-											<span>Не сохранять повторные контакты</span>
-										</label>
+											{renderFieldError(
+												validationTargetId('contact-title')
+											)}
+											<p className={styles.hint}>
+												Показывается перед полями телефона или email.
+											</p>
+										</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Ссылка на политику конфиденциальности:
+											</p>
+											<input
+												id={validationTargetId('privacy-url')}
+												type="url"
+												className={`${styles.input} ${
+													isInvalidTarget(
+														validationTargetId('privacy-url')
+													)
+														? pageStyles.inputError
+														: ''
+												}`}
+												value={config.privacyUrl}
+												onChange={event =>
+													setField(
+														'privacyUrl',
+														event.target.value,
+														validationTargetId('privacy-url')
+													)
+												}
+												placeholder="https://winwidget.ru/legal-documentation/consent-processing"
+												maxLength={500}
+												aria-invalid={isInvalidTarget(
+													validationTargetId('privacy-url')
+												)}
+												aria-describedby={
+													isInvalidTarget(
+														validationTargetId('privacy-url')
+													)
+														? `${validationTargetId('privacy-url')}-error`
+														: undefined
+												}
+											/>
+											{renderFieldError(validationTargetId('privacy-url'))}
+											<p className={styles.hint}>
+												Можно оставить ссылку Winwidget или указать
+												политику вашей компании.
+											</p>
+										</div>
+										<div className={styles.field}>
+											<label className={styles.checkRow}>
+												<input
+													type="checkbox"
+													checked={config.filterDuplicates}
+													onChange={event =>
+														setField(
+															'filterDuplicates',
+															event.target.checked
+														)
+													}
+												/>
+												<span className={styles.checkLabel}>
+													Не учитывать повторные контакты
+												</span>
+											</label>
+											<p className={styles.hint}>
+												Повторная заявка с уже сохранённым телефоном или
+												email не будет создана.
+											</p>
+										</div>
 									</>
 								)}
-								<label className={styles.checkRow}>
-									<input
-										type="checkbox"
-										checked={config.developInfoActive}
-										onChange={event =>
-											setField('developInfoActive', event.target.checked)
-										}
-									/>
-									<span>Показывать ссылку на Winwidget</span>
-								</label>
+								<div className={styles.field}>
+									<label className={styles.checkRow}>
+										<input
+											type="checkbox"
+											checked={config.developInfoActive}
+											onChange={event =>
+												setField('developInfoActive', event.target.checked)
+											}
+										/>
+										<span className={styles.checkLabel}>
+											Показывать ссылку на Winwidget
+										</span>
+									</label>
+									<p className={styles.hint}>
+										Управляет отображением подписи сервиса внутри
+										калькулятора.
+									</p>
+								</div>
+							</div>
+
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Опасные действия
+									</h3>
+								</div>
+								<div className={styles.dangerActions}>
+									<p className={styles.hint}>
+										Сброс заменит внешний вид, тексты, поля, формулу и
+										интеграции стандартными значениями. Название и домен
+										установки сохранятся.
+									</p>
+									<button
+										type="button"
+										className={styles.resetSettingsBtn}
+										onClick={() => setIsResetConfirmOpen(true)}
+										disabled={isDangerActionPending}
+									>
+										Сбросить все настройки
+									</button>
+								</div>
 							</div>
 						</div>
 					)}
@@ -946,13 +1751,15 @@ const CalculatorSettingsModal = ({
 					{tab === 'fields' && (
 						<div className={styles.fields}>
 							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>
-									Параметры расчёта
-								</h3>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Параметры расчёта
+									</h3>
+								</div>
 								<p className={styles.infoText}>
 									Поля показываются посетителю в указанном порядке. Для
-									выбора и чекбокса настройте надбавку и множитель, для
-									числа — цену за единицу.
+									вариантов можно задать надбавку и множитель, для числа —
+									цену за единицу.
 								</p>
 							</div>
 							{config.fields.map((field, fieldIndex) => (
@@ -987,19 +1794,47 @@ const CalculatorSettingsModal = ({
 									</div>
 									<div className={styles.gridTwo}>
 										<div className={styles.field}>
-											<p className={styles.label}>Название поля</p>
+											<p className={styles.label}>Название поля:</p>
 											<input
-												className={styles.input}
+												id={validationTargetId(`field-${field.id}-label`)}
+												className={`${styles.input} ${
+													isInvalidTarget(
+														validationTargetId(`field-${field.id}-label`)
+													)
+														? pageStyles.inputError
+														: ''
+												}`}
 												value={field.label}
-												onChange={event =>
-													updateCalculatorField(fieldIndex, {
-														label: event.target.value
-													})
+												aria-invalid={isInvalidTarget(
+													validationTargetId(`field-${field.id}-label`)
+												)}
+												aria-describedby={
+													isInvalidTarget(
+														validationTargetId(`field-${field.id}-label`)
+													)
+														? `${validationTargetId(
+																`field-${field.id}-label`
+															)}-error`
+														: undefined
 												}
+												onChange={event =>
+													updateCalculatorField(
+														fieldIndex,
+														{
+															label: event.target.value
+														},
+														validationTargetId(`field-${field.id}-label`)
+													)
+												}
+												placeholder={`Параметр ${fieldIndex + 1}`}
+												maxLength={100}
 											/>
+											{renderFieldError(
+												validationTargetId(`field-${field.id}-label`)
+											)}
 										</div>
 										<div className={styles.field}>
-											<p className={styles.label}>Тип</p>
+											<p className={styles.label}>Тип поля:</p>
 											<select
 												className={styles.input}
 												value={field.type}
@@ -1010,8 +1845,8 @@ const CalculatorSettingsModal = ({
 													)
 												}
 											>
-												<option value="select">Выбор</option>
-												<option value="number">Число</option>
+												<option value="select">Выпадающий список</option>
+												<option value="number">Числовое поле</option>
 												<option value="radio">Один вариант</option>
 												<option value="checkbox">
 													Несколько вариантов
@@ -1029,7 +1864,9 @@ const CalculatorSettingsModal = ({
 												})
 											}
 										/>
-										<span>Обязательное поле</span>
+										<span className={styles.checkLabel}>
+											Обязательное поле
+										</span>
 									</label>
 
 									{(field.type === 'select' ||
@@ -1038,20 +1875,51 @@ const CalculatorSettingsModal = ({
 										<div className={styles.optionList}>
 											{(field.options || []).map((option, optionIndex) => (
 												<div key={option.id} className={styles.optionRow}>
-													<input
-														className={styles.input}
-														value={option.label}
-														placeholder="Название варианта"
-														onChange={event =>
-															updateOption(fieldIndex, optionIndex, {
-																label: event.target.value
-															})
-														}
-													/>
 													<div className={styles.compactField}>
-														<span>Надбавка</span>
+														<span>Название варианта:</span>
+														<input
+															id={validationTargetId(
+																`field-${field.id}-option-${option.id}-label`
+															)}
+															className={`${styles.input} ${
+																isInvalidTarget(
+																	validationTargetId(
+																		`field-${field.id}-option-${option.id}-label`
+																	)
+																)
+																	? pageStyles.inputError
+																	: ''
+															}`}
+															value={option.label}
+															placeholder={`Вариант ${optionIndex + 1}`}
+															maxLength={100}
+															onChange={event =>
+																updateOption(fieldIndex, optionIndex, {
+																	label: event.target.value
+																})
+															}
+														/>
+														{renderFieldError(
+															validationTargetId(
+																`field-${field.id}-option-${option.id}-label`
+															)
+														)}
+													</div>
+													<div className={styles.compactField}>
+														<span>Надбавка:</span>
 														<NumericInput
-															className={styles.input}
+															id={validationTargetId(
+																`field-${field.id}-option-${option.id}-add`
+															)}
+															className={`${styles.input} ${
+																isInvalidTarget(
+																	validationTargetId(
+																		`field-${field.id}-option-${option.id}-add`
+																	)
+																)
+																	? pageStyles.inputError
+																	: ''
+															}`}
 															aria-label={`Надбавка для варианта ${option.label}`}
 															value={option.add}
 															onValueChange={value =>
@@ -1060,13 +1928,29 @@ const CalculatorSettingsModal = ({
 																})
 															}
 														/>
+														{renderFieldError(
+															validationTargetId(
+																`field-${field.id}-option-${option.id}-add`
+															)
+														)}
 													</div>
 													<div className={styles.compactField}>
-														<span>Множитель</span>
+														<span>Множитель:</span>
 														<NumericInput
+															id={validationTargetId(
+																`field-${field.id}-option-${option.id}-multiplier`
+															)}
 															min={0.01}
 															step={0.01}
-															className={styles.input}
+															className={`${styles.input} ${
+																isInvalidTarget(
+																	validationTargetId(
+																		`field-${field.id}-option-${option.id}-multiplier`
+																	)
+																)
+																	? pageStyles.inputError
+																	: ''
+															}`}
 															aria-label={`Множитель для варианта ${option.label}`}
 															value={option.multiplier}
 															onValueChange={value =>
@@ -1075,6 +1959,11 @@ const CalculatorSettingsModal = ({
 																})
 															}
 														/>
+														{renderFieldError(
+															validationTargetId(
+																`field-${field.id}-option-${option.id}-multiplier`
+															)
+														)}
 													</div>
 													<button
 														type="button"
@@ -1089,12 +1978,24 @@ const CalculatorSettingsModal = ({
 												</div>
 											))}
 											<button
+												id={validationTargetId(
+													`field-${field.id}-options`
+												)}
 												type="button"
-												className={styles.secondaryBtn}
+												className={`${styles.secondaryBtn} ${
+													isInvalidTarget(
+														validationTargetId(`field-${field.id}-options`)
+													)
+														? pageStyles.inputError
+														: ''
+												}`}
 												onClick={() => addOption(fieldIndex)}
 											>
 												Добавить вариант
 											</button>
+											{renderFieldError(
+												validationTargetId(`field-${field.id}-options`)
+											)}
 										</div>
 									)}
 
@@ -1110,20 +2011,40 @@ const CalculatorSettingsModal = ({
 												] as const
 											).map(([key, label]) => (
 												<div key={key} className={styles.field}>
-													<p className={styles.label}>{label}</p>
+													<p className={styles.label}>{label}:</p>
 													<NumericInput
-														className={styles.input}
+														id={validationTargetId(
+															`field-${field.id}-${key}`
+														)}
+														className={`${styles.input} ${
+															isInvalidTarget(
+																validationTargetId(
+																	`field-${field.id}-${key}`
+																)
+															)
+																? pageStyles.inputError
+																: ''
+														}`}
 														value={field[key] ?? 0}
 														onValueChange={value =>
-															updateCalculatorField(fieldIndex, {
-																[key]: value
-															})
+															updateCalculatorField(
+																fieldIndex,
+																{
+																	[key]: value
+																},
+																validationTargetId(
+																	`field-${field.id}-${key}`
+																)
+															)
 														}
 													/>
+													{renderFieldError(
+														validationTargetId(`field-${field.id}-${key}`)
+													)}
 												</div>
 											))}
 											<div className={styles.field}>
-												<p className={styles.label}>Единица</p>
+												<p className={styles.label}>Единица:</p>
 												<input
 													className={styles.input}
 													value={field.unit || ''}
@@ -1139,19 +2060,27 @@ const CalculatorSettingsModal = ({
 								</div>
 							))}
 							<button
+								id={validationTargetId('fields-empty')}
 								type="button"
-								className={styles.addBtn}
+								className={`${styles.addBtn} ${
+									isInvalidTarget(validationTargetId('fields-empty'))
+										? pageStyles.inputError
+										: ''
+								}`}
 								onClick={addCalculatorField}
 							>
 								Добавить поле
 							</button>
+							{renderFieldError(validationTargetId('fields-empty'))}
 						</div>
 					)}
 
 					{tab === 'calculation' && (
 						<div className={styles.fields}>
 							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>Формула</h3>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>Формула</h3>
+								</div>
 								<p className={styles.infoText}>
 									Итог = (базовая стоимость + надбавки + значения числовых
 									полей × цена за единицу) × множители. После этого
@@ -1159,37 +2088,90 @@ const CalculatorSettingsModal = ({
 								</p>
 								<div className={styles.gridThree}>
 									<div className={styles.field}>
-										<p className={styles.label}>Базовая стоимость</p>
+										<p className={styles.label}>Базовая стоимость:</p>
 										<NumericInput
+											id={validationTargetId('calculation-base-price')}
 											min={0}
-											className={styles.input}
+											className={`${styles.input} ${
+												isInvalidTarget(
+													validationTargetId('calculation-base-price')
+												)
+													? pageStyles.inputError
+													: ''
+											}`}
 											value={config.basePrice}
-											onValueChange={value => setField('basePrice', value)}
+											onValueChange={value =>
+												setField(
+													'basePrice',
+													value,
+													validationTargetId('calculation-base-price')
+												)
+											}
 										/>
+										{renderFieldError(
+											validationTargetId('calculation-base-price')
+										)}
+										<p className={styles.hint}>
+											Начальная сумма до применения выбранных параметров.
+										</p>
 									</div>
 									<div className={styles.field}>
-										<p className={styles.label}>Валюта</p>
+										<p className={styles.label}>Валюта:</p>
 										<input
-											className={styles.input}
+											id={validationTargetId('calculation-currency')}
+											className={`${styles.input} ${
+												isInvalidTarget(
+													validationTargetId('calculation-currency')
+												)
+													? pageStyles.inputError
+													: ''
+											}`}
 											value={config.currency}
 											onChange={event =>
-												setField('currency', event.target.value)
+												setField(
+													'currency',
+													event.target.value,
+													validationTargetId('calculation-currency')
+												)
 											}
-											maxLength={10}
+											maxLength={3}
 											placeholder="RUB"
 										/>
+										{renderFieldError(
+											validationTargetId('calculation-currency')
+										)}
+										<p className={styles.hint}>
+											Трёхбуквенный код: RUB, USD или EUR.
+										</p>
 									</div>
 									<div className={styles.field}>
-										<p className={styles.label}>Шаг округления</p>
+										<p className={styles.label}>Шаг округления:</p>
 										<NumericInput
+											id={validationTargetId('calculation-rounding-step')}
 											min={0.01}
 											step={0.01}
-											className={styles.input}
+											className={`${styles.input} ${
+												isInvalidTarget(
+													validationTargetId('calculation-rounding-step')
+												)
+													? pageStyles.inputError
+													: ''
+											}`}
 											value={config.roundingStep}
 											onValueChange={value =>
-												setField('roundingStep', value)
+												setField(
+													'roundingStep',
+													value,
+													validationTargetId('calculation-rounding-step')
+												)
 											}
 										/>
+										{renderFieldError(
+											validationTargetId('calculation-rounding-step')
+										)}
+										<p className={styles.hint}>
+											Например, 100 округляет результат до ближайшей сотни.
+										</p>
 									</div>
 								</div>
 							</div>
@@ -1199,90 +2181,192 @@ const CalculatorSettingsModal = ({
 					{tab === 'integrations' && (
 						<div className={styles.fields}>
 							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>
-									Получение заявок
-								</h3>
-								{(
-									[
-										['email', 'Email для уведомлений', 'mail@example.ru'],
-										['telegramChatId', 'Telegram Chat ID', '123456789'],
-										[
-											'webhookUrl',
-											'Webhook URL',
-											'https://example.ru/webhook'
-										],
-										[
-											'bitrix24WebhookUrl',
-											'Битрикс24 — входящий webhook',
-											'https://company.bitrix24.ru/rest/...'
-										],
-										['amoCrmDomain', 'amoCRM — домен', 'company.amocrm.ru']
-									] as const
-								).map(([key, label, placeholder]) => (
-									<div key={key} className={styles.field}>
-										<p className={styles.label}>{label}</p>
-										<input
-											className={styles.input}
-											value={String(config.integrations[key] || '')}
-											placeholder={placeholder}
-											onChange={event =>
-												setIntegration(key, event.target.value)
-											}
-										/>
-									</div>
-								))}
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Уведомления
+									</h3>
+								</div>
+								<p className={styles.infoText}>
+									Можно включить email и Telegram одновременно. Оба
+									уведомления отправляются после сохранения заявки.
+								</p>
+								<div className={styles.field}>
+									<p className={styles.label}>Отправка заявок на Email</p>
+									<input
+										type="email"
+										className={styles.input}
+										value={config.integrations.email || ''}
+										placeholder="mail@example.ru"
+										maxLength={200}
+										onChange={event =>
+											setIntegration('email', event.target.value)
+										}
+									/>
+									<p className={styles.hint}>
+										На этот адрес будут приходить новые заявки
+										калькулятора.
+									</p>
+								</div>
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Отправка заявок в Telegram
+									</p>
+									<input
+										className={styles.input}
+										value={config.integrations.telegramChatId || ''}
+										placeholder="123456789"
+										maxLength={100}
+										onChange={event =>
+											setIntegration('telegramChatId', event.target.value)
+										}
+									/>
+									<p className={styles.hint}>
+										Напишите боту <b>@winwidget_info_bot</b> команду
+										/start, затем укажите ваш Telegram ID. Узнать его можно
+										через <b>@getmyid_bot</b>.
+									</p>
+								</div>
+							</div>
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Webhooks и CRM
+									</h3>
+								</div>
+								<div className={styles.field}>
+									<p className={styles.label}>Внешний URL (Webhook)</p>
+									<input
+										type="url"
+										className={styles.input}
+										value={config.integrations.webhookUrl || ''}
+										placeholder="https://example.ru/webhook"
+										maxLength={500}
+										onChange={event =>
+											setIntegration('webhookUrl', event.target.value)
+										}
+									/>
+									<p className={styles.hint}>
+										Winwidget отправит данные заявки POST-запросом на
+										указанный адрес.
+									</p>
+								</div>
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Отправка заявок в Битрикс24
+									</p>
+									<input
+										type="url"
+										className={styles.input}
+										value={config.integrations.bitrix24WebhookUrl || ''}
+										placeholder="https://company.bitrix24.ru/rest/..."
+										maxLength={500}
+										onChange={event =>
+											setIntegration(
+												'bitrix24WebhookUrl',
+												event.target.value
+											)
+										}
+									/>
+									<p className={styles.hint}>
+										Новые заявки будут создаваться как лиды в Битрикс24.
+									</p>
+								</div>
+								<div className={styles.field}>
+									<p className={styles.label}>amoCRM — домен аккаунта</p>
+									<input
+										className={styles.input}
+										value={config.integrations.amoCrmDomain || ''}
+										placeholder="company.amocrm.ru"
+										maxLength={100}
+										onChange={event =>
+											setIntegration('amoCrmDomain', event.target.value)
+										}
+									/>
+									<p className={styles.hint}>
+										Например, company.amocrm.ru без пути и протокола.
+									</p>
+								</div>
 								<div className={styles.field}>
 									<p className={styles.label}>amoCRM — токен доступа</p>
 									<input
 										type="password"
 										className={styles.input}
 										value={config.integrations.amoCrmToken || ''}
+										placeholder="Долгосрочный токен из настроек API"
+										maxLength={500}
 										onChange={event =>
 											setIntegration('amoCrmToken', event.target.value)
 										}
 									/>
+									<p className={styles.hint}>
+										При каждой заявке будут создаваться сделка и контакт.
+									</p>
 								</div>
 							</div>
 							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>Аналитика</h3>
-								<div className={styles.gridTwo}>
-									<div className={styles.field}>
-										<p className={styles.label}>Яндекс Метрика — ID</p>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>Аналитика</h3>
+								</div>
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Яндекс Метрика — ID счётчика
+									</p>
+									<input
+										className={styles.input}
+										value={config.integrations.yandexMetrikaId || ''}
+										placeholder="12345678"
+										maxLength={100}
+										onChange={event =>
+											setIntegration('yandexMetrikaId', event.target.value)
+										}
+									/>
+									<p className={styles.hint}>
+										При открытии отправляется цель <b>calculator_open</b>,
+										после заявки — <b>calculator_lead</b>. Счётчик должен
+										быть установлен на странице сайта.
+									</p>
+								</div>
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Ретаргетинг ВКонтакте — ID пикселя
+									</p>
+									<input
+										className={styles.input}
+										value={config.integrations.vkPixelId || ''}
+										placeholder="VK-RTRG-12345-ABCDEF"
+										maxLength={100}
+										onChange={event =>
+											setIntegration('vkPixelId', event.target.value)
+										}
+									/>
+									<p className={styles.hint}>
+										События: <b>calculator_open</b> и{' '}
+										<b>calculator_lead</b>. Пиксель VK должен быть
+										установлен на странице сайта.
+									</p>
+								</div>
+								<div className={styles.field}>
+									<label className={styles.checkRow}>
 										<input
-											className={styles.input}
-											value={config.integrations.yandexMetrikaId || ''}
+											type="checkbox"
+											checked={config.integrations.roistatEnabled || false}
 											onChange={event =>
 												setIntegration(
-													'yandexMetrikaId',
-													event.target.value
+													'roistatEnabled',
+													event.target.checked
 												)
 											}
 										/>
-									</div>
-									<div className={styles.field}>
-										<p className={styles.label}>VK — ID пикселя</p>
-										<input
-											className={styles.input}
-											value={config.integrations.vkPixelId || ''}
-											onChange={event =>
-												setIntegration('vkPixelId', event.target.value)
-											}
-										/>
-									</div>
+										<span className={styles.checkLabel}>
+											Включить отправку целей в Roistat
+										</span>
+									</label>
+									<p className={styles.hint}>
+										Отправляются цели <b>calculator_open</b> и{' '}
+										<b>calculator_lead</b>. Код Roistat должен быть
+										подключён на странице сайта.
+									</p>
 								</div>
-								<label className={styles.checkRow}>
-									<input
-										type="checkbox"
-										checked={config.integrations.roistatEnabled || false}
-										onChange={event =>
-											setIntegration(
-												'roistatEnabled',
-												event.target.checked
-											)
-										}
-									/>
-									<span>Отправлять цели в Roistat</span>
-								</label>
 							</div>
 						</div>
 					)}
@@ -1290,15 +2374,18 @@ const CalculatorSettingsModal = ({
 					{tab === 'code' && (
 						<div className={styles.fields}>
 							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>
-									Установка на сайт
-								</h3>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Установка на сайт
+									</h3>
+								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>Домен установки</p>
+									<p className={styles.label}>Домен установки виджета:</p>
 									<input
 										className={styles.input}
 										value={installDomain}
 										placeholder="site.ru"
+										maxLength={255}
 										onChange={event =>
 											setInstallDomain(event.target.value)
 										}
@@ -1309,7 +2396,10 @@ const CalculatorSettingsModal = ({
 									</p>
 								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>Код виджета</p>
+									<p className={styles.label}>Код виджета:</p>
+									<p className={styles.hint}>
+										Вставьте код перед закрывающим тегом &lt;/body&gt;.
+									</p>
 									<textarea
 										className={`${styles.input} ${styles.codeArea}`}
 										value={scriptCode}
@@ -1318,19 +2408,24 @@ const CalculatorSettingsModal = ({
 									<button
 										type="button"
 										className={styles.secondaryBtn}
-										onClick={() => {
-											navigator.clipboard.writeText(scriptCode)
-											toast.success('Код скопирован')
-										}}
+										onClick={() =>
+											copyToClipboard(scriptCode, 'Код скопирован', true)
+										}
 									>
 										Копировать код
 									</button>
 								</div>
 							</div>
 							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>
-									Прямая ссылка
-								</h3>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Прямая ссылка
+									</h3>
+								</div>
+								<p className={styles.hint}>
+									Используйте калькулятор без установки на сайт или
+									отправьте ссылку клиенту.
+								</p>
 								<div className={styles.directLink}>
 									<input
 										className={styles.input}
@@ -1349,10 +2444,9 @@ const CalculatorSettingsModal = ({
 								<button
 									type="button"
 									className={styles.secondaryBtn}
-									onClick={() => {
-										navigator.clipboard.writeText(directLink)
-										toast.success('Ссылка скопирована')
-									}}
+									onClick={() =>
+										copyToClipboard(directLink, 'Ссылка скопирована')
+									}
 								>
 									Копировать ссылку
 								</button>
@@ -1367,9 +2461,11 @@ const CalculatorSettingsModal = ({
 					{tab === 'info' && (
 						<div className={styles.fields}>
 							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>
-									Как работает калькулятор
-								</h3>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Как работает калькулятор
+									</h3>
+								</div>
 								<ul className={styles.infoList}>
 									<li>Посетитель заполняет настроенные поля.</li>
 									<li>
@@ -1377,19 +2473,26 @@ const CalculatorSettingsModal = ({
 										множители без выполнения пользовательского JavaScript.
 									</li>
 									<li>
-										Контакт запрашивается до или после результата — в
-										зависимости от выбранной настройки.
+										Если сбор данных включён, контакт всегда запрашивается
+										перед показом результата.
 									</li>
 									<li>
-										Заявка, параметры и итоговая стоимость сохраняются в
-										единой странице заявок кабинета.
+										Если выбран вариант «Ничего не собираем», результат
+										показывается сразу, а заявка не создаётся.
+									</li>
+									<li>
+										При включённом сборе данных заявка, параметры и
+										итоговая стоимость сохраняются на единой странице
+										заявок кабинета.
 									</li>
 								</ul>
 							</div>
 							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>
-									Перед запуском
-								</h3>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Перед запуском
+									</h3>
+								</div>
 								<ul className={styles.infoList}>
 									<li>Проверьте минимальные и максимальные значения.</li>
 									<li>Сравните несколько расчётов вручную.</li>
@@ -1415,10 +2518,10 @@ const CalculatorSettingsModal = ({
 						<button
 							type="button"
 							className={styles.cancelBtn}
-							onClick={onClose}
+							onClick={requestClose}
 							disabled={saveMutation.isPending}
 						>
-							Отмена
+							{isPagePresentation ? 'К виджетам' : 'Отмена'}
 						</button>
 						<button
 							type="button"
@@ -1430,6 +2533,18 @@ const CalculatorSettingsModal = ({
 						</button>
 					</div>
 				</div>
+				{closeGuardDialog}
+				{isResetConfirmOpen && (
+					<ConfirmDialog
+						title="Сбросить настройки калькулятора?"
+						message="Внешний вид, тексты, поля, формула и интеграции будут заменены стандартными значениями. Название виджета и домен установки сохранятся."
+						confirmLabel="Да, сбросить"
+						cancelLabel="Отмена"
+						confirmDisabled={isDangerActionPending}
+						onConfirm={resetSettings}
+						onCancel={() => setIsResetConfirmOpen(false)}
+					/>
+				)}
 			</div>
 		</div>
 	)

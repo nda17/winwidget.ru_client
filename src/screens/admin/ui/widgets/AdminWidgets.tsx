@@ -5,6 +5,7 @@ import AdminSectionHeading from '@/screens/admin/ui/common/admin-section-heading
 import Heading from '@/shared/ui/heading/Heading'
 import Pagination from '@/shared/ui/pagination/Pagination'
 import SkeletonLoader from '@/shared/ui/skeleton-loader/SkeletonLoader'
+import ConfirmDialog from '@/shared/ui/confirm-dialog/ConfirmDialog'
 import { errorCatch } from '@/shared/api'
 import {
 	adminWidgetsService,
@@ -16,7 +17,7 @@ import {
 	IAdminWidgetMonitoringItem
 } from '@/features/manage-widgets'
 import type { Plan, SubscriptionStatus } from '@/entities/subscription'
-import { useAuthStore } from '@/entities/user'
+import { UserRole, useAuthStore, useUser } from '@/entities/user'
 import {
 	useMutation,
 	useQuery,
@@ -136,6 +137,13 @@ const formatOwner = (item: IAdminWidgetMonitoringItem) =>
 const formatOwnerContact = (item: IAdminWidgetMonitoringItem) =>
 	item.owner.email || item.owner.phone || item.owner.id
 
+const formatDeleteOwner = (item: IAdminWidgetMonitoringItem) => {
+	const owner = formatOwner(item)
+	const contact = formatOwnerContact(item)
+
+	return owner === contact ? owner : `${owner} (${contact})`
+}
+
 const getWidgetKey = (
 	item: Pick<IAdminWidgetMonitoringItem, 'type' | 'id'>
 ) => `${item.type}:${item.id}`
@@ -145,6 +153,7 @@ const getDetailsQueryKey = (type: AdminWidgetType, id: string) =>
 
 const AdminWidgets: NextPage = () => {
 	const auth = useAuthStore(state => state.auth)
+	const { user } = useUser()
 	const queryClient = useQueryClient()
 	const [currentPage, setCurrentPage] = useState(1)
 	const [filterDraft, setFilterDraft] = useState(DEFAULT_FILTERS)
@@ -153,7 +162,17 @@ const AdminWidgets: NextPage = () => {
 	const [loadingEditorKey, setLoadingEditorKey] = useState<string | null>(
 		null
 	)
+	const [deleteTarget, setDeleteTarget] =
+		useState<IAdminWidgetMonitoringItem | null>(null)
+	const [deletingWidgetKeys, setDeletingWidgetKeys] = useState<
+		Set<string>
+	>(() => new Set())
 	const itemQuantity = 20
+	const canDeleteWidgets = Boolean(
+		user?.rights?.some(
+			role => role === UserRole.ADMIN || role === UserRole.DEV
+		)
+	)
 
 	const { data, isLoading, isFetching } = useQuery({
 		queryKey: [
@@ -204,6 +223,61 @@ const AdminWidgets: NextPage = () => {
 		onError: (error, _, toastId) => {
 			toast.error(errorCatch(error) || 'Не удалось изменить статус', {
 				id: toastId
+			})
+		}
+	})
+
+	const deleteMutation = useMutation({
+		mutationFn: (item: IAdminWidgetMonitoringItem) =>
+			adminWidgetsService.deleteWidget(item.type, item.id),
+		onMutate: item => {
+			const widgetKey = getWidgetKey(item)
+			setDeletingWidgetKeys(current => {
+				const next = new Set(current)
+				next.add(widgetKey)
+				return next
+			})
+
+			return {
+				widgetKey,
+				toastId: toast.loading('Удаляем виджет...')
+			}
+		},
+		onSuccess: (response, _, context) => {
+			setEditor(current => {
+				if (
+					current?.details.type === response.type &&
+					current.details.entity.id === response.id
+				) {
+					return null
+				}
+
+				return current
+			})
+			queryClient.removeQueries({
+				queryKey: getDetailsQueryKey(response.type, response.id),
+				exact: true
+			})
+			queryClient.invalidateQueries({
+				queryKey: ['admin-widgets-monitoring']
+			})
+			toast.success('Виджет и связанные заявки удалены', {
+				id: context.toastId
+			})
+		},
+		onError: (error, _, context) => {
+			toast.error(errorCatch(error) || 'Не удалось удалить виджет', {
+				id: context?.toastId
+			})
+		},
+		onSettled: (_, __, item, context) => {
+			const widgetKey = context?.widgetKey ?? getWidgetKey(item)
+			setDeletingWidgetKeys(current => {
+				if (!current.has(widgetKey)) return current
+
+				const next = new Set(current)
+				next.delete(widgetKey)
+				return next
 			})
 		}
 	})
@@ -292,10 +366,25 @@ const AdminWidgets: NextPage = () => {
 		})
 	}
 
+	const confirmDelete = () => {
+		if (
+			!deleteTarget ||
+			deletingWidgetKeys.has(getWidgetKey(deleteTarget))
+		) {
+			return
+		}
+
+		deleteMutation.mutate(deleteTarget)
+		setDeleteTarget(null)
+	}
+
 	const isActivityPending = (item: IAdminWidgetMonitoringItem) =>
 		activityMutation.isPending &&
 		activityMutation.variables?.item.type === item.type &&
 		activityMutation.variables.item.id === item.id
+
+	const isDeletePending = (item: IAdminWidgetMonitoringItem) =>
+		deletingWidgetKeys.has(getWidgetKey(item))
 
 	const renderPlan = (item: IAdminWidgetMonitoringItem) =>
 		item.ownerPlan ? (
@@ -324,15 +413,26 @@ const AdminWidgets: NextPage = () => {
 
 	return (
 		<section className={styles.wrapper}>
+			{deleteTarget && (
+				<ConfirmDialog
+					title="Удалить пользовательский виджет?"
+					message={`Тип: ${TYPE_LABELS[deleteTarget.type]}. Название: «${deleteTarget.name}». Владелец: ${formatDeleteOwner(deleteTarget)}. Виджет и все связанные с ним заявки будут удалены без возможности восстановления.`}
+					confirmLabel="Удалить виджет"
+					cancelLabel="Отмена"
+					confirmDisabled={isDeletePending(deleteTarget)}
+					onConfirm={confirmDelete}
+					onCancel={() => setDeleteTarget(null)}
+				/>
+			)}
 			<Heading text="Панель администратора" />
 			<AdminNavigation />
 
 			<AdminSectionHeading
 				text="Виджеты"
-				title="Мониторинг и редактирование виджетов"
-				description="Показывает все виджеты пользователей и позволяет администраторам изменять их настройки и активность."
-				risk="medium"
-				riskText="Изменения сразу влияют на работающий виджет пользователя. Перед сохранением проверьте владельца, домен и интеграции."
+				title="Мониторинг и управление виджетами"
+				description="Показывает все виджеты пользователей, позволяет изменять их настройки и активность, а суперпользователям ADMIN и DEV — удалять виджеты."
+				risk="high"
+				riskText="Изменения сразу влияют на работающий виджет пользователя. Удаление необратимо и также удаляет связанные заявки."
 			/>
 
 			<form className={styles.filters} onSubmit={applyFilters}>
@@ -456,6 +556,7 @@ const AdminWidgets: NextPage = () => {
 									const isEditorLoading =
 										loadingEditorKey === getWidgetKey(item)
 									const isStatusUpdating = isActivityPending(item)
+									const isDeleting = isDeletePending(item)
 
 									return (
 										<div
@@ -523,7 +624,9 @@ const AdminWidgets: NextPage = () => {
 															isActive: !item.isActive
 														})
 													}
-													disabled={activityMutation.isPending}
+													disabled={
+														activityMutation.isPending || isDeleting
+													}
 												>
 													{isStatusUpdating
 														? 'Обновляем...'
@@ -535,12 +638,28 @@ const AdminWidgets: NextPage = () => {
 													type="button"
 													className={styles.actionButtonPrimary}
 													onClick={() => openEditor(item)}
-													disabled={loadingEditorKey !== null}
+													disabled={
+														loadingEditorKey !== null || isDeleting
+													}
 												>
 													{isEditorLoading
 														? 'Загружаем...'
 														: 'Редактировать'}
 												</button>
+												{canDeleteWidgets && (
+													<button
+														type="button"
+														className={styles.actionButtonDanger}
+														onClick={() => setDeleteTarget(item)}
+														disabled={
+															isDeleting ||
+															isStatusUpdating ||
+															isEditorLoading
+														}
+													>
+														{isDeleting ? 'Удаляем...' : 'Удалить'}
+													</button>
+												)}
 											</div>
 										</div>
 									)
@@ -570,6 +689,7 @@ const AdminWidgets: NextPage = () => {
 											const isEditorLoading =
 												loadingEditorKey === getWidgetKey(item)
 											const isStatusUpdating = isActivityPending(item)
+											const isDeleting = isDeletePending(item)
 
 											return (
 												<tr key={getWidgetKey(item)}>
@@ -625,7 +745,9 @@ const AdminWidgets: NextPage = () => {
 																		isActive: !item.isActive
 																	})
 																}
-																disabled={activityMutation.isPending}
+																disabled={
+																	activityMutation.isPending || isDeleting
+																}
 															>
 																{isStatusUpdating
 																	? 'Обновляем...'
@@ -637,12 +759,28 @@ const AdminWidgets: NextPage = () => {
 																type="button"
 																className={styles.actionButtonPrimary}
 																onClick={() => openEditor(item)}
-																disabled={loadingEditorKey !== null}
+																disabled={
+																	loadingEditorKey !== null || isDeleting
+																}
 															>
 																{isEditorLoading
 																	? 'Загружаем...'
 																	: 'Редактировать'}
 															</button>
+															{canDeleteWidgets && (
+																<button
+																	type="button"
+																	className={styles.actionButtonDanger}
+																	onClick={() => setDeleteTarget(item)}
+																	disabled={
+																		isDeleting ||
+																		isStatusUpdating ||
+																		isEditorLoading
+																	}
+																>
+																	{isDeleting ? 'Удаляем...' : 'Удалить'}
+																</button>
+															)}
 														</div>
 													</td>
 												</tr>

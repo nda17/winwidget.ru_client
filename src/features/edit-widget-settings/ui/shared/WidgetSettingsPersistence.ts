@@ -9,3 +9,10 @@ export interface WidgetSettingsPersistence<TEntity, TConfig> {
 	) => Promise<TEntity>
 	uploadButtonImage?: (file: FormData) => Promise<TEntity>
 }
+
+export type WidgetSettingsPresentation = 'modal' | 'page'
+
+export interface WidgetSettingsPresentationProps {
+	presentation?: WidgetSettingsPresentation
+	previewPortalTarget?: HTMLElement | null
+}

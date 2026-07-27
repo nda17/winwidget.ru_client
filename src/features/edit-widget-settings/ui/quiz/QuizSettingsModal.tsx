@@ -13,8 +13,14 @@ import Image from 'next/image'
 import { ChangeEvent, useId, useState } from 'react'
 import toast from 'react-hot-toast'
 import DirectLinkQr from '../shared/DirectLinkQr'
+import useWidgetSettingsCloseGuard from '../shared/useWidgetSettingsCloseGuard'
 import WidgetLivePreview from '../shared/WidgetLivePreview'
-import type { WidgetSettingsPersistence } from '../shared/WidgetSettingsPersistence'
+import pageStyles from '../shared/WidgetSettingsModal.module.scss'
+import type {
+	WidgetSettingsPersistence,
+	WidgetSettingsPresentationProps
+} from '../shared/WidgetSettingsPersistence'
+import WidgetSettingsPreviewPortal from '../shared/WidgetSettingsPreviewPortal'
 import styles from './QuizSettingsModal.module.scss'
 
 type Tab =
@@ -28,7 +34,20 @@ type ScoreMode = 'simple' | 'advanced'
 type QuizTemplateKey = 'tariff' | 'service' | 'discount' | 'diagnostic'
 const BUTTON_IMAGE_MAX_SIZE_BYTES = 200 * 1024
 
-interface Props {
+interface ValidationIssue {
+	tab: Tab
+	fieldId: string
+	message: string
+}
+
+const QUIZ_TEMPLATE_LABELS: Record<QuizTemplateKey, string> = {
+	tariff: 'Подбор тарифа',
+	service: 'Подбор услуги',
+	discount: 'Квиз для скидки',
+	diagnostic: 'Диагностика потребности'
+}
+
+interface Props extends WidgetSettingsPresentationProps {
 	quiz: Quiz
 	canUseCustomButtonImage: boolean
 	onClose: () => void
@@ -48,11 +67,13 @@ const clampNumber = (
 	return Math.min(max, Math.max(min, numeric))
 }
 
-const toOptionalNonNegativeNumber = (value: string) => {
-	if (value.trim() === '') return null
-	const numeric = Number(value)
-	if (!Number.isFinite(numeric)) return null
-	return Math.max(0, numeric)
+const isHttpUrl = (value: string) => {
+	try {
+		const url = new URL(value)
+		return url.protocol === 'http:' || url.protocol === 'https:'
+	} catch {
+		return false
+	}
 }
 
 const makeScoredOption = (
@@ -187,7 +208,7 @@ const buildQuizTemplate = (
 				description:
 					'Подходит для старта, проверки спроса и небольшого потока заявок.',
 				promoCode: '',
-				buttonText: 'Посмотреть тариф',
+				buttonText: '',
 				buttonUrl: ''
 			},
 			{
@@ -196,7 +217,7 @@ const buildQuizTemplate = (
 				description:
 					'Подходит для активного продвижения, аналитики и большего объёма заявок.',
 				promoCode: '',
-				buttonText: 'Обсудить подключение',
+				buttonText: '',
 				buttonUrl: ''
 			}
 		]
@@ -255,7 +276,7 @@ const buildQuizTemplate = (
 				description:
 					'Начнём с диагностики задачи и предложим понятный план дальнейших действий.',
 				promoCode: '',
-				buttonText: 'Записаться',
+				buttonText: '',
 				buttonUrl: ''
 			},
 			{
@@ -264,7 +285,7 @@ const buildQuizTemplate = (
 				description:
 					'Возьмём задачу под ключ: от настройки до запуска и сопровождения.',
 				promoCode: '',
-				buttonText: 'Получить расчёт',
+				buttonText: '',
 				buttonUrl: ''
 			}
 		]
@@ -322,7 +343,7 @@ const buildQuizTemplate = (
 				description:
 					'Отличный стартовый бонус. Используйте промокод при оформлении заказа.',
 				promoCode: 'SALE10',
-				buttonText: 'Использовать скидку',
+				buttonText: '',
 				buttonUrl: ''
 			},
 			{
@@ -331,7 +352,7 @@ const buildQuizTemplate = (
 				description:
 					'Максимальный бонус за подходящие ответы. Промокод уже ждёт вас.',
 				promoCode: 'SALE20',
-				buttonText: 'Забрать скидку',
+				buttonText: '',
 				buttonUrl: ''
 			}
 		]
@@ -380,7 +401,7 @@ const buildQuizTemplate = (
 			description:
 				'Сначала стоит уточнить потребности и ограничения, чтобы не переплачивать за лишнее.',
 			promoCode: '',
-			buttonText: 'Получить консультацию',
+			buttonText: '',
 			buttonUrl: ''
 		},
 		{
@@ -389,7 +410,7 @@ const buildQuizTemplate = (
 			description:
 				'По ответам видно, что можно переходить к подбору решения и запуску.',
 			promoCode: '',
-			buttonText: 'Обсудить запуск',
+			buttonText: '',
 			buttonUrl: ''
 		}
 	]
@@ -436,7 +457,9 @@ const QuizSettingsModal = ({
 	canUseCustomButtonImage,
 	onClose,
 	onSaved,
-	persistence
+	persistence,
+	presentation = 'modal',
+	previewPortalTarget
 }: Props) => {
 	const [tab, setTab] = useState<Tab>('main')
 	const [config, setConfig] = useState<QuizConfig>({ ...quiz.config })
@@ -447,11 +470,12 @@ const QuizSettingsModal = ({
 	const [scoreMode, setScoreMode] = useState<ScoreMode>('simple')
 	const titleId = useId()
 	const buttonImageInputId = useId()
-	const [cooldownInput, setCooldownInput] = useState(
-		String(quiz.config.quizCooldownDays ?? 0)
-	)
 	const [confirmResetAttempts, setConfirmResetAttempts] = useState(false)
 	const [confirmResetDefaults, setConfirmResetDefaults] = useState(false)
+	const [pendingTemplate, setPendingTemplate] =
+		useState<QuizTemplateKey | null>(null)
+	const [validationIssue, setValidationIssue] =
+		useState<ValidationIssue | null>(null)
 	const [savedSnapshot, setSavedSnapshot] = useState(
 		JSON.stringify({
 			name: quiz.name,
@@ -563,11 +587,18 @@ const QuizSettingsModal = ({
 		saveMutation.isPending ||
 		resetAttemptsMutation.isPending ||
 		buttonImageMutation.isPending
+	const { requestClose, closeGuardDialog } = useWidgetSettingsCloseGuard({
+		hasUnsavedChanges,
+		isBusy: isDangerActionPending,
+		onClose
+	})
+	const isPagePresentation = presentation === 'page'
 
 	const setField = <K extends keyof QuizConfig>(
 		key: K,
 		value: QuizConfig[K]
 	) => {
+		setValidationIssue(null)
 		setConfig(prev => ({ ...prev, [key]: value }))
 	}
 
@@ -575,16 +606,52 @@ const QuizSettingsModal = ({
 		key: keyof QuizConfig['integrations'],
 		value: any
 	) => {
+		setValidationIssue(null)
 		setConfig(prev => ({
 			...prev,
 			integrations: { ...prev.integrations, [key]: value }
 		}))
 	}
 
+	const getValidationFieldId = (suffix: string) => `${titleId}-${suffix}`
+
+	const isValidationFieldInvalid = (fieldId: string) =>
+		validationIssue?.fieldId === fieldId
+
+	const getValidationDescriptionId = (fieldId: string) =>
+		isValidationFieldInvalid(fieldId) ? `${fieldId}-error` : undefined
+
+	const renderValidationError = (fieldId: string) =>
+		isValidationFieldInvalid(fieldId) ? (
+			<p
+				id={`${fieldId}-error`}
+				className={pageStyles.fieldError}
+				role="alert"
+			>
+				{validationIssue?.message}
+			</p>
+		) : null
+
+	const reportValidationIssue = (issue: ValidationIssue) => {
+		setValidationIssue(issue)
+		setTab(issue.tab)
+		toast.error(issue.message)
+
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => {
+				const field = document.getElementById(issue.fieldId)
+				if (!field) return
+				field.scrollIntoView({ behavior: 'smooth', block: 'center' })
+				field.focus({ preventScroll: true })
+			})
+		})
+	}
+
 	// --- Questions helpers ---
 
 	const addQuestion = () => {
 		if (config.questions.length >= 10) return
+		setValidationIssue(null)
 		const newId = `q${makeId()}`
 		const initialScores: Record<string, number> = {}
 		for (const r of config.results) initialScores[r.id] = 0
@@ -611,6 +678,7 @@ const QuizSettingsModal = ({
 
 	const removeQuestion = (qIdx: number) => {
 		if (config.questions.length <= 1) return
+		setValidationIssue(null)
 		setConfig(prev => ({
 			...prev,
 			questions: prev.questions.filter((_, i) => i !== qIdx)
@@ -622,6 +690,7 @@ const QuizSettingsModal = ({
 		field: keyof QuizQuestion,
 		value: any
 	) => {
+		setValidationIssue(null)
 		setConfig(prev => {
 			const questions = [...prev.questions]
 			questions[qIdx] = { ...questions[qIdx], [field]: value }
@@ -631,6 +700,7 @@ const QuizSettingsModal = ({
 
 	const addOption = (qIdx: number) => {
 		if (config.questions[qIdx].options.length >= 4) return
+		setValidationIssue(null)
 		const initialScores: Record<string, number> = {}
 		for (const r of config.results) initialScores[r.id] = 0
 
@@ -652,6 +722,7 @@ const QuizSettingsModal = ({
 
 	const removeOption = (qIdx: number, oIdx: number) => {
 		if (config.questions[qIdx].options.length <= 2) return
+		setValidationIssue(null)
 		setConfig(prev => {
 			const questions = [...prev.questions]
 			questions[qIdx] = {
@@ -668,6 +739,7 @@ const QuizSettingsModal = ({
 		field: keyof QuizOption,
 		value: any
 	) => {
+		setValidationIssue(null)
 		setConfig(prev => {
 			const questions = [...prev.questions]
 			const options = [...questions[qIdx].options]
@@ -683,6 +755,7 @@ const QuizSettingsModal = ({
 		resultId: string,
 		pts: number
 	) => {
+		setValidationIssue(null)
 		setConfig(prev => {
 			const questions = [...prev.questions]
 			const options = [...questions[qIdx].options]
@@ -715,6 +788,7 @@ const QuizSettingsModal = ({
 		oIdx: number,
 		winnerId: string
 	) => {
+		setValidationIssue(null)
 		setConfig(prev => {
 			const questions = [...prev.questions]
 			const options = [...questions[qIdx].options]
@@ -736,6 +810,7 @@ const QuizSettingsModal = ({
 
 	const addResult = () => {
 		if (config.results.length >= 5) return
+		setValidationIssue(null)
 		const newId = `r${makeId()}`
 		const newResult: QuizResult = {
 			id: newId,
@@ -760,6 +835,7 @@ const QuizSettingsModal = ({
 
 	const removeResult = (rIdx: number) => {
 		if (config.results.length <= 2) return
+		setValidationIssue(null)
 		const removedId = config.results[rIdx].id
 		setConfig(prev => {
 			const results = prev.results.filter((_, i) => i !== rIdx)
@@ -780,6 +856,7 @@ const QuizSettingsModal = ({
 		field: keyof QuizResult,
 		value: string
 	) => {
+		setValidationIssue(null)
 		setConfig(prev => {
 			const results = [...prev.results]
 			results[rIdx] = { ...results[rIdx], [field]: value }
@@ -787,65 +864,202 @@ const QuizSettingsModal = ({
 		})
 	}
 
-	const applyTemplate = (template: QuizTemplateKey) => {
-		const templateConfig = buildQuizTemplate(template)
+	const applyPendingTemplate = () => {
+		if (!pendingTemplate) return
+
+		const templateConfig = buildQuizTemplate(pendingTemplate)
+		const templateLabel = QUIZ_TEMPLATE_LABELS[pendingTemplate]
+		setValidationIssue(null)
 		setConfig(prev => ({
 			...prev,
 			...templateConfig
 		}))
+		setPendingTemplate(null)
 		setTab('questions')
-		toast.success('Шаблон применён')
+		toast.success(`Шаблон «${templateLabel}» применён`)
 	}
 
 	// ---
 
 	const handleSave = () => {
+		if (!name.trim()) {
+			reportValidationIssue({
+				tab: 'main',
+				fieldId: getValidationFieldId('name'),
+				message: 'Укажите название виджета'
+			})
+			return
+		}
+
+		if ((config.bubbleEnabled ?? true) && !config.bubbleText.trim()) {
+			reportValidationIssue({
+				tab: 'main',
+				fieldId: getValidationFieldId('bubble-text'),
+				message: 'Укажите текст облачка или отключите его'
+			})
+			return
+		}
+
+		if (!config.title.trim()) {
+			reportValidationIssue({
+				tab: 'main',
+				fieldId: getValidationFieldId('title'),
+				message: 'Укажите заголовок квиза'
+			})
+			return
+		}
+
+		if (!config.buttonText.trim()) {
+			reportValidationIssue({
+				tab: 'main',
+				fieldId: getValidationFieldId('button-text'),
+				message: 'Укажите текст кнопки запуска'
+			})
+			return
+		}
+
+		if (config.dataType !== 'NONE' && !config.contactTitle.trim()) {
+			reportValidationIssue({
+				tab: 'main',
+				fieldId: getValidationFieldId('contact-title'),
+				message: 'Укажите заголовок экрана контакта'
+			})
+			return
+		}
+
+		if (
+			config.dataType !== 'NONE' &&
+			(!config.privacyUrl.trim() || !isHttpUrl(config.privacyUrl))
+		) {
+			reportValidationIssue({
+				tab: 'main',
+				fieldId: getValidationFieldId('privacy-url'),
+				message: 'Укажите полную ссылку на политику с http:// или https://'
+			})
+			return
+		}
+
 		if (config.results.length < 2) {
-			toast.error('Минимум 2 результата необходимо для квиза')
+			reportValidationIssue({
+				tab: 'results',
+				fieldId: getValidationFieldId('results-add'),
+				message: 'Добавьте минимум 2 результата'
+			})
 			return
 		}
-		if (config.questions.length < 1) {
-			toast.error('Добавьте хотя бы один вопрос')
-			return
-		}
-		const emptyQuestion = config.questions.findIndex(q => !q.text.trim())
-		if (emptyQuestion !== -1) {
-			toast.error(`Вопрос ${emptyQuestion + 1}: заполните текст вопроса`)
-			return
-		}
-		const bottom = config.buttonBottom
-		if (!bottom || bottom < 1 || bottom > 50) {
-			toast.error('Высота кнопки: введите число от 1 до 50')
-			return
-		}
+
 		for (let i = 0; i < config.results.length; i++) {
 			const r = config.results[i]
+			if (!r.title.trim()) {
+				reportValidationIssue({
+					tab: 'results',
+					fieldId: getValidationFieldId(`result-${r.id}-title`),
+					message: `Результат ${i + 1}: заполните заголовок`
+				})
+				return
+			}
+
 			const hasText = r.buttonText.trim() !== ''
 			const hasUrl = r.buttonUrl.trim() !== ''
 			if (hasText && !hasUrl) {
-				toast.error(
-					`Результат ${i + 1}: заполните ссылку кнопки или уберите текст кнопки`
-				)
+				reportValidationIssue({
+					tab: 'results',
+					fieldId: getValidationFieldId(`result-${r.id}-button-url`),
+					message: `Результат ${i + 1}: заполните ссылку кнопки или уберите текст кнопки`
+				})
 				return
 			}
 			if (hasUrl && !hasText) {
-				toast.error(
-					`Результат ${i + 1}: заполните текст кнопки или уберите ссылку`
-				)
+				reportValidationIssue({
+					tab: 'results',
+					fieldId: getValidationFieldId(`result-${r.id}-button-text`),
+					message: `Результат ${i + 1}: заполните текст кнопки или уберите ссылку`
+				})
+				return
+			}
+			if (hasUrl && !isHttpUrl(r.buttonUrl)) {
+				reportValidationIssue({
+					tab: 'results',
+					fieldId: getValidationFieldId(`result-${r.id}-button-url`),
+					message: `Результат ${i + 1}: укажите полную ссылку с http:// или https://`
+				})
 				return
 			}
 		}
-		const cooldown = config.quizCooldownDays ?? 0
-		if (cooldown > 365) {
-			toast.error('Повторное прохождение: введите число от 0 до 365')
+
+		if (config.questions.length < 1) {
+			reportValidationIssue({
+				tab: 'questions',
+				fieldId: getValidationFieldId('questions-add'),
+				message: 'Добавьте хотя бы один вопрос'
+			})
 			return
 		}
-		const sanitizedName = name.trim() || 'Квиз'
+
+		for (
+			let questionIndex = 0;
+			questionIndex < config.questions.length;
+			questionIndex += 1
+		) {
+			const question = config.questions[questionIndex]
+			if (!question.text.trim()) {
+				reportValidationIssue({
+					tab: 'questions',
+					fieldId: getValidationFieldId(`question-${question.id}-text`),
+					message: `Вопрос ${questionIndex + 1}: заполните текст вопроса`
+				})
+				return
+			}
+
+			const emptyOptionIndex = question.options.findIndex(
+				option => !option.text.trim()
+			)
+			if (emptyOptionIndex !== -1) {
+				const option = question.options[emptyOptionIndex]
+				reportValidationIssue({
+					tab: 'questions',
+					fieldId: getValidationFieldId(
+						`question-${question.id}-option-${option.id}`
+					),
+					message: `Вопрос ${questionIndex + 1}, вариант ${emptyOptionIndex + 1}: заполните текст`
+				})
+				return
+			}
+		}
+
+		const bottom = config.buttonBottom
+		if (!bottom || bottom < 1 || bottom > 50) {
+			reportValidationIssue({
+				tab: 'main',
+				fieldId: getValidationFieldId('button-bottom'),
+				message: 'Высота кнопки: выберите значение от 1 до 50%'
+			})
+			return
+		}
+
+		const cooldown = config.quizCooldownDays ?? 0
+		if (cooldown < 0 || cooldown > 365) {
+			reportValidationIssue({
+				tab: 'main',
+				fieldId: getValidationFieldId('cooldown'),
+				message:
+					'Повторное прохождение: выберите значение от 0 до 365 дней'
+			})
+			return
+		}
+
+		setValidationIssue(null)
+		const sanitizedName = name.trim()
 		setName(sanitizedName)
 		saveMutation.mutate({ name: sanitizedName, installDomain, config })
 	}
 
 	const handleResetAttempts = () => {
+		if (hasUnsavedChanges) {
+			toast.error('Сначала сохраните текущие настройки виджета')
+			return
+		}
+
 		resetAttemptsMutation.mutate(makeId())
 		setConfirmResetAttempts(false)
 	}
@@ -862,6 +1076,28 @@ const QuizSettingsModal = ({
 	).replace(/\/$/, '')
 	const scriptCode = `<script src="${apiUrl}/widgets/quiz.js" data-key="${quiz.publicKey}" async></script>`
 	const directLink = `${publicSiteUrl}/page-quiz/${quiz.publicKey}`
+	const savedInstallDomain = (
+		JSON.parse(savedSnapshot) as { installDomain: string }
+	).installDomain
+	const hasUnsavedInstallDomain =
+		installDomain.trim() !== savedInstallDomain.trim()
+	const copyToClipboard = async (
+		value: string,
+		successMessage: string,
+		requireSavedDomain = false
+	) => {
+		if (requireSavedDomain && hasUnsavedInstallDomain) {
+			setTab('code')
+			toast.error('Сначала сохраните домен установки')
+			return
+		}
+		try {
+			await navigator.clipboard.writeText(value)
+			toast.success(successMessage)
+		} catch {
+			toast.error('Не удалось скопировать')
+		}
+	}
 	const defaultButtonImageUrl = `${apiUrl}/widgets/quiz-button.png`
 	const buttonImagePreviewUrl =
 		config.buttonImageUrl || defaultButtonImageUrl
@@ -902,6 +1138,11 @@ const QuizSettingsModal = ({
 	}
 
 	const handleResetButtonImage = () => {
+		if (hasUnsavedChanges) {
+			toast.error('Сначала сохраните текущие настройки виджета')
+			return
+		}
+
 		const nextConfig = { ...config, buttonImageUrl: '' }
 		setConfig(nextConfig)
 		saveMutation.mutate({
@@ -911,31 +1152,46 @@ const QuizSettingsModal = ({
 	}
 
 	return (
-		<div className={styles.overlay}>
-			<button
-				type="button"
-				className={styles.backdrop}
-				onClick={onClose}
-				aria-label="Закрыть настройки квиза"
-			/>
-			<div
-				className={styles.modal}
-				role="dialog"
-				aria-modal="true"
-				aria-labelledby={titleId}
-			>
+		<div
+			className={
+				isPagePresentation ? pageStyles.pageEditor : styles.overlay
+			}
+		>
+			{!isPagePresentation && (
 				<button
 					type="button"
-					className={styles.closeBtn}
-					onClick={onClose}
-				>
-					✕
-				</button>
+					className={styles.backdrop}
+					onClick={requestClose}
+					aria-label="Закрыть настройки квиза"
+				/>
+			)}
+			<div
+				className={
+					isPagePresentation ? pageStyles.pagePanel : styles.modal
+				}
+				role={isPagePresentation ? 'region' : 'dialog'}
+				aria-modal={isPagePresentation ? undefined : true}
+				aria-labelledby={titleId}
+			>
+				{!isPagePresentation && (
+					<button
+						type="button"
+						className={styles.closeBtn}
+						onClick={requestClose}
+						aria-label="Закрыть настройки"
+					>
+						✕
+					</button>
+				)}
 				<h2 id={titleId} className={styles.modalTitle}>
-					Настройки
+					Настройки квиза
 				</h2>
 
-				<div className={styles.tabs}>
+				<div
+					className={styles.tabs}
+					role="tablist"
+					aria-label="Разделы настроек квиза"
+				>
 					{(
 						[
 							'main',
@@ -948,6 +1204,12 @@ const QuizSettingsModal = ({
 					).map(t => (
 						<button
 							key={t}
+							type="button"
+							id={`${titleId}-tab-${t}`}
+							role="tab"
+							aria-selected={tab === t}
+							aria-controls={`${titleId}-panel-${t}`}
+							tabIndex={tab === t ? 0 : -1}
 							className={`${styles.tab} ${tab === t ? styles.tabActive : ''}`}
 							onClick={() => setTab(t)}
 						>
@@ -955,19 +1217,33 @@ const QuizSettingsModal = ({
 							{t === 'questions' && `Вопросы (${config.questions.length})`}
 							{t === 'results' && `Результаты (${config.results.length})`}
 							{t === 'integrations' && 'Интеграции'}
-							{t === 'code' && 'Код'}
+							{t === 'code' && 'Установка'}
 							{t === 'info' && 'Инфо'}
 						</button>
 					))}
 				</div>
 
-				<WidgetLivePreview
-					type="quiz"
-					config={config}
-					isHardPlan={canUseCustomButtonImage}
-				/>
+				<WidgetSettingsPreviewPortal
+					inline={!isPagePresentation}
+					target={previewPortalTarget}
+				>
+					<WidgetLivePreview
+						type="quiz"
+						config={config}
+						isHardPlan={canUseCustomButtonImage}
+						autoCollapse={
+							!isPagePresentation &&
+							['integrations', 'code', 'info'].includes(tab)
+						}
+					/>
+				</WidgetSettingsPreviewPortal>
 
-				<div className={styles.tabContent}>
+				<div
+					id={`${titleId}-panel-${tab}`}
+					className={styles.tabContent}
+					role="tabpanel"
+					aria-labelledby={`${titleId}-tab-${tab}`}
+				>
 					{/* ===== ГЛАВНЫЕ ===== */}
 					{tab === 'main' && (
 						<div className={styles.fields}>
@@ -979,14 +1255,31 @@ const QuizSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Название квиза:</p>
+									<p className={styles.label}>Название виджета:</p>
 									<input
-										className={styles.input}
+										id={getValidationFieldId('name')}
+										className={`${styles.input} ${
+											isValidationFieldInvalid(
+												getValidationFieldId('name')
+											)
+												? pageStyles.inputError
+												: ''
+										}`}
 										value={name}
-										onChange={e => setName(e.target.value)}
+										onChange={e => {
+											setValidationIssue(null)
+											setName(e.target.value)
+										}}
 										placeholder="Квиз"
-										maxLength={15}
+										maxLength={50}
+										aria-invalid={isValidationFieldInvalid(
+											getValidationFieldId('name')
+										)}
+										aria-describedby={getValidationDescriptionId(
+											getValidationFieldId('name')
+										)}
 									/>
+									{renderValidationError(getValidationFieldId('name'))}
 									<p className={styles.hint}>
 										Отображается только в вашем кабинете. Посетители это
 										название не видят.
@@ -1027,7 +1320,7 @@ const QuizSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Цвет фона виджета:</p>
+									<p className={styles.label}>Цвет фона виджета</p>
 									<div className={styles.colorRow}>
 										<input
 											type="color"
@@ -1103,6 +1396,14 @@ const QuizSettingsModal = ({
 										</div>
 									</div>
 								</details>
+							</div>
+
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Кнопка открытия
+									</h3>
+								</div>
 
 								<div className={styles.field}>
 									<p className={styles.label}>Цвет кнопки открытия:</p>
@@ -1211,7 +1512,36 @@ const QuizSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Расположение кнопки:</p>
+									<p className={styles.label}>
+										Кнопка открытия — пульсация
+									</p>
+									<div className={styles.checkRow}>
+										<input
+											id="quizPulse"
+											type="checkbox"
+											checked={config.buttonPulse}
+											onChange={e =>
+												setField('buttonPulse', e.target.checked)
+											}
+										/>
+										<label
+											htmlFor="quizPulse"
+											className={styles.checkLabel}
+										>
+											Включить пульсацию кнопки
+										</label>
+									</div>
+									<p className={styles.hint}>
+										Дополнительный эффект свечения на плавающей кнопке
+										открытия квиза.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Сторона расположения кнопки для открытия виджета на
+										вашем сайте:
+									</p>
 									<select
 										className={styles.input}
 										value={config.buttonSide}
@@ -1232,108 +1562,7 @@ const QuizSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>
-										Высота кнопки от низа экрана:{' '}
-										<strong>{config.buttonBottom}%</strong>
-									</p>
-									<input
-										type="range"
-										min={1}
-										max={50}
-										value={config.buttonBottom}
-										onChange={e =>
-											setField('buttonBottom', Number(e.target.value))
-										}
-										className={styles.input}
-										style={{
-											padding: '8px 0',
-											background: 'transparent',
-											border: 'none'
-										}}
-									/>
-									<p className={styles.hint}>
-										Отступ от нижнего края экрана в процентах. 3 — почти
-										внизу, 50 — по центру.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Отступ кнопки от края экрана:{' '}
-										<strong>{config.buttonOffset ?? 3}%</strong>
-									</p>
-									<input
-										type="range"
-										min={1}
-										max={50}
-										value={config.buttonOffset ?? 3}
-										onChange={e =>
-											setField('buttonOffset', Number(e.target.value))
-										}
-										className={styles.input}
-										style={{
-											padding: '8px 0',
-											background: 'transparent',
-											border: 'none'
-										}}
-									/>
-									<p className={styles.hint}>
-										Отступ кнопки от левого или правого края экрана в
-										процентах. 3 — почти у края, 50 — по центру.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Размер кнопки открытия:{' '}
-										<strong>{config.buttonSize ?? 60}px</strong>
-									</p>
-									<input
-										type="range"
-										min={40}
-										max={100}
-										value={config.buttonSize ?? 60}
-										onChange={e =>
-											setField('buttonSize', Number(e.target.value))
-										}
-										className={styles.input}
-										style={{
-											padding: '8px 0',
-											background: 'transparent',
-											border: 'none'
-										}}
-									/>
-									<p className={styles.hint}>
-										Размер плавающей кнопки открытия квиза в пикселях. По
-										умолчанию 60px.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<div className={styles.checkRow}>
-										<input
-											id="quizPulse"
-											type="checkbox"
-											checked={config.buttonPulse}
-											onChange={e =>
-												setField('buttonPulse', e.target.checked)
-											}
-										/>
-										<label
-											htmlFor="quizPulse"
-											className={styles.checkLabel}
-										>
-											Пульсация кнопки
-										</label>
-									</div>
-									<p className={styles.hint}>
-										Дополнительный эффект свечения на плавающей кнопке
-										открытия квиза.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>Отображение облачка:</p>
+									<p className={styles.label}>Отображение облачка</p>
 									<div className={styles.checkRow}>
 										<input
 											id="quizBubbleEnabled"
@@ -1355,43 +1584,174 @@ const QuizSettingsModal = ({
 									</p>
 								</div>
 
+								{config.bubbleEnabled && (
+									<div className={styles.field}>
+										<p className={styles.label}>Текст облачка:</p>
+										<input
+											id={getValidationFieldId('bubble-text')}
+											className={`${styles.input} ${
+												isValidationFieldInvalid(
+													getValidationFieldId('bubble-text')
+												)
+													? pageStyles.inputError
+													: ''
+											}`}
+											value={config.bubbleText ?? ''}
+											onChange={e =>
+												setField('bubbleText', e.target.value)
+											}
+											placeholder="Пройдите квиз!"
+											maxLength={80}
+											aria-invalid={isValidationFieldInvalid(
+												getValidationFieldId('bubble-text')
+											)}
+											aria-describedby={getValidationDescriptionId(
+												getValidationFieldId('bubble-text')
+											)}
+										/>
+										{renderValidationError(
+											getValidationFieldId('bubble-text')
+										)}
+										<p className={styles.hint}>
+											Подсказка рядом с плавающей кнопкой. Если оставить
+											пустым, будет показан стандартный текст.
+										</p>
+									</div>
+								)}
+
 								<div className={styles.field}>
-									<p className={styles.label}>Текст облачка у кнопки:</p>
+									<div className={pageStyles.rangeHeader}>
+										<p className={styles.label}>
+											Высота кнопки от низа экрана:
+										</p>
+										<span className={pageStyles.rangeValue}>
+											{config.buttonBottom}%
+										</span>
+									</div>
 									<input
-										className={styles.input}
-										value={config.bubbleText ?? ''}
-										onChange={e => setField('bubbleText', e.target.value)}
-										placeholder="Пройдите квиз!"
-										maxLength={80}
+										id={getValidationFieldId('button-bottom')}
+										type="range"
+										aria-label="Высота кнопки от низа экрана"
+										min={1}
+										max={50}
+										value={config.buttonBottom}
+										onChange={e =>
+											setField('buttonBottom', Number(e.target.value))
+										}
+										className={pageStyles.rangeInput}
+										aria-invalid={isValidationFieldInvalid(
+											getValidationFieldId('button-bottom')
+										)}
+										aria-describedby={getValidationDescriptionId(
+											getValidationFieldId('button-bottom')
+										)}
 									/>
+									{renderValidationError(
+										getValidationFieldId('button-bottom')
+									)}
 									<p className={styles.hint}>
-										Подсказка рядом с плавающей кнопкой. Если оставить
-										пустым, будет показан стандартный текст.
+										Отступ от нижнего края экрана в процентах. 3 — почти
+										внизу, 50 — по центру.
 									</p>
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>
-										Авто-открытие через (сек):
-									</p>
+									<div className={pageStyles.rangeHeader}>
+										<p className={styles.label}>
+											Отступ кнопки от края экрана:
+										</p>
+										<span className={pageStyles.rangeValue}>
+											{config.buttonOffset ?? 3}%
+										</span>
+									</div>
 									<input
-										type="number"
-										className={styles.input}
-										value={config.autoOpenDelay ?? ''}
+										type="range"
+										aria-label="Отступ кнопки от края экрана"
+										min={1}
+										max={50}
+										value={config.buttonOffset ?? 3}
 										onChange={e =>
-											setField(
-												'autoOpenDelay',
-												toOptionalNonNegativeNumber(e.target.value)
-											)
+											setField('buttonOffset', Number(e.target.value))
 										}
-										placeholder="Не открывать автоматически"
-										min={0}
+										className={pageStyles.rangeInput}
 									/>
 									<p className={styles.hint}>
+										Отступ кнопки от левого или правого края экрана в
+										процентах. 3 — почти у края, 50 — по центру.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<div className={pageStyles.rangeHeader}>
+										<p className={styles.label}>Размер кнопки открытия:</p>
+										<span className={pageStyles.rangeValue}>
+											{config.buttonSize ?? 60}px
+										</span>
+									</div>
+									<input
+										type="range"
+										aria-label="Размер кнопки открытия"
+										min={40}
+										max={100}
+										value={config.buttonSize ?? 60}
+										onChange={e =>
+											setField('buttonSize', Number(e.target.value))
+										}
+										className={pageStyles.rangeInput}
+									/>
+									<p className={styles.hint}>
+										Размер плавающей кнопки открытия квиза в пикселях. По
+										умолчанию 60px.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>Автооткрытие:</p>
+									<div className={styles.checkRow}>
+										<input
+											id={`${titleId}-auto-open-enabled`}
+											type="checkbox"
+											checked={config.autoOpenDelay != null}
+											onChange={e =>
+												setField(
+													'autoOpenDelay',
+													e.target.checked ? 5 : null
+												)
+											}
+										/>
+										<label
+											htmlFor={`${titleId}-auto-open-enabled`}
+											className={styles.checkLabel}
+										>
+											Открывать виджет автоматически
+										</label>
+									</div>
+									{config.autoOpenDelay != null && (
+										<>
+											<div className={pageStyles.rangeHeader}>
+												<p className={styles.label}>Автооткрытие через:</p>
+												<span className={pageStyles.rangeValue}>
+													{config.autoOpenDelay} сек.
+												</span>
+											</div>
+											<input
+												type="range"
+												aria-label="Автооткрытие через"
+												min={1}
+												max={60}
+												step={1}
+												className={pageStyles.rangeInput}
+												value={config.autoOpenDelay}
+												onChange={e =>
+													setField('autoOpenDelay', Number(e.target.value))
+												}
+											/>
+										</>
+									)}
+									<p className={styles.hint}>
 										Через сколько секунд виджет откроется автоматически
-										после открытия страницы вашего сайта. Оставьте пустым
-										для отключения. Если пользователь уже учавствовал,
-										данная настройка игнорируется при любых значениях.
+										после открытия страницы вашего сайта. Если пользователь
+										уже участвовал, автооткрытие не сработает.
 									</p>
 								</div>
 							</div>
@@ -1404,12 +1764,26 @@ const QuizSettingsModal = ({
 								<div className={styles.field}>
 									<p className={styles.label}>Заголовок квиза:</p>
 									<input
-										className={styles.input}
+										id={getValidationFieldId('title')}
+										className={`${styles.input} ${
+											isValidationFieldInvalid(
+												getValidationFieldId('title')
+											)
+												? pageStyles.inputError
+												: ''
+										}`}
 										value={config.title}
 										onChange={e => setField('title', e.target.value)}
 										placeholder="Пройдите наш квиз!"
 										maxLength={60}
+										aria-invalid={isValidationFieldInvalid(
+											getValidationFieldId('title')
+										)}
+										aria-describedby={getValidationDescriptionId(
+											getValidationFieldId('title')
+										)}
 									/>
+									{renderValidationError(getValidationFieldId('title'))}
 									<p className={styles.hint}>
 										Крупный заголовок на стартовом экране квиза.
 									</p>
@@ -1432,35 +1806,69 @@ const QuizSettingsModal = ({
 								<div className={styles.field}>
 									<p className={styles.label}>Текст кнопки запуска:</p>
 									<input
-										className={styles.input}
+										id={getValidationFieldId('button-text')}
+										className={`${styles.input} ${
+											isValidationFieldInvalid(
+												getValidationFieldId('button-text')
+											)
+												? pageStyles.inputError
+												: ''
+										}`}
 										value={config.buttonText}
 										onChange={e => setField('buttonText', e.target.value)}
 										placeholder="Начать квиз"
 										maxLength={30}
+										aria-invalid={isValidationFieldInvalid(
+											getValidationFieldId('button-text')
+										)}
+										aria-describedby={getValidationDescriptionId(
+											getValidationFieldId('button-text')
+										)}
 									/>
+									{renderValidationError(
+										getValidationFieldId('button-text')
+									)}
 									<p className={styles.hint}>
 										Текст кнопки, с которой начинается прохождение квиза.
 									</p>
 								</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Заголовок экрана контакта:
-									</p>
-									<input
-										className={styles.input}
-										value={config.contactTitle}
-										onChange={e =>
-											setField('contactTitle', e.target.value)
-										}
-										placeholder="Оставьте контакт для получения результата"
-										maxLength={80}
-									/>
-									<p className={styles.hint}>
-										Заголовок экрана, на котором посетитель оставляет свои
-										данные перед показом результата.
-									</p>
-								</div>
+								{config.dataType !== 'NONE' && (
+									<div className={styles.field}>
+										<p className={styles.label}>
+											Заголовок экрана контакта:
+										</p>
+										<input
+											id={getValidationFieldId('contact-title')}
+											className={`${styles.input} ${
+												isValidationFieldInvalid(
+													getValidationFieldId('contact-title')
+												)
+													? pageStyles.inputError
+													: ''
+											}`}
+											value={config.contactTitle}
+											onChange={e =>
+												setField('contactTitle', e.target.value)
+											}
+											placeholder="Оставьте контакт для получения результата"
+											maxLength={80}
+											aria-invalid={isValidationFieldInvalid(
+												getValidationFieldId('contact-title')
+											)}
+											aria-describedby={getValidationDescriptionId(
+												getValidationFieldId('contact-title')
+											)}
+										/>
+										{renderValidationError(
+											getValidationFieldId('contact-title')
+										)}
+										<p className={styles.hint}>
+											Заголовок экрана, на котором посетитель оставляет
+											свои данные перед показом результата.
+										</p>
+									</div>
+								)}
 							</div>
 
 							<div className={styles.settingsGroup}>
@@ -1471,7 +1879,7 @@ const QuizSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Сбор данных:</p>
+									<p className={styles.label}>Сбор данных клиента:</p>
 									<select
 										className={styles.input}
 										value={config.dataType}
@@ -1482,12 +1890,12 @@ const QuizSettingsModal = ({
 											)
 										}
 									>
-										<option value="PHONE">Телефон</option>
+										<option value="PHONE">Номер телефона</option>
 										<option value="EMAIL">Email</option>
 										<option value="PHONE_AND_EMAIL">
-											Телефон и Email
+											Номер телефона и Email
 										</option>
-										<option value="NONE">Не собирать</option>
+										<option value="NONE">Ничего не собираем</option>
 									</select>
 									<p className={styles.hint}>
 										Какие данные собирать у посетителя в обмен на
@@ -1495,54 +1903,80 @@ const QuizSettingsModal = ({
 									</p>
 								</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Ссылка на политику конфиденциальности:
-									</p>
-									<input
-										className={styles.input}
-										value={config.privacyUrl}
-										onChange={e => setField('privacyUrl', e.target.value)}
-										placeholder="https://..."
-										maxLength={500}
-									/>
-									<p className={styles.hint}>
-										По умолчанию ведёт на нашу политику. Замените на ссылку
-										своей политики конфиденциальности.
-									</p>
-								</div>
-
-								<details className={styles.advancedBlock}>
-									<summary className={styles.advancedSummary}>
-										Дополнительно
-									</summary>
-
-									<div className={styles.advancedContent}>
+								{config.dataType !== 'NONE' && (
+									<>
 										<div className={styles.field}>
-											<div className={styles.checkRow}>
-												<input
-													id="quizFilterDuplicates"
-													type="checkbox"
-													checked={config.filterDuplicates}
-													onChange={e =>
-														setField('filterDuplicates', e.target.checked)
-													}
-												/>
-												<label
-													htmlFor="quizFilterDuplicates"
-													className={styles.checkLabel}
-												>
-													Не сохранять повторные контакты
-												</label>
-											</div>
+											<p className={styles.label}>
+												Ссылка на политику конфиденциальности:
+											</p>
+											<input
+												id={getValidationFieldId('privacy-url')}
+												type="url"
+												className={`${styles.input} ${
+													isValidationFieldInvalid(
+														getValidationFieldId('privacy-url')
+													)
+														? pageStyles.inputError
+														: ''
+												}`}
+												value={config.privacyUrl}
+												onChange={e =>
+													setField('privacyUrl', e.target.value)
+												}
+												placeholder="https://..."
+												maxLength={500}
+												aria-invalid={isValidationFieldInvalid(
+													getValidationFieldId('privacy-url')
+												)}
+												aria-describedby={getValidationDescriptionId(
+													getValidationFieldId('privacy-url')
+												)}
+											/>
+											{renderValidationError(
+												getValidationFieldId('privacy-url')
+											)}
 											<p className={styles.hint}>
-												Если посетитель оставит контакт, который уже есть в
-												базе этого квиза — повторная заявка не будет
-												сохранена и уведомления не придут.
+												По умолчанию ведёт на нашу политику. Замените на
+												ссылку своей политики конфиденциальности.
 											</p>
 										</div>
-									</div>
-								</details>
+
+										<details className={styles.advancedBlock}>
+											<summary className={styles.advancedSummary}>
+												Дополнительно
+											</summary>
+
+											<div className={styles.advancedContent}>
+												<div className={styles.field}>
+													<div className={styles.checkRow}>
+														<input
+															id="quizFilterDuplicates"
+															type="checkbox"
+															checked={config.filterDuplicates}
+															onChange={e =>
+																setField(
+																	'filterDuplicates',
+																	e.target.checked
+																)
+															}
+														/>
+														<label
+															htmlFor="quizFilterDuplicates"
+															className={styles.checkLabel}
+														>
+															Не сохранять повторные контакты
+														</label>
+													</div>
+													<p className={styles.hint}>
+														Если посетитель оставит контакт, который уже
+														есть в базе этого квиза — повторная заявка не
+														будет сохранена и уведомления не придут.
+													</p>
+												</div>
+											</div>
+										</details>
+									</>
+								)}
 							</div>
 
 							<div className={styles.settingsGroup}>
@@ -1550,43 +1984,6 @@ const QuizSettingsModal = ({
 									<h3 className={styles.settingsGroupTitle}>
 										Повторные прохождения
 									</h3>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Заголовок «Уже проходили»:
-									</p>
-									<input
-										className={styles.input}
-										value={config.alreadyPlayedTitle}
-										onChange={e =>
-											setField('alreadyPlayedTitle', e.target.value)
-										}
-										placeholder="🎉 Вы уже проходили этот квиз!"
-										maxLength={80}
-									/>
-									<p className={styles.hint}>
-										Показывается посетителю, который открывает квиз
-										повторно.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Подзаголовок «Уже проходили»:
-									</p>
-									<input
-										className={styles.input}
-										value={config.alreadyPlayedSubtitle}
-										onChange={e =>
-											setField('alreadyPlayedSubtitle', e.target.value)
-										}
-										placeholder="Каждый посетитель может пройти квиз только один раз"
-										maxLength={160}
-									/>
-									<p className={styles.hint}>
-										Подпись под заголовком антифрод-экрана.
-									</p>
 								</div>
 
 								<div className={styles.field}>
@@ -1612,49 +2009,84 @@ const QuizSettingsModal = ({
 									</p>
 								</div>
 
-								<details className={styles.advancedBlock}>
-									<summary className={styles.advancedSummary}>
-										Дополнительно
-									</summary>
-
-									<div className={styles.advancedContent}>
+								{!config.hideIfPlayed && (
+									<>
 										<div className={styles.field}>
 											<p className={styles.label}>
-												Когда можно пройти повторно:
+												Заголовок «Уже проходили»:
 											</p>
 											<input
-												type="number"
 												className={styles.input}
-												value={cooldownInput}
-												onChange={e => {
-													const raw = e.target.value
-													if (!/^\d*$/.test(raw)) return
-													setCooldownInput(raw)
-													if (raw === '') {
-														setField('quizCooldownDays', 0)
-														return
-													}
-													const normalized = clampNumber(
-														parseInt(raw),
-														0,
-														365,
-														0
-													)
-													setCooldownInput(String(normalized))
-													setField('quizCooldownDays', normalized)
-												}}
-												min={0}
-												max={365}
-												placeholder="0"
+												value={config.alreadyPlayedTitle}
+												onChange={e =>
+													setField('alreadyPlayedTitle', e.target.value)
+												}
+												placeholder="🎉 Вы уже проходили этот квиз!"
+												maxLength={80}
 											/>
 											<p className={styles.hint}>
-												0 — проходить можно только единоразово. Любое
-												другое число - посетитель сможет проходить снова
-												через указанное количество дней.
+												Показывается посетителю, который открывает квиз
+												повторно.
 											</p>
 										</div>
+
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Подзаголовок «Уже проходили»:
+											</p>
+											<input
+												className={styles.input}
+												value={config.alreadyPlayedSubtitle}
+												onChange={e =>
+													setField('alreadyPlayedSubtitle', e.target.value)
+												}
+												placeholder="Каждый посетитель может пройти квиз только один раз"
+												maxLength={160}
+											/>
+											<p className={styles.hint}>
+												Подпись под заголовком антифрод-экрана.
+											</p>
+										</div>
+									</>
+								)}
+
+								<div className={styles.field}>
+									<div className={pageStyles.rangeHeader}>
+										<p className={styles.label}>
+											Когда можно пройти повторно:
+										</p>
+										<span className={pageStyles.rangeValue}>
+											{(config.quizCooldownDays ?? 0) === 0
+												? 'Однократно'
+												: `${config.quizCooldownDays} дн.`}
+										</span>
 									</div>
-								</details>
+									<input
+										id={getValidationFieldId('cooldown')}
+										type="range"
+										aria-label="Повторное прохождение через"
+										min={0}
+										max={365}
+										step={1}
+										className={pageStyles.rangeInput}
+										value={config.quizCooldownDays ?? 0}
+										onChange={e =>
+											setField('quizCooldownDays', Number(e.target.value))
+										}
+										aria-invalid={isValidationFieldInvalid(
+											getValidationFieldId('cooldown')
+										)}
+										aria-describedby={getValidationDescriptionId(
+											getValidationFieldId('cooldown')
+										)}
+									/>
+									{renderValidationError(getValidationFieldId('cooldown'))}
+									<p className={styles.hint}>
+										0 — пройти квиз можно только один раз. При другом
+										значении посетитель сможет пройти его снова через
+										указанное количество дней.
+									</p>
+								</div>
 							</div>
 
 							<div className={styles.settingsGroup}>
@@ -1669,7 +2101,15 @@ const QuizSettingsModal = ({
 										<button
 											type="button"
 											className={styles.resetAttemptsBtn}
-											onClick={() => setConfirmResetAttempts(true)}
+											onClick={() => {
+												if (hasUnsavedChanges) {
+													toast.error(
+														'Сначала сохраните текущие настройки виджета'
+													)
+													return
+												}
+												setConfirmResetAttempts(true)
+											}}
 											disabled={isDangerActionPending}
 										>
 											Сбросить попытки всех посетителей
@@ -1710,13 +2150,14 @@ const QuizSettingsModal = ({
 											onClick={() => setConfirmResetDefaults(true)}
 											disabled={isDangerActionPending}
 										>
-											Сбросить все настройки до значений по умолчанию
+											Сбросить настройки, кроме вопросов и результатов
 										</button>
 									) : (
 										<div className={styles.dangerItem}>
 											<p className={styles.hint}>
-												Все настройки квиза будут заменены на стандартные.
-												Действие необратимо после сохранения.
+												Оформление, тексты, интеграции и параметры показа
+												будут заменены стандартными. Вопросы и результаты
+												сохранятся.
 											</p>
 											<div className={styles.footerActions}>
 												<button
@@ -1730,7 +2171,7 @@ const QuizSettingsModal = ({
 															results: config.results
 														}
 														setConfig(resetConfig)
-														setCooldownInput('0')
+														setValidationIssue(null)
 														setConfirmResetDefaults(false)
 														saveMutation.mutate({
 															name: name.trim() || 'Квиз',
@@ -1778,8 +2219,7 @@ const QuizSettingsModal = ({
 									</li>
 								</ul>
 								<p
-									className={styles.infoBlockTitle}
-									style={{ marginTop: 4 }}
+									className={`${styles.infoBlockTitle} ${styles.infoBlockSubTitle}`}
 								>
 									Что значит режим баллов
 								</p>
@@ -1796,8 +2236,7 @@ const QuizSettingsModal = ({
 									</li>
 								</ul>
 								<p
-									className={styles.infoBlockTitle}
-									style={{ marginTop: 4 }}
+									className={`${styles.infoBlockTitle} ${styles.infoBlockSubTitle}`}
 								>
 									Как настраивать
 								</p>
@@ -1821,7 +2260,7 @@ const QuizSettingsModal = ({
 								</ul>
 							</div>
 							{config.results.length < 2 && (
-								<p style={{ color: '#e05a5a', fontSize: 13 }}>
+								<p className={pageStyles.fieldError}>
 									⚠️ Сначала добавьте минимум 2 результата во вкладке
 									«Результаты»
 								</p>
@@ -1861,20 +2300,9 @@ const QuizSettingsModal = ({
 										<span className={styles.questionNumber}>
 											Вопрос {qIdx + 1} из {config.questions.length}
 										</span>
-										<div
-											style={{
-												display: 'flex',
-												gap: 8,
-												alignItems: 'center'
-											}}
-										>
+										<div className={styles.headerActions}>
 											<select
-												className={styles.input}
-												style={{
-													width: 'auto',
-													padding: '4px 8px',
-													fontSize: 12
-												}}
+												className={`${styles.input} ${styles.questionTypeSelect}`}
 												value={q.type}
 												onChange={e =>
 													updateQuestion(qIdx, 'type', e.target.value)
@@ -1889,7 +2317,7 @@ const QuizSettingsModal = ({
 												onClick={() => removeQuestion(qIdx)}
 												disabled={config.questions.length <= 1}
 												title={
-													config.questions.length <= 4
+													config.questions.length <= 1
 														? 'Минимум 1 вопрос'
 														: 'Удалить вопрос'
 												}
@@ -1898,37 +2326,60 @@ const QuizSettingsModal = ({
 											</button>
 										</div>
 									</div>
-									<p className={styles.hint} style={{ marginTop: -4 }}>
+									<p
+										className={`${styles.hint} ${styles.questionTypeHint}`}
+									>
 										{q.type === 'radio'
 											? 'Один ответ — посетитель выбирает один вариант. Подходит для большинства вопросов.'
 											: 'Несколько ответов — посетитель отмечает любое количество вариантов. Баллы суммируются по всем выбранным.'}
 									</p>
 
 									<input
-										className={styles.input}
+										id={getValidationFieldId(`question-${q.id}-text`)}
+										className={`${styles.input} ${
+											isValidationFieldInvalid(
+												getValidationFieldId(`question-${q.id}-text`)
+											)
+												? pageStyles.inputError
+												: ''
+										}`}
 										value={q.text}
 										onChange={e =>
 											updateQuestion(qIdx, 'text', e.target.value)
 										}
 										placeholder={`Текст вопроса ${qIdx + 1}`}
 										maxLength={200}
+										aria-invalid={isValidationFieldInvalid(
+											getValidationFieldId(`question-${q.id}-text`)
+										)}
+										aria-describedby={getValidationDescriptionId(
+											getValidationFieldId(`question-${q.id}-text`)
+										)}
 									/>
+									{renderValidationError(
+										getValidationFieldId(`question-${q.id}-text`)
+									)}
 
 									<div className={styles.optionRow}>
 										{q.options.map((opt, oIdx) => (
 											<div key={opt.id} className={styles.optionItem}>
 												<div className={styles.optionTop}>
-													<span
-														style={{
-															color: '#bbb',
-															fontSize: 13,
-															minWidth: 20
-														}}
-													>
+													<span className={styles.optionNumber}>
 														{oIdx + 1}.
 													</span>
 													<input
-														className={styles.optionInput}
+														id={getValidationFieldId(
+															`question-${q.id}-option-${opt.id}`
+														)}
+														className={`${styles.optionInput} ${
+															isValidationFieldInvalid(
+																getValidationFieldId(
+																	`question-${q.id}-option-${opt.id}`
+																)
+															)
+																? pageStyles.inputError
+																: ''
+														}`}
 														value={opt.text}
 														onChange={e =>
 															updateOption(
@@ -1940,6 +2391,16 @@ const QuizSettingsModal = ({
 														}
 														placeholder={`Вариант ${oIdx + 1}`}
 														maxLength={150}
+														aria-invalid={isValidationFieldInvalid(
+															getValidationFieldId(
+																`question-${q.id}-option-${opt.id}`
+															)
+														)}
+														aria-describedby={getValidationDescriptionId(
+															getValidationFieldId(
+																`question-${q.id}-option-${opt.id}`
+															)
+														)}
 													/>
 													<button
 														type="button"
@@ -1955,6 +2416,11 @@ const QuizSettingsModal = ({
 														✕
 													</button>
 												</div>
+												{renderValidationError(
+													getValidationFieldId(
+														`question-${q.id}-option-${opt.id}`
+													)
+												)}
 
 												{config.results.length > 0 && (
 													<div className={styles.scoresRow}>
@@ -2063,18 +2529,31 @@ const QuizSettingsModal = ({
 							))}
 
 							<button
+								id={getValidationFieldId('questions-add')}
 								type="button"
-								className={styles.addBtn}
+								className={`${styles.addBtn} ${
+									isValidationFieldInvalid(
+										getValidationFieldId('questions-add')
+									)
+										? pageStyles.inputError
+										: ''
+								}`}
 								onClick={addQuestion}
 								disabled={config.questions.length >= 10}
+								aria-describedby={getValidationDescriptionId(
+									getValidationFieldId('questions-add')
+								)}
 							>
 								{config.questions.length >= 10
 									? 'Максимум 10 вопросов'
 									: '+ Добавить вопрос'}
 							</button>
+							{renderValidationError(
+								getValidationFieldId('questions-add')
+							)}
 
 							{config.questions.length === 0 && (
-								<p className={styles.hint} style={{ textAlign: 'center' }}>
+								<p className={`${styles.hint} ${styles.emptyHint}`}>
 									Минимум 1 вопрос, максимум 10
 								</p>
 							)}
@@ -2088,40 +2567,65 @@ const QuizSettingsModal = ({
 								<div>
 									<p className={styles.templateTitle}>Шаблоны квиза</p>
 									<p className={styles.hint}>
-										Быстрый старт: шаблон заменит текущие результаты и
-										вопросы, остальные настройки останутся.
+										Быстрый старт: шаблон заменит тексты, вопросы и
+										результаты. Оформление и параметры показа сохранятся.
 									</p>
 								</div>
 								<div className={styles.templateGrid}>
 									<button
 										type="button"
 										className={styles.templateBtn}
-										onClick={() => applyTemplate('tariff')}
+										onClick={() => setPendingTemplate('tariff')}
 									>
 										Подбор тарифа
 									</button>
 									<button
 										type="button"
 										className={styles.templateBtn}
-										onClick={() => applyTemplate('service')}
+										onClick={() => setPendingTemplate('service')}
 									>
 										Подбор услуги
 									</button>
 									<button
 										type="button"
 										className={styles.templateBtn}
-										onClick={() => applyTemplate('discount')}
+										onClick={() => setPendingTemplate('discount')}
 									>
 										Квиз для скидки
 									</button>
 									<button
 										type="button"
 										className={styles.templateBtn}
-										onClick={() => applyTemplate('diagnostic')}
+										onClick={() => setPendingTemplate('diagnostic')}
 									>
 										Диагностика потребности
 									</button>
 								</div>
+								{pendingTemplate && (
+									<div className={styles.dangerItem}>
+										<p className={styles.hint}>
+											Шаблон «{QUIZ_TEMPLATE_LABELS[pendingTemplate]}»
+											заменит тексты, вопросы и результаты. Оформление и
+											параметры показа сохранятся.
+										</p>
+										<div className={styles.footerActions}>
+											<button
+												type="button"
+												className={styles.resetAttemptsBtn}
+												onClick={applyPendingTemplate}
+											>
+												Применить шаблон
+											</button>
+											<button
+												type="button"
+												className={styles.cancelBtn}
+												onClick={() => setPendingTemplate(null)}
+											>
+												Отмена
+											</button>
+										</div>
+									</div>
+								)}
 							</div>
 
 							{config.results.map((r, rIdx) => (
@@ -2130,13 +2634,7 @@ const QuizSettingsModal = ({
 										<span className={styles.resultNumber}>
 											Результат {rIdx + 1}
 										</span>
-										<div
-											style={{
-												display: 'flex',
-												alignItems: 'center',
-												gap: 8
-											}}
-										>
+										<div className={styles.headerActions}>
 											<span className={styles.resultId}>id: {r.id}</span>
 											<button
 												type="button"
@@ -2157,14 +2655,30 @@ const QuizSettingsModal = ({
 									<div className={styles.field}>
 										<p className={styles.label}>Заголовок:</p>
 										<input
-											className={styles.input}
+											id={getValidationFieldId(`result-${r.id}-title`)}
+											className={`${styles.input} ${
+												isValidationFieldInvalid(
+													getValidationFieldId(`result-${r.id}-title`)
+												)
+													? pageStyles.inputError
+													: ''
+											}`}
 											value={r.title}
 											onChange={e =>
 												updateResult(rIdx, 'title', e.target.value)
 											}
 											placeholder="Например: Вам подойдёт тариф HARD"
 											maxLength={80}
+											aria-invalid={isValidationFieldInvalid(
+												getValidationFieldId(`result-${r.id}-title`)
+											)}
+											aria-describedby={getValidationDescriptionId(
+												getValidationFieldId(`result-${r.id}-title`)
+											)}
 										/>
+										{renderValidationError(
+											getValidationFieldId(`result-${r.id}-title`)
+										)}
 										<p className={styles.hint}>
 											Крупный текст на финальном экране квиза, который
 											увидит посетитель после прохождения.
@@ -2212,14 +2726,34 @@ const QuizSettingsModal = ({
 											Текст кнопки (необязательно):
 										</p>
 										<input
-											className={styles.input}
+											id={getValidationFieldId(
+												`result-${r.id}-button-text`
+											)}
+											className={`${styles.input} ${
+												isValidationFieldInvalid(
+													getValidationFieldId(
+														`result-${r.id}-button-text`
+													)
+												)
+													? pageStyles.inputError
+													: ''
+											}`}
 											value={r.buttonText}
 											onChange={e =>
 												updateResult(rIdx, 'buttonText', e.target.value)
 											}
 											placeholder="Получить скидку"
 											maxLength={40}
+											aria-invalid={isValidationFieldInvalid(
+												getValidationFieldId(`result-${r.id}-button-text`)
+											)}
+											aria-describedby={getValidationDescriptionId(
+												getValidationFieldId(`result-${r.id}-button-text`)
+											)}
 										/>
+										{renderValidationError(
+											getValidationFieldId(`result-${r.id}-button-text`)
+										)}
 										<p className={styles.hint}>
 											Кнопка с призывом к действию (CTA) под описанием
 											результата. Заполните вместе со ссылкой ниже.
@@ -2231,14 +2765,33 @@ const QuizSettingsModal = ({
 											Ссылка кнопки (необязательно):
 										</p>
 										<input
-											className={styles.input}
+											id={getValidationFieldId(
+												`result-${r.id}-button-url`
+											)}
+											type="url"
+											className={`${styles.input} ${
+												isValidationFieldInvalid(
+													getValidationFieldId(`result-${r.id}-button-url`)
+												)
+													? pageStyles.inputError
+													: ''
+											}`}
 											value={r.buttonUrl}
 											onChange={e =>
 												updateResult(rIdx, 'buttonUrl', e.target.value)
 											}
 											placeholder="https://..."
 											maxLength={500}
+											aria-invalid={isValidationFieldInvalid(
+												getValidationFieldId(`result-${r.id}-button-url`)
+											)}
+											aria-describedby={getValidationDescriptionId(
+												getValidationFieldId(`result-${r.id}-button-url`)
+											)}
 										/>
+										{renderValidationError(
+											getValidationFieldId(`result-${r.id}-button-url`)
+										)}
 										<p className={styles.hint}>
 											Куда переходит посетитель по клику на кнопку.
 											Например, на страницу товара или оформления заказа.
@@ -2248,18 +2801,29 @@ const QuizSettingsModal = ({
 							))}
 
 							<button
+								id={getValidationFieldId('results-add')}
 								type="button"
-								className={styles.addBtn}
+								className={`${styles.addBtn} ${
+									isValidationFieldInvalid(
+										getValidationFieldId('results-add')
+									)
+										? pageStyles.inputError
+										: ''
+								}`}
 								onClick={addResult}
 								disabled={config.results.length >= 5}
+								aria-describedby={getValidationDescriptionId(
+									getValidationFieldId('results-add')
+								)}
 							>
 								{config.results.length >= 5
 									? 'Максимум 5 результатов'
 									: '+ Добавить результат'}
 							</button>
+							{renderValidationError(getValidationFieldId('results-add'))}
 
 							{config.results.length === 0 && (
-								<p className={styles.hint} style={{ textAlign: 'center' }}>
+								<p className={`${styles.hint} ${styles.emptyHint}`}>
 									Минимум 2 результата, максимум 5. Добавьте результаты
 									перед вопросами.
 								</p>
@@ -2278,7 +2842,7 @@ const QuizSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Отправка заявок на Email:</p>
+									<p className={styles.label}>Отправка заявок на Email</p>
 									<input
 										className={styles.input}
 										type="email"
@@ -2293,7 +2857,7 @@ const QuizSettingsModal = ({
 
 								<div className={styles.field}>
 									<p className={styles.label}>
-										Отправка заявок в Telegram:
+										Отправка заявок в Telegram
 									</p>
 									<input
 										className={styles.input}
@@ -2319,9 +2883,10 @@ const QuizSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Внешний URL (Webhook):</p>
+									<p className={styles.label}>Внешний URL (Webhook)</p>
 									<input
 										className={styles.input}
+										type="url"
 										value={config.integrations?.webhookUrl || ''}
 										onChange={e =>
 											setIntegration('webhookUrl', e.target.value)
@@ -2338,10 +2903,11 @@ const QuizSettingsModal = ({
 
 								<div className={styles.field}>
 									<p className={styles.label}>
-										Отправка заявок в Битрикс24:
+										Отправка заявок в Битрикс24
 									</p>
 									<input
 										className={styles.input}
+										type="url"
 										value={config.integrations?.bitrix24WebhookUrl || ''}
 										onChange={e =>
 											setIntegration('bitrix24WebhookUrl', e.target.value)
@@ -2356,7 +2922,7 @@ const QuizSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>amoCRM — домен аккаунта:</p>
+									<p className={styles.label}>amoCRM — домен аккаунта</p>
 									<input
 										className={styles.input}
 										value={config.integrations?.amoCrmDomain || ''}
@@ -2372,7 +2938,7 @@ const QuizSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>amoCRM — токен доступа:</p>
+									<p className={styles.label}>amoCRM — токен доступа</p>
 									<input
 										className={styles.input}
 										type="password"
@@ -2397,7 +2963,7 @@ const QuizSettingsModal = ({
 
 								<div className={styles.field}>
 									<p className={styles.label}>
-										Яндекс Метрика — ID счётчика:
+										Яндекс Метрика — ID счётчика
 									</p>
 									<input
 										className={styles.input}
@@ -2416,7 +2982,7 @@ const QuizSettingsModal = ({
 
 								<div className={styles.field}>
 									<p className={styles.label}>
-										Ретаргетинг ВКонтакте — ID пикселя:
+										Ретаргетинг ВКонтакте — ID пикселя
 									</p>
 									<input
 										className={styles.input}
@@ -2434,7 +3000,7 @@ const QuizSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Roistat:</p>
+									<p className={styles.label}>Roistat</p>
 									<div className={styles.checkRow}>
 										<input
 											id="quizRoistat"
@@ -2478,7 +3044,7 @@ const QuizSettingsModal = ({
 										className={styles.label}
 										htmlFor={`${titleId}-install-domain`}
 									>
-										Домен установки виджета
+										Домен установки виджета:
 									</label>
 									<input
 										id={`${titleId}-install-domain`}
@@ -2513,10 +3079,9 @@ const QuizSettingsModal = ({
 									<button
 										type="button"
 										className={styles.copyBtn}
-										onClick={() => {
-											navigator.clipboard.writeText(scriptCode)
-											toast.success('Скопировано!')
-										}}
+										onClick={() =>
+											copyToClipboard(scriptCode, 'Код скопирован', true)
+										}
 									>
 										Копировать код
 									</button>
@@ -2534,7 +3099,7 @@ const QuizSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Прямая ссылка на квиз:</p>
+									<p className={styles.label}>Прямая ссылка:</p>
 									<div className={styles.directLink}>
 										<input
 											className={styles.input}
@@ -2556,10 +3121,9 @@ const QuizSettingsModal = ({
 									<button
 										type="button"
 										className={styles.copyBtn}
-										onClick={() => {
-											navigator.clipboard.writeText(directLink)
-											toast.success('Скопировано!')
-										}}
+										onClick={() =>
+											copyToClipboard(directLink, 'Ссылка скопирована')
+										}
 									>
 										Копировать ссылку
 									</button>
@@ -2604,8 +3168,8 @@ const QuizSettingsModal = ({
 										логики результата.
 									</li>
 									<li>
-										В «Коде» установите квиз на сайт или используйте прямую
-										ссылку.
+										В «Установке» добавьте квиз на сайт или используйте
+										прямую ссылку.
 									</li>
 								</ul>
 							</div>
@@ -2653,10 +3217,10 @@ const QuizSettingsModal = ({
 						<button
 							type="button"
 							className={styles.cancelBtn}
-							onClick={onClose}
+							onClick={requestClose}
 							disabled={saveMutation.isPending}
 						>
-							Отмена
+							{isPagePresentation ? 'К виджетам' : 'Отмена'}
 						</button>
 						<button
 							type="button"
@@ -2668,6 +3232,7 @@ const QuizSettingsModal = ({
 						</button>
 					</div>
 				</div>
+				{closeGuardDialog}
 			</div>
 		</div>
 	)

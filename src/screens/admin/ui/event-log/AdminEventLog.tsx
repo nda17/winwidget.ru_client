@@ -51,6 +51,7 @@ const ACTION_LABELS: Record<AdminEventLogAction, string> = {
 	USER_TOGGLE_ACTIVATION: 'Активация пользователя',
 	USER_DELETE: 'Удаление пользователя',
 	WIDGET_UPDATE: 'Редактирование виджета',
+	WIDGET_DELETE: 'Удаление виджета',
 	WIDGET_BUTTON_IMAGE_UPDATE: 'Изображение кнопки виджета',
 	BACKLOG_TASK_CREATE: 'Создание задачи',
 	BACKLOG_TASK_UPDATE: 'Обновление задачи',

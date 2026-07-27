@@ -7,6 +7,7 @@ import { OnlineConsultantConfig } from '@/entities/site-widget'
 import { QuizConfig } from '@/entities/site-widget'
 import { StopOfferConfig } from '@/entities/site-widget'
 import { WidgetConfig } from '@/entities/site-widget'
+import { useDebounce } from '@/shared/lib/hooks/useDebounce'
 import type { CSSProperties } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import styles from './WidgetLivePreview.module.scss'
@@ -20,7 +21,7 @@ type PreviewType =
 	| 'onlineConsultant'
 	| 'calculator'
 
-type WidgetLivePreviewProps =
+type WidgetLivePreviewEntityProps =
 	| {
 			type: 'wheel'
 			config: WidgetConfig
@@ -56,6 +57,13 @@ type WidgetLivePreviewProps =
 			config: CalculatorConfig
 			isHardPlan: boolean
 	  }
+
+type WidgetLivePreviewProps = WidgetLivePreviewEntityProps & {
+	autoCollapse?: boolean
+}
+
+type PreviewDevice = 'desktop' | 'mobile'
+type PreviewSurface = 'dialog' | 'launcher'
 
 const API_URL =
 	process.env.NEXT_PUBLIC_MODE === 'production'
@@ -112,11 +120,12 @@ const hashString = (value: string) => {
 	return Math.abs(hash).toString(36)
 }
 
-const getPreviewLayout = (containerWidth: number) => {
+const getPreviewLayout = (
+	containerWidth: number,
+	device: PreviewDevice
+) => {
 	const frame =
-		containerWidth <= MOBILE_PREVIEW_BREAKPOINT
-			? MOBILE_PREVIEW_FRAME
-			: DESKTOP_PREVIEW_FRAME
+		device === 'mobile' ? MOBILE_PREVIEW_FRAME : DESKTOP_PREVIEW_FRAME
 	const scale = Math.min(1, containerWidth / frame.width)
 
 	return {
@@ -411,7 +420,8 @@ const buildPreviewPublicConfig = (props: WidgetLivePreviewProps) => {
 const buildPreviewSandboxDocument = (
 	type: PreviewType,
 	publicConfig: object,
-	previewKey: string
+	previewKey: string,
+	surface: PreviewSurface
 ) => {
 	const scriptUrl = `${API_URL}/widgets/${SCRIPT_BY_TYPE[type]}`
 	const configPath = CONFIG_PATH_BY_TYPE[type]
@@ -441,6 +451,7 @@ const buildPreviewSandboxDocument = (
 		(function () {
 			var previewKey = ${JSON.stringify(previewKey)};
 			var previewType = ${JSON.stringify(type)};
+			var previewSurface = ${JSON.stringify(surface)};
 			var configPath = ${JSON.stringify(configPath)};
 			var publicConfig = ${escapeScriptJson(publicConfig)};
 			var nativeFetch = window.fetch.bind(window);
@@ -619,27 +630,35 @@ const buildPreviewSandboxDocument = (
 				}
 			} catch (e) {}
 
+			var shouldAutoOpen = previewSurface === 'dialog';
+
 			window.winwidget = previewType === 'wheel'
 				? previewKey
-				: { autoOpen: true };
-			window.winwidgetAutoOpen = previewType === 'wheel';
-			window.winquizAutoOpen = previewType === 'quiz';
-			window.wincallbackAutoOpen = previewType === 'callback';
-			window.winwidgetCallbackAutoOpen = previewType === 'callback';
-			window.wintimerAutoOpen = previewType === 'timer';
-			window.winwidgetTimerAutoOpen = previewType === 'timer';
+				: { autoOpen: shouldAutoOpen };
+			window.winwidgetAutoOpen = previewType === 'wheel' && shouldAutoOpen;
+			window.winquizAutoOpen = previewType === 'quiz' && shouldAutoOpen;
+			window.wincallbackAutoOpen =
+				previewType === 'callback' && shouldAutoOpen;
+			window.winwidgetCallbackAutoOpen =
+				previewType === 'callback' && shouldAutoOpen;
+			window.wintimerAutoOpen = previewType === 'timer' && shouldAutoOpen;
+			window.winwidgetTimerAutoOpen =
+				previewType === 'timer' && shouldAutoOpen;
 			window.wintimer = previewType === 'timer' ? previewKey : undefined;
-			window.winstopofferAutoOpen = previewType === 'stopOffer';
-			window.winwidgetStopOfferAutoOpen = previewType === 'stopOffer';
+			window.winstopofferAutoOpen =
+				previewType === 'stopOffer' && shouldAutoOpen;
+			window.winwidgetStopOfferAutoOpen =
+				previewType === 'stopOffer' && shouldAutoOpen;
 			window.winstopoffer =
 				previewType === 'stopOffer' ? previewKey : undefined;
 			window.winonlineconsultantAutoOpen =
-				previewType === 'onlineConsultant';
+				previewType === 'onlineConsultant' && shouldAutoOpen;
 			window.winwidgetOnlineConsultantAutoOpen =
-				previewType === 'onlineConsultant';
+				previewType === 'onlineConsultant' && shouldAutoOpen;
 			window.winonlineconsultant =
 				previewType === 'onlineConsultant' ? previewKey : undefined;
-			window.wincalculatorAutoOpen = previewType === 'calculator';
+			window.wincalculatorAutoOpen =
+				previewType === 'calculator' && shouldAutoOpen;
 			window.wincalculator =
 				previewType === 'calculator' ? previewKey : undefined;
 
@@ -755,17 +774,26 @@ const getTypeLabel = (type: PreviewType) => {
 
 const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 	const serializedConfig = JSON.stringify(props.config)
+	const debouncedSerializedConfig = useDebounce(serializedConfig, 300)
 	const [previewRunId, setPreviewRunId] = useState(0)
 	const [canRestartPreview, setCanRestartPreview] = useState(false)
+	const [isCollapsed, setIsCollapsed] = useState(false)
+	const [device, setDevice] = useState<PreviewDevice>('desktop')
+	const [surface, setSurface] = useState<PreviewSurface>('dialog')
 	const previewViewportRef = useRef<HTMLDivElement | null>(null)
-	const previewKey = `live-preview-${props.type}-${hashString(serializedConfig)}-${props.isHardPlan ? 'hard' : 'base'}-${previewRunId}`
+	const previewKey = `live-preview-${props.type}-${hashString(debouncedSerializedConfig)}-${props.isHardPlan ? 'hard' : 'base'}-${surface}-${previewRunId}`
 	const [previewLayout, setPreviewLayout] = useState(
 		DEFAULT_PREVIEW_LAYOUT
 	)
+	const previewProps = {
+		...props,
+		config: JSON.parse(debouncedSerializedConfig)
+	} as WidgetLivePreviewProps
 	const previewDocument = buildPreviewSandboxDocument(
 		props.type,
-		buildPreviewPublicConfig(props),
-		previewKey
+		buildPreviewPublicConfig(previewProps),
+		previewKey,
+		surface
 	)
 	const cropStyle = {
 		width: `${Math.ceil(previewLayout.frameWidth * previewLayout.scale)}px`,
@@ -778,12 +806,28 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 	} as CSSProperties
 
 	useEffect(() => {
+		if (
+			window.matchMedia(`(max-width: ${MOBILE_PREVIEW_BREAKPOINT}px)`)
+				.matches
+		) {
+			setDevice('mobile')
+			setIsCollapsed(true)
+		}
+	}, [])
+
+	useEffect(() => {
+		if (props.autoCollapse) setIsCollapsed(true)
+	}, [props.autoCollapse])
+
+	useEffect(() => {
+		if (isCollapsed) return
+
 		const updateLayout = () => {
 			const containerWidth = previewViewportRef.current?.clientWidth
 
 			if (!containerWidth) return
 
-			const nextLayout = getPreviewLayout(containerWidth)
+			const nextLayout = getPreviewLayout(containerWidth, device)
 
 			setPreviewLayout(currentLayout => {
 				if (
@@ -814,7 +858,7 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 			window.removeEventListener('resize', updateLayout)
 			resizeObserver?.disconnect()
 		}
-	}, [])
+	}, [device, isCollapsed])
 
 	useEffect(() => {
 		setCanRestartPreview(false)
@@ -845,7 +889,7 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 				return
 			}
 
-			if (data.event !== 'ready-to-restart') return
+			if (data.event !== 'ready-to-restart' || surface !== 'dialog') return
 
 			setCanRestartPreview(true)
 		}
@@ -853,7 +897,7 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 		window.addEventListener('message', handleMessage)
 
 		return () => window.removeEventListener('message', handleMessage)
-	}, [previewKey])
+	}, [previewKey, surface])
 
 	const restartPreview = () => {
 		setCanRestartPreview(false)
@@ -863,33 +907,115 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 	return (
 		<section className={styles.preview} aria-label="Live preview виджета">
 			<div className={styles.previewHeader}>
-				<p className={styles.previewTitle}>Предпросмотр</p>
-				<span className={styles.previewBadge}>
-					{getTypeLabel(props.type)}
-				</span>
-			</div>
-			<div className={styles.previewViewport} ref={previewViewportRef}>
-				{canRestartPreview && (
+				<div>
+					<p className={styles.previewTitle}>Предпросмотр</p>
+					<span className={styles.previewBadge}>
+						{getTypeLabel(props.type)}
+					</span>
+				</div>
+				<div className={styles.previewControls}>
+					{!isCollapsed && (
+						<>
+							<div
+								className={styles.previewSegmented}
+								aria-label="Состояние виджета"
+							>
+								<button
+									type="button"
+									className={`${styles.previewControlBtn} ${
+										surface === 'dialog'
+											? styles.previewControlBtnActive
+											: ''
+									}`}
+									onClick={() => setSurface('dialog')}
+									aria-pressed={surface === 'dialog'}
+								>
+									Окно
+								</button>
+								<button
+									type="button"
+									className={`${styles.previewControlBtn} ${
+										surface === 'launcher'
+											? styles.previewControlBtnActive
+											: ''
+									}`}
+									onClick={() => setSurface('launcher')}
+									aria-pressed={surface === 'launcher'}
+								>
+									Кнопка
+								</button>
+							</div>
+							<div
+								className={styles.previewSegmented}
+								aria-label="Размер экрана"
+							>
+								<button
+									type="button"
+									className={`${styles.previewControlBtn} ${
+										device === 'desktop'
+											? styles.previewControlBtnActive
+											: ''
+									}`}
+									onClick={() => setDevice('desktop')}
+									aria-pressed={device === 'desktop'}
+								>
+									Desktop
+								</button>
+								<button
+									type="button"
+									className={`${styles.previewControlBtn} ${
+										device === 'mobile'
+											? styles.previewControlBtnActive
+											: ''
+									}`}
+									onClick={() => setDevice('mobile')}
+									aria-pressed={device === 'mobile'}
+								>
+									Mobile
+								</button>
+							</div>
+						</>
+					)}
 					<button
 						type="button"
-						className={styles.previewRestart}
-						onClick={restartPreview}
+						className={styles.previewToggle}
+						onClick={() => setIsCollapsed(current => !current)}
+						aria-expanded={!isCollapsed}
 					>
-						Попробовать снова
+						{isCollapsed ? 'Показать' : 'Свернуть'}
 					</button>
-				)}
-				<div className={styles.previewCrop} style={cropStyle}>
-					<iframe
-						key={previewKey}
-						className={styles.previewFrame}
-						title={`Предпросмотр: ${getTypeLabel(props.type)}`}
-						srcDoc={previewDocument}
-						sandbox="allow-scripts"
-						scrolling="no"
-						style={frameStyle}
-					/>
 				</div>
 			</div>
+			{!isCollapsed && (
+				<>
+					<div className={styles.previewViewport} ref={previewViewportRef}>
+						{canRestartPreview && surface === 'dialog' && (
+							<button
+								type="button"
+								className={styles.previewRestart}
+								onClick={restartPreview}
+							>
+								Попробовать снова
+							</button>
+						)}
+						<div className={styles.previewCrop} style={cropStyle}>
+							<iframe
+								key={previewKey}
+								className={styles.previewFrame}
+								title={`Предпросмотр: ${getTypeLabel(props.type)}`}
+								srcDoc={previewDocument}
+								sandbox="allow-scripts"
+								scrolling="no"
+								style={frameStyle}
+							/>
+						</div>
+					</div>
+					<p className={styles.previewNotice}>
+						Тестовый режим: заявки и интеграции не отправляются,
+						ограничения повторного показа отключены.
+					</p>
+				</>
+			)}
 		</section>
 	)
 }

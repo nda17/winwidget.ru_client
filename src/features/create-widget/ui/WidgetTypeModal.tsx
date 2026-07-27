@@ -380,7 +380,7 @@ const WIDGET_TYPES: WidgetType[] = [
 		id: 'calculator',
 		name: 'Калькулятор стоимости',
 		description:
-			'Считает стоимость по выбранным параметрам и собирает контакт до или после результата.',
+			'Считает стоимость по выбранным параметрам и при необходимости собирает контакт перед результатом.',
 		icon: <CalculatorIcon />,
 		available: true
 	}
@@ -389,12 +389,13 @@ const WIDGET_TYPES: WidgetType[] = [
 interface Props {
 	onSelect: (typeId: string) => void
 	onClose: () => void
-	isCreating: boolean
+	creatingTypeId: string | null
 }
 
-const WidgetTypeModal = ({ onSelect, onClose, isCreating }: Props) => {
+const WidgetTypeModal = ({ onSelect, onClose, creatingTypeId }: Props) => {
 	const titleId = useId()
 	const descriptionId = useId()
+	const isCreating = creatingTypeId !== null
 
 	useEffect(() => {
 		const originalOverflow = document.body.style.overflow
@@ -412,6 +413,7 @@ const WidgetTypeModal = ({ onSelect, onClose, isCreating }: Props) => {
 				type="button"
 				className={styles.backdrop}
 				onClick={onClose}
+				disabled={isCreating}
 				aria-label="Закрыть окно выбора типа виджета"
 			/>
 			<div
@@ -425,6 +427,7 @@ const WidgetTypeModal = ({ onSelect, onClose, isCreating }: Props) => {
 					type="button"
 					className={styles.closeBtn}
 					onClick={onClose}
+					disabled={isCreating}
 					aria-label="Закрыть"
 				>
 					✕
@@ -436,24 +439,29 @@ const WidgetTypeModal = ({ onSelect, onClose, isCreating }: Props) => {
 					Кликните по виджету, чтобы создать его
 				</p>
 				<div className={styles.gridLayout}>
-					{WIDGET_TYPES.map(type => (
-						<button
-							key={type.id}
-							className={`${styles.card} ${!type.available ? styles.cardDisabled : ''}`}
-							onClick={() => type.available && onSelect(type.id)}
-							disabled={!type.available || isCreating}
-						>
-							{!type.available && (
-								<span className={styles.badge}>Скоро</span>
-							)}
-							<div className={styles.icon}>{type.icon}</div>
-							<div className={styles.name}>{type.name}</div>
-							<div className={styles.desc}>{type.description}</div>
-							{isCreating && type.available && (
-								<div className={styles.creating}>Создание...</div>
-							)}
-						</button>
-					))}
+					{WIDGET_TYPES.map(type => {
+						const isSelectedType = creatingTypeId === type.id
+
+						return (
+							<button
+								key={type.id}
+								className={`${styles.card} ${!type.available ? styles.cardDisabled : ''} ${isSelectedType ? styles.cardCreating : ''}`}
+								onClick={() => type.available && onSelect(type.id)}
+								disabled={!type.available || isCreating}
+								aria-busy={isSelectedType}
+							>
+								{!type.available && (
+									<span className={styles.badge}>Скоро</span>
+								)}
+								<div className={styles.icon}>{type.icon}</div>
+								<div className={styles.name}>{type.name}</div>
+								<div className={styles.desc}>{type.description}</div>
+								{isSelectedType && (
+									<div className={styles.creating}>Создание...</div>
+								)}
+							</button>
+						)
+					})}
 				</div>
 			</div>
 		</div>

@@ -7,12 +7,17 @@ import { useId, useState } from 'react'
 import toast from 'react-hot-toast'
 import DirectLinkQr from '../shared/DirectLinkQr'
 import styles from '../shared/WidgetSettingsModal.module.scss'
+import useWidgetSettingsCloseGuard from '../shared/useWidgetSettingsCloseGuard'
 import WidgetLivePreview from '../shared/WidgetLivePreview'
-import type { WidgetSettingsPersistence } from '../shared/WidgetSettingsPersistence'
+import type {
+	WidgetSettingsPersistence,
+	WidgetSettingsPresentationProps
+} from '../shared/WidgetSettingsPersistence'
+import WidgetSettingsPreviewPortal from '../shared/WidgetSettingsPreviewPortal'
 
 type Tab = 'main' | 'trigger' | 'form' | 'integrations' | 'code' | 'info'
 
-interface Props {
+interface Props extends WidgetSettingsPresentationProps {
 	stopOffer: StopOffer
 	canUseCustomButtonImage: boolean
 	onClose: () => void
@@ -20,12 +25,18 @@ interface Props {
 	persistence?: WidgetSettingsPersistence<StopOffer, StopOfferConfig>
 }
 
+type ValidationIssue = {
+	tab: Tab
+	fieldId: string
+	message: string
+}
+
 const TABS: { id: Tab; label: string }[] = [
 	{ id: 'main', label: 'Главные' },
 	{ id: 'trigger', label: 'Показ' },
 	{ id: 'form', label: 'Форма' },
 	{ id: 'integrations', label: 'Интеграции' },
-	{ id: 'code', label: 'Код' },
+	{ id: 'code', label: 'Установка' },
 	{ id: 'info', label: 'Инфо' }
 ]
 
@@ -95,29 +106,17 @@ const mergeConfig = (
 	}
 }
 
-const clampNumber = (
-	value: number,
-	min: number,
-	max: number,
-	fallback: number
-) => {
-	const numeric = Number.isFinite(value) ? value : fallback
-	return Math.min(max, Math.max(min, numeric))
-}
-
-const toOptionalNumber = (
-	value: string,
-	min = Number.NEGATIVE_INFINITY,
-	max = Number.POSITIVE_INFINITY
-) => {
-	if (value.trim() === '') return null
-	const numeric = Number(value)
-	if (!Number.isFinite(numeric)) return null
-	return Math.min(max, Math.max(min, numeric))
-}
-
 const createResetToken = () =>
 	`${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+
+const isHttpUrl = (value: string) => {
+	try {
+		const url = new URL(value)
+		return url.protocol === 'http:' || url.protocol === 'https:'
+	} catch {
+		return false
+	}
+}
 
 const notifyStopOfferUpdated = (publicKey: string) => {
 	if (typeof window === 'undefined') return
@@ -139,7 +138,9 @@ const StopOfferSettingsModal = ({
 	canUseCustomButtonImage,
 	onClose,
 	onSaved,
-	persistence
+	persistence,
+	presentation = 'modal',
+	previewPortalTarget
 }: Props) => {
 	const titleId = useId()
 	const [tab, setTab] = useState<Tab>('main')
@@ -154,6 +155,8 @@ const StopOfferSettingsModal = ({
 	const [confirmResetSubmissions, setConfirmResetSubmissions] =
 		useState(false)
 	const [confirmResetDefaults, setConfirmResetDefaults] = useState(false)
+	const [validationIssue, setValidationIssue] =
+		useState<ValidationIssue | null>(null)
 	const [savedSnapshot, setSavedSnapshot] = useState(
 		JSON.stringify({
 			name: stopOffer.name,
@@ -191,6 +194,7 @@ const StopOfferSettingsModal = ({
 			setName(updated.name)
 			setInstallDomain(updated.installDomain ?? '')
 			setCfg(nextConfig)
+			setValidationIssue(null)
 			setSavedSnapshot(
 				JSON.stringify({
 					name: updated.name,
@@ -208,14 +212,23 @@ const StopOfferSettingsModal = ({
 		}
 	})
 	const isDangerActionPending = mutation.isPending
+	const { requestClose, closeGuardDialog } = useWidgetSettingsCloseGuard({
+		hasUnsavedChanges,
+		isBusy: isDangerActionPending,
+		onClose
+	})
+	const isPagePresentation = presentation === 'page'
 
-	const set = (patch: Partial<StopOfferConfig>) =>
+	const set = (patch: Partial<StopOfferConfig>) => {
+		setValidationIssue(null)
 		setCfg(prev => ({ ...prev, ...patch }))
+	}
 
 	const setIntegration = (
 		key: keyof StopOfferConfig['integrations'],
 		value: string | boolean
-	) =>
+	) => {
+		setValidationIssue(null)
 		setCfg(prev => ({
 			...prev,
 			integrations: {
@@ -223,6 +236,30 @@ const StopOfferSettingsModal = ({
 				[key]: value
 			}
 		}))
+	}
+
+	const reportValidationIssue = (issue: ValidationIssue) => {
+		setValidationIssue(issue)
+		setTab(issue.tab)
+		window.requestAnimationFrame(() => {
+			const field = document.getElementById(issue.fieldId)
+			field?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+			field?.focus({ preventScroll: true })
+		})
+		toast.error(issue.message)
+	}
+
+	const inputClassName = (fieldId: string) =>
+		`${styles.input} ${
+			validationIssue?.fieldId === fieldId ? styles.inputError : ''
+		}`
+
+	const fieldError = (fieldId: string) =>
+		validationIssue?.fieldId === fieldId ? (
+			<p className={styles.fieldError} role="alert">
+				{validationIssue.message}
+			</p>
+		) : null
 
 	const publicSiteUrl = (
 		process.env.NEXT_PUBLIC_SITE_URL ||
@@ -237,17 +274,100 @@ const StopOfferSettingsModal = ({
 	).replace(/\/$/, '')
 	const embedCode = `<script src="${apiUrl}/widgets/stop-offer.js" data-key="${stopOffer.publicKey}" async></script>`
 	const previewUrl = `${publicSiteUrl}/page-stop-offer/${stopOffer.publicKey}`
+	const savedInstallDomain = (
+		JSON.parse(savedSnapshot) as { installDomain: string }
+	).installDomain
+	const hasUnsavedInstallDomain =
+		installDomain.trim() !== savedInstallDomain.trim()
 
-	const handleCopy = async (text: string) => {
+	const handleCopy = async (
+		text: string,
+		successMessage: string,
+		requireSavedDomain = false
+	) => {
+		if (requireSavedDomain && hasUnsavedInstallDomain) {
+			setTab('code')
+			toast.error('Сначала сохраните домен установки')
+			return
+		}
+
 		try {
 			await navigator.clipboard.writeText(text)
-			toast.success('Скопировано')
+			toast.success(successMessage)
 		} catch {
 			toast.error('Не удалось скопировать')
 		}
 	}
 
 	const save = () => {
+		if (!name.trim()) {
+			reportValidationIssue({
+				tab: 'main',
+				fieldId: `${titleId}-name`,
+				message: 'Укажите название виджета'
+			})
+			return
+		}
+		if (!cfg.offerText.trim()) {
+			reportValidationIssue({
+				tab: 'main',
+				fieldId: `${titleId}-offer`,
+				message: 'Укажите текст предложения'
+			})
+			return
+		}
+		if (!cfg.title.trim()) {
+			reportValidationIssue({
+				tab: 'main',
+				fieldId: `${titleId}-title`,
+				message: 'Укажите заголовок виджета'
+			})
+			return
+		}
+		if (cfg.dataType !== 'NONE') {
+			if (!cfg.contactTitle.trim()) {
+				reportValidationIssue({
+					tab: 'form',
+					fieldId: `${titleId}-contact-title`,
+					message: 'Укажите заголовок формы'
+				})
+				return
+			}
+			if (!cfg.submitButtonText.trim()) {
+				reportValidationIssue({
+					tab: 'form',
+					fieldId: `${titleId}-submit-text`,
+					message: 'Укажите текст кнопки отправки'
+				})
+				return
+			}
+			if (!cfg.privacyUrl.trim() || !isHttpUrl(cfg.privacyUrl)) {
+				reportValidationIssue({
+					tab: 'form',
+					fieldId: `${titleId}-privacy-url`,
+					message:
+						'Укажите полную ссылку на политику с http:// или https://'
+				})
+				return
+			}
+		}
+		if (
+			cfg.actionButtonEnabled &&
+			(!cfg.actionButtonText.trim() || !isHttpUrl(cfg.actionButtonUrl))
+		) {
+			const missingText = !cfg.actionButtonText.trim()
+			reportValidationIssue({
+				tab: 'form',
+				fieldId: missingText
+					? `${titleId}-action-text`
+					: `${titleId}-action-url`,
+				message: missingText
+					? 'Укажите текст кнопки перехода'
+					: 'Укажите полную ссылку кнопки с http:// или https://'
+			})
+			return
+		}
+
 		const sanitizedConfig: StopOfferConfig = {
 			...cfg,
 			autoOpenDelay:
@@ -271,10 +391,22 @@ const StopOfferSettingsModal = ({
 				Math.min(365, Number(cfg.submissionCooldownDays) || 0)
 			)
 		}
-		mutation.mutate({ name, installDomain, config: sanitizedConfig })
+		const sanitizedName = name.trim()
+		setName(sanitizedName)
+		setCfg(sanitizedConfig)
+		mutation.mutate({
+			name: sanitizedName,
+			installDomain,
+			config: sanitizedConfig
+		})
 	}
 
 	const handleResetShows = () => {
+		if (hasUnsavedChanges) {
+			toast.error('Сначала сохраните текущие настройки виджета')
+			return
+		}
+
 		const nextConfig = {
 			...cfg,
 			displayResetToken: createResetToken()
@@ -285,6 +417,11 @@ const StopOfferSettingsModal = ({
 	}
 
 	const handleResetSubmissions = () => {
+		if (hasUnsavedChanges) {
+			toast.error('Сначала сохраните текущие настройки виджета')
+			return
+		}
+
 		const nextConfig = {
 			...cfg,
 			submissionResetToken: createResetToken()
@@ -302,31 +439,50 @@ const StopOfferSettingsModal = ({
 	}
 
 	return (
-		<div className={styles.overlay}>
-			<button
-				type="button"
-				className={styles.backdrop}
-				onClick={onClose}
-				aria-label="Закрыть настройки стоп-оффера"
-			/>
-			<div className={styles.modal} role="dialog" aria-modal="true">
+		<div
+			className={isPagePresentation ? styles.pageEditor : styles.overlay}
+		>
+			{!isPagePresentation && (
 				<button
 					type="button"
-					className={styles.closeBtn}
-					onClick={onClose}
-					aria-label="Закрыть"
-				>
-					✕
-				</button>
+					className={styles.backdrop}
+					onClick={requestClose}
+					aria-label="Закрыть настройки стоп-оффера"
+				/>
+			)}
+			<div
+				className={isPagePresentation ? styles.pagePanel : styles.modal}
+				role={isPagePresentation ? 'region' : 'dialog'}
+				aria-modal={isPagePresentation ? undefined : true}
+			>
+				{!isPagePresentation && (
+					<button
+						type="button"
+						className={styles.closeBtn}
+						onClick={requestClose}
+						aria-label="Закрыть настройки"
+					>
+						✕
+					</button>
+				)}
 				<h2 id={titleId} className={styles.modalTitle}>
 					Настройки стоп-оффера
 				</h2>
 
-				<div className={styles.tabs}>
+				<div
+					className={styles.tabs}
+					role="tablist"
+					aria-label="Разделы настроек стоп-оффера"
+				>
 					{TABS.map(t => (
 						<button
 							type="button"
 							key={t.id}
+							id={`${titleId}-tab-${t.id}`}
+							role="tab"
+							aria-selected={tab === t.id}
+							aria-controls={`${titleId}-panel-${t.id}`}
+							tabIndex={tab === t.id ? 0 : -1}
 							className={`${styles.tab} ${
 								tab === t.id ? styles.tabActive : ''
 							}`}
@@ -337,72 +493,80 @@ const StopOfferSettingsModal = ({
 					))}
 				</div>
 
-				<WidgetLivePreview
-					type="stopOffer"
-					config={cfg}
-					isHardPlan={canUseCustomButtonImage}
-				/>
+				<WidgetSettingsPreviewPortal
+					inline={!isPagePresentation}
+					target={previewPortalTarget}
+				>
+					<WidgetLivePreview
+						type="stopOffer"
+						config={cfg}
+						isHardPlan={canUseCustomButtonImage}
+						autoCollapse={
+							!isPagePresentation &&
+							['integrations', 'code', 'info'].includes(tab)
+						}
+					/>
+				</WidgetSettingsPreviewPortal>
 
-				<div className={styles.tabContent}>
+				<div
+					id={`${titleId}-panel-${tab}`}
+					className={styles.tabContent}
+					role="tabpanel"
+					aria-labelledby={`${titleId}-tab-${tab}`}
+				>
 					{tab === 'main' && (
 						<div className={styles.fields}>
 							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>Основное</h3>
+								<h3 className={styles.settingsGroupTitle}>Внешний вид</h3>
 								<div className={styles.field}>
-									<p className={styles.label}>Название</p>
+									<p className={styles.label}>Название виджета:</p>
 									<input
-										className={styles.input}
+										id={`${titleId}-name`}
+										className={inputClassName(`${titleId}-name`)}
 										value={name}
-										onChange={e => setName(e.target.value)}
+										onChange={e => {
+											setValidationIssue(null)
+											setName(e.target.value)
+										}}
+										maxLength={50}
+										aria-invalid={
+											validationIssue?.fieldId === `${titleId}-name`
+										}
 									/>
+									{fieldError(`${titleId}-name`)}
 								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>Домен установки виджета</p>
-									<input
-										className={styles.input}
-										value={installDomain}
-										placeholder="example.com"
-										onChange={e => setInstallDomain(e.target.value)}
-									/>
-									<p className={styles.domainHint}>
-										Стоп-оффер будет работать только на этом домене.
+									<p className={styles.label}>Основной цвет:</p>
+									<div className={styles.colorRow}>
+										<input
+											className={styles.colorPicker}
+											type="color"
+											value={getColorPickerValue(cfg.color, '#4705fb')}
+											onChange={e => set({ color: e.target.value })}
+										/>
+										<input
+											className={styles.input}
+											value={cfg.color}
+											onChange={e => set({ color: e.target.value })}
+											maxLength={7}
+										/>
+										{cfg.color !== '#4705fb' && (
+											<button
+												type="button"
+												className={styles.clearColorBtn}
+												onClick={() => set({ color: '#4705fb' })}
+												title="Вернуть стандартный цвет"
+											>
+												✕
+											</button>
+										)}
+									</div>
+									<p className={styles.hint}>
+										Используется для акцентов и элементов предложения.
 									</p>
 								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>Акцентный цвет</p>
-									<div className={styles.colorRow}>
-										<input
-											className={styles.colorPicker}
-											type="color"
-											value={cfg.color}
-											onChange={e => set({ color: e.target.value })}
-										/>
-										<input
-											className={styles.input}
-											value={cfg.color}
-											onChange={e => set({ color: e.target.value })}
-										/>
-									</div>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Цвет кнопки</p>
-									<div className={styles.colorRow}>
-										<input
-											className={styles.colorPicker}
-											type="color"
-											value={cfg.buttonColor || cfg.color}
-											onChange={e => set({ buttonColor: e.target.value })}
-										/>
-										<input
-											className={styles.input}
-											value={cfg.buttonColor}
-											placeholder="По умолчанию акцентный цвет"
-											onChange={e => set({ buttonColor: e.target.value })}
-										/>
-									</div>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Фон попапа</p>
+									<p className={styles.label}>Цвет фона виджета</p>
 									<div className={styles.colorRow}>
 										<input
 											className={styles.colorPicker}
@@ -415,14 +579,58 @@ const StopOfferSettingsModal = ({
 											value={cfg.bgColor}
 											placeholder="#ffffff"
 											onChange={e => set({ bgColor: e.target.value })}
+											maxLength={7}
 										/>
+										{cfg.bgColor && (
+											<button
+												type="button"
+												className={styles.clearColorBtn}
+												onClick={() => set({ bgColor: '' })}
+												title="Вернуть белый фон"
+											>
+												✕
+											</button>
+										)}
+									</div>
+								</div>
+								<div className={styles.field}>
+									<p className={styles.label}>Цвет кнопки действия:</p>
+									<div className={styles.colorRow}>
+										<input
+											className={styles.colorPicker}
+											type="color"
+											value={getColorPickerValue(
+												cfg.buttonColor,
+												getColorPickerValue(cfg.color, '#4705fb')
+											)}
+											onChange={e => set({ buttonColor: e.target.value })}
+										/>
+										<input
+											className={styles.input}
+											value={cfg.buttonColor}
+											placeholder="Как основной цвет"
+											onChange={e => set({ buttonColor: e.target.value })}
+											maxLength={7}
+										/>
+										{cfg.buttonColor && (
+											<button
+												type="button"
+												className={styles.clearColorBtn}
+												onClick={() => set({ buttonColor: '' })}
+												title="Использовать основной цвет"
+											>
+												✕
+											</button>
+										)}
 									</div>
 								</div>
 							</div>
 							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>Тексты</h3>
+								<h3 className={styles.settingsGroupTitle}>
+									Тексты виджета
+								</h3>
 								<div className={styles.field}>
-									<p className={styles.label}>Бейдж</p>
+									<p className={styles.label}>Текст бейджа:</p>
 									<input
 										className={styles.input}
 										value={cfg.badgeText}
@@ -430,23 +638,33 @@ const StopOfferSettingsModal = ({
 									/>
 								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>Оффер</p>
+									<p className={styles.label}>Текст предложения:</p>
 									<input
-										className={styles.input}
+										id={`${titleId}-offer`}
+										className={inputClassName(`${titleId}-offer`)}
 										value={cfg.offerText}
 										onChange={e => set({ offerText: e.target.value })}
+										aria-invalid={
+											validationIssue?.fieldId === `${titleId}-offer`
+										}
 									/>
+									{fieldError(`${titleId}-offer`)}
 								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>Заголовок</p>
+									<p className={styles.label}>Заголовок виджета:</p>
 									<input
-										className={styles.input}
+										id={`${titleId}-title`}
+										className={inputClassName(`${titleId}-title`)}
 										value={cfg.title}
 										onChange={e => set({ title: e.target.value })}
+										aria-invalid={
+											validationIssue?.fieldId === `${titleId}-title`
+										}
 									/>
+									{fieldError(`${titleId}-title`)}
 								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>Подзаголовок</p>
+									<p className={styles.label}>Подзаголовок виджета:</p>
 									<textarea
 										className={styles.textarea}
 										value={cfg.subtitle}
@@ -506,6 +724,10 @@ const StopOfferSettingsModal = ({
 								<h3 className={styles.settingsGroupTitle}>
 									Условия показа
 								</h3>
+								<p className={styles.infoText}>
+									Условия работают по логике «ИЛИ»: стоп-оффер откроется,
+									как только выполнится любое из них.
+								</p>
 								<div className={styles.field}>
 									<label className={styles.checkRow}>
 										<input
@@ -543,23 +765,26 @@ const StopOfferSettingsModal = ({
 								</div>
 								{cfg.showOnce && (
 									<div className={styles.field}>
-										<p className={styles.label}>
-											Показывать повторно через N дней
-										</p>
+										<div className={styles.rangeHeader}>
+											<p className={styles.label}>
+												Повторный показ через:
+											</p>
+											<span className={styles.rangeValue}>
+												{cfg.displayCooldownDays
+													? `${cfg.displayCooldownDays} дн.`
+													: 'Только после сброса'}
+											</span>
+										</div>
 										<input
-											className={styles.input}
-											type="number"
+											className={styles.rangeInput}
+											type="range"
+											aria-label="Повторный показ через"
 											min={0}
 											max={365}
 											value={cfg.displayCooldownDays}
 											onChange={e =>
 												set({
-													displayCooldownDays: clampNumber(
-														Number(e.target.value),
-														0,
-														365,
-														0
-													)
+													displayCooldownDays: Number(e.target.value)
 												})
 											}
 										/>
@@ -571,40 +796,66 @@ const StopOfferSettingsModal = ({
 									</div>
 								)}
 								<div className={styles.field}>
-									<p className={styles.label}>Автопоказ через, сек</p>
-									<input
-										className={styles.input}
-										type="number"
-										min={0}
-										placeholder="Отключено"
-										value={cfg.autoOpenDelay ?? ''}
-										onChange={e =>
-											set({
-												autoOpenDelay: toOptionalNumber(e.target.value, 0)
-											})
-										}
-									/>
+									<p className={styles.label}>Автопоказ по времени:</p>
+									<label className={styles.checkRow}>
+										<input
+											type="checkbox"
+											checked={cfg.autoOpenDelay != null}
+											onChange={e =>
+												set({
+													autoOpenDelay: e.target.checked ? 8 : null
+												})
+											}
+										/>
+										<span className={styles.checkLabel}>
+											Открывать автоматически на компьютере
+										</span>
+									</label>
+									{cfg.autoOpenDelay != null && (
+										<>
+											<div className={styles.rangeHeader}>
+												<p className={styles.label}>Автопоказ через:</p>
+												<span className={styles.rangeValue}>
+													{cfg.autoOpenDelay} сек.
+												</span>
+											</div>
+											<input
+												className={styles.rangeInput}
+												type="range"
+												aria-label="Автопоказ через"
+												min={1}
+												max={60}
+												value={cfg.autoOpenDelay}
+												onChange={e =>
+													set({
+														autoOpenDelay: Number(e.target.value)
+													})
+												}
+											/>
+										</>
+									)}
 									<p className={styles.hint}>
-										Через сколько секунд после загрузки страницы открыть
-										стоп-оффер автоматически. Пусто — автопоказ по таймеру
-										выключен.
+										Дополнительное условие для компьютеров. Можно выключить
+										и оставить только уход/скролл.
 									</p>
 								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>
-										Мобильный показ через, сек
-									</p>
+									<div className={styles.rangeHeader}>
+										<p className={styles.label}>Мобильный показ через:</p>
+										<span className={styles.rangeValue}>
+											{cfg.mobileAutoOpenDelay} сек.
+										</span>
+									</div>
 									<input
-										className={styles.input}
-										type="number"
+										className={styles.rangeInput}
+										type="range"
+										aria-label="Мобильный показ через"
 										min={1}
+										max={60}
 										value={cfg.mobileAutoOpenDelay}
 										onChange={e =>
 											set({
-												mobileAutoOpenDelay: Math.max(
-													1,
-													Number(e.target.value) || 1
-												)
+												mobileAutoOpenDelay: Number(e.target.value)
 											})
 										}
 									/>
@@ -614,21 +865,22 @@ const StopOfferSettingsModal = ({
 									</p>
 								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>Показ после скролла, %</p>
+									<div className={styles.rangeHeader}>
+										<p className={styles.label}>Показ после прокрутки:</p>
+										<span className={styles.rangeValue}>
+											{cfg.scrollPercent}%
+										</span>
+									</div>
 									<input
-										className={styles.input}
-										type="number"
+										className={styles.rangeInput}
+										type="range"
+										aria-label="Показ после прокрутки"
 										min={1}
 										max={100}
 										value={cfg.scrollPercent}
 										onChange={e =>
 											set({
-												scrollPercent: clampNumber(
-													Number(e.target.value),
-													1,
-													100,
-													70
-												)
+												scrollPercent: Number(e.target.value)
 											})
 										}
 									/>
@@ -676,7 +928,15 @@ const StopOfferSettingsModal = ({
 									<button
 										type="button"
 										className={styles.resetAttemptsBtn}
-										onClick={() => setConfirmResetShows(true)}
+										onClick={() => {
+											if (hasUnsavedChanges) {
+												toast.error(
+													'Сначала сохраните текущие настройки виджета'
+												)
+												return
+											}
+											setConfirmResetShows(true)
+										}}
 										disabled={isDangerActionPending}
 									>
 										Сбросить историю показов
@@ -689,9 +949,11 @@ const StopOfferSettingsModal = ({
 					{tab === 'form' && (
 						<div className={styles.fields}>
 							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>Форма</h3>
+								<h3 className={styles.settingsGroupTitle}>
+									Сбор данных клиента
+								</h3>
 								<div className={styles.field}>
-									<p className={styles.label}>Тип сбора данных</p>
+									<p className={styles.label}>Сбор данных клиента:</p>
 									<select
 										className={styles.input}
 										value={cfg.dataType}
@@ -702,67 +964,73 @@ const StopOfferSettingsModal = ({
 											})
 										}
 									>
-										<option value="PHONE">Телефон</option>
+										<option value="PHONE">Номер телефона</option>
 										<option value="EMAIL">Email</option>
 										<option value="PHONE_AND_EMAIL">
-											Телефон и email
+											Номер телефона и Email
 										</option>
-										<option value="NONE">Без сбора контактов</option>
+										<option value="NONE">Ничего не собираем</option>
 									</select>
 								</div>
 								{cfg.dataType !== 'NONE' ? (
 									<>
 										<div className={styles.field}>
-											<p className={styles.label}>Заголовок формы</p>
+											<p className={styles.label}>Заголовок формы:</p>
 											<input
-												className={styles.input}
+												id={`${titleId}-contact-title`}
+												className={inputClassName(
+													`${titleId}-contact-title`
+												)}
 												value={cfg.contactTitle}
 												onChange={e =>
 													set({ contactTitle: e.target.value })
 												}
+												aria-invalid={
+													validationIssue?.fieldId ===
+													`${titleId}-contact-title`
+												}
 											/>
+											{fieldError(`${titleId}-contact-title`)}
 										</div>
 										<div className={styles.field}>
-											<p className={styles.label}>Текст кнопки</p>
+											<p className={styles.label}>
+												Текст кнопки отправки:
+											</p>
 											<input
-												className={styles.input}
+												id={`${titleId}-submit-text`}
+												className={inputClassName(
+													`${titleId}-submit-text`
+												)}
 												value={cfg.submitButtonText}
 												onChange={e =>
 													set({
 														submitButtonText: e.target.value
 													})
 												}
-											/>
-										</div>
-										<div className={styles.field}>
-											<p className={styles.label}>Заголовок успеха</p>
-											<input
-												className={styles.input}
-												value={cfg.successTitle}
-												onChange={e =>
-													set({ successTitle: e.target.value })
+												aria-invalid={
+													validationIssue?.fieldId ===
+													`${titleId}-submit-text`
 												}
 											/>
+											{fieldError(`${titleId}-submit-text`)}
 										</div>
 										<div className={styles.field}>
-											<p className={styles.label}>Текст успеха</p>
-											<textarea
-												className={styles.textarea}
-												value={cfg.successSubtitle}
-												onChange={e =>
-													set({
-														successSubtitle: e.target.value
-													})
-												}
-											/>
-										</div>
-										<div className={styles.field}>
-											<p className={styles.label}>Ссылка на политику</p>
+											<p className={styles.label}>
+												Ссылка на политику конфиденциальности:
+											</p>
 											<input
-												className={styles.input}
+												id={`${titleId}-privacy-url`}
+												className={inputClassName(
+													`${titleId}-privacy-url`
+												)}
 												value={cfg.privacyUrl}
 												onChange={e => set({ privacyUrl: e.target.value })}
+												aria-invalid={
+													validationIssue?.fieldId ===
+													`${titleId}-privacy-url`
+												}
 											/>
+											{fieldError(`${titleId}-privacy-url`)}
 										</div>
 									</>
 								) : (
@@ -772,6 +1040,37 @@ const StopOfferSettingsModal = ({
 									</p>
 								)}
 							</div>
+							{cfg.dataType !== 'NONE' && (
+								<div className={styles.settingsGroup}>
+									<h3 className={styles.settingsGroupTitle}>
+										После отправки
+									</h3>
+									<div className={styles.field}>
+										<p className={styles.label}>
+											Заголовок после отправки:
+										</p>
+										<input
+											className={styles.input}
+											value={cfg.successTitle}
+											onChange={e => set({ successTitle: e.target.value })}
+										/>
+									</div>
+									<div className={styles.field}>
+										<p className={styles.label}>
+											Сообщение после отправки:
+										</p>
+										<textarea
+											className={styles.textarea}
+											value={cfg.successSubtitle}
+											onChange={e =>
+												set({
+													successSubtitle: e.target.value
+												})
+											}
+										/>
+									</div>
+								</div>
+							)}
 							<div className={styles.settingsGroup}>
 								<h3 className={styles.settingsGroupTitle}>
 									Кнопка перехода
@@ -796,39 +1095,52 @@ const StopOfferSettingsModal = ({
 										отправки формы. Текст и ссылка останутся в настройках.
 									</p>
 								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Текст кнопки</p>
-									<input
-										className={styles.input}
-										value={cfg.actionButtonText}
-										onChange={e =>
-											set({
-												actionButtonText: e.target.value
-											})
-										}
-									/>
-									<p className={styles.hint}>
-										Подпись кнопки, которая ведёт посетителя на страницу
-										акции или предложения.
-									</p>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Ссылка</p>
-									<input
-										className={styles.input}
-										value={cfg.actionButtonUrl}
-										placeholder="https://example.com/sale"
-										onChange={e =>
-											set({
-												actionButtonUrl: e.target.value
-											})
-										}
-									/>
-									<p className={styles.hint}>
-										Без ссылки кнопка не будет показана, даже если
-										переключатель включён.
-									</p>
-								</div>
+								{cfg.actionButtonEnabled && (
+									<>
+										<div className={styles.field}>
+											<p className={styles.label}>Текст кнопки:</p>
+											<input
+												id={`${titleId}-action-text`}
+												className={inputClassName(
+													`${titleId}-action-text`
+												)}
+												value={cfg.actionButtonText}
+												onChange={e =>
+													set({
+														actionButtonText: e.target.value
+													})
+												}
+												aria-invalid={
+													validationIssue?.fieldId ===
+													`${titleId}-action-text`
+												}
+											/>
+											{fieldError(`${titleId}-action-text`)}
+											<p className={styles.hint}>
+												Подпись кнопки, ведущей на страницу акции.
+											</p>
+										</div>
+										<div className={styles.field}>
+											<p className={styles.label}>Ссылка кнопки:</p>
+											<input
+												id={`${titleId}-action-url`}
+												className={inputClassName(`${titleId}-action-url`)}
+												value={cfg.actionButtonUrl}
+												placeholder="https://example.com/sale"
+												onChange={e =>
+													set({
+														actionButtonUrl: e.target.value
+													})
+												}
+												aria-invalid={
+													validationIssue?.fieldId ===
+													`${titleId}-action-url`
+												}
+											/>
+											{fieldError(`${titleId}-action-url`)}
+										</div>
+									</>
+								)}
 							</div>
 							{cfg.dataType !== 'NONE' && (
 								<div className={styles.settingsGroup}>
@@ -870,23 +1182,26 @@ const StopOfferSettingsModal = ({
 									</p>
 									{cfg.filterDuplicates && (
 										<div className={styles.field}>
-											<p className={styles.label}>
-												Повторная заявка через N дней
-											</p>
+											<div className={styles.rangeHeader}>
+												<p className={styles.label}>
+													Повторная заявка через:
+												</p>
+												<span className={styles.rangeValue}>
+													{cfg.submissionCooldownDays
+														? `${cfg.submissionCooldownDays} дн.`
+														: 'Только после сброса'}
+												</span>
+											</div>
 											<input
-												className={styles.input}
-												type="number"
+												className={styles.rangeInput}
+												type="range"
+												aria-label="Повторная заявка через"
 												min={0}
 												max={365}
 												value={cfg.submissionCooldownDays}
 												onChange={e =>
 													set({
-														submissionCooldownDays: clampNumber(
-															Number(e.target.value),
-															0,
-															365,
-															0
-														)
+														submissionCooldownDays: Number(e.target.value)
 													})
 												}
 											/>
@@ -925,7 +1240,15 @@ const StopOfferSettingsModal = ({
 										<button
 											type="button"
 											className={styles.resetAttemptsBtn}
-											onClick={() => setConfirmResetSubmissions(true)}
+											onClick={() => {
+												if (hasUnsavedChanges) {
+													toast.error(
+														'Сначала сохраните текущие настройки виджета'
+													)
+													return
+												}
+												setConfirmResetSubmissions(true)
+											}}
 											disabled={isDangerActionPending}
 										>
 											Сбросить историю заявок
@@ -941,15 +1264,18 @@ const StopOfferSettingsModal = ({
 							<div className={styles.settingsGroup}>
 								<h3 className={styles.settingsGroupTitle}>Уведомления</h3>
 								<div className={styles.field}>
-									<p className={styles.label}>Email для заявок</p>
+									<p className={styles.label}>Отправка заявок на Email</p>
 									<input
 										className={styles.input}
+										type="email"
 										value={cfg.integrations.email || ''}
 										onChange={e => setIntegration('email', e.target.value)}
 									/>
 								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>Telegram chat ID</p>
+									<p className={styles.label}>
+										Отправка заявок в Telegram
+									</p>
 									<input
 										className={styles.input}
 										value={cfg.integrations.telegramChatId || ''}
@@ -958,23 +1284,30 @@ const StopOfferSettingsModal = ({
 										}
 									/>
 								</div>
+							</div>
+							<div className={styles.settingsGroup}>
+								<h3 className={styles.settingsGroupTitle}>
+									Webhooks и CRM
+								</h3>
 								<div className={styles.field}>
-									<p className={styles.label}>Webhook URL</p>
+									<p className={styles.label}>Внешний URL (Webhook)</p>
 									<input
 										className={styles.input}
+										type="url"
 										value={cfg.integrations.webhookUrl || ''}
 										onChange={e =>
 											setIntegration('webhookUrl', e.target.value)
 										}
+										placeholder="https://example.com/webhook"
 									/>
 								</div>
-							</div>
-							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>CRM</h3>
 								<div className={styles.field}>
-									<p className={styles.label}>Bitrix24 webhook</p>
+									<p className={styles.label}>
+										Отправка заявок в Битрикс24
+									</p>
 									<input
 										className={styles.input}
+										type="url"
 										value={cfg.integrations.bitrix24WebhookUrl || ''}
 										onChange={e =>
 											setIntegration('bitrix24WebhookUrl', e.target.value)
@@ -997,6 +1330,8 @@ const StopOfferSettingsModal = ({
 									<p className={styles.label}>amoCRM — токен доступа</p>
 									<input
 										className={styles.input}
+										type="password"
+										autoComplete="off"
 										value={cfg.integrations.amoCrmToken || ''}
 										onChange={e =>
 											setIntegration('amoCrmToken', e.target.value)
@@ -1008,7 +1343,9 @@ const StopOfferSettingsModal = ({
 							<div className={styles.settingsGroup}>
 								<h3 className={styles.settingsGroupTitle}>Аналитика</h3>
 								<div className={styles.field}>
-									<p className={styles.label}>Яндекс.Метрика ID</p>
+									<p className={styles.label}>
+										Яндекс Метрика — ID счётчика
+									</p>
 									<input
 										className={styles.input}
 										value={cfg.integrations.yandexMetrikaId || ''}
@@ -1022,7 +1359,9 @@ const StopOfferSettingsModal = ({
 									</p>
 								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>VK Pixel ID</p>
+									<p className={styles.label}>
+										Ретаргетинг ВКонтакте — ID пикселя
+									</p>
 									<input
 										className={styles.input}
 										value={cfg.integrations.vkPixelId || ''}
@@ -1057,11 +1396,31 @@ const StopOfferSettingsModal = ({
 						<div className={styles.fields}>
 							<div className={styles.settingsGroup}>
 								<h3 className={styles.settingsGroupTitle}>
-									Код установки
+									Установка на сайт
 								</h3>
 								<div className={styles.field}>
+									<p className={styles.label}>Домен установки виджета:</p>
+									<input
+										className={styles.input}
+										value={installDomain}
+										placeholder="example.com"
+										onChange={e => {
+											setValidationIssue(null)
+											setInstallDomain(e.target.value)
+										}}
+									/>
+									<p className={styles.domainHint}>
+										Без сохранённого домена стоп-оффер не появится на
+										сайте. Прямая ссылка работает без домена.
+									</p>
+								</div>
+								<div className={styles.field}>
+									<p className={styles.label}>Код виджета:</p>
+									<p className={styles.hint}>
+										Вставьте код перед закрывающим тегом &lt;/body&gt;.
+									</p>
 									<textarea
-										className={styles.textarea}
+										className={`${styles.textarea} ${styles.codeArea}`}
 										value={embedCode}
 										readOnly
 										rows={4}
@@ -1069,7 +1428,9 @@ const StopOfferSettingsModal = ({
 									<button
 										type="button"
 										className={styles.copyBtn}
-										onClick={() => handleCopy(embedCode)}
+										onClick={() =>
+											handleCopy(embedCode, 'Код скопирован', true)
+										}
 									>
 										Скопировать код
 									</button>
@@ -1080,6 +1441,10 @@ const StopOfferSettingsModal = ({
 									Прямая ссылка
 								</h3>
 								<div className={styles.field}>
+									<p className={styles.label}>Прямая ссылка:</p>
+									<p className={styles.hint}>
+										Работает без установки кода и сохранённого домена.
+									</p>
 									<input
 										className={styles.input}
 										value={previewUrl}
@@ -1093,6 +1458,15 @@ const StopOfferSettingsModal = ({
 									>
 										Открыть страницу
 									</a>
+									<button
+										type="button"
+										className={styles.copyBtn}
+										onClick={() =>
+											handleCopy(previewUrl, 'Ссылка скопирована')
+										}
+									>
+										Скопировать ссылку
+									</button>
 									<DirectLinkQr
 										value={previewUrl}
 										downloadName={`winwidget-stop-offer-${stopOffer.publicKey}.png`}
@@ -1140,18 +1514,47 @@ const StopOfferSettingsModal = ({
 									</li>
 								</ul>
 							</div>
+							<div className={styles.settingsGroup}>
+								<h3 className={styles.settingsGroupTitle}>
+									Что проверить перед запуском
+								</h3>
+								<ul className={styles.infoList}>
+									<li>
+										Проверьте условия показа на компьютере и телефоне:
+										достаточно срабатывания любого активного условия.
+									</li>
+									<li>
+										Если включена кнопка перехода, откройте ссылку из
+										предпросмотра.
+									</li>
+									<li>
+										Сохраните домен, установите код и отправьте тестовую
+										заявку.
+									</li>
+								</ul>
+							</div>
 						</div>
 					)}
 				</div>
 
 				<div className={styles.stickyFooter}>
+					<p
+						className={`${styles.saveStatus} ${
+							hasUnsavedChanges ? styles.saveStatusDirty : ''
+						}`}
+					>
+						{hasUnsavedChanges
+							? 'Есть несохранённые изменения'
+							: 'Изменений нет'}
+					</p>
 					<div className={styles.footerActions}>
 						<button
 							type="button"
 							className={styles.cancelBtn}
-							onClick={onClose}
+							onClick={requestClose}
+							disabled={isDangerActionPending}
 						>
-							Закрыть
+							{isPagePresentation ? 'К виджетам' : 'Отмена'}
 						</button>
 						<button
 							type="button"
@@ -1163,6 +1566,7 @@ const StopOfferSettingsModal = ({
 						</button>
 					</div>
 				</div>
+				{closeGuardDialog}
 			</div>
 		</div>
 	)

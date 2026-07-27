@@ -4,17 +4,24 @@ import { callbackService } from '@/entities/site-widget'
 import { Callback, CallbackConfig } from '@/entities/site-widget'
 import { useMutation } from '@tanstack/react-query'
 import Image from 'next/image'
-import { ChangeEvent, useId, useState } from 'react'
+import { ChangeEvent, useEffect, useId, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import styles from './CallbackSettingsModal.module.scss'
 import DirectLinkQr from '../shared/DirectLinkQr'
+import useWidgetSettingsCloseGuard from '../shared/useWidgetSettingsCloseGuard'
 import WidgetLivePreview from '../shared/WidgetLivePreview'
-import type { WidgetSettingsPersistence } from '../shared/WidgetSettingsPersistence'
+import pageStyles from '../shared/WidgetSettingsModal.module.scss'
+import type {
+	WidgetSettingsPersistence,
+	WidgetSettingsPresentationProps
+} from '../shared/WidgetSettingsPersistence'
+import WidgetSettingsPreviewPortal from '../shared/WidgetSettingsPreviewPortal'
 
 type Tab = 'main' | 'form' | 'integrations' | 'code' | 'info'
 const BUTTON_IMAGE_MAX_SIZE_BYTES = 200 * 1024
+const MAX_TIME_SLOTS = 12
 
-interface Props {
+interface Props extends WidgetSettingsPresentationProps {
 	callback: Callback
 	canUseCustomButtonImage: boolean
 	onClose: () => void
@@ -26,7 +33,7 @@ const TABS: { id: Tab; label: string }[] = [
 	{ id: 'main', label: 'Главные' },
 	{ id: 'form', label: 'Форма' },
 	{ id: 'integrations', label: 'Интеграции' },
-	{ id: 'code', label: 'Код' },
+	{ id: 'code', label: 'Установка' },
 	{ id: 'info', label: 'Инфо' }
 ]
 
@@ -73,25 +80,29 @@ const DEFAULT_CONFIG: CallbackConfig = {
 	}
 }
 
-const toOptionalNonNegativeInteger = (value: string) => {
-	if (value.trim() === '') return null
-	const parsed = parseInt(value)
-	if (Number.isNaN(parsed)) return null
-	return Math.max(0, parsed)
-}
-
 const getDefaultConfig = (): CallbackConfig => ({
 	...DEFAULT_CONFIG,
 	timeSlots: [...DEFAULT_CONFIG.timeSlots],
 	integrations: { ...DEFAULT_CONFIG.integrations }
 })
 
+const isValidHttpUrl = (value: string) => {
+	try {
+		const url = new URL(value)
+		return url.protocol === 'http:' || url.protocol === 'https:'
+	} catch {
+		return false
+	}
+}
+
 const CallbackSettingsModal = ({
 	callback,
 	canUseCustomButtonImage,
 	onClose,
 	onSaved,
-	persistence
+	persistence,
+	presentation = 'modal',
+	previewPortalTarget
 }: Props) => {
 	const titleId = useId()
 	const buttonImageInputId = useId()
@@ -102,6 +113,11 @@ const CallbackSettingsModal = ({
 		callback.installDomain ?? ''
 	)
 	const [confirmResetDefaults, setConfirmResetDefaults] = useState(false)
+	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>(
+		{}
+	)
+	const fieldRefs = useRef<Record<string, HTMLElement | null>>({})
+	const pendingFocusFieldRef = useRef<string | null>(null)
 	const [savedSnapshot, setSavedSnapshot] = useState(
 		JSON.stringify({
 			name: callback.name,
@@ -134,6 +150,7 @@ const CallbackSettingsModal = ({
 			toast.loading('Сохраняем настройки, пожалуйста подождите...'),
 		onSuccess: (updated, _, toastId) => {
 			toast.success('Сохранено', { id: toastId })
+			setFieldErrors({})
 			setName(updated.name)
 			setInstallDomain(updated.installDomain ?? '')
 			setCfg(updated.config)
@@ -184,9 +201,62 @@ const CallbackSettingsModal = ({
 	})
 	const isDangerActionPending =
 		mutation.isPending || buttonImageMutation.isPending
+	const { requestClose, closeGuardDialog } = useWidgetSettingsCloseGuard({
+		hasUnsavedChanges,
+		isBusy: isDangerActionPending,
+		onClose
+	})
+	const isPagePresentation = presentation === 'page'
+
+	useEffect(() => {
+		const field = pendingFocusFieldRef.current
+		if (!field) return
+
+		const frameId = window.requestAnimationFrame(() => {
+			const element = fieldRefs.current[field]
+			if (!element) return
+			element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+			element.focus({ preventScroll: true })
+			pendingFocusFieldRef.current = null
+		})
+
+		return () => window.cancelAnimationFrame(frameId)
+	}, [fieldErrors, tab])
 
 	const set = (patch: Partial<CallbackConfig>) =>
 		setCfg(prev => ({ ...prev, ...patch }))
+
+	const setFieldRef = (field: string) => (element: HTMLElement | null) => {
+		fieldRefs.current[field] = element
+	}
+
+	const clearFieldError = (...fields: string[]) => {
+		setFieldErrors(previous => {
+			if (!fields.some(field => previous[field])) return previous
+			const next = { ...previous }
+			fields.forEach(field => delete next[field])
+			return next
+		})
+	}
+
+	const showValidationErrors = (
+		errors: Record<string, string>,
+		order: string[]
+	) => {
+		const firstField =
+			order.find(field => errors[field]) ?? Object.keys(errors)[0]
+		if (!firstField) return false
+
+		setFieldErrors(errors)
+		pendingFocusFieldRef.current = firstField
+		setTab(
+			firstField === 'name' || firstField === 'bubbleText'
+				? 'main'
+				: 'form'
+		)
+		toast.error(errors[firstField])
+		return true
+	}
 
 	const setIntegration = (key: string, value: string | boolean) =>
 		setCfg(prev => ({
@@ -208,6 +278,28 @@ const CallbackSettingsModal = ({
 
 	const embedCode = `<script src="${apiUrl}/widgets/callback.js" data-key="${callback.publicKey}" async></script>`
 	const previewUrl = `${publicSiteUrl}/page-callback/${callback.publicKey}`
+	const savedInstallDomain = (
+		JSON.parse(savedSnapshot) as { installDomain: string }
+	).installDomain
+	const hasUnsavedInstallDomain =
+		installDomain.trim() !== savedInstallDomain.trim()
+	const copyToClipboard = async (
+		value: string,
+		successMessage: string,
+		requireSavedDomain = false
+	) => {
+		if (requireSavedDomain && hasUnsavedInstallDomain) {
+			setTab('code')
+			toast.error('Сначала сохраните домен установки')
+			return
+		}
+		try {
+			await navigator.clipboard.writeText(value)
+			toast.success(successMessage)
+		} catch {
+			toast.error('Не удалось скопировать')
+		}
+	}
 	const defaultButtonImageUrl = `${apiUrl}/widgets/callback-button.png`
 	const buttonImagePreviewUrl = cfg.buttonImageUrl || defaultButtonImageUrl
 	const buttonImageUploadDisabled =
@@ -215,18 +307,41 @@ const CallbackSettingsModal = ({
 		hasUnsavedChanges ||
 		buttonImageMutation.isPending
 	const bubbleText = cfg.bubbleText ?? DEFAULT_CONFIG.bubbleText
+	const autoOpenEnabled =
+		cfg.autoOpenDelay !== null &&
+		cfg.autoOpenDelay !== undefined &&
+		cfg.autoOpenDelay > 0
+	const autoOpenDelay = Math.min(
+		60,
+		Math.max(1, cfg.autoOpenDelay ?? DEFAULT_CONFIG.autoOpenDelay ?? 5)
+	)
 
-	const addSlot = () => set({ timeSlots: [...(cfg.timeSlots || []), ''] })
+	const addSlot = () => {
+		if ((cfg.timeSlots || []).length >= MAX_TIME_SLOTS) {
+			toast.error(`Можно добавить не больше ${MAX_TIME_SLOTS} слотов`)
+			return
+		}
+		clearFieldError('timeSlots')
+		set({ timeSlots: [...(cfg.timeSlots || []), ''] })
+	}
 
 	const updateSlot = (i: number, val: string) => {
 		const slots = [...(cfg.timeSlots || [])]
 		slots[i] = val
+		clearFieldError('timeSlots', `timeSlots.${i}`)
 		set({ timeSlots: slots })
 	}
 
 	const removeSlot = (i: number) => {
 		const slots = [...(cfg.timeSlots || [])]
 		slots.splice(i, 1)
+		setFieldErrors(previous =>
+			Object.fromEntries(
+				Object.entries(previous).filter(
+					([field]) => !field.startsWith('timeSlots')
+				)
+			)
+		)
 		set({ timeSlots: slots })
 	}
 
@@ -262,6 +377,11 @@ const CallbackSettingsModal = ({
 	}
 
 	const handleResetButtonImage = () => {
+		if (hasUnsavedChanges) {
+			toast.error('Сначала сохраните текущие настройки виджета')
+			return
+		}
+
 		const nextConfig = { ...cfg, buttonImageUrl: '' }
 		setCfg(nextConfig)
 		mutation.mutate({
@@ -272,44 +392,135 @@ const CallbackSettingsModal = ({
 
 	const handleResetDefaults = () => {
 		const resetConfig = getDefaultConfig()
+		setFieldErrors({})
 		setCfg(resetConfig)
 		setConfirmResetDefaults(false)
 		mutation.mutate({ name, config: resetConfig })
 	}
 
+	const handleSave = () => {
+		const sanitizedName = name.trim()
+		const sanitizedSlots = (cfg.timeSlots || []).map(slot => slot.trim())
+		const firstEmptySlot = sanitizedSlots.findIndex(slot => !slot)
+		const errors: Record<string, string> = {}
+
+		if (!sanitizedName) {
+			errors.name = 'Укажите название виджета'
+		}
+		if (cfg.bubbleEnabled !== false && !bubbleText.trim()) {
+			errors.bubbleText = 'Укажите текст облачка или отключите его'
+		}
+		if (!cfg.title.trim()) {
+			errors.title = 'Укажите заголовок формы'
+		}
+		if (!cfg.submitButtonText.trim()) {
+			errors.submitButtonText = 'Укажите текст кнопки отправки'
+		}
+		if (!cfg.successTitle.trim()) {
+			errors.successTitle = 'Укажите заголовок экрана успеха'
+		}
+		if (sanitizedSlots.length === 0) {
+			errors.timeSlots = 'Добавьте хотя бы один вариант времени звонка'
+		} else if (sanitizedSlots.length > MAX_TIME_SLOTS) {
+			errors.timeSlots = `Оставьте не больше ${MAX_TIME_SLOTS} слотов`
+		} else if (firstEmptySlot >= 0) {
+			errors.timeSlots = 'Заполните или удалите пустой слот времени'
+			errors[`timeSlots.${firstEmptySlot}`] = errors.timeSlots
+		}
+
+		const privacyUrl = cfg.privacyUrl.trim()
+		if (!privacyUrl) {
+			errors.privacyUrl = 'Укажите ссылку на политику конфиденциальности'
+		} else if (!isValidHttpUrl(privacyUrl)) {
+			errors.privacyUrl =
+				'Укажите полную ссылку с протоколом http:// или https://'
+		}
+
+		const validationOrder = [
+			'name',
+			'bubbleText',
+			'title',
+			'submitButtonText',
+			'successTitle',
+			firstEmptySlot >= 0 ? `timeSlots.${firstEmptySlot}` : 'timeSlots',
+			'privacyUrl'
+		]
+		if (showValidationErrors(errors, validationOrder)) return
+
+		const sanitizedConfig: CallbackConfig = {
+			...cfg,
+			bubbleText: bubbleText.trim(),
+			title: cfg.title.trim(),
+			subtitle: cfg.subtitle.trim(),
+			submitButtonText: cfg.submitButtonText.trim(),
+			successTitle: cfg.successTitle.trim(),
+			successSubtitle: cfg.successSubtitle.trim(),
+			privacyUrl,
+			timeSlots: sanitizedSlots,
+			autoOpenDelay: autoOpenEnabled ? autoOpenDelay : null
+		}
+
+		setFieldErrors({})
+		setName(sanitizedName)
+		setCfg(sanitizedConfig)
+		mutation.mutate({
+			name: sanitizedName,
+			installDomain,
+			config: sanitizedConfig
+		})
+	}
+
 	return (
-		<div className={styles.overlay}>
-			<button
-				type="button"
-				className={styles.backdrop}
-				onClick={onClose}
-				aria-label="Закрыть"
-			/>
-			<div
-				className={styles.modal}
-				role="dialog"
-				aria-modal="true"
-				aria-labelledby={titleId}
-			>
+		<div
+			className={
+				isPagePresentation ? pageStyles.pageEditor : styles.overlay
+			}
+		>
+			{!isPagePresentation && (
 				<button
 					type="button"
-					className={styles.closeBtn}
-					onClick={onClose}
+					className={styles.backdrop}
+					onClick={requestClose}
 					aria-label="Закрыть"
-				>
-					✕
-				</button>
+				/>
+			)}
+			<div
+				className={
+					isPagePresentation ? pageStyles.pagePanel : styles.modal
+				}
+				role={isPagePresentation ? 'region' : 'dialog'}
+				aria-modal={isPagePresentation ? undefined : true}
+				aria-labelledby={titleId}
+			>
+				{!isPagePresentation && (
+					<button
+						type="button"
+						className={styles.closeBtn}
+						onClick={requestClose}
+						aria-label="Закрыть настройки"
+					>
+						✕
+					</button>
+				)}
 
 				<h2 id={titleId} className={styles.modalTitle}>
-					Настройки
+					Настройки обратного звонка
 				</h2>
 
-				<div className={styles.tabs} role="tablist">
+				<div
+					className={styles.tabs}
+					role="tablist"
+					aria-label="Разделы настроек обратного звонка"
+				>
 					{TABS.map(t => (
 						<button
 							key={t.id}
+							type="button"
+							id={`${titleId}-tab-${t.id}`}
 							role="tab"
 							aria-selected={tab === t.id}
+							aria-controls={`${titleId}-panel-${t.id}`}
+							tabIndex={tab === t.id ? 0 : -1}
 							className={`${styles.tab} ${tab === t.id ? styles.tabActive : ''}`}
 							onClick={() => setTab(t.id)}
 						>
@@ -318,13 +529,27 @@ const CallbackSettingsModal = ({
 					))}
 				</div>
 
-				<WidgetLivePreview
-					type="callback"
-					config={cfg}
-					isHardPlan={canUseCustomButtonImage}
-				/>
+				<WidgetSettingsPreviewPortal
+					inline={!isPagePresentation}
+					target={previewPortalTarget}
+				>
+					<WidgetLivePreview
+						type="callback"
+						config={cfg}
+						isHardPlan={canUseCustomButtonImage}
+						autoCollapse={
+							!isPagePresentation &&
+							['integrations', 'code', 'info'].includes(tab)
+						}
+					/>
+				</WidgetSettingsPreviewPortal>
 
-				<div className={styles.tabContent}>
+				<div
+					id={`${titleId}-panel-${tab}`}
+					className={styles.tabContent}
+					role="tabpanel"
+					aria-labelledby={`${titleId}-tab-${tab}`}
+				>
 					{/* ── Основное ── */}
 					{tab === 'main' && (
 						<div className={styles.fields}>
@@ -337,14 +562,27 @@ const CallbackSettingsModal = ({
 								<div className={styles.field}>
 									<p className={styles.label}>Название виджета:</p>
 									<input
-										className={styles.input}
+										ref={setFieldRef('name')}
+										className={`${styles.input} ${
+											fieldErrors.name ? pageStyles.inputError : ''
+										}`}
 										value={name}
-										onChange={e => setName(e.target.value)}
-										maxLength={15}
+										onChange={e => {
+											clearFieldError('name')
+											setName(e.target.value)
+										}}
+										maxLength={50}
+										aria-invalid={Boolean(fieldErrors.name)}
 									/>
-									<p className={styles.hint}>
-										Отображается только в вашем кабинете.
-									</p>
+									{fieldErrors.name ? (
+										<p className={pageStyles.fieldError}>
+											{fieldErrors.name}
+										</p>
+									) : (
+										<p className={styles.hint}>
+											Отображается только в вашем кабинете.
+										</p>
+									)}
 								</div>
 
 								<div className={styles.field}>
@@ -379,7 +617,7 @@ const CallbackSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Цвет фона формы:</p>
+									<p className={styles.label}>Цвет фона формы</p>
 									<div className={styles.colorRow}>
 										<input
 											type="color"
@@ -409,9 +647,16 @@ const CallbackSettingsModal = ({
 										белого.
 									</p>
 								</div>
+							</div>
 
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Кнопка открытия
+									</h3>
+								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>Цвет кнопки открытия:</p>
+									<p className={styles.label}>Цвет кнопки открытия</p>
 									<div className={styles.colorRow}>
 										<input
 											type="color"
@@ -515,7 +760,32 @@ const CallbackSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Сторона экрана:</p>
+									<p className={styles.label}>
+										Кнопка открытия — пульсация
+									</p>
+									<div className={styles.checkRow}>
+										<input
+											id="cbPulse"
+											type="checkbox"
+											checked={cfg.buttonPulse !== false}
+											onChange={e =>
+												set({ buttonPulse: e.target.checked })
+											}
+										/>
+										<label htmlFor="cbPulse" className={styles.checkLabel}>
+											Включить пульсацию кнопки
+										</label>
+									</div>
+									<p className={styles.hint}>
+										Дополнительный эффект свечения на плавающей кнопке.
+									</p>
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Сторона расположения кнопки для открытия виджета на
+										вашем сайте:
+									</p>
 									<select
 										className={styles.input}
 										value={cfg.buttonSide}
@@ -534,71 +804,74 @@ const CallbackSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Цвет кнопки отправки:</p>
-									<div className={styles.colorRow}>
+									<p className={styles.label}>Отображение облачка</p>
+									<div className={styles.checkRow}>
 										<input
-											type="color"
-											className={styles.colorPicker}
-											value={cfg.buttonColor || cfg.color || '#4705fb'}
-											onChange={e => set({ buttonColor: e.target.value })}
+											type="checkbox"
+											id="callbackBubbleEnabled"
+											checked={cfg.bubbleEnabled ?? true}
+											onChange={e => {
+												set({ bubbleEnabled: e.target.checked })
+												if (!e.target.checked) {
+													clearFieldError('bubbleText')
+												}
+											}}
 										/>
-										<input
-											className={styles.input}
-											value={cfg.buttonColor || ''}
-											onChange={e => set({ buttonColor: e.target.value })}
-											placeholder="По умолчанию — основной цвет"
-										/>
-										{cfg.buttonColor && (
-											<button
-												type="button"
-												className={styles.clearColorBtn}
-												onClick={() => set({ buttonColor: '' })}
-												title="Сбросить"
-											>
-												✕
-											</button>
-										)}
+										<label
+											htmlFor="callbackBubbleEnabled"
+											className={styles.checkLabel}
+										>
+											Показывать облачко рядом с кнопкой
+										</label>
 									</div>
 									<p className={styles.hint}>
-										Цвет кнопки «Заказать звонок» внутри формы. Оставьте
-										пустым для использования основного цвета.
+										Если выключить, на сайте останется только плавающая
+										кнопка.
 									</p>
 								</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Размер кнопки открытия:{' '}
-										<strong>{cfg.buttonSize ?? 60}px</strong>
-									</p>
-									<input
-										type="range"
-										min={40}
-										max={100}
-										value={cfg.buttonSize ?? 60}
-										onChange={e =>
-											set({
-												buttonSize: parseInt(e.target.value) || 60
-											})
-										}
-										className={styles.input}
-										style={{
-											padding: '8px 0',
-											background: 'transparent',
-											border: 'none'
-										}}
-									/>
-									<p className={styles.hint}>
-										Размер плавающей кнопки в пикселях. По умолчанию 60px.
-									</p>
-								</div>
+								{cfg.bubbleEnabled !== false && (
+									<div className={styles.field}>
+										<p className={styles.label}>Текст облачка:</p>
+										<input
+											ref={setFieldRef('bubbleText')}
+											className={`${styles.input} ${
+												fieldErrors.bubbleText ? pageStyles.inputError : ''
+											}`}
+											value={bubbleText}
+											onChange={e => {
+												clearFieldError('bubbleText')
+												set({ bubbleText: e.target.value })
+											}}
+											placeholder="Перезвоним!"
+											maxLength={60}
+											aria-invalid={Boolean(fieldErrors.bubbleText)}
+										/>
+										{fieldErrors.bubbleText ? (
+											<p className={pageStyles.fieldError}>
+												{fieldErrors.bubbleText}
+											</p>
+										) : (
+											<p className={styles.hint}>
+												Короткая фраза объясняет посетителю назначение
+												кнопки.
+											</p>
+										)}
+									</div>
+								)}
 
 								<div className={styles.field}>
-									<p className={styles.label}>
-										Высота кнопки от низа экрана:{' '}
-										<strong>{cfg.buttonBottom ?? 3}%</strong>
-									</p>
+									<div className={pageStyles.rangeHeader}>
+										<p className={styles.label}>
+											Высота кнопки от низа экрана:
+										</p>
+										<span className={pageStyles.rangeValue}>
+											{cfg.buttonBottom ?? 3}%
+										</span>
+									</div>
 									<input
 										type="range"
+										aria-label="Высота кнопки от низа экрана"
 										min={1}
 										max={50}
 										value={cfg.buttonBottom ?? 3}
@@ -607,12 +880,7 @@ const CallbackSettingsModal = ({
 												buttonBottom: parseFloat(e.target.value) || 3
 											})
 										}
-										className={styles.input}
-										style={{
-											padding: '8px 0',
-											background: 'transparent',
-											border: 'none'
-										}}
+										className={pageStyles.rangeInput}
 									/>
 									<p className={styles.hint}>
 										Отступ от нижнего края экрана в процентах. 3 — почти
@@ -621,12 +889,17 @@ const CallbackSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>
-										Отступ кнопки от края экрана:{' '}
-										<strong>{cfg.buttonOffset ?? 3}%</strong>
-									</p>
+									<div className={pageStyles.rangeHeader}>
+										<p className={styles.label}>
+											Отступ кнопки от края экрана:
+										</p>
+										<span className={pageStyles.rangeValue}>
+											{cfg.buttonOffset ?? 3}%
+										</span>
+									</div>
 									<input
 										type="range"
+										aria-label="Отступ кнопки от края экрана"
 										min={1}
 										max={50}
 										value={cfg.buttonOffset ?? 3}
@@ -635,12 +908,7 @@ const CallbackSettingsModal = ({
 												buttonOffset: parseFloat(e.target.value) || 3
 											})
 										}
-										className={styles.input}
-										style={{
-											padding: '8px 0',
-											background: 'transparent',
-											border: 'none'
-										}}
+										className={pageStyles.rangeInput}
 									/>
 									<p className={styles.hint}>
 										Отступ кнопки от левого или правого края экрана в
@@ -649,53 +917,79 @@ const CallbackSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<div className={styles.checkRow}>
-										<input
-											id="cbPulse"
-											type="checkbox"
-											checked={cfg.buttonPulse !== false}
-											onChange={e =>
-												set({ buttonPulse: e.target.checked })
-											}
-										/>
-										<label htmlFor="cbPulse" className={styles.checkLabel}>
-											Пульсация кнопки
-										</label>
+									<div className={pageStyles.rangeHeader}>
+										<p className={styles.label}>Размер кнопки открытия:</p>
+										<span className={pageStyles.rangeValue}>
+											{cfg.buttonSize ?? 60}px
+										</span>
 									</div>
-									<p className={styles.hint}>
-										Дополнительный эффект свечения на плавающей кнопке.
-									</p>
-								</div>
-							</div>
-
-							<div className={styles.settingsGroup}>
-								<div className={styles.settingsGroupHeader}>
-									<h3 className={styles.settingsGroupTitle}>
-										Автооткрытие
-									</h3>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Задержка автооткрытия (секунд):
-									</p>
 									<input
-										type="number"
-										className={styles.input}
-										value={cfg.autoOpenDelay ?? ''}
-										min={0}
-										placeholder="Не открывать автоматически"
+										type="range"
+										aria-label="Размер кнопки открытия"
+										min={40}
+										max={100}
+										value={cfg.buttonSize ?? 60}
 										onChange={e =>
 											set({
-												autoOpenDelay: toOptionalNonNegativeInteger(
-													e.target.value
-												)
+												buttonSize: parseInt(e.target.value) || 60
 											})
 										}
+										className={pageStyles.rangeInput}
 									/>
 									<p className={styles.hint}>
-										Через сколько секунд виджет откроется автоматически.
-										Оставьте пустым для отключения.
+										Размер плавающей кнопки в пикселях. По умолчанию 60px.
 									</p>
+								</div>
+
+								<div className={styles.field}>
+									<div className={styles.checkRow}>
+										<input
+											id="callback-auto-open"
+											type="checkbox"
+											checked={autoOpenEnabled}
+											onChange={e =>
+												set({
+													autoOpenDelay: e.target.checked
+														? autoOpenDelay
+														: null
+												})
+											}
+										/>
+										<label
+											htmlFor="callback-auto-open"
+											className={styles.checkLabel}
+										>
+											Открывать виджет автоматически
+										</label>
+									</div>
+									{autoOpenEnabled && (
+										<>
+											<div className={pageStyles.rangeHeader}>
+												<p className={styles.label}>Автооткрытие через:</p>
+												<span className={pageStyles.rangeValue}>
+													{autoOpenDelay} сек.
+												</span>
+											</div>
+											<input
+												type="range"
+												aria-label="Автооткрытие через"
+												min={1}
+												max={60}
+												step={1}
+												value={autoOpenDelay}
+												className={pageStyles.rangeInput}
+												onChange={e =>
+													set({
+														autoOpenDelay: Number(e.target.value)
+													})
+												}
+											/>
+											<p className={styles.hint}>
+												Форма откроется через 1–60 секунд после загрузки
+												страницы.
+											</p>
+										</>
+									)}
 								</div>
 							</div>
 
@@ -758,65 +1052,40 @@ const CallbackSettingsModal = ({
 							<div className={styles.settingsGroup}>
 								<div className={styles.settingsGroupHeader}>
 									<h3 className={styles.settingsGroupTitle}>
-										Тексты кнопки и формы
+										Содержимое формы
 									</h3>
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Отображение облачка:</p>
-									<div className={styles.checkRow}>
-										<input
-											type="checkbox"
-											id="callbackBubbleEnabled"
-											checked={cfg.bubbleEnabled ?? true}
-											onChange={e =>
-												set({ bubbleEnabled: e.target.checked })
-											}
-										/>
-										<label
-											htmlFor="callbackBubbleEnabled"
-											className={styles.checkLabel}
-										>
-											Показывать облачко рядом с кнопкой
-										</label>
-									</div>
-									<p className={styles.hint}>
-										Если выключить, останется только плавающая кнопка.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>Текст облачка у кнопки:</p>
+									<p className={styles.label}>Заголовок формы</p>
 									<input
-										className={styles.input}
-										value={bubbleText}
-										onChange={e => set({ bubbleText: e.target.value })}
-										placeholder="Перезвоним!"
-										maxLength={60}
-									/>
-									<p className={styles.hint}>
-										Короткая фраза рядом с плавающей кнопкой. Она помогает
-										объяснить, зачем нажимать на кнопку.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>Заголовок формы:</p>
-									<input
-										className={styles.input}
+										ref={setFieldRef('title')}
+										className={`${styles.input} ${
+											fieldErrors.title ? pageStyles.inputError : ''
+										}`}
 										value={cfg.title}
-										onChange={e => set({ title: e.target.value })}
+										onChange={e => {
+											clearFieldError('title')
+											set({ title: e.target.value })
+										}}
 										placeholder="Заказать звонок"
+										aria-invalid={Boolean(fieldErrors.title)}
 									/>
-									<p className={styles.hint}>
-										Крупный заголовок внутри окна обратного звонка.
-									</p>
+									{fieldErrors.title ? (
+										<p className={pageStyles.fieldError}>
+											{fieldErrors.title}
+										</p>
+									) : (
+										<p className={styles.hint}>
+											Крупный заголовок внутри окна обратного звонка.
+										</p>
+									)}
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Описание формы:</p>
-									<input
-										className={styles.input}
+									<p className={styles.label}>Описание формы</p>
+									<textarea
+										className={styles.textarea}
 										value={cfg.subtitle}
 										onChange={e => set({ subtitle: e.target.value })}
 										placeholder="Оставьте номер — перезвоним в удобное время"
@@ -827,17 +1096,62 @@ const CallbackSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Текст кнопки отправки:</p>
+									<p className={styles.label}>Текст кнопки отправки</p>
 									<input
-										className={styles.input}
+										ref={setFieldRef('submitButtonText')}
+										className={`${styles.input} ${
+											fieldErrors.submitButtonText
+												? pageStyles.inputError
+												: ''
+										}`}
 										value={cfg.submitButtonText}
-										onChange={e =>
+										onChange={e => {
+											clearFieldError('submitButtonText')
 											set({ submitButtonText: e.target.value })
-										}
+										}}
 										placeholder="Заказать звонок"
+										aria-invalid={Boolean(fieldErrors.submitButtonText)}
 									/>
+									{fieldErrors.submitButtonText ? (
+										<p className={pageStyles.fieldError}>
+											{fieldErrors.submitButtonText}
+										</p>
+									) : (
+										<p className={styles.hint}>
+											Текст кнопки, на которую нажимает посетитель.
+										</p>
+									)}
+								</div>
+
+								<div className={styles.field}>
+									<p className={styles.label}>Цвет кнопки отправки</p>
+									<div className={styles.colorRow}>
+										<input
+											type="color"
+											className={styles.colorPicker}
+											value={cfg.buttonColor || cfg.color || '#4705fb'}
+											onChange={e => set({ buttonColor: e.target.value })}
+										/>
+										<input
+											className={styles.input}
+											value={cfg.buttonColor || ''}
+											onChange={e => set({ buttonColor: e.target.value })}
+											placeholder="Как основной цвет"
+											maxLength={7}
+										/>
+										{cfg.buttonColor && (
+											<button
+												type="button"
+												className={styles.clearColorBtn}
+												onClick={() => set({ buttonColor: '' })}
+												title="Использовать основной цвет"
+											>
+												✕
+											</button>
+										)}
+									</div>
 									<p className={styles.hint}>
-										Текст кнопки, на которую нажимает посетитель.
+										Оставьте пустым, чтобы использовать основной цвет.
 									</p>
 								</div>
 							</div>
@@ -850,22 +1164,35 @@ const CallbackSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Заголовок:</p>
+									<p className={styles.label}>Заголовок</p>
 									<input
-										className={styles.input}
+										ref={setFieldRef('successTitle')}
+										className={`${styles.input} ${
+											fieldErrors.successTitle ? pageStyles.inputError : ''
+										}`}
 										value={cfg.successTitle}
-										onChange={e => set({ successTitle: e.target.value })}
+										onChange={e => {
+											clearFieldError('successTitle')
+											set({ successTitle: e.target.value })
+										}}
 										placeholder="Спасибо! Мы перезвоним"
+										aria-invalid={Boolean(fieldErrors.successTitle)}
 									/>
-									<p className={styles.hint}>
-										Крупный текст на экране подтверждения.
-									</p>
+									{fieldErrors.successTitle ? (
+										<p className={pageStyles.fieldError}>
+											{fieldErrors.successTitle}
+										</p>
+									) : (
+										<p className={styles.hint}>
+											Крупный текст на экране подтверждения.
+										</p>
+									)}
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Подзаголовок:</p>
-									<input
-										className={styles.input}
+									<p className={styles.label}>Подзаголовок</p>
+									<textarea
+										className={styles.textarea}
 										value={cfg.successSubtitle}
 										onChange={e =>
 											set({ successSubtitle: e.target.value })
@@ -881,18 +1208,34 @@ const CallbackSettingsModal = ({
 							<div className={styles.settingsGroup}>
 								<div className={styles.settingsGroupHeader}>
 									<h3 className={styles.settingsGroupTitle}>
-										Слоты времени
+										Время звонка
 									</h3>
 								</div>
+								<p className={styles.hint}>
+									Добавьте от 1 до {MAX_TIME_SLOTS} понятных посетителю
+									вариантов.
+								</p>
 
-								<div className={styles.slotList}>
+								<div
+									ref={setFieldRef('timeSlots')}
+									className={styles.slotList}
+									tabIndex={-1}
+								>
 									{(cfg.timeSlots || []).map((slot, i) => (
 										<div key={i} className={styles.slotRow}>
 											<input
-												className={styles.slotInput}
+												ref={setFieldRef(`timeSlots.${i}`)}
+												className={`${styles.slotInput} ${
+													fieldErrors[`timeSlots.${i}`]
+														? pageStyles.inputError
+														: ''
+												}`}
 												value={slot}
 												onChange={e => updateSlot(i, e.target.value)}
 												placeholder="Например: 10:00–12:00"
+												aria-invalid={Boolean(
+													fieldErrors[`timeSlots.${i}`]
+												)}
 											/>
 											<button
 												type="button"
@@ -905,35 +1248,58 @@ const CallbackSettingsModal = ({
 										</div>
 									))}
 								</div>
+								{fieldErrors.timeSlots && (
+									<p className={pageStyles.fieldError}>
+										{fieldErrors.timeSlots}
+									</p>
+								)}
 
 								<button
 									type="button"
 									className={styles.addBtn}
 									onClick={addSlot}
+									disabled={(cfg.timeSlots || []).length >= MAX_TIME_SLOTS}
 								>
-									+ Добавить слот
+									{(cfg.timeSlots || []).length >= MAX_TIME_SLOTS
+										? `Достигнут лимит: ${MAX_TIME_SLOTS}`
+										: '+ Добавить время'}
 								</button>
 							</div>
 
 							<div className={styles.settingsGroup}>
 								<div className={styles.settingsGroupHeader}>
-									<h3 className={styles.settingsGroupTitle}>Телефон</h3>
+									<h3 className={styles.settingsGroupTitle}>
+										Согласие и защита
+									</h3>
 								</div>
 
 								<div className={styles.field}>
 									<p className={styles.label}>
-										Ссылка на политику конфиденциальности:
+										Ссылка на политику конфиденциальности
 									</p>
 									<input
-										className={styles.input}
+										ref={setFieldRef('privacyUrl')}
+										className={`${styles.input} ${
+											fieldErrors.privacyUrl ? pageStyles.inputError : ''
+										}`}
 										value={cfg.privacyUrl}
-										onChange={e => set({ privacyUrl: e.target.value })}
+										onChange={e => {
+											clearFieldError('privacyUrl')
+											set({ privacyUrl: e.target.value })
+										}}
 										placeholder="https://example.com/privacy"
+										aria-invalid={Boolean(fieldErrors.privacyUrl)}
 									/>
-									<p className={styles.hint}>
-										По умолчанию ведёт на нашу политику. Замените на ссылку
-										своей политики конфиденциальности.
-									</p>
+									{fieldErrors.privacyUrl ? (
+										<p className={pageStyles.fieldError}>
+											{fieldErrors.privacyUrl}
+										</p>
+									) : (
+										<p className={styles.hint}>
+											Укажите полную публичную ссылку с протоколом
+											https://.
+										</p>
+									)}
 								</div>
 
 								<details className={styles.advancedBlock}>
@@ -955,12 +1321,13 @@ const CallbackSettingsModal = ({
 													htmlFor="cbFilterDuplicates"
 													className={styles.checkLabel}
 												>
-													Фильтровать дубли (один звонок с устройства)
+													Не принимать повторные заявки
 												</label>
 											</div>
 											<p className={styles.hint}>
-												Если посетитель уже оставлял заявку с этого
-												устройства — повторная не будет сохранена.
+												При включении повторная заявка с того же IP будет
+												отклоняться. Тот же телефон в течение 30 минут
+												блокируется всегда.
 											</p>
 										</div>
 									</div>
@@ -980,7 +1347,7 @@ const CallbackSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Email для заявок:</p>
+									<p className={styles.label}>Отправка заявок на Email</p>
 									<input
 										type="email"
 										className={styles.input}
@@ -994,7 +1361,9 @@ const CallbackSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Telegram chat ID:</p>
+									<p className={styles.label}>
+										Отправка заявок в Telegram
+									</p>
 									<input
 										className={styles.input}
 										value={cfg.integrations?.telegramChatId || ''}
@@ -1019,9 +1388,10 @@ const CallbackSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Внешний URL (Webhook):</p>
+									<p className={styles.label}>Внешний URL (Webhook)</p>
 									<input
 										className={styles.input}
+										type="url"
 										value={cfg.integrations?.webhookUrl || ''}
 										onChange={e =>
 											setIntegration('webhookUrl', e.target.value)
@@ -1036,10 +1406,11 @@ const CallbackSettingsModal = ({
 
 								<div className={styles.field}>
 									<p className={styles.label}>
-										Битрикс24 — входящий webhook:
+										Отправка заявок в Битрикс24
 									</p>
 									<input
 										className={styles.input}
+										type="url"
 										value={cfg.integrations?.bitrix24WebhookUrl || ''}
 										onChange={e =>
 											setIntegration('bitrix24WebhookUrl', e.target.value)
@@ -1053,7 +1424,7 @@ const CallbackSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>amoCRM — домен аккаунта:</p>
+									<p className={styles.label}>amoCRM — домен аккаунта</p>
 									<input
 										className={styles.input}
 										value={cfg.integrations?.amoCrmDomain || ''}
@@ -1069,7 +1440,7 @@ const CallbackSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>amoCRM — токен доступа:</p>
+									<p className={styles.label}>amoCRM — токен доступа</p>
 									<input
 										type="password"
 										className={styles.input}
@@ -1093,7 +1464,7 @@ const CallbackSettingsModal = ({
 
 								<div className={styles.field}>
 									<p className={styles.label}>
-										Яндекс Метрика — ID счётчика:
+										Яндекс Метрика — ID счётчика
 									</p>
 									<input
 										className={styles.input}
@@ -1112,7 +1483,7 @@ const CallbackSettingsModal = ({
 
 								<div className={styles.field}>
 									<p className={styles.label}>
-										Ретаргетинг ВКонтакте — ID пикселя:
+										Ретаргетинг ВКонтакте — ID пикселя
 									</p>
 									<input
 										className={styles.input}
@@ -1130,7 +1501,7 @@ const CallbackSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Roistat:</p>
+									<p className={styles.label}>Roistat</p>
 									<div className={styles.checkRow}>
 										<input
 											id="cbRoistat"
@@ -1172,7 +1543,7 @@ const CallbackSettingsModal = ({
 										className={styles.label}
 										htmlFor={`${titleId}-install-domain`}
 									>
-										Домен установки виджета
+										Домен установки виджета:
 									</label>
 									<input
 										id={`${titleId}-install-domain`}
@@ -1193,7 +1564,7 @@ const CallbackSettingsModal = ({
 
 								<div className={styles.field}>
 									<p className={styles.label}>
-										Скрипт для вставки на сайт:
+										Скрипт для вставки на сайт
 									</p>
 									<textarea
 										readOnly
@@ -1207,10 +1578,9 @@ const CallbackSettingsModal = ({
 									<button
 										type="button"
 										className={styles.copyBtn}
-										onClick={() => {
-											navigator.clipboard.writeText(embedCode)
-											toast.success('Скопировано!')
-										}}
+										onClick={() =>
+											copyToClipboard(embedCode, 'Код скопирован', true)
+										}
 									>
 										Копировать код
 									</button>
@@ -1228,7 +1598,7 @@ const CallbackSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Прямая ссылка на виджет:</p>
+									<p className={styles.label}>Прямая ссылка:</p>
 									<div className={styles.directLink}>
 										<input
 											className={styles.input}
@@ -1250,10 +1620,9 @@ const CallbackSettingsModal = ({
 									<button
 										type="button"
 										className={styles.copyBtn}
-										onClick={() => {
-											navigator.clipboard.writeText(previewUrl)
-											toast.success('Скопировано!')
-										}}
+										onClick={() =>
+											copyToClipboard(previewUrl, 'Ссылка скопирована')
+										}
 									>
 										Копировать ссылку
 									</button>
@@ -1286,19 +1655,18 @@ const CallbackSettingsModal = ({
 								</p>
 								<ul className={styles.infoList}>
 									<li>
-										В «Главных» настройте кнопку, положение, цвета и тексты
-										окна.
+										В «Главных» настройте внешний вид и кнопку открытия.
 									</li>
 									<li>
-										В «Форме» задайте поля, тексты успеха и варианты
-										времени звонка.
+										В «Форме» задайте содержимое, цвет кнопки отправки,
+										тексты успеха и варианты времени звонка.
 									</li>
 									<li>
 										В «Интеграциях» подключите уведомления, CRM, webhook и
 										аналитику.
 									</li>
 									<li>
-										В «Коде» установите виджет на сайт или используйте
+										В «Установке» добавьте виджет на сайт или используйте
 										прямую ссылку/QR-код.
 									</li>
 								</ul>
@@ -1345,21 +1713,22 @@ const CallbackSettingsModal = ({
 						<button
 							type="button"
 							className={styles.cancelBtn}
-							onClick={onClose}
+							onClick={requestClose}
 							disabled={mutation.isPending}
 						>
-							Отмена
+							{isPagePresentation ? 'К виджетам' : 'Отмена'}
 						</button>
 						<button
 							type="button"
 							className={styles.saveBtn}
 							disabled={mutation.isPending || !hasUnsavedChanges}
-							onClick={() => mutation.mutate(undefined)}
+							onClick={handleSave}
 						>
 							{mutation.isPending ? 'Сохранение...' : 'Сохранить'}
 						</button>
 					</div>
 				</div>
+				{closeGuardDialog}
 			</div>
 		</div>
 	)

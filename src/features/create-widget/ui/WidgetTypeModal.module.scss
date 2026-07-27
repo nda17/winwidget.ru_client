@@ -6,6 +6,9 @@
 .backdrop {
 	@apply absolute inset-0 border-none bg-transparent p-0;
 }
+.backdrop:disabled {
+	@apply cursor-wait;
+}
 
 .modal {
 	@apply relative z-[1] flex w-full max-w-[56rem] max-h-[calc(100dvh-3rem)] flex-col overflow-y-auto overscroll-contain rounded-[1.25rem] border border-[#e0d6f0] bg-white px-8 pb-8 pt-9;
@@ -20,6 +23,9 @@
 }
 .closeBtn:hover {
 	@apply text-[#7b3fa0] bg-[#f3eeff];
+}
+.closeBtn:disabled {
+	@apply cursor-wait opacity-50;
 }
 
 .title {
@@ -43,6 +49,9 @@
 }
 .card:active:not(:disabled) {
 	@apply translate-y-0;
+}
+.cardCreating {
+	@apply border-[#7b3fa0] bg-[#f3eeff] shadow-md;
 }
 
 .cardDisabled {

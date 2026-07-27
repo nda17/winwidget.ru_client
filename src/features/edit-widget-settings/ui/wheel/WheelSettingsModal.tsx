@@ -7,8 +7,14 @@ import Image from 'next/image'
 import { ChangeEvent, useId, useState } from 'react'
 import toast from 'react-hot-toast'
 import DirectLinkQr from '../shared/DirectLinkQr'
+import useWidgetSettingsCloseGuard from '../shared/useWidgetSettingsCloseGuard'
 import WidgetLivePreview from '../shared/WidgetLivePreview'
-import type { WidgetSettingsPersistence } from '../shared/WidgetSettingsPersistence'
+import pageStyles from '../shared/WidgetSettingsModal.module.scss'
+import type {
+	WidgetSettingsPersistence,
+	WidgetSettingsPresentationProps
+} from '../shared/WidgetSettingsPersistence'
+import WidgetSettingsPreviewPortal from '../shared/WidgetSettingsPreviewPortal'
 import styles from './WheelSettingsModal.module.scss'
 
 type Tab = 'main' | 'bonuses' | 'integrations' | 'code' | 'info'
@@ -56,14 +62,13 @@ const hasTooLongWheelSectorWord = (value: string) =>
 		.split(/\s+/)
 		.some(word => word.length > WHEEL_BONUS_WORD_MAX_LENGTH)
 
-const clampNumber = (value: number, min: number, max: number) =>
-	Math.min(max, Math.max(min, value))
-
-const toOptionalNonNegativeInteger = (value: string) => {
-	if (value.trim() === '') return null
-	const parsed = parseInt(value)
-	if (Number.isNaN(parsed)) return null
-	return Math.max(0, parsed)
+const isHttpUrl = (value: string) => {
+	try {
+		const url = new URL(value)
+		return url.protocol === 'http:' || url.protocol === 'https:'
+	} catch {
+		return false
+	}
 }
 
 const getReadableTextColor = (color: string) => {
@@ -81,7 +86,7 @@ const getReadableTextColor = (color: string) => {
 	return brightness > 170 ? '#000000' : '#ffffff'
 }
 
-interface Props {
+interface Props extends WidgetSettingsPresentationProps {
 	widget: Widget
 	canUseCustomButtonImage: boolean
 	onClose: () => void
@@ -89,12 +94,20 @@ interface Props {
 	persistence?: WidgetSettingsPersistence<Widget, WidgetConfig>
 }
 
+type ValidationIssue = {
+	tab: Tab
+	fieldId: string
+	message: string
+}
+
 const WheelSettingsModal = ({
 	widget,
 	canUseCustomButtonImage,
 	onClose,
 	onSaved,
-	persistence
+	persistence,
+	presentation = 'modal',
+	previewPortalTarget
 }: Props) => {
 	const [tab, setTab] = useState<Tab>('main')
 	const [config, setConfig] = useState<WidgetConfig>({ ...widget.config })
@@ -104,9 +117,8 @@ const WheelSettingsModal = ({
 	)
 	const titleId = useId()
 	const buttonImageInputId = useId()
-	const [cooldownInput, setCooldownInput] = useState(
-		String(widget.config.spinCooldownDays ?? 0)
-	)
+	const [validationIssue, setValidationIssue] =
+		useState<ValidationIssue | null>(null)
 	const [confirmReset, setConfirmReset] = useState(false)
 	const [confirmResetAttempts, setConfirmResetAttempts] = useState(false)
 	const [savedSnapshot, setSavedSnapshot] = useState(() =>
@@ -243,7 +255,7 @@ const WheelSettingsModal = ({
 			setName(updated.name)
 			setInstallDomain(updated.installDomain ?? '')
 			setConfig(updated.config)
-			setCooldownInput(String(updated.config.spinCooldownDays ?? 0))
+			setValidationIssue(null)
 			setSavedSnapshot(
 				JSON.stringify({
 					name: updated.name,
@@ -276,7 +288,7 @@ const WheelSettingsModal = ({
 			setName(updated.name)
 			setInstallDomain(updated.installDomain ?? '')
 			setConfig(updated.config)
-			setCooldownInput(String(updated.config.spinCooldownDays ?? 0))
+			setValidationIssue(null)
 			setSavedSnapshot(
 				JSON.stringify({
 					name: updated.name,
@@ -307,7 +319,7 @@ const WheelSettingsModal = ({
 			setName(updated.name)
 			setInstallDomain(updated.installDomain ?? '')
 			setConfig(updated.config)
-			setCooldownInput(String(updated.config.spinCooldownDays ?? 0))
+			setValidationIssue(null)
 			setSavedSnapshot(
 				JSON.stringify({
 					name: updated.name,
@@ -327,11 +339,18 @@ const WheelSettingsModal = ({
 		saveMutation.isPending ||
 		resetAttemptsMutation.isPending ||
 		buttonImageMutation.isPending
+	const { requestClose, closeGuardDialog } = useWidgetSettingsCloseGuard({
+		hasUnsavedChanges,
+		isBusy: isDangerActionPending,
+		onClose
+	})
+	const isPagePresentation = presentation === 'page'
 
 	const setField = <K extends keyof WidgetConfig>(
 		key: K,
 		value: WidgetConfig[K]
 	) => {
+		setValidationIssue(null)
 		setConfig(prev => ({ ...prev, [key]: value }))
 	}
 
@@ -347,12 +366,42 @@ const WheelSettingsModal = ({
 			| 'neverWin',
 		value: string | boolean | number | undefined
 	) => {
+		setValidationIssue(null)
 		setConfig(prev => {
 			const bonuses = [...prev.bonuses]
 			bonuses[index] = { ...bonuses[index], [field]: value }
 			return { ...prev, bonuses }
 		})
 	}
+
+	const reportValidationIssue = (issue: ValidationIssue) => {
+		setValidationIssue(issue)
+		setTab(issue.tab)
+		window.requestAnimationFrame(() => {
+			window.requestAnimationFrame(() => {
+				const field = document.getElementById(issue.fieldId)
+				field?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+				field?.focus({ preventScroll: true })
+			})
+		})
+		toast.error(issue.message)
+	}
+
+	const inputClassName = (fieldId: string) =>
+		`${styles.input} ${
+			validationIssue?.fieldId === fieldId ? pageStyles.inputError : ''
+		}`
+
+	const fieldError = (fieldId: string) =>
+		validationIssue?.fieldId === fieldId ? (
+			<p
+				id={`${fieldId}-error`}
+				className={pageStyles.fieldError}
+				role="alert"
+			>
+				{validationIssue.message}
+			</p>
+		) : null
 
 	const apiUrl =
 		process.env.NEXT_PUBLIC_MODE === 'production'
@@ -366,6 +415,11 @@ const WheelSettingsModal = ({
 	).replace(/\/$/, '')
 	const scriptCode = `<script src="${apiUrl}/widgets/wheel.js" data-key="${widget.publicKey}" async></script>`
 	const directLink = `${publicSiteUrl}/page-wheel/${widget.publicKey}`
+	const savedInstallDomain = (
+		JSON.parse(savedSnapshot) as { installDomain: string }
+	).installDomain
+	const hasUnsavedInstallDomain =
+		installDomain.trim() !== savedInstallDomain.trim()
 	const defaultButtonImageUrl = `${apiUrl}/widgets/gift-button.png`
 	const buttonImagePreviewUrl =
 		config.buttonImageUrl || defaultButtonImageUrl
@@ -373,6 +427,25 @@ const WheelSettingsModal = ({
 		!canUseCustomButtonImage ||
 		hasUnsavedChanges ||
 		buttonImageMutation.isPending
+
+	const copyToClipboard = async (
+		value: string,
+		successMessage: string,
+		requireSavedDomain = false
+	) => {
+		if (requireSavedDomain && hasUnsavedInstallDomain) {
+			setTab('code')
+			toast.error('Сначала сохраните домен установки')
+			return
+		}
+
+		try {
+			await navigator.clipboard.writeText(value)
+			toast.success(successMessage)
+		} catch {
+			toast.error('Не удалось скопировать')
+		}
+	}
 
 	const handleButtonImageUpload = (
 		event: ChangeEvent<HTMLInputElement>
@@ -406,6 +479,11 @@ const WheelSettingsModal = ({
 	}
 
 	const handleResetButtonImage = () => {
+		if (hasUnsavedChanges) {
+			toast.error('Сначала сохраните текущие настройки виджета')
+			return
+		}
+
 		const nextConfig = { ...config, buttonImageUrl: '' }
 		setConfig(nextConfig)
 		saveMutation.mutate({
@@ -415,71 +493,167 @@ const WheelSettingsModal = ({
 	}
 
 	const handleSave = () => {
+		if (!name.trim()) {
+			reportValidationIssue({
+				tab: 'main',
+				fieldId: `${titleId}-name`,
+				message: 'Укажите название виджета'
+			})
+			return
+		}
+		if (
+			(config.bubbleEnabled ?? true) &&
+			!(config.bubbleText ?? '').trim()
+		) {
+			reportValidationIssue({
+				tab: 'main',
+				fieldId: `${titleId}-bubble-text`,
+				message: 'Укажите текст облачка или отключите его'
+			})
+			return
+		}
+		if (!config.title.trim()) {
+			reportValidationIssue({
+				tab: 'main',
+				fieldId: `${titleId}-title`,
+				message: 'Укажите заголовок виджета'
+			})
+			return
+		}
+		if (!config.buttonText.trim()) {
+			reportValidationIssue({
+				tab: 'main',
+				fieldId: `${titleId}-button-text`,
+				message: 'Укажите текст кнопки запуска'
+			})
+			return
+		}
 		const activeCount = config.bonuses.filter(b => b.active).length
 		const canWinCount = config.bonuses.filter(
 			b => b.active && !b.neverWin
 		).length
-		if (canWinCount === 0) {
-			toast.error('Хотя бы один сектор должен иметь возможность выиграть')
-			return
-		}
 		if (activeCount < 2) {
-			toast.error('Минимум 2 бонуса должны участвовать в розыгрыше')
+			const firstInactiveIndex = config.bonuses.findIndex(
+				bonus => !bonus.active
+			)
+			reportValidationIssue({
+				tab: 'bonuses',
+				fieldId: `${titleId}-bonus-${Math.max(firstInactiveIndex, 0)}-active`,
+				message: 'Минимум 2 бонуса должны участвовать в розыгрыше'
+			})
 			return
 		}
 		if (activeCount > 8) {
-			toast.error('Максимум 8 бонусов могут участвовать в розыгрыше')
+			const ninthActiveIndex = config.bonuses.reduce(
+				(foundIndex, bonus, index) => {
+					if (foundIndex !== -1 || !bonus.active) return foundIndex
+
+					const activeBefore = config.bonuses
+						.slice(0, index + 1)
+						.filter(item => item.active).length
+
+					return activeBefore === 9 ? index : -1
+				},
+				-1
+			)
+			reportValidationIssue({
+				tab: 'bonuses',
+				fieldId: `${titleId}-bonus-${Math.max(ninthActiveIndex, 0)}-active`,
+				message: 'Максимум 8 бонусов могут участвовать в розыгрыше'
+			})
+			return
+		}
+		if (canWinCount === 0) {
+			const neverWinIndex = config.bonuses.findIndex(
+				bonus => bonus.active && bonus.neverWin
+			)
+			reportValidationIssue({
+				tab: 'bonuses',
+				fieldId: `${titleId}-bonus-${Math.max(neverWinIndex, 0)}-never-win`,
+				message: 'Хотя бы один сектор должен иметь возможность выиграть'
+			})
 			return
 		}
 		const invalidBonusNameLength = config.bonuses.findIndex(
 			b => b.active && b.name.trim().length > WHEEL_BONUS_NAME_MAX_LENGTH
 		)
 		if (invalidBonusNameLength !== -1) {
-			toast.error(
-				`Бонус #${invalidBonusNameLength + 1}: полное название не должно быть длиннее ${WHEEL_BONUS_NAME_MAX_LENGTH} символов`
-			)
+			reportValidationIssue({
+				tab: 'bonuses',
+				fieldId: `${titleId}-bonus-${invalidBonusNameLength}-name`,
+				message: `Бонус #${invalidBonusNameLength + 1}: полное название не должно быть длиннее ${WHEEL_BONUS_NAME_MAX_LENGTH} символов`
+			})
 			return
 		}
 		const invalidWheelLabel = config.bonuses.findIndex(
 			b => b.active && !b.wheelLabel?.trim().length
 		)
 		if (invalidWheelLabel !== -1) {
-			toast.error(
-				`Бонус #${invalidWheelLabel + 1}: заполните текст на колесе`
-			)
+			reportValidationIssue({
+				tab: 'bonuses',
+				fieldId: `${titleId}-bonus-${invalidWheelLabel}-label`,
+				message: `Бонус #${invalidWheelLabel + 1}: заполните текст на колесе`
+			})
 			return
 		}
 		const invalidWheelLabelLength = config.bonuses.findIndex(
 			b => b.active && b.wheelLabel.trim().length > wheelLabelMaxLength
 		)
 		if (invalidWheelLabelLength !== -1) {
-			toast.error(
-				`Бонус #${invalidWheelLabelLength + 1}: текст на колесе не должен быть длиннее ${wheelLabelMaxLength} символов`
-			)
+			reportValidationIssue({
+				tab: 'bonuses',
+				fieldId: `${titleId}-bonus-${invalidWheelLabelLength}-label`,
+				message: `Бонус #${invalidWheelLabelLength + 1}: текст на колесе не должен быть длиннее ${wheelLabelMaxLength} символов`
+			})
 			return
 		}
 		const invalidWheelLabelWord = config.bonuses.findIndex(
 			b => b.active && hasTooLongWheelSectorWord(b.wheelLabel)
 		)
 		if (invalidWheelLabelWord !== -1) {
-			toast.error(
-				`Бонус #${invalidWheelLabelWord + 1}: слишком длинное слово в тексте на колесе, добавьте пробел или сократите текст`
-			)
+			reportValidationIssue({
+				tab: 'bonuses',
+				fieldId: `${titleId}-bonus-${invalidWheelLabelWord}-label`,
+				message: `Бонус #${invalidWheelLabelWord + 1}: слишком длинное слово в тексте на колесе, добавьте пробел или сократите текст`
+			})
 			return
 		}
 		const spin = config.spinDuration ?? 5
 		if (spin < 4 || spin > 10) {
-			toast.error('Длительность анимации должна быть от 4 до 10 секунд')
+			reportValidationIssue({
+				tab: 'bonuses',
+				fieldId: `${titleId}-spin-duration`,
+				message: 'Длительность анимации должна быть от 4 до 10 секунд'
+			})
 			return
 		}
 		const bottom = config.buttonBottom
 		if (!bottom || bottom < 1 || bottom > 50) {
-			toast.error('Высота кнопки: введите число от 1 до 50')
+			reportValidationIssue({
+				tab: 'main',
+				fieldId: `${titleId}-button-bottom`,
+				message: 'Высота кнопки должна быть от 1 до 50%'
+			})
 			return
 		}
 		const cooldown = config.spinCooldownDays ?? 0
 		if (cooldown > 365) {
-			toast.error('Повторное участие: введите число от 0 до 365')
+			reportValidationIssue({
+				tab: 'main',
+				fieldId: `${titleId}-spin-cooldown`,
+				message: 'Повторное участие должно быть от 0 до 365 дней'
+			})
+			return
+		}
+		if (
+			config.dataType !== 'NONE' &&
+			(!config.privacyUrl.trim() || !isHttpUrl(config.privacyUrl))
+		) {
+			reportValidationIssue({
+				tab: 'main',
+				fieldId: `${titleId}-privacy-url`,
+				message: 'Укажите полную ссылку на политику с http:// или https://'
+			})
 			return
 		}
 		const invalidBonus = config.bonuses.findIndex(b => {
@@ -487,9 +661,11 @@ const WheelSettingsModal = ({
 			return p < 1 || p > 100
 		})
 		if (invalidBonus !== -1) {
-			toast.error(
-				`Бонус #${invalidBonus + 1}: вес должен быть от 1 до 100`
-			)
+			reportValidationIssue({
+				tab: 'bonuses',
+				fieldId: `${titleId}-bonus-${invalidBonus}-weight`,
+				message: `Бонус #${invalidBonus + 1}: вес должен быть от 1 до 100`
+			})
 			return
 		}
 		const sanitizedConfig: WidgetConfig = {
@@ -501,7 +677,7 @@ const WheelSettingsModal = ({
 				probability: b.probability ?? 1
 			}))
 		}
-		const sanitizedName = name.trim() || 'Виджет'
+		const sanitizedName = name.trim()
 		setName(sanitizedName)
 		setConfig(sanitizedConfig)
 		saveMutation.mutate({
@@ -512,55 +688,90 @@ const WheelSettingsModal = ({
 	}
 
 	return (
-		<div className={styles.overlay}>
-			<button
-				type="button"
-				className={styles.backdrop}
-				onClick={onClose}
-				aria-label="Закрыть настройки виджета"
-			/>
-			<div
-				className={styles.modal}
-				role="dialog"
-				aria-modal="true"
-				aria-labelledby={titleId}
-			>
+		<div
+			className={
+				isPagePresentation ? pageStyles.pageEditor : styles.overlay
+			}
+		>
+			{!isPagePresentation && (
 				<button
 					type="button"
-					className={styles.closeBtn}
-					onClick={onClose}
-				>
-					✕
-				</button>
+					className={styles.backdrop}
+					onClick={requestClose}
+					aria-label="Закрыть настройки виджета"
+				/>
+			)}
+			<div
+				className={
+					isPagePresentation ? pageStyles.pagePanel : styles.modal
+				}
+				role={isPagePresentation ? 'region' : 'dialog'}
+				aria-modal={isPagePresentation ? undefined : true}
+				aria-labelledby={titleId}
+			>
+				{!isPagePresentation && (
+					<button
+						type="button"
+						className={styles.closeBtn}
+						onClick={requestClose}
+						aria-label="Закрыть настройки"
+					>
+						✕
+					</button>
+				)}
 				<h2 id={titleId} className={styles.modalTitle}>
-					Настройки
+					Настройки колеса
 				</h2>
 
-				<div className={styles.tabs}>
+				<div
+					className={styles.tabs}
+					role="tablist"
+					aria-label="Разделы настроек колеса"
+				>
 					{(
 						['main', 'bonuses', 'integrations', 'code', 'info'] as Tab[]
 					).map(t => (
 						<button
 							key={t}
+							type="button"
+							id={`${titleId}-tab-${t}`}
+							role="tab"
+							aria-selected={tab === t}
+							aria-controls={`${titleId}-panel-${t}`}
+							tabIndex={tab === t ? 0 : -1}
 							className={`${styles.tab} ${tab === t ? styles.tabActive : ''}`}
 							onClick={() => setTab(t)}
 						>
 							{t === 'main' && 'Главные'}
 							{t === 'bonuses' && 'Бонусы'}
 							{t === 'integrations' && 'Интеграции'}
-							{t === 'code' && 'Код'}
+							{t === 'code' && 'Установка'}
 							{t === 'info' && 'Инфо'}
 						</button>
 					))}
 				</div>
 
-				<WidgetLivePreview
-					type="wheel"
-					config={config}
-					isHardPlan={canUseCustomButtonImage}
-				/>
+				<WidgetSettingsPreviewPortal
+					inline={!isPagePresentation}
+					target={previewPortalTarget}
+				>
+					<WidgetLivePreview
+						type="wheel"
+						config={config}
+						isHardPlan={canUseCustomButtonImage}
+						autoCollapse={
+							!isPagePresentation &&
+							['integrations', 'code', 'info'].includes(tab)
+						}
+					/>
+				</WidgetSettingsPreviewPortal>
 
-				<div className={styles.tabContent}>
+				<div
+					id={`${titleId}-panel-${tab}`}
+					className={styles.tabContent}
+					role="tabpanel"
+					aria-labelledby={`${titleId}-tab-${tab}`}
+				>
 					{tab === 'main' && (
 						<div className={styles.fields}>
 							<div className={styles.settingsGroup}>
@@ -573,12 +784,25 @@ const WheelSettingsModal = ({
 								<div className={styles.field}>
 									<p className={styles.label}>Название виджета:</p>
 									<input
-										className={styles.input}
+										id={`${titleId}-name`}
+										className={inputClassName(`${titleId}-name`)}
 										value={name}
-										onChange={e => setName(e.target.value)}
+										onChange={e => {
+											setValidationIssue(null)
+											setName(e.target.value)
+										}}
 										placeholder="Виджет"
-										maxLength={15}
+										maxLength={50}
+										aria-invalid={
+											validationIssue?.fieldId === `${titleId}-name`
+										}
+										aria-describedby={
+											validationIssue?.fieldId === `${titleId}-name`
+												? `${titleId}-name-error`
+												: undefined
+										}
 									/>
+									{fieldError(`${titleId}-name`)}
 								</div>
 
 								<div className={styles.field}>
@@ -856,40 +1080,6 @@ const WheelSettingsModal = ({
 							<div className={styles.settingsGroup}>
 								<div className={styles.settingsGroupHeader}>
 									<h3 className={styles.settingsGroupTitle}>
-										Поведение колеса
-									</h3>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Длительность анимации прокрутки (сек):
-									</p>
-									<input
-										className={styles.input}
-										type="number"
-										min={4}
-										max={10}
-										value={config.spinDuration ?? ''}
-										onChange={e => {
-											const val = parseInt(e.target.value)
-											setField(
-												'spinDuration',
-												Number.isNaN(val)
-													? ('' as any)
-													: clampNumber(val, 4, 10)
-											)
-										}}
-										placeholder="5"
-									/>
-									<p className={styles.hint}>
-										От 4 до 10 секунд. Рекомендуемое значение 5-7 секунд.
-									</p>
-								</div>
-							</div>
-
-							<div className={styles.settingsGroup}>
-								<div className={styles.settingsGroupHeader}>
-									<h3 className={styles.settingsGroupTitle}>
 										Кнопка открытия
 									</h3>
 								</div>
@@ -1012,7 +1202,7 @@ const WheelSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Отображение облачка:</p>
+									<p className={styles.label}>Отображение облачка</p>
 									<div className={styles.checkRow}>
 										<input
 											type="checkbox"
@@ -1034,41 +1224,62 @@ const WheelSettingsModal = ({
 									</p>
 								</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>Текст облачка у кнопки:</p>
-									<input
-										className={styles.input}
-										value={config.bubbleText ?? ''}
-										onChange={e => setField('bubbleText', e.target.value)}
-										placeholder="Испытайте удачу!"
-										maxLength={80}
-									/>
-									<p className={styles.hint}>
-										Подсказка рядом с плавающей кнопкой. Если оставить
-										пустым, будет показан стандартный текст.
-									</p>
-								</div>
+								{config.bubbleEnabled && (
+									<div className={styles.field}>
+										<p className={styles.label}>Текст облачка:</p>
+										<input
+											id={`${titleId}-bubble-text`}
+											className={inputClassName(`${titleId}-bubble-text`)}
+											value={config.bubbleText ?? ''}
+											onChange={e =>
+												setField('bubbleText', e.target.value)
+											}
+											placeholder="Испытайте удачу!"
+											maxLength={80}
+											aria-invalid={
+												validationIssue?.fieldId ===
+												`${titleId}-bubble-text`
+											}
+											aria-describedby={
+												validationIssue?.fieldId ===
+												`${titleId}-bubble-text`
+													? `${titleId}-bubble-text-error`
+													: undefined
+											}
+										/>
+										{fieldError(`${titleId}-bubble-text`)}
+										<p className={styles.hint}>
+											Короткая подсказка рядом с плавающей кнопкой.
+										</p>
+									</div>
+								)}
 
 								<div className={styles.field}>
-									<p className={styles.label}>
-										Высота кнопки от низа экрана:{' '}
-										<strong>{config.buttonBottom ?? 3}%</strong>
-									</p>
+									<div className={pageStyles.rangeHeader}>
+										<p className={styles.label}>
+											Высота кнопки от низа экрана:
+										</p>
+										<span className={pageStyles.rangeValue}>
+											{config.buttonBottom ?? 3}%
+										</span>
+									</div>
 									<input
+										id={`${titleId}-button-bottom`}
 										type="range"
+										aria-label="Высота кнопки от низа экрана"
 										min={1}
 										max={50}
 										value={config.buttonBottom ?? 3}
 										onChange={e =>
 											setField('buttonBottom', Number(e.target.value))
 										}
-										className={styles.input}
-										style={{
-											padding: '8px 0',
-											background: 'transparent',
-											border: 'none'
-										}}
+										className={pageStyles.rangeInput}
+										aria-invalid={
+											validationIssue?.fieldId ===
+											`${titleId}-button-bottom`
+										}
 									/>
+									{fieldError(`${titleId}-button-bottom`)}
 									<p className={styles.hint}>
 										Отступ от нижнего края экрана в процентах. 3 — почти
 										внизу, 50 — по центру.
@@ -1076,24 +1287,24 @@ const WheelSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>
-										Отступ кнопки от края экрана:{' '}
-										<strong>{config.buttonOffset ?? 3}%</strong>
-									</p>
+									<div className={pageStyles.rangeHeader}>
+										<p className={styles.label}>
+											Отступ кнопки от края экрана:
+										</p>
+										<span className={pageStyles.rangeValue}>
+											{config.buttonOffset ?? 3}%
+										</span>
+									</div>
 									<input
 										type="range"
+										aria-label="Отступ кнопки от края экрана"
 										min={1}
 										max={50}
 										value={config.buttonOffset ?? 3}
 										onChange={e =>
 											setField('buttonOffset', Number(e.target.value))
 										}
-										className={styles.input}
-										style={{
-											padding: '8px 0',
-											background: 'transparent',
-											border: 'none'
-										}}
+										className={pageStyles.rangeInput}
 									/>
 									<p className={styles.hint}>
 										Отступ кнопки от левого или правого края экрана в
@@ -1102,24 +1313,22 @@ const WheelSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>
-										Размер кнопки открытия:{' '}
-										<strong>{config.buttonSize ?? 60}px</strong>
-									</p>
+									<div className={pageStyles.rangeHeader}>
+										<p className={styles.label}>Размер кнопки открытия:</p>
+										<span className={pageStyles.rangeValue}>
+											{config.buttonSize ?? 60}px
+										</span>
+									</div>
 									<input
 										type="range"
+										aria-label="Размер кнопки открытия"
 										min={40}
 										max={100}
 										value={config.buttonSize ?? 60}
 										onChange={e =>
 											setField('buttonSize', Number(e.target.value))
 										}
-										className={styles.input}
-										style={{
-											padding: '8px 0',
-											background: 'transparent',
-											border: 'none'
-										}}
+										className={pageStyles.rangeInput}
 									/>
 									<p className={styles.hint}>
 										Размер иконки плавающей кнопки в пикселях. По умолчанию
@@ -1128,27 +1337,50 @@ const WheelSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>
-										Количество секунд до авто-открытия виджета:
-									</p>
-									<input
-										className={styles.input}
-										type="number"
-										min="0"
-										value={config.autoOpenDelay ?? ''}
-										onChange={e =>
-											setField(
-												'autoOpenDelay',
-												toOptionalNonNegativeInteger(e.target.value)
-											)
-										}
-										placeholder="Оставьте пустым для отключения"
-									/>
+									<p className={styles.label}>Автооткрытие:</p>
+									<div className={styles.checkRow}>
+										<input
+											type="checkbox"
+											id={`${titleId}-auto-open-enabled`}
+											checked={config.autoOpenDelay != null}
+											onChange={e =>
+												setField(
+													'autoOpenDelay',
+													e.target.checked ? 5 : null
+												)
+											}
+										/>
+										<label
+											htmlFor={`${titleId}-auto-open-enabled`}
+											className={styles.checkLabel}
+										>
+											Открывать виджет автоматически
+										</label>
+									</div>
+									{config.autoOpenDelay != null && (
+										<>
+											<div className={pageStyles.rangeHeader}>
+												<p className={styles.label}>Автооткрытие через:</p>
+												<span className={pageStyles.rangeValue}>
+													{config.autoOpenDelay} сек.
+												</span>
+											</div>
+											<input
+												type="range"
+												aria-label="Автооткрытие через"
+												min={1}
+												max={60}
+												value={config.autoOpenDelay}
+												onChange={e =>
+													setField('autoOpenDelay', Number(e.target.value))
+												}
+												className={pageStyles.rangeInput}
+											/>
+										</>
+									)}
 									<p className={styles.hint}>
-										Через сколько секунд виджет откроется автоматически
-										после открытия страницы вашего сайта. Оставьте пустым
-										для отключения. Если пользователь уже учавствовал,
-										данная настройка игнорируется при любых значениях.
+										Если посетитель уже участвовал, автооткрытие не
+										сработает.
 									</p>
 								</div>
 							</div>
@@ -1188,12 +1420,22 @@ const WheelSettingsModal = ({
 								<div className={styles.field}>
 									<p className={styles.label}>Заголовок виджета:</p>
 									<input
-										className={styles.input}
+										id={`${titleId}-title`}
+										className={inputClassName(`${titleId}-title`)}
 										value={config.title}
 										onChange={e => setField('title', e.target.value)}
 										placeholder="Крутите колесо!"
 										maxLength={80}
+										aria-invalid={
+											validationIssue?.fieldId === `${titleId}-title`
+										}
+										aria-describedby={
+											validationIssue?.fieldId === `${titleId}-title`
+												? `${titleId}-title-error`
+												: undefined
+										}
 									/>
+									{fieldError(`${titleId}-title`)}
 									<p className={styles.hint}>Информация для посетителя.</p>
 								</div>
 
@@ -1218,6 +1460,30 @@ const WheelSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
+									<p className={styles.label}>Текст кнопки запуска:</p>
+									<input
+										id={`${titleId}-button-text`}
+										className={inputClassName(`${titleId}-button-text`)}
+										value={config.buttonText}
+										onChange={e => setField('buttonText', e.target.value)}
+										placeholder="Крутить!"
+										maxLength={40}
+										aria-invalid={
+											validationIssue?.fieldId === `${titleId}-button-text`
+										}
+										aria-describedby={
+											validationIssue?.fieldId === `${titleId}-button-text`
+												? `${titleId}-button-text-error`
+												: undefined
+										}
+									/>
+									{fieldError(`${titleId}-button-text`)}
+									<p className={styles.hint}>
+										Текст кнопки, которая запускает вращение колеса.
+									</p>
+								</div>
+
+								<div className={styles.field}>
 									<p className={styles.label}>Сообщение после выигрыша:</p>
 									<input
 										className={styles.input}
@@ -1234,72 +1500,29 @@ const WheelSettingsModal = ({
 
 								<div className={styles.field}>
 									<p className={styles.label}>
-										Антифрод уведомление «уже участвовали» — заголовок:
-									</p>
-									<input
-										className={styles.input}
-										value={config.alreadyPlayedTitle ?? ''}
-										onChange={e =>
-											setField('alreadyPlayedTitle', e.target.value)
-										}
-										placeholder="🎉 Вы уже участвовали!"
-										maxLength={80}
-									/>
-									<p className={styles.hint}>
-										Если посетитель повторно откроет виджет, он увидит это
-										уведомление в интерфейсе.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Антифрод уведомление «уже участвовали» — подзаголовок:
-									</p>
-									<input
-										className={styles.input}
-										value={config.alreadyPlayedSubtitle ?? ''}
-										onChange={e =>
-											setField('alreadyPlayedSubtitle', e.target.value)
-										}
-										placeholder="Каждый посетитель может крутить колесо только один раз"
-										maxLength={150}
-									/>
-									<p className={styles.hint}>
-										Если посетитель повторно откроет виджет, он увидит это
-										уведомление в интерфейсе.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>
 										Ссылка на политику конфиденциальности:
 									</p>
 									<input
-										className={styles.input}
+										id={`${titleId}-privacy-url`}
+										type="url"
+										className={inputClassName(`${titleId}-privacy-url`)}
 										value={config.privacyUrl}
 										onChange={e => setField('privacyUrl', e.target.value)}
 										placeholder="https://winwidget.ru/legal-documentation/consent-processing"
 										maxLength={500}
+										aria-invalid={
+											validationIssue?.fieldId === `${titleId}-privacy-url`
+										}
+										aria-describedby={
+											validationIssue?.fieldId === `${titleId}-privacy-url`
+												? `${titleId}-privacy-url-error`
+												: undefined
+										}
 									/>
+									{fieldError(`${titleId}-privacy-url`)}
 									<p className={styles.hint}>
 										По умолчанию ссылка ведёт на политику нашего сервиса.
 										Можно оставить как есть или добавить свою ссылку.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Текст в кнопке старта вращения:
-									</p>
-									<input
-										className={styles.input}
-										value={config.buttonText}
-										onChange={e => setField('buttonText', e.target.value)}
-										placeholder="Крутить!"
-										maxLength={40}
-									/>
-									<p className={styles.hint}>
-										Текст в кнопке для старта вращения
 									</p>
 								</div>
 							</div>
@@ -1337,44 +1560,75 @@ const WheelSettingsModal = ({
 									</p>
 								</div>
 
+								{!config.hideIfPlayed && (
+									<>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Заголовок для повторного посетителя:
+											</p>
+											<input
+												className={styles.input}
+												value={config.alreadyPlayedTitle ?? ''}
+												onChange={e =>
+													setField('alreadyPlayedTitle', e.target.value)
+												}
+												placeholder="🎉 Вы уже участвовали!"
+												maxLength={80}
+											/>
+											<p className={styles.hint}>
+												Показывается вместо колеса, если повторное участие
+												пока недоступно.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Сообщение для повторного посетителя:
+											</p>
+											<input
+												className={styles.input}
+												value={config.alreadyPlayedSubtitle ?? ''}
+												onChange={e =>
+													setField('alreadyPlayedSubtitle', e.target.value)
+												}
+												placeholder="Каждый посетитель может крутить колесо только один раз"
+												maxLength={150}
+											/>
+										</div>
+									</>
+								)}
+
 								<div className={styles.field}>
-									<p className={styles.label}>
-										Повторное участие — раз в N дней:
-									</p>
+									<div className={pageStyles.rangeHeader}>
+										<p className={styles.label}>
+											Повторное участие через:
+										</p>
+										<span className={pageStyles.rangeValue}>
+											{config.spinCooldownDays
+												? `${config.spinCooldownDays} дн.`
+												: 'Один раз'}
+										</span>
+									</div>
 									<input
-										className={styles.input}
-										type="number"
-										min="0"
-										max="365"
-										value={cooldownInput}
-										onChange={e => {
-											const raw = e.target.value
-											if (!/^\d*$/.test(raw)) return
-											setCooldownInput(raw)
-											if (raw !== '') {
-												const normalized = clampNumber(
-													parseInt(raw),
-													0,
-													365
-												)
-												setCooldownInput(String(normalized))
-												setField('spinCooldownDays', normalized)
-											}
-										}}
-										onBlur={() => {
-											const val = parseInt(cooldownInput)
-											const normalized = Number.isNaN(val)
-												? 0
-												: clampNumber(val, 0, 365)
-											setCooldownInput(String(normalized))
-											setField('spinCooldownDays', normalized)
-										}}
-										placeholder="0"
+										id={`${titleId}-spin-cooldown`}
+										className={pageStyles.rangeInput}
+										type="range"
+										aria-label="Повторное участие через"
+										min={0}
+										max={365}
+										value={config.spinCooldownDays ?? 0}
+										onChange={e =>
+											setField('spinCooldownDays', Number(e.target.value))
+										}
+										aria-invalid={
+											validationIssue?.fieldId ===
+											`${titleId}-spin-cooldown`
+										}
 									/>
+									{fieldError(`${titleId}-spin-cooldown`)}
 									<p className={styles.hint}>
-										0 — крутить можно только единоразово. Любое другое
-										число — посетитель сможет крутить снова через указанное
-										количество дней.
+										0 — только одно участие. Другое значение разрешит новую
+										попытку через выбранное число дней.
 									</p>
 								</div>
 
@@ -1417,7 +1671,15 @@ const WheelSettingsModal = ({
 										<button
 											type="button"
 											className={styles.resetAttemptsBtn}
-											onClick={() => setConfirmResetAttempts(true)}
+											onClick={() => {
+												if (hasUnsavedChanges) {
+													toast.error(
+														'Сначала сохраните текущие настройки виджета'
+													)
+													return
+												}
+												setConfirmResetAttempts(true)
+											}}
 											disabled={isDangerActionPending}
 										>
 											Сбросить попытки всех посетителей
@@ -1433,6 +1695,12 @@ const WheelSettingsModal = ({
 													type="button"
 													className={styles.resetAttemptsBtn}
 													onClick={() => {
+														if (hasUnsavedChanges) {
+															toast.error(
+																'Сначала сохраните текущие настройки виджета'
+															)
+															return
+														}
 														resetAttemptsMutation.mutate(
 															crypto.randomUUID()
 														)
@@ -1478,7 +1746,6 @@ const WheelSettingsModal = ({
 													disabled={isDangerActionPending}
 													onClick={() => {
 														setConfig(DEFAULT_CONFIG)
-														setCooldownInput('0')
 														setConfirmReset(false)
 														saveMutation.mutate({
 															name: name.trim() || 'Колесо',
@@ -1506,6 +1773,44 @@ const WheelSettingsModal = ({
 
 					{tab === 'bonuses' && (
 						<div className={styles.fields}>
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Поведение колеса
+									</h3>
+								</div>
+
+								<div className={styles.field}>
+									<div className={pageStyles.rangeHeader}>
+										<p className={styles.label}>Длительность вращения:</p>
+										<span className={pageStyles.rangeValue}>
+											{config.spinDuration ?? 5} сек.
+										</span>
+									</div>
+									<input
+										id={`${titleId}-spin-duration`}
+										type="range"
+										aria-label="Длительность вращения"
+										min={4}
+										max={10}
+										value={config.spinDuration ?? 5}
+										onChange={e =>
+											setField('spinDuration', Number(e.target.value))
+										}
+										className={pageStyles.rangeInput}
+										aria-invalid={
+											validationIssue?.fieldId ===
+											`${titleId}-spin-duration`
+										}
+									/>
+									{fieldError(`${titleId}-spin-duration`)}
+									<p className={styles.hint}>
+										Рекомендуем 5–7 секунд: посетитель успеет заметить
+										анимацию, но не будет ждать слишком долго.
+									</p>
+								</div>
+							</div>
+
 							<div className={styles.settingsGroup}>
 								<div className={styles.settingsGroupHeader}>
 									<h3 className={styles.settingsGroupTitle}>
@@ -1546,12 +1851,20 @@ const WheelSettingsModal = ({
 										заявку, уведомления и интеграции.
 									</p>
 									<input
-										className={styles.input}
+										id={`${titleId}-bonus-${i}-name`}
+										className={inputClassName(
+											`${titleId}-bonus-${i}-name`
+										)}
 										value={bonus.name}
 										onChange={e => setBonus(i, 'name', e.target.value)}
 										placeholder={`Например: Скидка до 60 000 рублей`}
 										maxLength={WHEEL_BONUS_NAME_MAX_LENGTH}
+										aria-invalid={
+											validationIssue?.fieldId ===
+											`${titleId}-bonus-${i}-name`
+										}
 									/>
+									{fieldError(`${titleId}-bonus-${i}-name`)}
 									<p className={styles.hint}>
 										До {WHEEL_BONUS_NAME_MAX_LENGTH} символов. Здесь можно
 										писать подробнее, чем на секторе.
@@ -1562,14 +1875,22 @@ const WheelSettingsModal = ({
 										длинных фраз, чтобы текст не обрезался.
 									</p>
 									<input
-										className={styles.input}
+										id={`${titleId}-bonus-${i}-label`}
+										className={inputClassName(
+											`${titleId}-bonus-${i}-label`
+										)}
 										value={bonus.wheelLabel || ''}
 										onChange={e =>
 											setBonus(i, 'wheelLabel', e.target.value)
 										}
 										placeholder="Короткий текст на колесе"
 										maxLength={wheelLabelMaxLength}
+										aria-invalid={
+											validationIssue?.fieldId ===
+											`${titleId}-bonus-${i}-label`
+										}
 									/>
+									{fieldError(`${titleId}-bonus-${i}-label`)}
 									<p className={styles.hint}>
 										До {wheelLabelMaxLength} символов. Одно слово — до{' '}
 										{WHEEL_BONUS_WORD_MAX_LENGTH} символов.
@@ -1637,63 +1958,70 @@ const WheelSettingsModal = ({
 												)}
 											</div>
 										</div>
-										<div className={styles.colorRowField}>
-											<span className={styles.colorRowLabel}>Вес</span>
-											<input
-												className={styles.input}
-												type="number"
-												min="1"
-												max="100"
-												value={bonus.probability ?? ''}
-												onChange={e => {
-													if (e.target.value === '') {
-														setBonus(i, 'probability', undefined)
-														return
-													}
-													const parsed = parseInt(e.target.value)
-													if (Number.isNaN(parsed)) return
-													setBonus(
-														i,
-														'probability',
-														clampNumber(parsed, 1, 100)
-													)
-												}}
-												style={{ width: '80px' }}
-											/>
+									</div>
+									<div className={styles.field}>
+										<div className={pageStyles.rangeHeader}>
+											<span className={styles.label}>Вес бонуса:</span>
+											<span className={pageStyles.rangeValue}>
+												{bonus.probability ?? 1} из 100
+											</span>
 										</div>
+										<input
+											id={`${titleId}-bonus-${i}-weight`}
+											className={pageStyles.rangeInput}
+											type="range"
+											aria-label={`Вес бонуса «${bonus.name || i + 1}»`}
+											min={1}
+											max={100}
+											value={bonus.probability ?? 1}
+											onChange={e =>
+												setBonus(i, 'probability', Number(e.target.value))
+											}
+											aria-invalid={
+												validationIssue?.fieldId ===
+												`${titleId}-bonus-${i}-weight`
+											}
+										/>
+										{fieldError(`${titleId}-bonus-${i}-weight`)}
 									</div>
 									<div className={styles.checkRow}>
 										<input
 											type="checkbox"
-											id={`bonus-active-${i}`}
+											id={`${titleId}-bonus-${i}-active`}
 											checked={bonus.active}
 											onChange={e =>
 												setBonus(i, 'active', e.target.checked)
 											}
 										/>
 										<label
-											htmlFor={`bonus-active-${i}`}
+											htmlFor={`${titleId}-bonus-${i}-active`}
 											className={styles.checkLabel}
 										>
 											участвует в розыгрыше
 										</label>
 									</div>
+									{fieldError(`${titleId}-bonus-${i}-active`)}
 									<div className={styles.checkRow}>
 										<input
 											type="checkbox"
-											id={`bonus-neverwin-${i}`}
+											id={`${titleId}-bonus-${i}-never-win`}
 											checked={bonus.neverWin ?? false}
 											onChange={e =>
 												setBonus(i, 'neverWin', e.target.checked)
 											}
+											aria-invalid={
+												validationIssue?.fieldId ===
+												`${titleId}-bonus-${i}-never-win`
+											}
 										/>
 										<label
-											htmlFor={`bonus-neverwin-${i}`}
+											htmlFor={`${titleId}-bonus-${i}-never-win`}
 											className={styles.checkLabel}
 										>
 											никогда не выигрывает
 										</label>
 									</div>
+									{fieldError(`${titleId}-bonus-${i}-never-win`)}
 								</div>
 							))}
 						</div>
@@ -1946,7 +2274,7 @@ const WheelSettingsModal = ({
 										className={styles.label}
 										htmlFor={`${titleId}-install-domain`}
 									>
-										Домен установки виджета
+										Домен установки виджета:
 									</label>
 									<input
 										id={`${titleId}-install-domain`}
@@ -1966,7 +2294,7 @@ const WheelSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Код виджета</p>
+									<p className={styles.label}>Код виджета:</p>
 									<p className={styles.hint}>
 										Вставьте этот код перед закрывающим тегом &lt;/body&gt;
 									</p>
@@ -1981,10 +2309,9 @@ const WheelSettingsModal = ({
 									<button
 										type="button"
 										className={styles.copyBtn}
-										onClick={() => {
-											navigator.clipboard.writeText(scriptCode)
-											toast.success('Код скопирован')
-										}}
+										onClick={() =>
+											copyToClipboard(scriptCode, 'Код скопирован', true)
+										}
 									>
 										Скопировать
 									</button>
@@ -2003,7 +2330,7 @@ const WheelSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Прямая ссылка</p>
+									<p className={styles.label}>Прямая ссылка:</p>
 									<p className={styles.hint}>
 										Если не требуется подключение виджета к сайту
 									</p>
@@ -2028,10 +2355,9 @@ const WheelSettingsModal = ({
 									<button
 										type="button"
 										className={styles.copyBtn}
-										onClick={() => {
-											navigator.clipboard.writeText(directLink)
-											toast.success('Ссылка скопирована')
-										}}
+										onClick={() =>
+											copyToClipboard(directLink, 'Ссылка скопирована')
+										}
 									>
 										Скопировать
 									</button>
@@ -2067,7 +2393,7 @@ const WheelSettingsModal = ({
 										CRM и аналитику.
 									</li>
 									<li>
-										В «Коде» скопируйте скрипт на сайт или используйте
+										В «Установке» скопируйте скрипт на сайт или используйте
 										прямую ссылку/QR-код.
 									</li>
 								</ul>
@@ -2115,10 +2441,10 @@ const WheelSettingsModal = ({
 						<button
 							type="button"
 							className={styles.cancelBtn}
-							onClick={onClose}
+							onClick={requestClose}
 							disabled={saveMutation.isPending}
 						>
-							Отмена
+							{isPagePresentation ? 'К виджетам' : 'Отмена'}
 						</button>
 						<button
 							type="button"
@@ -2130,6 +2456,7 @@ const WheelSettingsModal = ({
 						</button>
 					</div>
 				</div>
+				{closeGuardDialog}
 			</div>
 		</div>
 	)

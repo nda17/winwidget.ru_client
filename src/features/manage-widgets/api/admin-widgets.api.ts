@@ -94,6 +94,13 @@ export interface IAdminWidgetMutationResponse<
 	entity: AdminWidgetEntityMap[TType]
 }
 
+export interface IAdminWidgetDeleteResponse<
+	TType extends AdminWidgetType = AdminWidgetType
+> {
+	type: TType
+	id: string
+}
+
 const adminWidgetsService = {
 	async getMonitoring(
 		page: number,
@@ -128,6 +135,16 @@ const adminWidgetsService = {
 			`/widgets/admin/${type}/${id}`,
 			payload
 		)
+		return data
+	},
+
+	async deleteWidget<TType extends AdminWidgetType>(
+		type: TType,
+		id: string
+	): Promise<IAdminWidgetDeleteResponse<TType>> {
+		const { data } = await axiosInterceptorsRequest.delete<
+			IAdminWidgetDeleteResponse<TType>
+		>(`/widgets/admin/${type}/${id}`)
 		return data
 	},
 

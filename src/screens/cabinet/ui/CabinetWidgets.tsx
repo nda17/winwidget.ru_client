@@ -2,15 +2,6 @@
 
 import { WidgetTypeModal } from '@/features/create-widget'
 import {
-	CalculatorSettingsModal,
-	CallbackSettingsModal,
-	CountdownTimerSettingsModal,
-	OnlineConsultantSettingsModal,
-	QuizSettingsModal,
-	StopOfferSettingsModal,
-	WheelSettingsModal
-} from '@/features/edit-widget-settings'
-import {
 	CheckIcon,
 	DeleteIcon,
 	ExternalLinkIcon,
@@ -38,6 +29,7 @@ import {
 	useQuery,
 	useQueryClient
 } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 import styles from './Cabinet.module.scss'
@@ -55,19 +47,8 @@ const CabinetWidgets = () => {
 	const auth = useAuthStore(state => state.auth)
 	const isAuthResolved = useAuthStore(state => state.isAuthResolved)
 	const queryClient = useQueryClient()
+	const router = useRouter()
 
-	const [settingsWidget, setSettingsWidget] = useState<Widget | null>(null)
-	const [settingsQuiz, setSettingsQuiz] = useState<Quiz | null>(null)
-	const [settingsCallback, setSettingsCallback] =
-		useState<Callback | null>(null)
-	const [settingsTimer, setSettingsTimer] =
-		useState<CountdownTimer | null>(null)
-	const [settingsStopOffer, setSettingsStopOffer] =
-		useState<StopOffer | null>(null)
-	const [settingsOnlineConsultant, setSettingsOnlineConsultant] =
-		useState<OnlineConsultant | null>(null)
-	const [settingsCalculator, setSettingsCalculator] =
-		useState<Calculator | null>(null)
 	const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(
 		null
 	)
@@ -127,8 +108,6 @@ const CabinetWidgets = () => {
 		stopOffersData?.subscription ||
 		onlineConsultantsData?.subscription ||
 		calculatorsData?.subscription
-	const canUseCustomButtonImage =
-		subscription?.plan === 'HARD' && subscription.status === 'ACTIVE'
 
 	const allItems: ListItem[] = [
 		...(widgetsData?.widgets || []).map(w => ({
@@ -198,7 +177,7 @@ const CabinetWidgets = () => {
 		},
 		onMutate: () =>
 			toast.loading('Создаём виджет, пожалуйста подождите...'),
-		onSuccess: (_, typeId, toastId) => {
+		onSuccess: (createdWidget, typeId, toastId) => {
 			queryClient.invalidateQueries({
 				queryKey:
 					typeId === 'quiz'
@@ -217,6 +196,7 @@ const CabinetWidgets = () => {
 			})
 			setShowTypeModal(false)
 			toast.success('Виджет создан', { id: toastId })
+			router.push(`/cabinet/widgets/${typeId}/${createdWidget.id}`)
 		},
 		onError: (e: any, _, toastId) => {
 			toast.error(
@@ -622,6 +602,44 @@ const CabinetWidgets = () => {
 														: deleteCalculatorMutation.isPending) &&
 								confirmDeleteId === item.id
 
+							const widgetStatus = !item.isActive
+								? {
+										label: 'Выключен',
+										description:
+											'Виджет отключён вручную и не показывается на сайте.',
+										className: styles.widgetStatusDisabled
+									}
+								: subscription?.status !== 'ACTIVE'
+									? {
+											label:
+												subscription?.status === 'CANCELLED'
+													? 'Подписка отменена'
+													: 'Подписка неактивна',
+											description:
+												'Виджет не работает, пока подписка не активна.',
+											className: styles.widgetStatusBlocked
+										}
+									: isLeadLimitReached
+										? {
+												label: 'Лимит заявок',
+												description:
+													'Виджет может отображаться, но новые заявки временно не принимаются.',
+												className: styles.widgetStatusBlocked
+											}
+										: !item.installDomain.trim()
+											? {
+													label: 'Требует настройки',
+													description:
+														'Добавьте домен в настройках, чтобы подключить виджет к сайту.',
+													className: styles.widgetStatusWarning
+												}
+											: {
+													label: 'Активен',
+													description:
+														'Виджет включён, домен настроен. Убедитесь, что код добавлен на сайт.',
+													className: styles.widgetStatusActive
+												}
+
 							const pageUrl =
 								kind === 'wheel'
 									? `${publicSiteUrl}/page-wheel/${item.publicKey}`
@@ -732,20 +750,28 @@ const CabinetWidgets = () => {
 																		: 'Калькулятор'}
 											</span>
 										</div>
-										<span
-											className={`${styles.widgetDomain} ${!item.installDomain ? styles.widgetDomainEmpty : ''}`}
-											data-tooltip={
-												item.installDomain
-													? 'Это сайт, на котором работает установленный виджет.'
-													: 'Нужно добавить домен, где будет работать виджет.'
-											}
-										>
-											<span className={styles.widgetDomainText}>
-												{item.installDomain
-													? `Домен: ${item.installDomain}`
-													: 'Домен не добавлен'}
+										<div className={styles.widgetMeta}>
+											<span
+												className={`${styles.widgetStatus} ${widgetStatus.className}`}
+												title={widgetStatus.description}
+											>
+												{widgetStatus.label}
 											</span>
-										</span>
+											<span
+												className={`${styles.widgetDomain} ${!item.installDomain ? styles.widgetDomainEmpty : ''}`}
+												data-tooltip={
+													item.installDomain
+														? 'Это домен, указанный в настройках виджета.'
+														: 'Нужно добавить домен, где будет работать виджет.'
+												}
+											>
+												<span className={styles.widgetDomainText}>
+													{item.installDomain
+														? `Домен: ${item.installDomain}`
+														: 'Домен не добавлен'}
+												</span>
+											</span>
+										</div>
 									</div>
 
 									<div className={styles.actions}>
@@ -754,8 +780,9 @@ const CabinetWidgets = () => {
 											target="_blank"
 											rel="noopener noreferrer"
 											className={styles.actionBtn}
+											title="Открыть прямой предпросмотр виджета"
 										>
-											<ExternalLinkIcon size={17} /> открыть
+											<ExternalLinkIcon size={17} /> предпросмотр
 										</a>
 
 										<a href={leadsUrl} className={styles.actionBtn}>
@@ -769,25 +796,9 @@ const CabinetWidgets = () => {
 
 										<button
 											className={styles.actionBtn}
-											onClick={() => {
-												if (kind === 'wheel') {
-													setSettingsWidget(item as Widget)
-												} else if (kind === 'quiz') {
-													setSettingsQuiz(item as Quiz)
-												} else if (kind === 'callback') {
-													setSettingsCallback(item as Callback)
-												} else if (kind === 'timer') {
-													setSettingsTimer(item as CountdownTimer)
-												} else if (kind === 'stop-offer') {
-													setSettingsStopOffer(item as StopOffer)
-												} else if (kind === 'online-consultant') {
-													setSettingsOnlineConsultant(
-														item as OnlineConsultant
-													)
-												} else {
-													setSettingsCalculator(item as Calculator)
-												}
-											}}
+											onClick={() =>
+												router.push(`/cabinet/widgets/${kind}/${item.id}`)
+											}
 										>
 											<SettingsIcon size={17} /> настройки
 										</button>
@@ -869,97 +880,9 @@ const CabinetWidgets = () => {
 				<WidgetTypeModal
 					onSelect={typeId => createMutation.mutate(typeId)}
 					onClose={() => setShowTypeModal(false)}
-					isCreating={createMutation.isPending}
-				/>
-			)}
-
-			{settingsWidget && (
-				<WheelSettingsModal
-					widget={settingsWidget}
-					canUseCustomButtonImage={canUseCustomButtonImage}
-					onClose={() => setSettingsWidget(null)}
-					onSaved={updated => {
-						setSettingsWidget(updated)
-						queryClient.invalidateQueries({ queryKey: ['widgets'] })
-					}}
-				/>
-			)}
-
-			{settingsQuiz && (
-				<QuizSettingsModal
-					quiz={settingsQuiz}
-					canUseCustomButtonImage={canUseCustomButtonImage}
-					onClose={() => setSettingsQuiz(null)}
-					onSaved={updated => {
-						setSettingsQuiz(updated)
-						queryClient.invalidateQueries({ queryKey: ['quizzes'] })
-					}}
-				/>
-			)}
-
-			{settingsCallback && (
-				<CallbackSettingsModal
-					callback={settingsCallback}
-					canUseCustomButtonImage={canUseCustomButtonImage}
-					onClose={() => setSettingsCallback(null)}
-					onSaved={updated => {
-						setSettingsCallback(updated)
-						queryClient.invalidateQueries({ queryKey: ['callbacks'] })
-					}}
-				/>
-			)}
-
-			{settingsTimer && (
-				<CountdownTimerSettingsModal
-					timer={settingsTimer}
-					canUseCustomButtonImage={canUseCustomButtonImage}
-					onClose={() => setSettingsTimer(null)}
-					onSaved={updated => {
-						setSettingsTimer(updated)
-						queryClient.invalidateQueries({
-							queryKey: ['countdown-timers']
-						})
-					}}
-				/>
-			)}
-
-			{settingsStopOffer && (
-				<StopOfferSettingsModal
-					stopOffer={settingsStopOffer}
-					canUseCustomButtonImage={canUseCustomButtonImage}
-					onClose={() => setSettingsStopOffer(null)}
-					onSaved={updated => {
-						setSettingsStopOffer(updated)
-						queryClient.invalidateQueries({
-							queryKey: ['stop-offers']
-						})
-					}}
-				/>
-			)}
-
-			{settingsOnlineConsultant && (
-				<OnlineConsultantSettingsModal
-					onlineConsultant={settingsOnlineConsultant}
-					canUseCustomButtonImage={canUseCustomButtonImage}
-					onClose={() => setSettingsOnlineConsultant(null)}
-					onSaved={updated => {
-						setSettingsOnlineConsultant(updated)
-						queryClient.invalidateQueries({
-							queryKey: ['online-consultants']
-						})
-					}}
-				/>
-			)}
-
-			{settingsCalculator && (
-				<CalculatorSettingsModal
-					calculator={settingsCalculator}
-					canUseCustomButtonImage={canUseCustomButtonImage}
-					onClose={() => setSettingsCalculator(null)}
-					onSaved={updated => {
-						setSettingsCalculator(updated)
-						queryClient.invalidateQueries({ queryKey: ['calculators'] })
-					}}
+					creatingTypeId={
+						createMutation.isPending ? createMutation.variables : null
+					}
 				/>
 			)}
 		</div>

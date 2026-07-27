@@ -390,6 +390,9 @@
 .widgetInfo {
 	@apply min-w-0 flex flex-col gap-1;
 }
+.widgetMeta {
+	@apply flex min-w-0 flex-wrap items-center gap-1;
+}
 .widgetNameLine {
 	@apply min-w-0 flex items-center gap-2;
 }
@@ -398,6 +401,21 @@
 }
 .widgetTypeBadge {
 	@apply shrink-0 rounded bg-[#f3eeff] text-[11px] font-semibold text-[#7b3fa0] py-px px-[6px];
+}
+.widgetStatus {
+	@apply block w-fit max-w-full rounded-md border text-[12px] font-semibold py-[2px] px-[7px];
+}
+.widgetStatusActive {
+	@apply border-[#b9e5c8] bg-[#eaf8ef] text-[#25834b];
+}
+.widgetStatusWarning {
+	@apply border-[#f4d2a3] bg-[#fff8f0] text-[#b45309];
+}
+.widgetStatusDisabled {
+	@apply border-[#ded9e7] bg-[#f5f3f7] text-[#77717e];
+}
+.widgetStatusBlocked {
+	@apply border-[#f0b5b5] bg-[#fde8e8] text-[#c0392b];
 }
 .widgetDomain {
 	@apply relative block w-fit max-w-full rounded-md bg-[#f8f5ff] border border-[#e7dcf7] text-[12px] font-medium text-[#8b6aa8] py-[2px] px-[7px];

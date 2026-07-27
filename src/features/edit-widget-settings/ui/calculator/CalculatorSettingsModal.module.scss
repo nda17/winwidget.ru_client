@@ -48,8 +48,12 @@
 	@apply flex flex-col gap-4 rounded-xl border border-[#e0d6f0] bg-white p-4;
 }
 
+.settingsGroupHeader {
+	@apply border-b border-[#f0eaf8] pb-3;
+}
+
 .settingsGroupTitle {
-	@apply m-0 border-b border-[#f0eaf8] pb-3 text-sm font-semibold uppercase tracking-[0.06em] text-[#7b3fa0];
+	@apply m-0 text-sm font-semibold uppercase tracking-[0.06em] text-[#7b3fa0];
 }
 
 .field {
@@ -96,12 +100,24 @@ select.input {
 	@apply flex items-center gap-2;
 }
 
+.colorRow .input {
+	@apply min-w-0;
+}
+
 .colorPicker {
 	@apply h-10 w-10 shrink-0 cursor-pointer rounded-md border border-[#e0d6f0] bg-transparent p-0.5;
 }
 
+.clearColorBtn {
+	@apply flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center self-center rounded-md border border-[#e0d6f0] bg-transparent text-xs text-[#bbb] transition-colors duration-150 hover:border-[#e05a5a] hover:text-[#e05a5a];
+}
+
 .checkRow {
 	@apply flex cursor-pointer items-center gap-2 text-sm text-[#555];
+}
+
+.checkLabel {
+	@apply cursor-pointer text-sm text-[#555];
 }
 
 .hint {
@@ -181,8 +197,20 @@ select.input {
 	@apply m-0 flex flex-col gap-2 pl-5 text-sm leading-6 text-[#555];
 }
 
+.infoList li::marker {
+	@apply text-[#7b3fa0];
+}
+
 .domainHint {
 	@apply m-0 text-xs leading-5 text-red-600;
+}
+
+.dangerActions {
+	@apply flex flex-col gap-3;
+}
+
+.resetSettingsBtn {
+	@apply self-start cursor-pointer rounded-lg border border-[#f1c7c7] bg-[#fff7f7] px-4 py-2 text-sm font-semibold text-[#d14d4d] transition-colors hover:bg-[#fde8e8] disabled:cursor-not-allowed disabled:opacity-50;
 }
 
 .codeArea {
@@ -257,5 +285,9 @@ select.input {
 	.buttonImageBox,
 	.directLink {
 		@apply flex-col items-stretch;
+	}
+
+	.colorRow {
+		@apply flex-wrap;
 	}
 }

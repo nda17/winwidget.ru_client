@@ -1,0 +1,156 @@
+.page,
+.statePage {
+	@apply w-full min-h-screen px-4 pb-24 pt-20 text-[#1a1a1a];
+}
+
+.page {
+	@apply mx-auto max-w-[1560px];
+}
+
+.pageHeader {
+	@apply mx-auto mb-6 w-full max-w-[1500px];
+}
+
+.eyebrow {
+	@apply mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-[#9a78b8];
+}
+
+.pageTitle {
+	@apply break-words text-2xl font-bold leading-tight text-[#1a1a1a];
+}
+
+.pageDescription {
+	@apply mt-2 text-sm leading-6 text-[#777];
+}
+
+.workspace,
+.loadingGrid {
+	@apply mx-auto grid w-full max-w-[1500px] grid-cols-[minmax(0,1.05fr)_minmax(32rem,0.95fr)] items-start gap-6;
+}
+
+.previewColumn {
+	@apply sticky top-[6.5rem] flex min-h-[calc(100vh-8rem)] min-w-0 items-center justify-center;
+}
+
+.previewPortalTarget {
+	@apply w-full max-w-[48rem];
+}
+
+.editorColumn {
+	@apply min-w-0;
+}
+
+.statePage {
+	@apply flex items-center justify-center;
+}
+
+.loadingGrid {
+	@apply items-stretch;
+}
+
+.previewSkeleton,
+.editorSkeleton {
+	@apply overflow-hidden rounded-2xl border border-[#e0d6f0] bg-white p-1;
+}
+
+.previewSkeleton {
+	@apply sticky top-[6.5rem] h-[34rem];
+}
+
+.editorSkeleton {
+	@apply h-[48rem];
+}
+
+.stateCard {
+	@apply w-full max-w-[34rem] rounded-2xl border border-[#e0d6f0] bg-white p-8 text-center shadow-sm;
+}
+
+.stateTitle {
+	@apply text-xl font-bold text-[#1a1a1a];
+}
+
+.stateText {
+	@apply mt-3 text-sm leading-6 text-[#777];
+}
+
+.stateActions {
+	@apply mt-6 flex flex-wrap justify-center gap-3;
+}
+
+.primaryButton,
+.secondaryButton {
+	@apply mt-6 min-h-10 rounded-lg px-5 py-2 text-sm font-semibold transition-colors duration-200;
+}
+
+.stateActions .primaryButton,
+.stateActions .secondaryButton {
+	@apply mt-0;
+}
+
+.primaryButton {
+	@apply cursor-pointer bg-[#7b3fa0] text-white hover:bg-[#6a328d] disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+.secondaryButton {
+	@apply cursor-pointer border border-[#c4a8e8] bg-white text-[#7b3fa0] hover:bg-[#f3eeff];
+}
+
+@media (max-width: 1100px) {
+	.workspace,
+	.loadingGrid {
+		@apply grid-cols-1;
+	}
+
+	.previewColumn {
+		@apply static min-h-0;
+	}
+
+	.previewPortalTarget {
+		@apply max-w-[56rem];
+	}
+
+	.previewSkeleton {
+		@apply static h-[30rem];
+	}
+}
+
+@media (max-width: 600px) {
+	.page,
+	.statePage {
+		@apply px-2 pb-16 pt-16;
+	}
+
+	.pageHeader {
+		@apply mb-4 px-2;
+	}
+
+	.pageTitle {
+		@apply text-xl;
+	}
+
+	.workspace,
+	.loadingGrid {
+		@apply gap-3;
+	}
+
+	.previewSkeleton {
+		@apply h-[14rem];
+	}
+
+	.editorSkeleton {
+		@apply h-[36rem];
+	}
+
+	.stateCard {
+		@apply p-6;
+	}
+
+	.stateActions {
+		@apply flex-col;
+	}
+
+	.primaryButton,
+	.secondaryButton {
+		@apply w-full;
+	}
+}

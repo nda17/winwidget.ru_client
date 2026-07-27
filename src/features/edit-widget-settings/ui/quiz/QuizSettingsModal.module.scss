@@ -124,6 +124,10 @@ select.input {
 	background-size: 16px 16px;
 }
 
+select.questionTypeSelect {
+	@apply w-auto py-1 pl-2 pr-10 text-xs;
+}
+
 .input[type='number'] {
 	-moz-appearance: textfield;
 	appearance: textfield;
@@ -218,6 +222,10 @@ select.input {
 
 .infoBlockTitle {
 	@apply text-sm font-semibold text-[#7b3fa0];
+}
+
+.infoBlockSubTitle {
+	@apply mt-1;
 }
 
 .infoBlockList {
@@ -330,6 +338,14 @@ select.input {
 	@apply flex items-center justify-between gap-2;
 }
 
+.headerActions {
+	@apply flex items-center gap-2;
+}
+
+.questionTypeHint {
+	@apply -mt-1;
+}
+
 .questionNumber {
 	@apply text-xs font-semibold text-[#7b3fa0] uppercase tracking-wide;
 }
@@ -352,6 +368,10 @@ select.input {
 
 .optionTop {
 	@apply flex items-center gap-2;
+}
+
+.optionNumber {
+	@apply min-w-5 text-[13px] text-[#bbb];
 }
 
 .optionInput {
@@ -462,6 +482,10 @@ select.input {
 
 .resultId {
 	@apply text-[10px] text-[#bbb] font-mono;
+}
+
+.emptyHint {
+	@apply text-center;
 }
 
 @media (max-width: 600px) {

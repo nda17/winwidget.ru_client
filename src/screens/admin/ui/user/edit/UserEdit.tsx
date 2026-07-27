@@ -82,6 +82,7 @@ const EVENT_ACTION_LABELS: Record<string, string> = {
 	USER_TOGGLE_ACTIVATION: 'Статус аккаунта',
 	USER_DELETE: 'Удаление',
 	WIDGET_UPDATE: 'Редактирование виджета',
+	WIDGET_DELETE: 'Удаление виджета',
 	WIDGET_BUTTON_IMAGE_UPDATE: 'Изображение кнопки виджета',
 	BACKLOG_TASK_CREATE: 'Создание задачи',
 	BACKLOG_TASK_UPDATE: 'Обновление задачи',

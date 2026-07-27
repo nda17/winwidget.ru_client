@@ -7,17 +7,22 @@ import {
 } from '@/entities/site-widget'
 import { useMutation } from '@tanstack/react-query'
 import Image from 'next/image'
-import { ChangeEvent, useId, useState } from 'react'
+import { ChangeEvent, useEffect, useId, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import DirectLinkQr from '../shared/DirectLinkQr'
 import styles from '../shared/WidgetSettingsModal.module.scss'
+import useWidgetSettingsCloseGuard from '../shared/useWidgetSettingsCloseGuard'
 import WidgetLivePreview from '../shared/WidgetLivePreview'
-import type { WidgetSettingsPersistence } from '../shared/WidgetSettingsPersistence'
+import type {
+	WidgetSettingsPersistence,
+	WidgetSettingsPresentationProps
+} from '../shared/WidgetSettingsPersistence'
+import WidgetSettingsPreviewPortal from '../shared/WidgetSettingsPreviewPortal'
 
 type Tab = 'main' | 'timer' | 'form' | 'integrations' | 'code' | 'info'
 const BUTTON_IMAGE_MAX_SIZE_BYTES = 200 * 1024
 
-interface Props {
+interface Props extends WidgetSettingsPresentationProps {
 	timer: CountdownTimer
 	canUseCustomButtonImage: boolean
 	onClose: () => void
@@ -33,7 +38,7 @@ const TABS: { id: Tab; label: string }[] = [
 	{ id: 'timer', label: 'Таймер' },
 	{ id: 'form', label: 'Форма' },
 	{ id: 'integrations', label: 'Интеграции' },
-	{ id: 'code', label: 'Код' },
+	{ id: 'code', label: 'Установка' },
 	{ id: 'info', label: 'Инфо' }
 ]
 
@@ -108,13 +113,6 @@ const clampNumber = (
 	return Math.min(max, Math.max(min, numeric))
 }
 
-const toOptionalNonNegativeInteger = (value: string) => {
-	if (value.trim() === '') return null
-	const parsed = parseInt(value)
-	if (Number.isNaN(parsed)) return null
-	return Math.max(0, parsed)
-}
-
 const toDateTimeLocal = (iso?: string) => {
 	if (!iso) return ''
 	const date = new Date(iso)
@@ -125,6 +123,34 @@ const toDateTimeLocal = (iso?: string) => {
 
 const fromDateTimeLocal = (value: string) =>
 	value ? new Date(value).toISOString() : ''
+
+const isValidHttpUrl = (value: string) => {
+	try {
+		const url = new URL(value)
+		return url.protocol === 'http:' || url.protocol === 'https:'
+	} catch {
+		return false
+	}
+}
+
+const isValidActionUrl = (value: string) => {
+	try {
+		const url = new URL(value, 'https://example.com')
+		return ['http:', 'https:', 'tel:', 'mailto:'].includes(url.protocol)
+	} catch {
+		return false
+	}
+}
+
+const formatDuration = (minutes: number) => {
+	if (minutes >= 1440 && minutes % 1440 === 0) {
+		return `${minutes / 1440} дн.`
+	}
+	if (minutes >= 60 && minutes % 60 === 0) {
+		return `${minutes / 60} ч.`
+	}
+	return `${minutes} мин.`
+}
 
 const notifyTimerWidgetUpdated = (publicKey: string) => {
 	if (typeof window === 'undefined') return
@@ -146,7 +172,9 @@ const CountdownTimerSettingsModal = ({
 	canUseCustomButtonImage,
 	onClose,
 	onSaved,
-	persistence
+	persistence,
+	presentation = 'modal',
+	previewPortalTarget
 }: Props) => {
 	const titleId = useId()
 	const buttonImageInputId = useId()
@@ -160,6 +188,11 @@ const CountdownTimerSettingsModal = ({
 	)
 	const [confirmResetDefaults, setConfirmResetDefaults] = useState(false)
 	const [confirmResetTimers, setConfirmResetTimers] = useState(false)
+	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>(
+		{}
+	)
+	const fieldRefs = useRef<Record<string, HTMLElement | null>>({})
+	const pendingFocusFieldRef = useRef<string | null>(null)
 	const [savedSnapshot, setSavedSnapshot] = useState(
 		JSON.stringify({
 			name: timer.name,
@@ -194,6 +227,7 @@ const CountdownTimerSettingsModal = ({
 		onSuccess: (updated, _, toastId) => {
 			const nextConfig = mergeConfig(updated.config)
 			toast.success('Сохранено', { id: toastId })
+			setFieldErrors({})
 			setName(updated.name)
 			setInstallDomain(updated.installDomain ?? '')
 			setCfg(nextConfig)
@@ -247,9 +281,70 @@ const CountdownTimerSettingsModal = ({
 	})
 	const isDangerActionPending =
 		mutation.isPending || buttonImageMutation.isPending
+	const { requestClose, closeGuardDialog } = useWidgetSettingsCloseGuard({
+		hasUnsavedChanges,
+		isBusy: isDangerActionPending,
+		onClose
+	})
+	const isPagePresentation = presentation === 'page'
+
+	useEffect(() => {
+		const field = pendingFocusFieldRef.current
+		if (!field) return
+
+		const frameId = window.requestAnimationFrame(() => {
+			const element = fieldRefs.current[field]
+			if (!element) return
+			element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+			element.focus({ preventScroll: true })
+			pendingFocusFieldRef.current = null
+		})
+
+		return () => window.cancelAnimationFrame(frameId)
+	}, [fieldErrors, tab])
 
 	const set = (patch: Partial<CountdownTimerConfig>) =>
 		setCfg(prev => ({ ...prev, ...patch }))
+
+	const setFieldRef = (field: string) => (element: HTMLElement | null) => {
+		fieldRefs.current[field] = element
+	}
+
+	const clearFieldError = (...fields: string[]) => {
+		setFieldErrors(previous => {
+			if (!fields.some(field => previous[field])) return previous
+			const next = { ...previous }
+			fields.forEach(field => delete next[field])
+			return next
+		})
+	}
+
+	const getFieldTab = (field: string): Tab => {
+		if (field === 'name' || field === 'bubbleText') return 'main'
+		if (
+			field === 'deadlineAt' ||
+			field === 'evergreenDurationMinutes' ||
+			field === 'expiredTitle'
+		) {
+			return 'timer'
+		}
+		return 'form'
+	}
+
+	const showValidationErrors = (
+		errors: Record<string, string>,
+		order: string[]
+	) => {
+		const firstField =
+			order.find(field => errors[field]) ?? Object.keys(errors)[0]
+		if (!firstField) return false
+
+		setFieldErrors(errors)
+		pendingFocusFieldRef.current = firstField
+		setTab(getFieldTab(firstField))
+		toast.error(errors[firstField])
+		return true
+	}
 
 	const setIntegration = (key: string, value: string | boolean) =>
 		setCfg(prev => ({
@@ -270,12 +365,39 @@ const CountdownTimerSettingsModal = ({
 	).replace(/\/$/, '')
 	const embedCode = `<script src="${apiUrl}/widgets/timer.js" data-key="${timer.publicKey}" async></script>`
 	const previewUrl = `${publicSiteUrl}/page-timer/${timer.publicKey}`
+	const savedInstallDomain = (
+		JSON.parse(savedSnapshot) as { installDomain: string }
+	).installDomain
+	const hasUnsavedInstallDomain =
+		installDomain.trim() !== savedInstallDomain.trim()
+	const copyToClipboard = async (
+		value: string,
+		successMessage: string,
+		requireSavedDomain = false
+	) => {
+		if (requireSavedDomain && hasUnsavedInstallDomain) {
+			setTab('code')
+			toast.error('Сначала сохраните домен установки')
+			return
+		}
+		try {
+			await navigator.clipboard.writeText(value)
+			toast.success(successMessage)
+		} catch {
+			toast.error('Не удалось скопировать')
+		}
+	}
 	const defaultButtonImageUrl = `${apiUrl}/widgets/timer-button.png`
 	const buttonImagePreviewUrl = cfg.buttonImageUrl || defaultButtonImageUrl
 	const buttonImageUploadDisabled =
 		!canUseCustomButtonImage ||
 		hasUnsavedChanges ||
 		buttonImageMutation.isPending
+	const autoOpenEnabled =
+		cfg.autoOpenDelay !== null &&
+		cfg.autoOpenDelay !== undefined &&
+		cfg.autoOpenDelay > 0
+	const autoOpenDelay = Math.min(60, Math.max(1, cfg.autoOpenDelay ?? 5))
 
 	const handleButtonImageUpload = (
 		event: ChangeEvent<HTMLInputElement>
@@ -309,6 +431,11 @@ const CountdownTimerSettingsModal = ({
 	}
 
 	const handleResetButtonImage = () => {
+		if (hasUnsavedChanges) {
+			toast.error('Сначала сохраните текущие настройки виджета')
+			return
+		}
+
 		const nextConfig = { ...cfg, buttonImageUrl: '' }
 		setCfg(nextConfig)
 		mutation.mutate({
@@ -318,37 +445,114 @@ const CountdownTimerSettingsModal = ({
 	}
 
 	const handleSave = () => {
-		const sanitizedName = name.trim() || 'Таймер'
+		const sanitizedName = name.trim()
+		const actionButtonUrl = cfg.actionButtonUrl.trim()
+		const actionButtonText = cfg.actionButtonText.trim()
+		const privacyUrl = cfg.privacyUrl.trim()
+		const errors: Record<string, string> = {}
+
+		if (!sanitizedName) {
+			errors.name = 'Укажите название виджета'
+		}
+		if (!cfg.bubbleText.trim()) {
+			errors.bubbleText = 'Укажите текст облачка'
+		}
+		if (!cfg.title.trim()) {
+			errors.title = 'Укажите заголовок предложения'
+		}
 		if (cfg.timerMode === 'FIXED_DATE' && !cfg.deadlineAt) {
-			toast.error('Укажите дату окончания таймера')
-			return
+			errors.deadlineAt = 'Укажите дату окончания таймера'
+		} else if (
+			cfg.timerMode === 'FIXED_DATE' &&
+			(!Number.isFinite(new Date(cfg.deadlineAt).getTime()) ||
+				new Date(cfg.deadlineAt).getTime() <= Date.now())
+		) {
+			errors.deadlineAt = 'Дата окончания должна быть в будущем'
 		}
 		if (
 			cfg.timerMode === 'EVERGREEN' &&
 			(cfg.evergreenDurationMinutes < 1 ||
 				cfg.evergreenDurationMinutes > 10080)
 		) {
-			toast.error(
-				'Длительность персонального таймера: от 1 до 10080 минут'
-			)
-			return
+			errors.evergreenDurationMinutes =
+				'Длительность таймера: от 1 минуты до 7 дней'
+		}
+		if (cfg.expiredBehavior !== 'hide' && !cfg.expiredTitle.trim()) {
+			errors.expiredTitle = 'Укажите заголовок после окончания таймера'
+		}
+		if (cfg.expiredBehavior === 'disableForm' && !actionButtonUrl) {
+			errors.actionButtonUrl =
+				'Для этого сценария укажите ссылку, которая останется после окончания'
+		} else if (actionButtonUrl && !isValidActionUrl(actionButtonUrl)) {
+			errors.actionButtonUrl = 'Укажите корректную ссылку для перехода'
+		}
+		if (actionButtonUrl && !actionButtonText) {
+			errors.actionButtonText = 'Укажите текст кнопки перехода'
 		}
 		if (
-			cfg.submissionCooldownDays < 0 ||
-			cfg.submissionCooldownDays > 365
+			cfg.dataType !== 'NONE' &&
+			cfg.filterDuplicates &&
+			(cfg.submissionCooldownDays < 0 || cfg.submissionCooldownDays > 365)
 		) {
-			toast.error('Повторная заявка: введите число от 0 до 365')
-			return
+			errors.submissionCooldownDays =
+				'Период повторной заявки: от 0 до 365 дней'
 		}
+		if (cfg.dataType !== 'NONE') {
+			if (!cfg.contactTitle.trim()) {
+				errors.contactTitle = 'Укажите заголовок формы контактов'
+			}
+			if (!cfg.submitButtonText.trim()) {
+				errors.submitButtonText = 'Укажите текст кнопки отправки'
+			}
+			if (!cfg.successTitle.trim()) {
+				errors.successTitle = 'Укажите заголовок после отправки'
+			}
+			if (!privacyUrl) {
+				errors.privacyUrl = 'Укажите ссылку на политику конфиденциальности'
+			} else if (!isValidHttpUrl(privacyUrl)) {
+				errors.privacyUrl =
+					'Укажите полную ссылку с протоколом http:// или https://'
+			}
+		}
+
+		const validationOrder = [
+			'name',
+			'bubbleText',
+			'deadlineAt',
+			'evergreenDurationMinutes',
+			'expiredTitle',
+			'title',
+			'actionButtonUrl',
+			'actionButtonText',
+			'contactTitle',
+			'submitButtonText',
+			'submissionCooldownDays',
+			'successTitle',
+			'privacyUrl'
+		]
+		if (showValidationErrors(errors, validationOrder)) return
+
 		const sanitizedConfig: CountdownTimerConfig = {
 			...cfg,
+			bubbleText: cfg.bubbleText.trim(),
+			title: cfg.title.trim(),
+			subtitle: cfg.subtitle.trim(),
+			expiredTitle: cfg.expiredTitle.trim(),
+			expiredSubtitle: cfg.expiredSubtitle.trim(),
+			contactTitle: cfg.contactTitle.trim(),
+			submitButtonText: cfg.submitButtonText.trim(),
+			successTitle: cfg.successTitle.trim(),
+			successSubtitle: cfg.successSubtitle.trim(),
 			submissionCooldownDays: Math.max(
 				0,
 				Math.min(365, cfg.submissionCooldownDays || 0)
 			),
-			actionButtonUrl: cfg.actionButtonUrl.trim(),
-			actionButtonText: cfg.actionButtonText.trim() || 'Перейти к акции'
+			actionButtonUrl,
+			actionButtonText: actionButtonText || 'Перейти к акции',
+			privacyUrl,
+			autoOpenDelay: autoOpenEnabled ? autoOpenDelay : null
 		}
+		setFieldErrors({})
 		setName(sanitizedName)
 		setCfg(sanitizedConfig)
 		mutation.mutate({
@@ -360,12 +564,18 @@ const CountdownTimerSettingsModal = ({
 
 	const handleResetDefaults = () => {
 		const resetConfig = getDefaultConfig()
+		setFieldErrors({})
 		setCfg(resetConfig)
 		setConfirmResetDefaults(false)
 		mutation.mutate({ name, config: resetConfig })
 	}
 
 	const handleResetTimers = () => {
+		if (hasUnsavedChanges) {
+			toast.error('Сначала сохраните текущие настройки виджета')
+			return
+		}
+
 		const token =
 			typeof crypto !== 'undefined' && 'randomUUID' in crypto
 				? crypto.randomUUID()
@@ -377,36 +587,50 @@ const CountdownTimerSettingsModal = ({
 	}
 
 	return (
-		<div className={styles.overlay}>
-			<button
-				type="button"
-				className={styles.backdrop}
-				onClick={onClose}
-				aria-label="Закрыть"
-			/>
-			<div
-				className={styles.modal}
-				role="dialog"
-				aria-modal="true"
-				aria-labelledby={titleId}
-			>
+		<div
+			className={isPagePresentation ? styles.pageEditor : styles.overlay}
+		>
+			{!isPagePresentation && (
 				<button
 					type="button"
-					className={styles.closeBtn}
-					onClick={onClose}
+					className={styles.backdrop}
+					onClick={requestClose}
 					aria-label="Закрыть"
-				>
-					✕
-				</button>
+				/>
+			)}
+			<div
+				className={isPagePresentation ? styles.pagePanel : styles.modal}
+				role={isPagePresentation ? 'region' : 'dialog'}
+				aria-modal={isPagePresentation ? undefined : true}
+				aria-labelledby={titleId}
+			>
+				{!isPagePresentation && (
+					<button
+						type="button"
+						className={styles.closeBtn}
+						onClick={requestClose}
+						aria-label="Закрыть настройки"
+					>
+						✕
+					</button>
+				)}
 				<h2 id={titleId} className={styles.modalTitle}>
-					Настройки
+					Настройки таймера
 				</h2>
-				<div className={styles.tabs} role="tablist">
+				<div
+					className={styles.tabs}
+					role="tablist"
+					aria-label="Разделы настроек таймера"
+				>
 					{TABS.map(t => (
 						<button
 							key={t.id}
+							type="button"
+							id={`${titleId}-tab-${t.id}`}
 							role="tab"
 							aria-selected={tab === t.id}
+							aria-controls={`${titleId}-panel-${t.id}`}
+							tabIndex={tab === t.id ? 0 : -1}
 							className={`${styles.tab} ${tab === t.id ? styles.tabActive : ''}`}
 							onClick={() => setTab(t.id)}
 						>
@@ -415,13 +639,27 @@ const CountdownTimerSettingsModal = ({
 					))}
 				</div>
 
-				<WidgetLivePreview
-					type="timer"
-					config={cfg}
-					isHardPlan={canUseCustomButtonImage}
-				/>
+				<WidgetSettingsPreviewPortal
+					inline={!isPagePresentation}
+					target={previewPortalTarget}
+				>
+					<WidgetLivePreview
+						type="timer"
+						config={cfg}
+						isHardPlan={canUseCustomButtonImage}
+						autoCollapse={
+							!isPagePresentation &&
+							['integrations', 'code', 'info'].includes(tab)
+						}
+					/>
+				</WidgetSettingsPreviewPortal>
 
-				<div className={styles.tabContent}>
+				<div
+					id={`${titleId}-panel-${tab}`}
+					className={styles.tabContent}
+					role="tabpanel"
+					aria-labelledby={`${titleId}-tab-${tab}`}
+				>
 					{tab === 'main' && (
 						<div className={styles.fields}>
 							<div className={styles.settingsGroup}>
@@ -429,11 +667,25 @@ const CountdownTimerSettingsModal = ({
 								<div className={styles.field}>
 									<p className={styles.label}>Название виджета:</p>
 									<input
-										className={styles.input}
+										ref={setFieldRef('name')}
+										className={`${styles.input} ${
+											fieldErrors.name ? styles.inputError : ''
+										}`}
 										value={name}
-										onChange={e => setName(e.target.value)}
+										onChange={e => {
+											clearFieldError('name')
+											setName(e.target.value)
+										}}
 										maxLength={50}
+										aria-invalid={Boolean(fieldErrors.name)}
 									/>
+									{fieldErrors.name ? (
+										<p className={styles.fieldError}>{fieldErrors.name}</p>
+									) : (
+										<p className={styles.hint}>
+											Отображается только в вашем кабинете.
+										</p>
+									)}
 								</div>
 								<div className={styles.field}>
 									<p className={styles.label}>Основной цвет:</p>
@@ -448,11 +700,53 @@ const CountdownTimerSettingsModal = ({
 											className={styles.input}
 											value={cfg.color || '#4705fb'}
 											onChange={e => set({ color: e.target.value })}
+											maxLength={7}
 										/>
 									</div>
+									<p className={styles.hint}>
+										Цвет акцентов, таймера и элементов формы.
+									</p>
 								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>Цвет кнопки открытия:</p>
+									<p className={styles.label}>Цвет фона окна</p>
+									<div className={styles.colorRow}>
+										<input
+											type="color"
+											className={styles.colorPicker}
+											value={cfg.bgColor || '#ffffff'}
+											onChange={e => set({ bgColor: e.target.value })}
+										/>
+										<input
+											className={styles.input}
+											value={cfg.bgColor || ''}
+											onChange={e => set({ bgColor: e.target.value })}
+											placeholder="По умолчанию — белый"
+											maxLength={7}
+										/>
+										{cfg.bgColor && (
+											<button
+												type="button"
+												className={styles.clearColorBtn}
+												onClick={() => set({ bgColor: '' })}
+												title="Использовать белый фон"
+											>
+												✕
+											</button>
+										)}
+									</div>
+									<p className={styles.hint}>
+										Оставьте пустым, чтобы использовать стандартный белый
+										фон.
+									</p>
+								</div>
+							</div>
+
+							<div className={styles.settingsGroup}>
+								<h3 className={styles.settingsGroupTitle}>
+									Кнопка открытия
+								</h3>
+								<div className={styles.field}>
+									<p className={styles.label}>Цвет кнопки открытия</p>
 									<div className={styles.colorRow}>
 										<input
 											type="color"
@@ -538,25 +832,37 @@ const CountdownTimerSettingsModal = ({
 										</div>
 									</div>
 								</div>
+
 								<div className={styles.field}>
-									<p className={styles.label}>Цвет фона окна:</p>
-									<div className={styles.colorRow}>
+									<p className={styles.label}>
+										Кнопка открытия — пульсация
+									</p>
+									<div className={styles.checkRow}>
 										<input
-											type="color"
-											className={styles.colorPicker}
-											value={cfg.bgColor || '#ffffff'}
-											onChange={e => set({ bgColor: e.target.value })}
+											id="timer-button-pulse"
+											type="checkbox"
+											checked={cfg.buttonPulse !== false}
+											onChange={e =>
+												set({ buttonPulse: e.target.checked })
+											}
 										/>
-										<input
-											className={styles.input}
-											value={cfg.bgColor || ''}
-											onChange={e => set({ bgColor: e.target.value })}
-											placeholder="По умолчанию"
-										/>
+										<label
+											htmlFor="timer-button-pulse"
+											className={styles.checkLabel}
+										>
+											Включить пульсацию кнопки
+										</label>
 									</div>
+									<p className={styles.hint}>
+										Дополнительный эффект свечения на плавающей кнопке.
+									</p>
 								</div>
+
 								<div className={styles.field}>
-									<p className={styles.label}>Сторона экрана:</p>
+									<p className={styles.label}>
+										Сторона расположения кнопки для открытия виджета на
+										вашем сайте:
+									</p>
 									<select
 										className={styles.input}
 										value={cfg.buttonSide}
@@ -571,24 +877,51 @@ const CountdownTimerSettingsModal = ({
 									</select>
 								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>
-										Высота кнопки от низа экрана:{' '}
-										<strong>{cfg.buttonBottom ?? 3}%</strong>
-									</p>
+									<p className={styles.label}>Текст облачка:</p>
+									<input
+										ref={setFieldRef('bubbleText')}
+										className={`${styles.input} ${
+											fieldErrors.bubbleText ? styles.inputError : ''
+										}`}
+										value={cfg.bubbleText}
+										onChange={e => {
+											clearFieldError('bubbleText')
+											set({ bubbleText: e.target.value })
+										}}
+										placeholder="Акция"
+										maxLength={60}
+										aria-invalid={Boolean(fieldErrors.bubbleText)}
+									/>
+									{fieldErrors.bubbleText ? (
+										<p className={styles.fieldError}>
+											{fieldErrors.bubbleText}
+										</p>
+									) : (
+										<p className={styles.hint}>
+											Короткая подсказка объясняет, что откроется по клику.
+										</p>
+									)}
+								</div>
+
+								<div className={styles.field}>
+									<div className={styles.rangeHeader}>
+										<p className={styles.label}>
+											Высота кнопки от низа экрана:
+										</p>
+										<span className={styles.rangeValue}>
+											{cfg.buttonBottom ?? 3}%
+										</span>
+									</div>
 									<input
 										type="range"
+										aria-label="Высота кнопки от низа экрана"
 										min={1}
 										max={50}
 										value={cfg.buttonBottom ?? 3}
 										onChange={e =>
 											set({ buttonBottom: Number(e.target.value) })
 										}
-										className={styles.input}
-										style={{
-											padding: '8px 0',
-											background: 'transparent',
-											border: 'none'
-										}}
+										className={styles.rangeInput}
 									/>
 									<p className={styles.hint}>
 										Отступ от нижнего края экрана в процентах. 3 — почти
@@ -597,24 +930,24 @@ const CountdownTimerSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>
-										Отступ кнопки от края экрана:{' '}
-										<strong>{cfg.buttonOffset ?? 3}%</strong>
-									</p>
+									<div className={styles.rangeHeader}>
+										<p className={styles.label}>
+											Отступ кнопки от края экрана:
+										</p>
+										<span className={styles.rangeValue}>
+											{cfg.buttonOffset ?? 3}%
+										</span>
+									</div>
 									<input
 										type="range"
+										aria-label="Отступ кнопки от края экрана"
 										min={1}
 										max={50}
 										value={cfg.buttonOffset ?? 3}
 										onChange={e =>
 											set({ buttonOffset: Number(e.target.value) })
 										}
-										className={styles.input}
-										style={{
-											padding: '8px 0',
-											background: 'transparent',
-											border: 'none'
-										}}
+										className={styles.rangeInput}
 									/>
 									<p className={styles.hint}>
 										Отступ кнопки от левого или правого края экрана в
@@ -623,24 +956,22 @@ const CountdownTimerSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>
-										Размер кнопки открытия:{' '}
-										<strong>{cfg.buttonSize}px</strong>
-									</p>
+									<div className={styles.rangeHeader}>
+										<p className={styles.label}>Размер кнопки открытия:</p>
+										<span className={styles.rangeValue}>
+											{cfg.buttonSize}px
+										</span>
+									</div>
 									<input
 										type="range"
+										aria-label="Размер кнопки открытия"
 										min={40}
 										max={100}
 										value={cfg.buttonSize}
 										onChange={e =>
 											set({ buttonSize: parseInt(e.target.value) || 60 })
 										}
-										className={styles.input}
-										style={{
-											padding: '8px 0',
-											background: 'transparent',
-											border: 'none'
-										}}
+										className={styles.rangeInput}
 									/>
 									<p className={styles.hint}>
 										Размер плавающей кнопки в пикселях. По умолчанию 60px.
@@ -650,44 +981,52 @@ const CountdownTimerSettingsModal = ({
 								<div className={styles.field}>
 									<div className={styles.checkRow}>
 										<input
-											id="timer-button-pulse"
+											id="timer-auto-open"
 											type="checkbox"
-											checked={cfg.buttonPulse !== false}
+											checked={autoOpenEnabled}
 											onChange={e =>
-												set({ buttonPulse: e.target.checked })
+												set({
+													autoOpenDelay: e.target.checked
+														? autoOpenDelay
+														: null
+												})
 											}
 										/>
 										<label
-											htmlFor="timer-button-pulse"
+											htmlFor="timer-auto-open"
 											className={styles.checkLabel}
 										>
-											Пульсация кнопки
+											Открывать виджет автоматически
 										</label>
 									</div>
-									<p className={styles.hint}>
-										Дополнительный эффект свечения на плавающей кнопке.
-									</p>
-								</div>
-							</div>
-
-							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>Появление</h3>
-								<div className={styles.field}>
-									<p className={styles.label}>Автооткрытие, секунд:</p>
-									<input
-										className={styles.input}
-										type="number"
-										min={0}
-										value={cfg.autoOpenDelay ?? ''}
-										placeholder="Не открывать автоматически"
-										onChange={e =>
-											set({
-												autoOpenDelay: toOptionalNonNegativeInteger(
-													e.target.value
-												)
-											})
-										}
-									/>
+									{autoOpenEnabled && (
+										<>
+											<div className={styles.rangeHeader}>
+												<p className={styles.label}>Автооткрытие через:</p>
+												<span className={styles.rangeValue}>
+													{autoOpenDelay} сек.
+												</span>
+											</div>
+											<input
+												className={styles.rangeInput}
+												type="range"
+												aria-label="Автооткрытие через"
+												min={1}
+												max={60}
+												step={1}
+												value={autoOpenDelay}
+												onChange={e =>
+													set({
+														autoOpenDelay: Number(e.target.value)
+													})
+												}
+											/>
+											<p className={styles.hint}>
+												Таймер откроется через 1–60 секунд после загрузки
+												страницы.
+											</p>
+										</>
+									)}
 								</div>
 							</div>
 
@@ -760,7 +1099,15 @@ const CountdownTimerSettingsModal = ({
 										<button
 											type="button"
 											className={styles.resetAttemptsBtn}
-											onClick={() => setConfirmResetTimers(true)}
+											onClick={() => {
+												if (hasUnsavedChanges) {
+													toast.error(
+														'Сначала сохраните текущие настройки виджета'
+													)
+													return
+												}
+												setConfirmResetTimers(true)
+											}}
 											disabled={isDangerActionPending}
 										>
 											Сбросить персональные таймеры для всех посетителей
@@ -778,7 +1125,7 @@ const CountdownTimerSettingsModal = ({
 									Сценарий отсчёта
 								</h3>
 								<div className={styles.field}>
-									<p className={styles.label}>Режим таймера:</p>
+									<p className={styles.label}>Режим таймера</p>
 									<select
 										className={styles.input}
 										value={cfg.timerMode}
@@ -804,38 +1151,54 @@ const CountdownTimerSettingsModal = ({
 								</div>
 								{cfg.timerMode === 'FIXED_DATE' ? (
 									<div className={styles.field}>
-										<p className={styles.label}>Дата окончания:</p>
+										<p className={styles.label}>Дата окончания</p>
 										<input
-											className={styles.input}
+											ref={setFieldRef('deadlineAt')}
+											className={`${styles.input} ${
+												fieldErrors.deadlineAt ? styles.inputError : ''
+											}`}
 											type="datetime-local"
 											value={toDateTimeLocal(cfg.deadlineAt)}
-											onChange={e =>
+											onChange={e => {
+												clearFieldError('deadlineAt')
 												set({
 													deadlineAt: fromDateTimeLocal(e.target.value)
 												})
-											}
+											}}
+											aria-invalid={Boolean(fieldErrors.deadlineAt)}
 										/>
-										<p className={styles.hint}>
-											Подходит для акции, вебинара или запуска, у которых
-											есть точная дата завершения.
-											<br />
-											Дата указывается по вашему текущему часовому поясу и
-											становится единым моментом окончания для всех
-											посетителей.
-										</p>
+										{fieldErrors.deadlineAt ? (
+											<p className={styles.fieldError}>
+												{fieldErrors.deadlineAt}
+											</p>
+										) : (
+											<p className={styles.hint}>
+												Дата задаётся в вашем часовом поясе и должна быть
+												позже текущего времени.
+											</p>
+										)}
 									</div>
 								) : (
 									<div className={styles.field}>
-										<p className={styles.label}>
-											Длительность таймера, минут:
-										</p>
+										<div className={styles.rangeHeader}>
+											<p className={styles.label}>
+												Длительность персонального таймера
+											</p>
+											<span className={styles.rangeValue}>
+												{formatDuration(cfg.evergreenDurationMinutes)}
+											</span>
+										</div>
 										<input
-											className={styles.input}
-											type="number"
+											ref={setFieldRef('evergreenDurationMinutes')}
+											className={styles.rangeInput}
+											type="range"
+											aria-label="Длительность персонального таймера"
 											min={1}
 											max={10080}
+											step={1}
 											value={cfg.evergreenDurationMinutes}
-											onChange={e =>
+											onChange={e => {
+												clearFieldError('evergreenDurationMinutes')
 												set({
 													evergreenDurationMinutes: clampNumber(
 														Number(e.target.value),
@@ -844,25 +1207,44 @@ const CountdownTimerSettingsModal = ({
 														15
 													)
 												})
-											}
+											}}
+											aria-invalid={Boolean(
+												fieldErrors.evergreenDurationMinutes
+											)}
 										/>
-										<p className={styles.hint}>
-											Подходит для персонального предложения: отсчёт
-											начинается заново для каждого посетителя.
-										</p>
+										{fieldErrors.evergreenDurationMinutes ? (
+											<p className={styles.fieldError}>
+												{fieldErrors.evergreenDurationMinutes}
+											</p>
+										) : (
+											<p className={styles.hint}>
+												От 1 минуты до 7 дней; отсчёт начинается отдельно
+												для каждого посетителя.
+											</p>
+										)}
 									</div>
 								)}
+							</div>
+
+							<div className={styles.settingsGroup}>
+								<h3 className={styles.settingsGroupTitle}>
+									После окончания
+								</h3>
 								<div className={styles.field}>
-									<p className={styles.label}>После окончания:</p>
+									<p className={styles.label}>Поведение виджета</p>
 									<select
 										className={styles.input}
 										value={cfg.expiredBehavior}
-										onChange={e =>
+										onChange={e => {
+											const expiredBehavior = e.target
+												.value as CountdownTimerConfig['expiredBehavior']
+											if (expiredBehavior === 'hide') {
+												clearFieldError('expiredTitle')
+											}
 											set({
-												expiredBehavior: e.target
-													.value as CountdownTimerConfig['expiredBehavior']
+												expiredBehavior
 											})
-										}
+										}}
 									>
 										<option value="showExpired">
 											Показать сообщение о завершении
@@ -873,24 +1255,50 @@ const CountdownTimerSettingsModal = ({
 										</option>
 									</select>
 								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Заголовок завершения:</p>
-									<input
-										className={styles.input}
-										value={cfg.expiredTitle}
-										onChange={e => set({ expiredTitle: e.target.value })}
-									/>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Текст завершения:</p>
-									<textarea
-										className={styles.textarea}
-										value={cfg.expiredSubtitle}
-										onChange={e =>
-											set({ expiredSubtitle: e.target.value })
-										}
-									/>
-								</div>
+								{cfg.expiredBehavior !== 'hide' && (
+									<>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Заголовок после окончания
+											</p>
+											<input
+												ref={setFieldRef('expiredTitle')}
+												className={`${styles.input} ${
+													fieldErrors.expiredTitle ? styles.inputError : ''
+												}`}
+												value={cfg.expiredTitle}
+												onChange={e => {
+													clearFieldError('expiredTitle')
+													set({ expiredTitle: e.target.value })
+												}}
+												aria-invalid={Boolean(fieldErrors.expiredTitle)}
+											/>
+											{fieldErrors.expiredTitle && (
+												<p className={styles.fieldError}>
+													{fieldErrors.expiredTitle}
+												</p>
+											)}
+										</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Описание после окончания
+											</p>
+											<textarea
+												className={styles.textarea}
+												value={cfg.expiredSubtitle}
+												onChange={e =>
+													set({ expiredSubtitle: e.target.value })
+												}
+											/>
+										</div>
+										{cfg.expiredBehavior === 'disableForm' && (
+											<p className={styles.hint}>
+												После завершения посетитель увидит этот текст и
+												кнопку перехода из вкладки «Форма».
+											</p>
+										)}
+									</>
+								)}
 							</div>
 						</div>
 					)}
@@ -898,25 +1306,29 @@ const CountdownTimerSettingsModal = ({
 					{tab === 'form' && (
 						<div className={styles.fields}>
 							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>Тексты</h3>
+								<h3 className={styles.settingsGroupTitle}>Предложение</h3>
 								<div className={styles.field}>
-									<p className={styles.label}>Текст у кнопки:</p>
+									<p className={styles.label}>Заголовок предложения</p>
 									<input
-										className={styles.input}
-										value={cfg.bubbleText}
-										onChange={e => set({ bubbleText: e.target.value })}
-									/>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Заголовок:</p>
-									<input
-										className={styles.input}
+										ref={setFieldRef('title')}
+										className={`${styles.input} ${
+											fieldErrors.title ? styles.inputError : ''
+										}`}
 										value={cfg.title}
-										onChange={e => set({ title: e.target.value })}
+										onChange={e => {
+											clearFieldError('title')
+											set({ title: e.target.value })
+										}}
+										aria-invalid={Boolean(fieldErrors.title)}
 									/>
+									{fieldErrors.title && (
+										<p className={styles.fieldError}>
+											{fieldErrors.title}
+										</p>
+									)}
 								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>Описание:</p>
+									<p className={styles.label}>Описание предложения</p>
 									<textarea
 										className={styles.textarea}
 										value={cfg.subtitle}
@@ -924,131 +1336,260 @@ const CountdownTimerSettingsModal = ({
 									/>
 								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>
-										Ссылка на товар или акцию:
-									</p>
+									<p className={styles.label}>Ссылка кнопки перехода</p>
 									<input
-										className={styles.input}
+										ref={setFieldRef('actionButtonUrl')}
+										className={`${styles.input} ${
+											fieldErrors.actionButtonUrl ? styles.inputError : ''
+										}`}
 										value={cfg.actionButtonUrl}
-										onChange={e =>
+										onChange={e => {
+											clearFieldError('actionButtonUrl')
 											set({ actionButtonUrl: e.target.value })
-										}
+										}}
 										placeholder="https://example.ru/product"
+										aria-invalid={Boolean(fieldErrors.actionButtonUrl)}
 									/>
+									{fieldErrors.actionButtonUrl ? (
+										<p className={styles.fieldError}>
+											{fieldErrors.actionButtonUrl}
+										</p>
+									) : (
+										<p className={styles.hint}>
+											Необязательно. Поддерживаются обычные ссылки, tel: и
+											mailto:.
+										</p>
+									)}
 								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>Текст кнопки ссылки:</p>
+									<p className={styles.label}>Текст кнопки перехода</p>
 									<input
-										className={styles.input}
+										ref={setFieldRef('actionButtonText')}
+										className={`${styles.input} ${
+											fieldErrors.actionButtonText ? styles.inputError : ''
+										}`}
 										value={cfg.actionButtonText}
-										onChange={e =>
+										onChange={e => {
+											clearFieldError('actionButtonText')
 											set({ actionButtonText: e.target.value })
-										}
+										}}
+										aria-invalid={Boolean(fieldErrors.actionButtonText)}
 									/>
+									{fieldErrors.actionButtonText && (
+										<p className={styles.fieldError}>
+											{fieldErrors.actionButtonText}
+										</p>
+									)}
+								</div>
+								<div className={styles.field}>
+									<p className={styles.label}>Цвет кнопок внутри окна</p>
+									<div className={styles.colorRow}>
+										<input
+											type="color"
+											className={styles.colorPicker}
+											value={cfg.buttonColor || cfg.color || '#4705fb'}
+											onChange={e => set({ buttonColor: e.target.value })}
+										/>
+										<input
+											className={styles.input}
+											value={cfg.buttonColor || ''}
+											onChange={e => set({ buttonColor: e.target.value })}
+											placeholder="Как основной цвет"
+											maxLength={7}
+										/>
+										{cfg.buttonColor && (
+											<button
+												type="button"
+												className={styles.clearColorBtn}
+												onClick={() => set({ buttonColor: '' })}
+												title="Использовать основной цвет"
+											>
+												✕
+											</button>
+										)}
+									</div>
+									<p className={styles.hint}>
+										Применяется к отправке формы и кнопке перехода.
+									</p>
 								</div>
 							</div>
 
 							<div className={styles.settingsGroup}>
 								<h3 className={styles.settingsGroupTitle}>
-									Сбор контактов
+									Сбор данных клиента
 								</h3>
 								<div className={styles.field}>
-									<p className={styles.label}>Что запрашивать:</p>
+									<p className={styles.label}>Сбор данных клиента:</p>
 									<select
 										className={styles.input}
 										value={cfg.dataType}
-										onChange={e =>
+										onChange={e => {
+											const dataType = e.target
+												.value as CountdownTimerConfig['dataType']
+											if (dataType === 'NONE') {
+												clearFieldError(
+													'contactTitle',
+													'submitButtonText',
+													'submissionCooldownDays',
+													'successTitle',
+													'privacyUrl'
+												)
+											}
 											set({
-												dataType: e.target
-													.value as CountdownTimerConfig['dataType']
+												dataType
 											})
-										}
+										}}
 									>
-										<option value="NONE">Не собирать контакты</option>
-										<option value="PHONE">Телефон</option>
+										<option value="PHONE">Номер телефона</option>
 										<option value="EMAIL">Email</option>
 										<option value="PHONE_AND_EMAIL">
-											Телефон и email
+											Номер телефона и Email
 										</option>
+										<option value="NONE">Ничего не собираем</option>
 									</select>
 								</div>
 								{cfg.dataType !== 'NONE' && (
 									<>
 										<div className={styles.field}>
-											<p className={styles.label}>Заголовок формы:</p>
+											<p className={styles.label}>Заголовок формы</p>
 											<input
-												className={styles.input}
+												ref={setFieldRef('contactTitle')}
+												className={`${styles.input} ${
+													fieldErrors.contactTitle ? styles.inputError : ''
+												}`}
 												value={cfg.contactTitle}
-												onChange={e =>
+												onChange={e => {
+													clearFieldError('contactTitle')
 													set({ contactTitle: e.target.value })
-												}
+												}}
+												aria-invalid={Boolean(fieldErrors.contactTitle)}
 											/>
+											{fieldErrors.contactTitle && (
+												<p className={styles.fieldError}>
+													{fieldErrors.contactTitle}
+												</p>
+											)}
 										</div>
 										<div className={styles.field}>
-											<p className={styles.label}>
-												Текст кнопки отправки:
-											</p>
+											<p className={styles.label}>Текст кнопки отправки</p>
 											<input
-												className={styles.input}
+												ref={setFieldRef('submitButtonText')}
+												className={`${styles.input} ${
+													fieldErrors.submitButtonText
+														? styles.inputError
+														: ''
+												}`}
 												value={cfg.submitButtonText}
-												onChange={e =>
+												onChange={e => {
+													clearFieldError('submitButtonText')
 													set({ submitButtonText: e.target.value })
-												}
+												}}
+												aria-invalid={Boolean(
+													fieldErrors.submitButtonText
+												)}
 											/>
+											{fieldErrors.submitButtonText && (
+												<p className={styles.fieldError}>
+													{fieldErrors.submitButtonText}
+												</p>
+											)}
 										</div>
-										<div className={styles.checkRow}>
-											<input
-												id="timer-filter-duplicates"
-												type="checkbox"
-												checked={cfg.filterDuplicates}
-												onChange={e =>
-													set({ filterDuplicates: e.target.checked })
-												}
-											/>
-											<label
-												htmlFor="timer-filter-duplicates"
-												className={styles.checkLabel}
-											>
-												Не принимать повторные заявки
-											</label>
+										<div className={styles.field}>
+											<div className={styles.checkRow}>
+												<input
+													id="timer-filter-duplicates"
+													type="checkbox"
+													checked={cfg.filterDuplicates}
+													onChange={e =>
+														set({ filterDuplicates: e.target.checked })
+													}
+												/>
+												<label
+													htmlFor="timer-filter-duplicates"
+													className={styles.checkLabel}
+												>
+													Не принимать повторные заявки
+												</label>
+											</div>
+											<p className={styles.hint}>
+												Ограничивает повторные заявки одного посетителя на
+												выбранный срок.
+											</p>
 										</div>
 										{cfg.filterDuplicates && (
 											<div className={styles.field}>
-												<p className={styles.label}>
-													Повторная заявка — раз в N дней:
-												</p>
+												<div className={styles.rangeHeader}>
+													<p className={styles.label}>
+														Период блокировки повторной заявки
+													</p>
+													<span className={styles.rangeValue}>
+														{cfg.submissionCooldownDays === 0
+															? 'До сброса'
+															: `${cfg.submissionCooldownDays} дн.`}
+													</span>
+												</div>
 												<input
-													className={styles.input}
-													type="number"
+													ref={setFieldRef('submissionCooldownDays')}
+													className={styles.rangeInput}
+													type="range"
+													aria-label="Период блокировки повторной заявки"
 													min={0}
 													max={365}
+													step={1}
 													value={cfg.submissionCooldownDays}
-													onChange={e =>
+													onChange={e => {
+														clearFieldError('submissionCooldownDays')
 														set({
 															submissionCooldownDays: clampNumber(
-																parseInt(e.target.value) || 0,
+																Number(e.target.value),
 																0,
 																365,
 																0
 															)
 														})
-													}
+													}}
+													aria-invalid={Boolean(
+														fieldErrors.submissionCooldownDays
+													)}
 												/>
-												<p className={styles.hint}>
-													0 — повторная заявка запрещена до сброса
-													персональных таймеров.
-												</p>
+												{fieldErrors.submissionCooldownDays ? (
+													<p className={styles.fieldError}>
+														{fieldErrors.submissionCooldownDays}
+													</p>
+												) : (
+													<p className={styles.hint}>
+														0 — повторная заявка запрещена до сброса
+														персональных таймеров.
+													</p>
+												)}
 											</div>
 										)}
 										<div className={styles.field}>
 											<p className={styles.label}>
-												Ссылка на согласие обработки данных:
+												Ссылка на согласие обработки данных
 											</p>
 											<input
-												className={styles.input}
+												ref={setFieldRef('privacyUrl')}
+												className={`${styles.input} ${
+													fieldErrors.privacyUrl ? styles.inputError : ''
+												}`}
 												value={cfg.privacyUrl}
-												onChange={e => set({ privacyUrl: e.target.value })}
+												onChange={e => {
+													clearFieldError('privacyUrl')
+													set({ privacyUrl: e.target.value })
+												}}
+												placeholder="https://example.ru/privacy"
+												aria-invalid={Boolean(fieldErrors.privacyUrl)}
 											/>
+											{fieldErrors.privacyUrl ? (
+												<p className={styles.fieldError}>
+													{fieldErrors.privacyUrl}
+												</p>
+											) : (
+												<p className={styles.hint}>
+													Полная ссылка с протоколом http:// или https://.
+												</p>
+											)}
 										</div>
 									</>
 								)}
@@ -1060,15 +1601,27 @@ const CountdownTimerSettingsModal = ({
 										После отправки
 									</h3>
 									<div className={styles.field}>
-										<p className={styles.label}>Заголовок:</p>
+										<p className={styles.label}>Заголовок успеха</p>
 										<input
-											className={styles.input}
+											ref={setFieldRef('successTitle')}
+											className={`${styles.input} ${
+												fieldErrors.successTitle ? styles.inputError : ''
+											}`}
 											value={cfg.successTitle}
-											onChange={e => set({ successTitle: e.target.value })}
+											onChange={e => {
+												clearFieldError('successTitle')
+												set({ successTitle: e.target.value })
+											}}
+											aria-invalid={Boolean(fieldErrors.successTitle)}
 										/>
+										{fieldErrors.successTitle && (
+											<p className={styles.fieldError}>
+												{fieldErrors.successTitle}
+											</p>
+										)}
 									</div>
 									<div className={styles.field}>
-										<p className={styles.label}>Подзаголовок:</p>
+										<p className={styles.label}>Описание успеха</p>
 										<textarea
 											className={styles.textarea}
 											value={cfg.successSubtitle}
@@ -1087,42 +1640,165 @@ const CountdownTimerSettingsModal = ({
 							<div className={styles.settingsGroup}>
 								<h3 className={styles.settingsGroupTitle}>Уведомления</h3>
 								<div className={styles.field}>
-									<p className={styles.label}>Email для заявок:</p>
+									<p className={styles.label}>Отправка заявок на Email</p>
 									<input
+										type="email"
 										className={styles.input}
 										value={cfg.integrations.email || ''}
 										onChange={e => setIntegration('email', e.target.value)}
+										placeholder="you@example.com"
 									/>
+									<p className={styles.hint}>
+										Уведомление о каждой новой заявке придёт на этот email.
+									</p>
 								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>Webhook:</p>
-									<input
-										className={styles.input}
-										value={cfg.integrations.webhookUrl || ''}
-										onChange={e =>
-											setIntegration('webhookUrl', e.target.value)
-										}
-									/>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Telegram chat ID:</p>
+									<p className={styles.label}>
+										Отправка заявок в Telegram
+									</p>
 									<input
 										className={styles.input}
 										value={cfg.integrations.telegramChatId || ''}
 										onChange={e =>
 											setIntegration('telegramChatId', e.target.value)
 										}
+										placeholder="-100xxxxxxxxxx"
 									/>
+									<p className={styles.hint}>
+										Напишите боту <b>@winwidget_info_bot</b> команду
+										/start, затем укажите Telegram ID. Узнать его можно
+										через <b>@getmyid_bot</b>.
+									</p>
+								</div>
+							</div>
+
+							<div className={styles.settingsGroup}>
+								<h3 className={styles.settingsGroupTitle}>
+									Webhooks и CRM
+								</h3>
+								<div className={styles.field}>
+									<p className={styles.label}>Внешний URL (Webhook)</p>
+									<input
+										className={styles.input}
+										type="url"
+										value={cfg.integrations.webhookUrl || ''}
+										onChange={e =>
+											setIntegration('webhookUrl', e.target.value)
+										}
+										placeholder="https://example.com/webhook"
+									/>
+									<p className={styles.hint}>
+										На указанный адрес отправляется POST-запрос с данными
+										новой заявки.
+									</p>
 								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>Яндекс.Метрика ID:</p>
+									<p className={styles.label}>
+										Отправка заявок в Битрикс24
+									</p>
+									<input
+										className={styles.input}
+										type="url"
+										value={cfg.integrations.bitrix24WebhookUrl || ''}
+										onChange={e =>
+											setIntegration('bitrix24WebhookUrl', e.target.value)
+										}
+										placeholder="https://b24-xxxxx.bitrix24.ru/rest/1/key/"
+									/>
+									<p className={styles.hint}>
+										Новые заявки будут создаваться как лиды в Битрикс24.
+									</p>
+								</div>
+								<div className={styles.field}>
+									<p className={styles.label}>amoCRM — домен аккаунта</p>
+									<input
+										className={styles.input}
+										value={cfg.integrations.amoCrmDomain || ''}
+										onChange={e =>
+											setIntegration('amoCrmDomain', e.target.value)
+										}
+										placeholder="example.amocrm.ru"
+									/>
+									<p className={styles.hint}>
+										Домен вашего аккаунта amoCRM без протокола.
+									</p>
+								</div>
+								<div className={styles.field}>
+									<p className={styles.label}>amoCRM — токен доступа</p>
+									<input
+										type="password"
+										className={styles.input}
+										value={cfg.integrations.amoCrmToken || ''}
+										onChange={e =>
+											setIntegration('amoCrmToken', e.target.value)
+										}
+										placeholder="Долгосрочный токен из настроек API"
+									/>
+									<p className={styles.hint}>
+										Используйте долгосрочный токен из настроек интеграции
+										amoCRM.
+									</p>
+								</div>
+							</div>
+
+							<div className={styles.settingsGroup}>
+								<h3 className={styles.settingsGroupTitle}>Аналитика</h3>
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Яндекс Метрика — ID счётчика
+									</p>
 									<input
 										className={styles.input}
 										value={cfg.integrations.yandexMetrikaId || ''}
 										onChange={e =>
 											setIntegration('yandexMetrikaId', e.target.value)
 										}
+										placeholder="12345678"
 									/>
+									<p className={styles.hint}>
+										При открытии таймера отправляется цель <b>wt_open</b>,
+										при отправке заявки — <b>wt_send</b>. Счётчик должен
+										быть установлен на странице сайта.
+									</p>
+								</div>
+								<div className={styles.field}>
+									<p className={styles.label}>
+										Ретаргетинг ВКонтакте — ID пикселя
+									</p>
+									<input
+										className={styles.input}
+										value={cfg.integrations.vkPixelId || ''}
+										onChange={e =>
+											setIntegration('vkPixelId', e.target.value)
+										}
+										placeholder="VK-RTRG-000000-xxxxx"
+									/>
+									<p className={styles.hint}>
+										Пиксель VK должен быть установлен на странице сайта.
+										События: <b>wt_open</b> и <b>wt_send</b>.
+									</p>
+								</div>
+								<div className={styles.field}>
+									<div className={styles.checkRow}>
+										<input
+											id="timer-roistat"
+											type="checkbox"
+											checked={cfg.integrations.roistatEnabled === true}
+											onChange={e =>
+												setIntegration('roistatEnabled', e.target.checked)
+											}
+										/>
+										<label
+											htmlFor="timer-roistat"
+											className={styles.checkLabel}
+										>
+											Включить отправку целей в Roistat
+										</label>
+									</div>
+									<p className={styles.hint}>
+										Код Roistat должен быть установлен на сайте. События:
+										<b> wt_open</b> и <b> wt_send</b>.
+									</p>
 								</div>
 							</div>
 						</div>
@@ -1131,13 +1807,15 @@ const CountdownTimerSettingsModal = ({
 					{tab === 'code' && (
 						<div className={styles.fields}>
 							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>Код виджета</h3>
+								<h3 className={styles.settingsGroupTitle}>
+									Установка на сайт
+								</h3>
 								<div className={styles.field}>
 									<label
 										className={styles.label}
 										htmlFor={`${titleId}-install-domain`}
 									>
-										Домен установки виджета
+										Домен установки виджета:
 									</label>
 									<input
 										id={`${titleId}-install-domain`}
@@ -1164,10 +1842,9 @@ const CountdownTimerSettingsModal = ({
 									<button
 										type="button"
 										className={styles.copyBtn}
-										onClick={() => {
-											navigator.clipboard.writeText(embedCode)
-											toast.success('Код скопирован')
-										}}
+										onClick={() =>
+											copyToClipboard(embedCode, 'Код скопирован', true)
+										}
 									>
 										Скопировать код
 									</button>
@@ -1193,6 +1870,19 @@ const CountdownTimerSettingsModal = ({
 											Открыть
 										</a>
 									</div>
+									<button
+										type="button"
+										className={styles.copyBtn}
+										onClick={() =>
+											copyToClipboard(previewUrl, 'Ссылка скопирована')
+										}
+									>
+										Скопировать ссылку
+									</button>
+									<p className={styles.hint}>
+										Подходит для рассылок, рекламы и мессенджеров без
+										установки кода на сайт.
+									</p>
 									<DirectLinkQr
 										value={previewUrl}
 										downloadName={`winwidget-timer-${timer.publicKey}.png`}
@@ -1210,27 +1900,30 @@ const CountdownTimerSettingsModal = ({
 								</h3>
 								<p className={styles.infoText}>
 									Таймер показывает ограниченное по времени предложение:
-									фиксированную дату окончания или персональный
-									evergreen-отсчёт для каждого посетителя. После заявки
-									данные сохраняются в кабинете и отправляются в
+									фиксированную дату окончания или персональный отсчёт для
+									каждого посетителя. Если включён сбор контактов, заявки
+									сохраняются в кабинете и отправляются в подключённые
 									интеграции.
 								</p>
 								<ul className={styles.infoList}>
 									<li>
-										В «Главных» настройте внешний вид, кнопку открытия и
-										текст предложения.
+										В «Главных» настройте внешний вид и кнопку открытия.
 									</li>
 									<li>
 										В «Таймере» выберите режим, длительность и поведение
 										после окончания.
 									</li>
 									<li>
-										В «Форме» включите сбор контактов или оставьте только
-										кнопку перехода.
+										В «Форме» задайте предложение, кнопку перехода и при
+										необходимости включите сбор контактов.
 									</li>
 									<li>
-										В «Коде» скопируйте скрипт на сайт или откройте прямую
-										ссылку.
+										В «Интеграциях» подключите уведомления, CRM, webhook и
+										аналитику.
+									</li>
+									<li>
+										В «Установке» скопируйте скрипт на сайт или откройте
+										прямую ссылку.
 									</li>
 								</ul>
 							</div>
@@ -1274,10 +1967,10 @@ const CountdownTimerSettingsModal = ({
 						<button
 							type="button"
 							className={styles.cancelBtn}
-							onClick={onClose}
+							onClick={requestClose}
 							disabled={mutation.isPending}
 						>
-							Отмена
+							{isPagePresentation ? 'К виджетам' : 'Отмена'}
 						</button>
 						<button
 							type="button"
@@ -1289,6 +1982,7 @@ const CountdownTimerSettingsModal = ({
 						</button>
 					</div>
 				</div>
+				{closeGuardDialog}
 			</div>
 		</div>
 	)

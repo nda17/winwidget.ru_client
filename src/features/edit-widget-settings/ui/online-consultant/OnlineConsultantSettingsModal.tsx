@@ -12,15 +12,20 @@ import { ChangeEvent, useId, useState } from 'react'
 import toast from 'react-hot-toast'
 import DirectLinkQr from '../shared/DirectLinkQr'
 import styles from '../shared/WidgetSettingsModal.module.scss'
+import useWidgetSettingsCloseGuard from '../shared/useWidgetSettingsCloseGuard'
 import WidgetLivePreview from '../shared/WidgetLivePreview'
-import type { WidgetSettingsPersistence } from '../shared/WidgetSettingsPersistence'
+import type {
+	WidgetSettingsPersistence,
+	WidgetSettingsPresentationProps
+} from '../shared/WidgetSettingsPersistence'
+import WidgetSettingsPreviewPortal from '../shared/WidgetSettingsPreviewPortal'
 
 type Tab = 'main' | 'actions' | 'form' | 'integrations' | 'code' | 'info'
 const BUTTON_IMAGE_MAX_SIZE_BYTES = 200 * 1024
 const MIN_QUICK_ACTIONS = 2
 const MAX_QUICK_ACTIONS = 10
 
-interface Props {
+interface Props extends WidgetSettingsPresentationProps {
 	onlineConsultant: OnlineConsultant
 	canUseCustomButtonImage: boolean
 	onClose: () => void
@@ -31,12 +36,18 @@ interface Props {
 	>
 }
 
+type ValidationIssue = {
+	tab: Tab
+	fieldId: string
+	message: string
+}
+
 const TABS: { id: Tab; label: string }[] = [
 	{ id: 'main', label: 'Главные' },
 	{ id: 'actions', label: 'Вопросы' },
 	{ id: 'form', label: 'Форма' },
 	{ id: 'integrations', label: 'Интеграции' },
-	{ id: 'code', label: 'Код' },
+	{ id: 'code', label: 'Установка' },
 	{ id: 'info', label: 'Инфо' }
 ]
 
@@ -77,13 +88,6 @@ const getDefaultActions = (): OnlineConsultantQuickAction[] => [
 
 const createActionId = () =>
 	`action-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
-
-const toOptionalNonNegativeInteger = (value: string) => {
-	if (value.trim() === '') return null
-	const parsed = parseInt(value)
-	if (Number.isNaN(parsed)) return null
-	return Math.max(0, parsed)
-}
 
 const createQuickAction = (
 	index: number
@@ -183,6 +187,15 @@ const mergeConfig = (
 	}
 }
 
+const isHttpUrl = (value: string) => {
+	try {
+		const url = new URL(value)
+		return url.protocol === 'http:' || url.protocol === 'https:'
+	} catch {
+		return false
+	}
+}
+
 const notifyOnlineConsultantUpdated = (publicKey: string) => {
 	if (typeof window === 'undefined') return
 	window.dispatchEvent(
@@ -197,7 +210,9 @@ const OnlineConsultantSettingsModal = ({
 	canUseCustomButtonImage,
 	onClose,
 	onSaved,
-	persistence
+	persistence,
+	presentation = 'modal',
+	previewPortalTarget
 }: Props) => {
 	const titleId = useId()
 	const buttonImageInputId = useId()
@@ -210,6 +225,8 @@ const OnlineConsultantSettingsModal = ({
 		onlineConsultant.installDomain ?? ''
 	)
 	const [confirmResetDefaults, setConfirmResetDefaults] = useState(false)
+	const [validationIssue, setValidationIssue] =
+		useState<ValidationIssue | null>(null)
 	const [savedSnapshot, setSavedSnapshot] = useState(
 		JSON.stringify({
 			name: onlineConsultant.name,
@@ -250,6 +267,7 @@ const OnlineConsultantSettingsModal = ({
 			setName(updated.name)
 			setInstallDomain(updated.installDomain ?? '')
 			setCfg(nextConfig)
+			setValidationIssue(null)
 			setSavedSnapshot(
 				JSON.stringify({
 					name: updated.name,
@@ -284,6 +302,7 @@ const OnlineConsultantSettingsModal = ({
 			setName(updated.name)
 			setInstallDomain(updated.installDomain ?? '')
 			setCfg(nextConfig)
+			setValidationIssue(null)
 			setSavedSnapshot(
 				JSON.stringify({
 					name: updated.name,
@@ -305,6 +324,12 @@ const OnlineConsultantSettingsModal = ({
 
 	const isDangerActionPending =
 		mutation.isPending || buttonImageMutation.isPending
+	const { requestClose, closeGuardDialog } = useWidgetSettingsCloseGuard({
+		hasUnsavedChanges,
+		isBusy: isDangerActionPending,
+		onClose
+	})
+	const isPagePresentation = presentation === 'page'
 	const defaultButtonImageUrl = `${(
 		(process.env.NEXT_PUBLIC_MODE === 'production'
 			? process.env.NEXT_PUBLIC_PRODUCTION_HOST
@@ -316,13 +341,16 @@ const OnlineConsultantSettingsModal = ({
 		hasUnsavedChanges ||
 		buttonImageMutation.isPending
 
-	const set = (patch: Partial<OnlineConsultantConfig>) =>
+	const set = (patch: Partial<OnlineConsultantConfig>) => {
+		setValidationIssue(null)
 		setCfg(prev => ({ ...prev, ...patch }))
+	}
 
 	const setIntegration = (
 		key: keyof OnlineConsultantConfig['integrations'],
 		value: string | boolean
-	) =>
+	) => {
+		setValidationIssue(null)
 		setCfg(prev => ({
 			...prev,
 			integrations: {
@@ -330,19 +358,51 @@ const OnlineConsultantSettingsModal = ({
 				[key]: value
 			}
 		}))
+	}
 
 	const setAction = (
 		index: number,
 		patch: Partial<OnlineConsultantQuickAction>
-	) =>
+	) => {
+		setValidationIssue(null)
 		setCfg(prev => ({
 			...prev,
 			quickActions: prev.quickActions.map((action, actionIndex) =>
 				actionIndex === index ? { ...action, ...patch } : action
 			)
 		}))
+	}
+
+	const reportValidationIssue = (issue: ValidationIssue) => {
+		setValidationIssue(issue)
+		setTab(issue.tab)
+		window.requestAnimationFrame(() => {
+			const field = document.getElementById(issue.fieldId)
+			field?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+			field?.focus({ preventScroll: true })
+		})
+		toast.error(issue.message)
+	}
+
+	const inputClassName = (fieldId: string) =>
+		`${styles.input} ${
+			validationIssue?.fieldId === fieldId ? styles.inputError : ''
+		}`
+
+	const textareaClassName = (fieldId: string) =>
+		`${styles.textarea} ${
+			validationIssue?.fieldId === fieldId ? styles.inputError : ''
+		}`
+
+	const fieldError = (fieldId: string) =>
+		validationIssue?.fieldId === fieldId ? (
+			<p className={styles.fieldError} role="alert">
+				{validationIssue.message}
+			</p>
+		) : null
 
 	const addAction = () => {
+		setValidationIssue(null)
 		setCfg(prev => {
 			if (prev.quickActions.length >= MAX_QUICK_ACTIONS) return prev
 
@@ -357,6 +417,7 @@ const OnlineConsultantSettingsModal = ({
 	}
 
 	const removeAction = (index: number) => {
+		setValidationIssue(null)
 		setCfg(prev => {
 			if (prev.quickActions.length <= MIN_QUICK_ACTIONS) return prev
 
@@ -382,11 +443,26 @@ const OnlineConsultantSettingsModal = ({
 	).replace(/\/$/, '')
 	const embedCode = `<script src="${apiUrl}/widgets/online-consultant.js" data-key="${onlineConsultant.publicKey}" async></script>`
 	const previewUrl = `${publicSiteUrl}/page-online-consultant/${onlineConsultant.publicKey}`
+	const savedInstallDomain = (
+		JSON.parse(savedSnapshot) as { installDomain: string }
+	).installDomain
+	const hasUnsavedInstallDomain =
+		installDomain.trim() !== savedInstallDomain.trim()
 
-	const handleCopy = async (text: string) => {
+	const handleCopy = async (
+		text: string,
+		successMessage: string,
+		requireSavedDomain = false
+	) => {
+		if (requireSavedDomain && hasUnsavedInstallDomain) {
+			setTab('code')
+			toast.error('Сначала сохраните домен установки')
+			return
+		}
+
 		try {
 			await navigator.clipboard.writeText(text)
-			toast.success('Скопировано')
+			toast.success(successMessage)
 		} catch {
 			toast.error('Не удалось скопировать')
 		}
@@ -414,6 +490,11 @@ const OnlineConsultantSettingsModal = ({
 	}
 
 	const resetButtonImage = () => {
+		if (hasUnsavedChanges) {
+			toast.error('Сначала сохраните текущие настройки виджета')
+			return
+		}
+
 		const nextConfig = { ...cfg, buttonImageUrl: '' }
 		setCfg(nextConfig)
 		mutation.mutate({ name, installDomain, config: nextConfig })
@@ -427,67 +508,175 @@ const OnlineConsultantSettingsModal = ({
 	}
 
 	const save = () => {
-		const actionWithUrlOnlyIndex = cfg.quickActions.findIndex(
-			action => action.buttonUrl.trim() && !action.buttonText.trim()
-		)
-
-		if (actionWithUrlOnlyIndex !== -1) {
-			toast.error(
-				`Вопрос ${actionWithUrlOnlyIndex + 1}: заполните текст кнопки перехода или уберите ссылку`
-			)
+		if (!name.trim()) {
+			reportValidationIssue({
+				tab: 'main',
+				fieldId: `${titleId}-name`,
+				message: 'Укажите название виджета'
+			})
 			return
 		}
 
-		mutation.mutate({
-			name,
-			installDomain,
-			config: {
-				...cfg,
-				buttonBottom: Math.min(
-					50,
-					Math.max(1, Number(cfg.buttonBottom) || 3)
-				),
-				buttonOffset: Math.min(
-					50,
-					Math.max(1, Number(cfg.buttonOffset) || 3)
-				),
-				buttonSize: Math.min(
-					100,
-					Math.max(40, Number(cfg.buttonSize) || 60)
-				),
-				bubbleEnabled: false,
-				bubbleText: '',
-				quickActions: normalizeQuickActions(cfg.quickActions)
+		for (let index = 0; index < cfg.quickActions.length; index += 1) {
+			const action = cfg.quickActions[index]
+			if (!action.label.trim()) {
+				reportValidationIssue({
+					tab: 'actions',
+					fieldId: `${titleId}-action-${action.id}-label`,
+					message: `Вопрос ${index + 1}: укажите текст вопроса`
+				})
+				return
 			}
+			if (!action.answer.trim()) {
+				reportValidationIssue({
+					tab: 'actions',
+					fieldId: `${titleId}-action-${action.id}-answer`,
+					message: `Вопрос ${index + 1}: укажите быстрый ответ`
+				})
+				return
+			}
+
+			const hasButtonText = Boolean(action.buttonText.trim())
+			const hasButtonUrl = Boolean(action.buttonUrl.trim())
+			if (hasButtonText !== hasButtonUrl) {
+				reportValidationIssue({
+					tab: 'actions',
+					fieldId: hasButtonText
+						? `${titleId}-action-${action.id}-url`
+						: `${titleId}-action-${action.id}-button`,
+					message: `Вопрос ${index + 1}: заполните текст и ссылку кнопки вместе`
+				})
+				return
+			}
+			if (hasButtonUrl && !isHttpUrl(action.buttonUrl)) {
+				reportValidationIssue({
+					tab: 'actions',
+					fieldId: `${titleId}-action-${action.id}-url`,
+					message: `Вопрос ${index + 1}: укажите полную ссылку с http:// или https://`
+				})
+				return
+			}
+		}
+
+		if (!cfg.title.trim()) {
+			reportValidationIssue({
+				tab: 'form',
+				fieldId: `${titleId}-form-title`,
+				message: 'Укажите заголовок виджета'
+			})
+			return
+		}
+
+		if (cfg.dataType !== 'NONE') {
+			if (!cfg.contactTitle.trim()) {
+				reportValidationIssue({
+					tab: 'form',
+					fieldId: `${titleId}-contact-title`,
+					message: 'Укажите заголовок формы'
+				})
+				return
+			}
+			if (!cfg.submitButtonText.trim()) {
+				reportValidationIssue({
+					tab: 'form',
+					fieldId: `${titleId}-submit-text`,
+					message: 'Укажите текст кнопки отправки'
+				})
+				return
+			}
+			if (!cfg.privacyUrl.trim() || !isHttpUrl(cfg.privacyUrl)) {
+				reportValidationIssue({
+					tab: 'form',
+					fieldId: `${titleId}-privacy-url`,
+					message:
+						'Укажите полную ссылку на политику с http:// или https://'
+				})
+				return
+			}
+		}
+
+		const sanitizedName = name.trim()
+		const normalizedActions = normalizeQuickActions(cfg.quickActions).map(
+			action => ({
+				...action,
+				label: action.label.trim(),
+				answer: action.answer.trim(),
+				buttonText: action.buttonText.trim(),
+				buttonUrl: action.buttonUrl.trim()
+			})
+		)
+		const sanitizedConfig: OnlineConsultantConfig = {
+			...cfg,
+			buttonBottom: Math.min(
+				50,
+				Math.max(1, Number(cfg.buttonBottom) || 3)
+			),
+			buttonOffset: Math.min(
+				50,
+				Math.max(1, Number(cfg.buttonOffset) || 3)
+			),
+			buttonSize: Math.min(
+				100,
+				Math.max(40, Number(cfg.buttonSize) || 60)
+			),
+			bubbleEnabled: false,
+			bubbleText: '',
+			quickActions: normalizedActions
+		}
+		setName(sanitizedName)
+		setCfg(sanitizedConfig)
+		mutation.mutate({
+			name: sanitizedName,
+			installDomain,
+			config: sanitizedConfig
 		})
 	}
 
 	return (
-		<div className={styles.overlay}>
-			<button
-				type="button"
-				className={styles.backdrop}
-				onClick={onClose}
-				aria-label="Закрыть настройки онлайн-консультанта"
-			/>
-			<div className={styles.modal} role="dialog" aria-modal="true">
+		<div
+			className={isPagePresentation ? styles.pageEditor : styles.overlay}
+		>
+			{!isPagePresentation && (
 				<button
 					type="button"
-					className={styles.closeBtn}
-					onClick={onClose}
-					aria-label="Закрыть"
-				>
-					✕
-				</button>
+					className={styles.backdrop}
+					onClick={requestClose}
+					aria-label="Закрыть настройки онлайн-консультанта"
+				/>
+			)}
+			<div
+				className={isPagePresentation ? styles.pagePanel : styles.modal}
+				role={isPagePresentation ? 'region' : 'dialog'}
+				aria-modal={isPagePresentation ? undefined : true}
+			>
+				{!isPagePresentation && (
+					<button
+						type="button"
+						className={styles.closeBtn}
+						onClick={requestClose}
+						aria-label="Закрыть настройки"
+					>
+						✕
+					</button>
+				)}
 				<h2 id={titleId} className={styles.modalTitle}>
 					Настройки онлайн-консультанта
 				</h2>
 
-				<div className={styles.tabs}>
+				<div
+					className={styles.tabs}
+					role="tablist"
+					aria-label="Разделы настроек онлайн-консультанта"
+				>
 					{TABS.map(item => (
 						<button
 							type="button"
 							key={item.id}
+							id={`${titleId}-tab-${item.id}`}
+							role="tab"
+							aria-selected={tab === item.id}
+							aria-controls={`${titleId}-panel-${item.id}`}
+							tabIndex={tab === item.id ? 0 : -1}
 							className={`${styles.tab} ${
 								tab === item.id ? styles.tabActive : ''
 							}`}
@@ -498,13 +687,27 @@ const OnlineConsultantSettingsModal = ({
 					))}
 				</div>
 
-				<WidgetLivePreview
-					type="onlineConsultant"
-					config={cfg}
-					isHardPlan={canUseCustomButtonImage}
-				/>
+				<WidgetSettingsPreviewPortal
+					inline={!isPagePresentation}
+					target={previewPortalTarget}
+				>
+					<WidgetLivePreview
+						type="onlineConsultant"
+						config={cfg}
+						isHardPlan={canUseCustomButtonImage}
+						autoCollapse={
+							!isPagePresentation &&
+							['integrations', 'code', 'info'].includes(tab)
+						}
+					/>
+				</WidgetSettingsPreviewPortal>
 
-				<div className={styles.tabContent}>
+				<div
+					id={`${titleId}-panel-${tab}`}
+					className={styles.tabContent}
+					role="tabpanel"
+					aria-labelledby={`${titleId}-tab-${tab}`}
+				>
 					{tab === 'main' && (
 						<div className={styles.fields}>
 							<div className={styles.settingsGroup}>
@@ -516,24 +719,21 @@ const OnlineConsultantSettingsModal = ({
 								<div className={styles.field}>
 									<p className={styles.label}>Название виджета:</p>
 									<input
-										className={styles.input}
+										id={`${titleId}-name`}
+										className={inputClassName(`${titleId}-name`)}
 										value={name}
-										onChange={e => setName(e.target.value)}
+										onChange={e => {
+											setValidationIssue(null)
+											setName(e.target.value)
+										}}
+										maxLength={50}
+										aria-invalid={
+											validationIssue?.fieldId === `${titleId}-name`
+										}
 									/>
+									{fieldError(`${titleId}-name`)}
 									<p className={styles.hint}>
 										Отображается только в вашем кабинете.
-									</p>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Домен установки виджета:</p>
-									<input
-										className={styles.input}
-										value={installDomain}
-										placeholder="example.com"
-										onChange={e => setInstallDomain(e.target.value)}
-									/>
-									<p className={styles.domainHint}>
-										Виджет будет работать только на этом домене.
 									</p>
 								</div>
 								<div className={styles.field}>
@@ -581,6 +781,7 @@ const OnlineConsultantSettingsModal = ({
 											value={cfg.bgColor || ''}
 											onChange={e => set({ bgColor: e.target.value })}
 											placeholder="#ffffff"
+											maxLength={7}
 										/>
 										{cfg.bgColor && (
 											<button
@@ -755,24 +956,24 @@ const OnlineConsultantSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>
-										Высота кнопки от низа экрана:{' '}
-										<strong>{cfg.buttonBottom ?? 3}%</strong>
-									</p>
+									<div className={styles.rangeHeader}>
+										<p className={styles.label}>
+											Высота кнопки от низа экрана:
+										</p>
+										<span className={styles.rangeValue}>
+											{cfg.buttonBottom ?? 3}%
+										</span>
+									</div>
 									<input
 										type="range"
+										aria-label="Высота кнопки от низа экрана"
 										min={1}
 										max={50}
 										value={cfg.buttonBottom ?? 3}
 										onChange={e =>
 											set({ buttonBottom: Number(e.target.value) })
 										}
-										className={styles.input}
-										style={{
-											padding: '8px 0',
-											background: 'transparent',
-											border: 'none'
-										}}
+										className={styles.rangeInput}
 									/>
 									<p className={styles.hint}>
 										Отступ от нижнего края экрана в процентах. 3 — почти
@@ -781,24 +982,24 @@ const OnlineConsultantSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>
-										Отступ кнопки от края экрана:{' '}
-										<strong>{cfg.buttonOffset ?? 3}%</strong>
-									</p>
+									<div className={styles.rangeHeader}>
+										<p className={styles.label}>
+											Отступ кнопки от края экрана:
+										</p>
+										<span className={styles.rangeValue}>
+											{cfg.buttonOffset ?? 3}%
+										</span>
+									</div>
 									<input
 										type="range"
+										aria-label="Отступ кнопки от края экрана"
 										min={1}
 										max={50}
 										value={cfg.buttonOffset ?? 3}
 										onChange={e =>
 											set({ buttonOffset: Number(e.target.value) })
 										}
-										className={styles.input}
-										style={{
-											padding: '8px 0',
-											background: 'transparent',
-											border: 'none'
-										}}
+										className={styles.rangeInput}
 									/>
 									<p className={styles.hint}>
 										Отступ кнопки от левого или правого края экрана в
@@ -807,24 +1008,22 @@ const OnlineConsultantSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>
-										Размер кнопки открытия:{' '}
-										<strong>{cfg.buttonSize ?? 60}px</strong>
-									</p>
+									<div className={styles.rangeHeader}>
+										<p className={styles.label}>Размер кнопки открытия:</p>
+										<span className={styles.rangeValue}>
+											{cfg.buttonSize ?? 60}px
+										</span>
+									</div>
 									<input
 										type="range"
+										aria-label="Размер кнопки открытия"
 										min={40}
 										max={100}
 										value={cfg.buttonSize ?? 60}
 										onChange={e =>
 											set({ buttonSize: Number(e.target.value) })
 										}
-										className={styles.input}
-										style={{
-											padding: '8px 0',
-											background: 'transparent',
-											border: 'none'
-										}}
+										className={styles.rangeInput}
 									/>
 									<p className={styles.hint}>
 										Размер иконки плавающей кнопки в пикселях. По умолчанию
@@ -833,27 +1032,46 @@ const OnlineConsultantSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>
-										Количество секунд до авто-открытия виджета:
-									</p>
-									<input
-										className={styles.input}
-										type="number"
-										min="0"
-										value={cfg.autoOpenDelay ?? ''}
-										onChange={e =>
-											set({
-												autoOpenDelay: toOptionalNonNegativeInteger(
-													e.target.value
-												)
-											})
-										}
-										placeholder="Оставьте пустым для отключения"
-									/>
+									<p className={styles.label}>Автооткрытие:</p>
+									<label className={styles.checkRow}>
+										<input
+											type="checkbox"
+											checked={cfg.autoOpenDelay != null}
+											onChange={e =>
+												set({
+													autoOpenDelay: e.target.checked ? 5 : null
+												})
+											}
+										/>
+										<span className={styles.checkLabel}>
+											Открывать виджет автоматически
+										</span>
+									</label>
+									{cfg.autoOpenDelay != null && (
+										<>
+											<div className={styles.rangeHeader}>
+												<p className={styles.label}>Автооткрытие через:</p>
+												<span className={styles.rangeValue}>
+													{cfg.autoOpenDelay} сек.
+												</span>
+											</div>
+											<input
+												className={styles.rangeInput}
+												type="range"
+												aria-label="Автооткрытие через"
+												min={1}
+												max={60}
+												value={cfg.autoOpenDelay}
+												onChange={e =>
+													set({
+														autoOpenDelay: Number(e.target.value)
+													})
+												}
+											/>
+										</>
+									)}
 									<p className={styles.hint}>
-										Через сколько секунд виджет откроется автоматически
-										после открытия страницы вашего сайта. Оставьте пустым
-										для отключения.
+										Время отсчитывается после загрузки страницы сайта.
 									</p>
 								</div>
 							</div>
@@ -940,68 +1158,104 @@ const OnlineConsultantSettingsModal = ({
 											✕
 										</button>
 									</div>
-									<div className={styles.fields}>
-										<div className={styles.field}>
-											<p className={styles.label}>Текст вопроса:</p>
-											<input
-												className={styles.input}
-												value={action.label}
-												onChange={e =>
-													setAction(index, {
-														label: e.target.value
-													})
-												}
-											/>
-										</div>
-										<div className={styles.field}>
-											<p className={styles.label}>
-												Текст в кнопке перехода:
-											</p>
-											<input
-												className={styles.input}
-												value={action.buttonText}
-												placeholder="Например: Подробнее"
-												onChange={e =>
-													setAction(index, {
-														buttonText: e.target.value
-													})
-												}
-											/>
-											<p className={styles.hint}>
-												Текст кнопки с призывом к действию под быстрым
-												ответом. Заполните вместе со ссылкой ниже.
-											</p>
-										</div>
+									<div className={styles.field}>
+										<p className={styles.label}>Текст вопроса:</p>
+										<input
+											id={`${titleId}-action-${action.id}-label`}
+											className={inputClassName(
+												`${titleId}-action-${action.id}-label`
+											)}
+											value={action.label}
+											onChange={e =>
+												setAction(index, {
+													label: e.target.value
+												})
+											}
+											aria-invalid={
+												validationIssue?.fieldId ===
+												`${titleId}-action-${action.id}-label`
+											}
+										/>
+										{fieldError(`${titleId}-action-${action.id}-label`)}
 									</div>
 									<div className={styles.field}>
 										<p className={styles.label}>Быстрый ответ:</p>
 										<textarea
-											className={styles.textarea}
+											id={`${titleId}-action-${action.id}-answer`}
+											className={textareaClassName(
+												`${titleId}-action-${action.id}-answer`
+											)}
 											value={action.answer}
 											onChange={e =>
 												setAction(index, {
 													answer: e.target.value
 												})
 											}
-										/>
-									</div>
-									<div className={styles.field}>
-										<p className={styles.label}>Ссылка кнопки перехода:</p>
-										<input
-											className={styles.input}
-											value={action.buttonUrl}
-											placeholder="https://example.com/page"
-											onChange={e =>
-												setAction(index, {
-													buttonUrl: e.target.value
-												})
+											aria-invalid={
+												validationIssue?.fieldId ===
+												`${titleId}-action-${action.id}-answer`
 											}
 										/>
-										<p className={styles.hint}>
-											Кнопка будет показана только если заполнены и текст,
-											и ссылка. По клику ссылка откроется в новой вкладке.
-										</p>
+										{fieldError(`${titleId}-action-${action.id}-answer`)}
 									</div>
+									<details
+										className={styles.optionalDetails}
+										open={Boolean(action.buttonText || action.buttonUrl)}
+									>
+										<summary className={styles.optionalSummary}>
+											Кнопка перехода — необязательно
+										</summary>
+										<div className={styles.optionalContent}>
+											<div className={styles.field}>
+												<p className={styles.label}>Текст кнопки:</p>
+												<input
+													id={`${titleId}-action-${action.id}-button`}
+													className={inputClassName(
+														`${titleId}-action-${action.id}-button`
+													)}
+													value={action.buttonText}
+													placeholder="Например: Подробнее"
+													onChange={e =>
+														setAction(index, {
+															buttonText: e.target.value
+														})
+													}
+													aria-invalid={
+														validationIssue?.fieldId ===
+														`${titleId}-action-${action.id}-button`
+													}
+												/>
+												{fieldError(
+													`${titleId}-action-${action.id}-button`
+												)}
+											</div>
+											<div className={styles.field}>
+												<p className={styles.label}>Ссылка кнопки:</p>
+												<input
+													id={`${titleId}-action-${action.id}-url`}
+													className={inputClassName(
+														`${titleId}-action-${action.id}-url`
+													)}
+													value={action.buttonUrl}
+													placeholder="https://example.com/page"
+													onChange={e =>
+														setAction(index, {
+															buttonUrl: e.target.value
+														})
+													}
+													aria-invalid={
+														validationIssue?.fieldId ===
+														`${titleId}-action-${action.id}-url`
+													}
+												/>
+												{fieldError(`${titleId}-action-${action.id}-url`)}
+											</div>
+											<p className={styles.hint}>
+												Заполните текст и ссылку вместе. Ссылка откроется в
+												новой вкладке.
+											</p>
+										</div>
+									</details>
 								</div>
 							))}
 							<button
@@ -1022,7 +1276,42 @@ const OnlineConsultantSettingsModal = ({
 							<div className={styles.settingsGroup}>
 								<div className={styles.settingsGroupHeader}>
 									<h3 className={styles.settingsGroupTitle}>
-										Форма и сообщения
+										Тексты виджета
+									</h3>
+								</div>
+								<div className={styles.field}>
+									<p className={styles.label}>Заголовок виджета:</p>
+									<input
+										id={`${titleId}-form-title`}
+										className={inputClassName(`${titleId}-form-title`)}
+										value={cfg.title}
+										onChange={e => set({ title: e.target.value })}
+										placeholder="Онлайн-консультант"
+										maxLength={80}
+										aria-invalid={
+											validationIssue?.fieldId === `${titleId}-form-title`
+										}
+									/>
+									{fieldError(`${titleId}-form-title`)}
+									<p className={styles.hint}>Информация для посетителя.</p>
+								</div>
+								<div className={styles.field}>
+									<p className={styles.label}>Подзаголовок виджета:</p>
+									<input
+										className={styles.input}
+										value={cfg.subtitle}
+										onChange={e => set({ subtitle: e.target.value })}
+										placeholder="Выберите популярный вопрос и получите быстрый ответ."
+										maxLength={150}
+									/>
+									<p className={styles.hint}>Информация для посетителя.</p>
+								</div>
+							</div>
+
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Сбор данных клиента
 									</h3>
 								</div>
 								<div className={styles.field}>
@@ -1045,119 +1334,141 @@ const OnlineConsultantSettingsModal = ({
 										<option value="NONE">Ничего не собираем</option>
 									</select>
 									<p className={styles.hint}>
-										Какие данные клиента нужно собрать после быстрого
-										ответа. Если выбрать «Ничего не собираем», виджет
-										останется справочным блоком.
+										Если выбрать «Ничего не собираем», консультант
+										останется справочным блоком без формы заявки.
 									</p>
 								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Заголовок виджета:</p>
-									<input
-										className={styles.input}
-										value={cfg.title}
-										onChange={e => set({ title: e.target.value })}
-										placeholder="Онлайн-консультант"
-										maxLength={80}
-									/>
-									<p className={styles.hint}>Информация для посетителя.</p>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Подзаголовок виджета:</p>
-									<input
-										className={styles.input}
-										value={cfg.subtitle}
-										onChange={e => set({ subtitle: e.target.value })}
-										placeholder="Выберите популярный вопрос и получите быстрый ответ."
-										maxLength={150}
-									/>
-									<p className={styles.hint}>Информация для посетителя.</p>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Заголовок формы заявки:</p>
-									<input
-										className={styles.input}
-										value={cfg.contactTitle}
-										onChange={e => set({ contactTitle: e.target.value })}
-									/>
-									<p className={styles.hint}>
-										Текст перед полями контактов внутри виджета.
-									</p>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Текст в кнопке отправки заявки:
-									</p>
-									<input
-										className={styles.input}
-										value={cfg.submitButtonText}
-										onChange={e =>
-											set({ submitButtonText: e.target.value })
-										}
-									/>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Заголовок успеха:</p>
-									<input
-										className={styles.input}
-										value={cfg.successTitle}
-										onChange={e => set({ successTitle: e.target.value })}
-									/>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Текст успеха:</p>
-									<input
-										className={styles.input}
-										value={cfg.successSubtitle}
-										onChange={e =>
-											set({ successSubtitle: e.target.value })
-										}
-									/>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Ссылка на политику конфиденциальности:
-									</p>
-									<input
-										className={styles.input}
-										value={cfg.privacyUrl}
-										onChange={e => set({ privacyUrl: e.target.value })}
-										placeholder="https://winwidget.ru/legal-documentation/consent-processing"
-										maxLength={500}
-									/>
-									<p className={styles.hint}>
-										По умолчанию ссылка ведёт на политику нашего сервиса.
-										Можно оставить как есть или добавить свою ссылку.
-									</p>
-								</div>
+								{cfg.dataType !== 'NONE' && (
+									<>
+										<div className={styles.field}>
+											<p className={styles.label}>Заголовок формы:</p>
+											<input
+												id={`${titleId}-contact-title`}
+												className={inputClassName(
+													`${titleId}-contact-title`
+												)}
+												value={cfg.contactTitle}
+												onChange={e =>
+													set({ contactTitle: e.target.value })
+												}
+												aria-invalid={
+													validationIssue?.fieldId ===
+													`${titleId}-contact-title`
+												}
+											/>
+											{fieldError(`${titleId}-contact-title`)}
+										</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Текст кнопки отправки:
+											</p>
+											<input
+												id={`${titleId}-submit-text`}
+												className={inputClassName(
+													`${titleId}-submit-text`
+												)}
+												value={cfg.submitButtonText}
+												onChange={e =>
+													set({ submitButtonText: e.target.value })
+												}
+												aria-invalid={
+													validationIssue?.fieldId ===
+													`${titleId}-submit-text`
+												}
+											/>
+											{fieldError(`${titleId}-submit-text`)}
+										</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Ссылка на политику конфиденциальности:
+											</p>
+											<input
+												id={`${titleId}-privacy-url`}
+												className={inputClassName(
+													`${titleId}-privacy-url`
+												)}
+												value={cfg.privacyUrl}
+												onChange={e => set({ privacyUrl: e.target.value })}
+												placeholder="https://winwidget.ru/legal-documentation/consent-processing"
+												maxLength={500}
+												aria-invalid={
+													validationIssue?.fieldId ===
+													`${titleId}-privacy-url`
+												}
+											/>
+											{fieldError(`${titleId}-privacy-url`)}
+										</div>
+									</>
+								)}
 							</div>
 
-							<div className={styles.settingsGroup}>
-								<div className={styles.field}>
-									<p className={styles.label}>Фильтр заявок:</p>
-									<div className={styles.checkRow}>
-										<input
-											type="checkbox"
-											id="onlineConsultantFilterDuplicates"
-											checked={cfg.filterDuplicates}
-											onChange={e =>
-												set({ filterDuplicates: e.target.checked })
-											}
-										/>
-										<label
-											htmlFor="onlineConsultantFilterDuplicates"
-											className={styles.checkLabel}
-										>
-											Не учитывать повторные контакты
-										</label>
+							{cfg.dataType !== 'NONE' && (
+								<>
+									<div className={styles.settingsGroup}>
+										<div className={styles.settingsGroupHeader}>
+											<h3 className={styles.settingsGroupTitle}>
+												После отправки
+											</h3>
+										</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Заголовок после отправки:
+											</p>
+											<input
+												className={styles.input}
+												value={cfg.successTitle}
+												onChange={e =>
+													set({ successTitle: e.target.value })
+												}
+											/>
+										</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Сообщение после отправки:
+											</p>
+											<input
+												className={styles.input}
+												value={cfg.successSubtitle}
+												onChange={e =>
+													set({ successSubtitle: e.target.value })
+												}
+											/>
+										</div>
 									</div>
-									<p className={styles.hint}>
-										Дополнительный антифрод-фактор. Если посетитель введёт
-										номер телефона или email, который уже есть в базе этого
-										виджета — повторная заявка не сохранится и уведомления
-										о заявках не будут вам отправлены.
-									</p>
-								</div>
-							</div>
+
+									<div className={styles.settingsGroup}>
+										<div className={styles.settingsGroupHeader}>
+											<h3 className={styles.settingsGroupTitle}>
+												Повторные заявки
+											</h3>
+										</div>
+										<div className={styles.field}>
+											<div className={styles.checkRow}>
+												<input
+													type="checkbox"
+													id="onlineConsultantFilterDuplicates"
+													checked={cfg.filterDuplicates}
+													onChange={e =>
+														set({
+															filterDuplicates: e.target.checked
+														})
+													}
+												/>
+												<label
+													htmlFor="onlineConsultantFilterDuplicates"
+													className={styles.checkLabel}
+												>
+													Не принимать повторный контакт
+												</label>
+											</div>
+											<p className={styles.hint}>
+												Повторная заявка с тем же телефоном или Email не
+												будет сохранена.
+											</p>
+										</div>
+									</div>
+								</>
+							)}
 						</div>
 					)}
 
@@ -1166,14 +1477,14 @@ const OnlineConsultantSettingsModal = ({
 							<div className={styles.settingsGroup}>
 								<h3 className={styles.settingsGroupTitle}>Уведомления</h3>
 								{[
-									['email', 'Email для заявок'],
-									['telegramChatId', 'Telegram chat ID'],
-									['webhookUrl', 'Webhook URL']
+									['email', 'Отправка заявок на Email'],
+									['telegramChatId', 'Отправка заявок в Telegram']
 								].map(([key, label]) => (
 									<div className={styles.field} key={key}>
 										<p className={styles.label}>{label}</p>
 										<input
 											className={styles.input}
+											type={key === 'email' ? 'email' : 'text'}
 											value={String(
 												cfg.integrations[
 													key as keyof OnlineConsultantConfig['integrations']
@@ -1190,16 +1501,29 @@ const OnlineConsultantSettingsModal = ({
 								))}
 							</div>
 							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>CRM</h3>
+								<h3 className={styles.settingsGroupTitle}>
+									Webhooks и CRM
+								</h3>
 								{[
-									['bitrix24WebhookUrl', 'Webhook Битрикс24'],
-									['amoCrmDomain', 'amoCRM домен'],
-									['amoCrmToken', 'amoCRM токен']
+									['webhookUrl', 'Внешний URL (Webhook)'],
+									['bitrix24WebhookUrl', 'Отправка заявок в Битрикс24'],
+									['amoCrmDomain', 'amoCRM — домен аккаунта'],
+									['amoCrmToken', 'amoCRM — токен доступа']
 								].map(([key, label]) => (
 									<div className={styles.field} key={key}>
 										<p className={styles.label}>{label}</p>
 										<input
 											className={styles.input}
+											type={
+												key === 'amoCrmToken'
+													? 'password'
+													: key.endsWith('Url')
+														? 'url'
+														: 'text'
+											}
+											autoComplete={
+												key === 'amoCrmToken' ? 'off' : undefined
+											}
 											value={String(
 												cfg.integrations[
 													key as keyof OnlineConsultantConfig['integrations']
@@ -1218,8 +1542,8 @@ const OnlineConsultantSettingsModal = ({
 							<div className={styles.settingsGroup}>
 								<h3 className={styles.settingsGroupTitle}>Аналитика</h3>
 								{[
-									['yandexMetrikaId', 'ID Яндекс Метрики'],
-									['vkPixelId', 'ID VK пикселя']
+									['yandexMetrikaId', 'Яндекс Метрика — ID счётчика'],
+									['vkPixelId', 'Ретаргетинг ВКонтакте — ID пикселя']
 								].map(([key, label]) => (
 									<div className={styles.field} key={key}>
 										<p className={styles.label}>{label}</p>
@@ -1237,6 +1561,11 @@ const OnlineConsultantSettingsModal = ({
 												)
 											}
 										/>
+										<p className={styles.hint}>
+											При открытии консультанта отправляется событие{' '}
+											<b>woc_open</b>, при отправке заявки —{' '}
+											<b>woc_send</b>.
+										</p>
 									</div>
 								))}
 								<label className={styles.checkRow}>
@@ -1248,9 +1577,13 @@ const OnlineConsultantSettingsModal = ({
 										}
 									/>
 									<span className={styles.checkLabel}>
-										Передавать roistat_visit
+										Передавать события в Roistat
 									</span>
 								</label>
+								<p className={styles.hint}>
+									Код Roistat должен быть установлен на сайте. События:
+									<b> woc_open</b> и <b>woc_send</b>.
+								</p>
 							</div>
 						</div>
 					)}
@@ -1259,11 +1592,31 @@ const OnlineConsultantSettingsModal = ({
 						<div className={styles.fields}>
 							<div className={styles.settingsGroup}>
 								<h3 className={styles.settingsGroupTitle}>
-									Код установки
+									Установка на сайт
 								</h3>
 								<div className={styles.field}>
+									<p className={styles.label}>Домен установки виджета:</p>
+									<input
+										className={styles.input}
+										value={installDomain}
+										placeholder="example.com"
+										onChange={e => {
+											setValidationIssue(null)
+											setInstallDomain(e.target.value)
+										}}
+									/>
+									<p className={styles.domainHint}>
+										Без сохранённого домена консультант не появится на
+										сайте. Прямая ссылка работает без домена.
+									</p>
+								</div>
+								<div className={styles.field}>
+									<p className={styles.label}>Код виджета:</p>
+									<p className={styles.hint}>
+										Вставьте код перед закрывающим тегом &lt;/body&gt;.
+									</p>
 									<textarea
-										className={styles.textarea}
+										className={`${styles.textarea} ${styles.codeArea}`}
 										readOnly
 										value={embedCode}
 										rows={4}
@@ -1271,7 +1624,9 @@ const OnlineConsultantSettingsModal = ({
 									<button
 										type="button"
 										className={styles.copyBtn}
-										onClick={() => handleCopy(embedCode)}
+										onClick={() =>
+											handleCopy(embedCode, 'Код скопирован', true)
+										}
 									>
 										Скопировать код
 									</button>
@@ -1282,6 +1637,10 @@ const OnlineConsultantSettingsModal = ({
 									Прямая ссылка
 								</h3>
 								<div className={styles.field}>
+									<p className={styles.label}>Прямая ссылка:</p>
+									<p className={styles.hint}>
+										Работает без установки кода и сохранённого домена.
+									</p>
 									<input
 										className={styles.input}
 										readOnly
@@ -1298,7 +1657,9 @@ const OnlineConsultantSettingsModal = ({
 									<button
 										type="button"
 										className={styles.copyBtn}
-										onClick={() => handleCopy(previewUrl)}
+										onClick={() =>
+											handleCopy(previewUrl, 'Ссылка скопирована')
+										}
 									>
 										Скопировать ссылку
 									</button>
@@ -1344,18 +1705,47 @@ const OnlineConsultantSettingsModal = ({
 									</li>
 								</ul>
 							</div>
+							<div className={styles.settingsGroup}>
+								<h3 className={styles.settingsGroupTitle}>
+									Что проверить перед запуском
+								</h3>
+								<ul className={styles.infoList}>
+									<li>
+										Откройте каждый вопрос и проверьте текст быстрого
+										ответа.
+									</li>
+									<li>
+										Если добавлена кнопка перехода, проверьте её текст и
+										ссылку.
+									</li>
+									<li>
+										Сохраните домен, установите код и отправьте тестовую
+										заявку.
+									</li>
+								</ul>
+							</div>
 						</div>
 					)}
 				</div>
 
 				<div className={styles.stickyFooter}>
+					<p
+						className={`${styles.saveStatus} ${
+							hasUnsavedChanges ? styles.saveStatusDirty : ''
+						}`}
+					>
+						{hasUnsavedChanges
+							? 'Есть несохранённые изменения'
+							: 'Изменений нет'}
+					</p>
 					<div className={styles.footerActions}>
 						<button
 							type="button"
 							className={styles.cancelBtn}
-							onClick={onClose}
+							onClick={requestClose}
+							disabled={isDangerActionPending}
 						>
-							Закрыть
+							{isPagePresentation ? 'К виджетам' : 'Отмена'}
 						</button>
 						<button
 							type="button"
@@ -1367,6 +1757,7 @@ const OnlineConsultantSettingsModal = ({
 						</button>
 					</div>
 				</div>
+				{closeGuardDialog}
 			</div>
 		</div>
 	)
