@@ -19,6 +19,9 @@ import axios from 'axios'
 import { ChangeEvent, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 
+const USER_SEARCH_TOAST_ID = 'admin-subscription-user-search'
+const BONUS_USER_SEARCH_TOAST_ID = 'admin-subscription-bonus-user-search'
+
 const today = () => new Date().toISOString().slice(0, 10)
 
 interface BonusConfirmState {
@@ -112,20 +115,34 @@ const useAdminSubscriptions = ({
 		})
 
 	useEffect(() => {
-		if (!isSearching && !isBonusSearching) return
-		const id = toast.loading('Поиск пользователя...')
-		return () => toast.dismiss(id)
-	}, [isBonusSearching, isSearching])
+		if (!isSearching) return
+		toast.loading('Поиск пользователя...', { id: USER_SEARCH_TOAST_ID })
+		return () => toast.dismiss(USER_SEARCH_TOAST_ID)
+	}, [isSearching])
+
+	useEffect(() => {
+		if (!isBonusSearching) return
+		toast.loading('Поиск пользователя...', {
+			id: BONUS_USER_SEARCH_TOAST_ID
+		})
+		return () => toast.dismiss(BONUS_USER_SEARCH_TOAST_ID)
+	}, [isBonusSearching])
 
 	useEffect(() => {
 		if (userSearchResults && userSearchResults.length === 0) {
-			toast('Пользователи не найдены', { icon: '🔍' })
+			toast('Пользователи не найдены', {
+				id: USER_SEARCH_TOAST_ID,
+				icon: '🔍'
+			})
 		}
 	}, [userSearchResults])
 
 	useEffect(() => {
 		if (bonusUserSearchResults && bonusUserSearchResults.length === 0) {
-			toast('Пользователи не найдены', { icon: '🔍' })
+			toast('Пользователи не найдены', {
+				id: BONUS_USER_SEARCH_TOAST_ID,
+				icon: '🔍'
+			})
 		}
 	}, [bonusUserSearchResults])
 

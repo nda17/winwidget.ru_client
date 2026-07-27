@@ -411,7 +411,7 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 		setIsTelegramAuthPolling(false)
 
 		if (dismissToast && telegramAuthToastRef.current) {
-			toast.dismiss(telegramAuthToastRef.current)
+			toast.remove(telegramAuthToastRef.current)
 			telegramAuthToastRef.current = null
 		}
 	}

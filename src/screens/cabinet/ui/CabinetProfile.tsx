@@ -276,7 +276,7 @@ const CabinetProfile = () => {
 		}
 
 		if (dismissToast && telegramBindingToastRef.current) {
-			toast.dismiss(telegramBindingToastRef.current)
+			toast.remove(telegramBindingToastRef.current)
 			telegramBindingToastRef.current = null
 		}
 	}
@@ -288,7 +288,7 @@ const CabinetProfile = () => {
 		}
 
 		if (dismissToast && telegramNotificationsToastRef.current) {
-			toast.dismiss(telegramNotificationsToastRef.current)
+			toast.remove(telegramNotificationsToastRef.current)
 			telegramNotificationsToastRef.current = null
 		}
 	}

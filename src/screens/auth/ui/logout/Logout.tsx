@@ -32,8 +32,9 @@ const Logout = () => {
 				toast.dismiss(toastId)
 				replace(PUBLIC_PAGES.LOGIN)
 			} catch {
-				toast.dismiss(toastId)
-				toast.error('Не удалось завершить выход. Попробуйте ещё раз.')
+				toast.error('Не удалось завершить выход. Попробуйте ещё раз.', {
+					id: toastId
+				})
 				replace(PUBLIC_PAGES.HOME)
 			}
 		}

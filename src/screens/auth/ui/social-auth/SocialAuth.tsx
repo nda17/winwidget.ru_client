@@ -7,6 +7,7 @@ import { useEffect } from 'react'
 import toast from 'react-hot-toast'
 
 const AFFILIATE_REFERRER_STORAGE_KEY = 'affiliateReferrerId'
+const SOCIAL_AUTH_TOAST_ID = 'social-auth'
 
 const SocialAuthPage: NextPage = () => {
 	const router = useRouter()
@@ -14,7 +15,9 @@ const SocialAuthPage: NextPage = () => {
 	const setAuthResolved = useAuthStore(state => state.setAuthResolved)
 
 	useEffect(() => {
-		const toastId = toast.loading('Загрузка...')
+		const toastId = toast.loading('Загрузка...', {
+			id: SOCIAL_AUTH_TOAST_ID
+		})
 
 		authService
 			.getNewTokens()
@@ -22,12 +25,14 @@ const SocialAuthPage: NextPage = () => {
 				window.localStorage.removeItem(AFFILIATE_REFERRER_STORAGE_KEY)
 				setAuth(true)
 				setAuthResolved(true)
+				toast.dismiss(toastId)
 			})
 			.catch(() => {
-				toast.error('Ошибка авторизации через социальную сеть')
+				toast.error('Ошибка авторизации через социальную сеть', {
+					id: toastId
+				})
 			})
 			.finally(() => {
-				toast.dismiss(toastId)
 				router.replace('/')
 			})
 	}, [router, setAuth, setAuthResolved])

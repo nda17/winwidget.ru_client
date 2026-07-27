@@ -5,8 +5,6 @@ import { PUBLIC_PAGES } from '@/shared/config/pages/public.config'
 import { useUser } from '@/entities/user'
 import { useAuthStore } from '@/entities/user'
 import { NextPage } from 'next'
-import { useEffect } from 'react'
-import toast from 'react-hot-toast'
 
 const AuthItems: NextPage = () => {
 	const { user, isLoading } = useUser()
@@ -14,12 +12,6 @@ const AuthItems: NextPage = () => {
 	const isAuthResolved = useAuthStore(state => state.isAuthResolved)
 
 	const isPending = !isAuthResolved || (auth && isLoading)
-
-	useEffect(() => {
-		if (!isPending) return
-		const id = toast.loading('Загрузка...', { id: 'auth-loading' })
-		return () => toast.dismiss(id)
-	}, [isPending])
 
 	if (isPending) {
 		return null
