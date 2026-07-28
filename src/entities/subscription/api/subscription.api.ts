@@ -257,14 +257,14 @@ const subscriptionService = {
 		return data
 	},
 
-	async cancelPendingPayment(): Promise<{
+	async cancelPendingPayment(paymentId: string): Promise<{
 		cancelled: boolean
-		awaitingProvider: boolean
 		message: string
 		cancelledAt: string
 	}> {
 		const { data } = await axiosInterceptorsRequest.post(
-			'/payments/pending/cancel'
+			'/payments/pending/cancel',
+			{ paymentId }
 		)
 		return data
 	},

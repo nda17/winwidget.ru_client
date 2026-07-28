@@ -82,19 +82,9 @@ const PAYMENT_COPY = {
 	pendingPaymentTypeAutoRenew: 'С автопродлением',
 	pendingPaymentCountdownText: 'Ссылка на оплату действует ещё',
 	pendingPaymentWarningText: 'До окончания оплаты осталось меньше 5 минут',
-	pendingPaymentVerifyingText: 'Срок ссылки завершён. Проверяем статус…',
-	pendingPaymentAwaitingProviderTitle: 'Срок ссылки на оплату истёк',
-	pendingPaymentAwaitingProviderText:
-		'Ссылка больше недоступна. Ждём окончательный статус ЮKassa, чтобы исключить двойное списание.',
-	pendingPaymentAwaitingProviderStatus:
-		'Ожидаем окончательный статус ЮKassa',
-	pendingPaymentExpiredTitle: 'Срок незавершённого платежа истёк',
-	pendingPaymentExpiredText:
-		'Статус обновлён. Теперь можно создать новый платёж.',
-	pendingPaymentErrorTitle: 'Не удалось проверить платёж',
+	pendingPaymentErrorTitle: 'Не удалось загрузить незавершённый платёж',
 	pendingPaymentErrorText:
-		'Ссылка на оплату временно недоступна. Повторите проверку статуса.',
-	pendingPaymentRetryButtonText: 'Проверить ещё раз',
+		'Обновите страницу перед созданием нового платежа.',
 	periodLegendText: 'Период оплаты',
 	pricePerMonthText: '/мес',
 	yearlyTotalText: '{amount} ₽ / год',
@@ -216,13 +206,6 @@ type PendingPaymentRequest = {
 	autoRenew: boolean
 }
 
-type PendingResolutionState =
-	| 'counting'
-	| 'verifying'
-	| 'awaitingProvider'
-	| 'expired'
-	| 'error'
-
 interface PricingProps {
 	pricingContent: HomePagePricingContent
 	paymentEnabled?: boolean
@@ -257,14 +240,10 @@ const Pricing = ({
 	const [paymentEmailCode, setPaymentEmailCode] = useState('')
 	const [pendingPaymentRequest, setPendingPaymentRequest] =
 		useState<PendingPaymentRequest | null>(null)
-	const [pendingResolutionState, setPendingResolutionState] =
-		useState<PendingResolutionState>('counting')
-	const [expiredPendingPayment, setExpiredPendingPayment] =
-		useState<IPendingPayment | null>(null)
-	const [nowMs, setNowMs] = useState(() => Date.now())
+	const [nowMs, setNowMs] = useState<number | null>(null)
 	const [serverOffsetMs, setServerOffsetMs] = useState(0)
 	const [serverOffsetKey, setServerOffsetKey] = useState('')
-	const reconcilingPaymentIdRef = useRef<string | null>(null)
+	const expiredPaymentCheckIdRef = useRef<string | null>(null)
 	const {
 		emailCodeRequested,
 		isSendingEmailCode,
@@ -300,8 +279,7 @@ const Pricing = ({
 	const {
 		data: pendingPayment,
 		isLoading: pendingLoading,
-		isError: pendingLoadError,
-		refetch: refetchPendingPayment
+		isError: pendingLoadError
 	} = useQuery({
 		queryKey: ['pending-payment'],
 		queryFn: subscriptionService.getPendingPayment,
@@ -336,35 +314,46 @@ const Pricing = ({
 	})
 
 	const cancelPendingMutation = useMutation({
-		mutationFn: subscriptionService.cancelPendingPayment,
-		onMutate: () => toast.loading('Отменяем незавершённый платёж...'),
-		onSuccess: async (result, _, toastId) => {
-			setExpiredPendingPayment(null)
-			setPendingResolutionState('counting')
-			await Promise.all([
-				refetchPendingPayment(),
-				queryClient.invalidateQueries({ queryKey: ['payment-history'] })
-			])
-			toast.success(result.message, {
+		mutationFn: (paymentId: string) =>
+			subscriptionService.cancelPendingPayment(paymentId),
+		onMutate: async paymentId => {
+			const toastId = `pending-payment-cancel-${paymentId}`
+			toast.loading('Отменяем незавершённый платёж...', {
 				id: toastId
 			})
+			await queryClient.cancelQueries({ queryKey: ['pending-payment'] })
+			return toastId
 		},
-		onError: (e: any, _, toastId) => {
-			toast.error(
-				e?.response?.data?.message || 'Не удалось отменить платёж',
-				{
-					id: toastId
-				}
+		onSuccess: (result, paymentId, toastId) => {
+			queryClient.setQueryData<IPendingPayment | null>(
+				['pending-payment'],
+				currentPayment =>
+					currentPayment?.id === paymentId ? null : currentPayment
 			)
-		},
-		onSettled: async () => {
-			await Promise.all([
-				refetchPendingPayment(),
+			void Promise.all([
 				queryClient.invalidateQueries({ queryKey: ['subscription'] }),
 				queryClient.invalidateQueries({ queryKey: ['payment-history'] }),
 				queryClient.invalidateQueries({ queryKey: ['auto-renewal'] }),
 				queryClient.invalidateQueries({ queryKey: ['widgets'] })
 			])
+			toast.success(result.message, {
+				id: toastId
+			})
+		},
+		onError: (e: any, paymentId, toastId) => {
+			void Promise.all([
+				queryClient.invalidateQueries({ queryKey: ['pending-payment'] }),
+				queryClient.invalidateQueries({ queryKey: ['subscription'] }),
+				queryClient.invalidateQueries({ queryKey: ['payment-history'] }),
+				queryClient.invalidateQueries({ queryKey: ['auto-renewal'] }),
+				queryClient.invalidateQueries({ queryKey: ['widgets'] })
+			])
+			toast.error(
+				e?.response?.data?.message || 'Не удалось отменить платёж',
+				{
+					id: toastId ?? `pending-payment-cancel-${paymentId}`
+				}
+			)
 		}
 	})
 
@@ -408,125 +397,54 @@ const Pricing = ({
 		? `${activePendingPayment.id}:${activePendingPayment.serverTime}`
 		: ''
 	const pendingServerNowMs =
-		serverOffsetKey === pendingServerOffsetKey
+		nowMs !== null && serverOffsetKey === pendingServerOffsetKey
 			? nowMs + serverOffsetMs
 			: Number.isFinite(pendingServerTimeMs)
 				? pendingServerTimeMs
-				: nowMs
+				: (nowMs ?? 0)
 	const pendingRemainingMs = activePendingPayment
 		? Math.max(0, pendingExpiresAtMs - pendingServerNowMs)
 		: 0
-	const pendingCountdownState = pendingLoadError
-		? 'error'
-		: pendingResolutionState === 'counting'
-			? pendingRemainingMs <= PENDING_PAYMENT_WARNING_MS
-				? 'warning'
-				: 'active'
-			: pendingResolutionState
+	const isPendingPaymentWarning =
+		nowMs !== null && pendingRemainingMs <= PENDING_PAYMENT_WARNING_MS
 	const isPendingLinkAvailable = Boolean(
 		activePendingPayment?.confirmationUrl &&
 		!pendingLoadError &&
-		pendingRemainingMs > 0 &&
-		(pendingCountdownState === 'active' ||
-			pendingCountdownState === 'warning')
+		pendingRemainingMs > 0
 	)
 
-	const reconcileExpiredPayment = useCallback(async () => {
+	const resolveExpiredPayment = useCallback(async () => {
 		const payment = activePendingPayment
 
-		if (!payment || reconcilingPaymentIdRef.current === payment.id) {
+		if (!payment || expiredPaymentCheckIdRef.current === payment.id) {
 			return
 		}
 
-		reconcilingPaymentIdRef.current = payment.id
-		setPendingResolutionState('verifying')
-		const toastId = `pending-payment-status-${payment.id}`
-		toast.loading('Проверяем статус незавершённого платежа...', {
-			id: toastId
-		})
+		expiredPaymentCheckIdRef.current = payment.id
+		queryClient.setQueryData<IPendingPayment | null>(
+			['pending-payment'],
+			currentPayment =>
+				currentPayment?.id === payment.id ? null : currentPayment
+		)
 
 		try {
-			const result = await refetchPendingPayment()
+			const freshPayment = await subscriptionService.getPendingPayment()
 
-			if (result.isError) {
-				throw result.error
+			if (freshPayment && freshPayment.id !== payment.id) {
+				queryClient.setQueryData(['pending-payment'], freshPayment)
 			}
 
-			const freshPayment = result.data
-
-			if (!freshPayment || freshPayment.id !== payment.id) {
-				const verification = await subscriptionService.verifyPayment(
-					payment.id
-				)
-
-				if (verification.status === 'succeeded') {
-					await Promise.all([
-						queryClient.invalidateQueries({
-							queryKey: ['subscription']
-						}),
-						queryClient.invalidateQueries({
-							queryKey: ['payment-history']
-						}),
-						queryClient.invalidateQueries({
-							queryKey: ['auto-renewal']
-						}),
-						queryClient.invalidateQueries({ queryKey: ['widgets'] })
-					])
-					toast.success('Оплата подтверждена', { id: toastId })
-					window.location.assign(
-						`/payment/success?paymentId=${encodeURIComponent(payment.id)}`
-					)
-					return
-				}
-
-				if (verification.status === 'pending') {
-					setPendingResolutionState('error')
-					toast.error(verification.message, { id: toastId })
-					return
-				}
-
-				setExpiredPendingPayment(payment)
-				setPendingResolutionState('expired')
-				await Promise.all([
-					queryClient.invalidateQueries({ queryKey: ['subscription'] }),
-					queryClient.invalidateQueries({ queryKey: ['payment-history'] }),
-					queryClient.invalidateQueries({ queryKey: ['auto-renewal'] }),
-					queryClient.invalidateQueries({ queryKey: ['widgets'] })
-				])
-				toast.success(verification.message, { id: toastId })
-				return
-			}
-
-			const freshServerTime = Date.parse(freshPayment.serverTime)
-			const freshServerNow = Number.isFinite(freshServerTime)
-				? freshServerTime
-				: Date.now()
-			const freshExpiresAt = getPendingExpiresAt(freshPayment)
-
-			if (
-				freshPayment.confirmationUrl &&
-				freshExpiresAt > freshServerNow
-			) {
-				setExpiredPendingPayment(null)
-				setPendingResolutionState('counting')
-				setNowMs(Date.now())
-				toast.success('Статус платежа обновлён', { id: toastId })
-				return
-			}
-
-			setPendingResolutionState('awaitingProvider')
-			toast.success(PAYMENT_COPY.pendingPaymentAwaitingProviderStatus, {
-				id: toastId
-			})
+			await Promise.all([
+				queryClient.invalidateQueries({ queryKey: ['subscription'] }),
+				queryClient.invalidateQueries({ queryKey: ['payment-history'] }),
+				queryClient.invalidateQueries({ queryKey: ['auto-renewal'] }),
+				queryClient.invalidateQueries({ queryKey: ['widgets'] })
+			])
 		} catch {
-			setPendingResolutionState('error')
-			toast.error('Не удалось проверить статус платежа', {
-				id: toastId
-			})
-		} finally {
-			reconcilingPaymentIdRef.current = null
+			// The expired checkout stays hidden. The backend cleanup and the
+			// next payment request repeat the same idempotent expiration check.
 		}
-	}, [activePendingPayment, queryClient, refetchPendingPayment])
+	}, [activePendingPayment, queryClient])
 
 	useEffect(() => {
 		if (!activePendingPayment) return
@@ -542,12 +460,10 @@ const Pricing = ({
 	}, [activePendingPayment])
 
 	useEffect(() => {
-		if (!activePendingPaymentId) return
-
-		setExpiredPendingPayment(null)
-		setPendingResolutionState('counting')
-		reconcilingPaymentIdRef.current = null
-	}, [activePendingPaymentId])
+		if (!activePendingPaymentId || pendingRemainingMs > 0) {
+			expiredPaymentCheckIdRef.current = null
+		}
+	}, [activePendingPaymentId, pendingRemainingMs])
 
 	useEffect(() => {
 		if (!activePendingPayment) return
@@ -556,38 +472,26 @@ const Pricing = ({
 		const handleVisibilityChange = () => {
 			if (document.visibilityState === 'visible') updateClock()
 		}
-		const intervalId =
-			pendingResolutionState === 'counting'
-				? window.setInterval(updateClock, 1000)
-				: null
+		const intervalId = window.setInterval(updateClock, 1000)
 
 		window.addEventListener('focus', updateClock)
 		document.addEventListener('visibilitychange', handleVisibilityChange)
 
 		return () => {
-			if (intervalId !== null) window.clearInterval(intervalId)
+			window.clearInterval(intervalId)
 			window.removeEventListener('focus', updateClock)
 			document.removeEventListener(
 				'visibilitychange',
 				handleVisibilityChange
 			)
 		}
-	}, [activePendingPayment, pendingResolutionState])
+	}, [activePendingPayment])
 
 	useEffect(() => {
-		if (
-			activePendingPayment &&
-			pendingResolutionState === 'counting' &&
-			pendingRemainingMs <= 0
-		) {
-			void reconcileExpiredPayment()
+		if (activePendingPayment && pendingRemainingMs <= 0) {
+			void resolveExpiredPayment()
 		}
-	}, [
-		activePendingPayment,
-		pendingRemainingMs,
-		pendingResolutionState,
-		reconcileExpiredPayment
-	])
+	}, [activePendingPayment, pendingRemainingMs, resolveExpiredPayment])
 
 	const handlePaymentClick = (
 		plan: PaidPlan,
@@ -638,30 +542,6 @@ const Pricing = ({
 				: 'Следующий платёж будет разовым',
 			{ id: `auto-renew-choice-${plan}` }
 		)
-	}
-
-	const retryPendingPaymentStatus = async () => {
-		if (activePendingPayment) {
-			await reconcileExpiredPayment()
-			return
-		}
-
-		const toastId = 'pending-payment-status-retry'
-		toast.loading('Проверяем незавершённые платежи...', {
-			id: toastId
-		})
-
-		const result = await refetchPendingPayment()
-
-		if (result.isError) {
-			toast.error('Не удалось проверить незавершённые платежи', {
-				id: toastId
-			})
-			return
-		}
-
-		setPendingResolutionState('counting')
-		toast.success('Статус платежей обновлён', { id: toastId })
 	}
 
 	const requestPaymentEmailCode = async () => {
@@ -800,40 +680,21 @@ const Pricing = ({
 							{PAYMENT_COPY.pendingPaymentErrorText}
 						</p>
 					</div>
-					<div className={styles.pendingActions}>
-						<button
-							type="button"
-							className={styles.pendingRetryBtn}
-							onClick={() => void retryPendingPaymentStatus()}
-						>
-							{PAYMENT_COPY.pendingPaymentRetryButtonText}
-						</button>
-					</div>
 				</div>
 			) : hasPendingPayment ? (
 				<div
 					className={`${styles.pendingNotice} ${
-						pendingCountdownState === 'warning'
-							? styles.pendingNoticeWarning
-							: pendingCountdownState === 'error'
-								? styles.pendingNoticeError
-								: ''
+						isPendingPaymentWarning ? styles.pendingNoticeWarning : ''
 					}`}
 				>
 					<div className={styles.pendingCopy}>
 						<p className={styles.pendingTitle}>
-							{pendingCountdownState === 'error'
-								? PAYMENT_COPY.pendingPaymentErrorTitle
-								: pendingCountdownState === 'awaitingProvider'
-									? PAYMENT_COPY.pendingPaymentAwaitingProviderTitle
-									: isPendingDowngradeBlocked
-										? PAYMENT_COPY.pendingPaymentUnavailableTitle
-										: PAYMENT_COPY.pendingPaymentTitle}
+							{isPendingDowngradeBlocked
+								? PAYMENT_COPY.pendingPaymentUnavailableTitle
+								: PAYMENT_COPY.pendingPaymentTitle}
 						</p>
 						<p className={styles.pendingText}>
-							{pendingCountdownState === 'awaitingProvider' ? (
-								PAYMENT_COPY.pendingPaymentAwaitingProviderText
-							) : isPendingDowngradeBlocked ? (
+							{isPendingDowngradeBlocked ? (
 								<>
 									{renderTemplate(
 										PAYMENT_COPY.pendingPaymentUnavailableText,
@@ -867,38 +728,27 @@ const Pricing = ({
 									Boolean(activePendingPayment?.autoRenew)
 								)}
 							</span>
-							{pendingCountdownState === 'active' ||
-							pendingCountdownState === 'warning' ? (
-								<span
-									className={`${styles.pendingCountdown} ${
-										pendingCountdownState === 'warning'
-											? styles.pendingCountdownWarning
-											: ''
-									}`}
-								>
-									<span>{PAYMENT_COPY.pendingPaymentCountdownText} </span>
-									<strong aria-hidden="true">
-										{formatCountdown(pendingRemainingMs)}
-									</strong>
-									<span className="srOnly">
-										{`${Math.max(1, Math.ceil(pendingRemainingMs / 60000))} мин.`}
-									</span>
+							<span
+								className={`${styles.pendingCountdown} ${
+									isPendingPaymentWarning
+										? styles.pendingCountdownWarning
+										: ''
+								}`}
+							>
+								<span>{PAYMENT_COPY.pendingPaymentCountdownText} </span>
+								<strong aria-hidden="true">
+									{nowMs === null
+										? '--:--'
+										: formatCountdown(pendingRemainingMs)}
+								</strong>
+								<span className="srOnly">
+									{nowMs === null
+										? 'Оставшееся время рассчитывается'
+										: `${Math.max(1, Math.ceil(pendingRemainingMs / 60000))} мин.`}
 								</span>
-							) : pendingCountdownState === 'verifying' ? (
-								<span className={styles.pendingStatus} role="status">
-									{PAYMENT_COPY.pendingPaymentVerifyingText}
-								</span>
-							) : pendingCountdownState === 'awaitingProvider' ? (
-								<span className={styles.pendingStatus} role="status">
-									{PAYMENT_COPY.pendingPaymentAwaitingProviderStatus}
-								</span>
-							) : (
-								<span className={styles.pendingStatus} role="alert">
-									{PAYMENT_COPY.pendingPaymentErrorText}
-								</span>
-							)}
+							</span>
 						</div>
-						{pendingCountdownState === 'warning' && (
+						{isPendingPaymentWarning && (
 							<p className={styles.pendingWarning} role="status">
 								{PAYMENT_COPY.pendingPaymentWarningText}
 							</p>
@@ -913,54 +763,20 @@ const Pricing = ({
 								{PAYMENT_COPY.pendingPaymentResumeButtonText}
 							</a>
 						)}
-						{pendingCountdownState === 'verifying' && (
-							<button
-								type="button"
-								className={styles.pendingResumeBtn}
-								disabled
-							>
-								Проверяем…
-							</button>
-						)}
-						{(pendingCountdownState === 'error' ||
-							pendingCountdownState === 'awaitingProvider') && (
-							<button
-								type="button"
-								className={styles.pendingRetryBtn}
-								onClick={() => void retryPendingPaymentStatus()}
-							>
-								{PAYMENT_COPY.pendingPaymentRetryButtonText}
-							</button>
-						)}
 						<button
 							type="button"
 							className={styles.pendingCancelBtn}
-							onClick={() => cancelPendingMutation.mutate()}
-							disabled={
-								cancelPendingMutation.isPending ||
-								pendingCountdownState === 'verifying'
-							}
+							onClick={() => {
+								if (activePendingPaymentId) {
+									cancelPendingMutation.mutate(activePendingPaymentId)
+								}
+							}}
+							disabled={cancelPendingMutation.isPending}
 						>
 							{cancelPendingMutation.isPending
 								? PAYMENT_COPY.pendingPaymentCancelLoadingText
 								: PAYMENT_COPY.pendingPaymentCancelButtonText}
 						</button>
-					</div>
-				</div>
-			) : expiredPendingPayment ? (
-				<div className={styles.pendingNotice} role="status">
-					<div className={styles.pendingCopy}>
-						<p className={styles.pendingTitle}>
-							{PAYMENT_COPY.pendingPaymentExpiredTitle}
-						</p>
-						<p className={styles.pendingText}>
-							{PAYMENT_COPY.pendingPaymentExpiredText}
-						</p>
-						<span className={styles.pendingTypeBadge}>
-							{getPaymentTypeLabel(
-								Boolean(expiredPendingPayment.autoRenew)
-							)}
-						</span>
 					</div>
 				</div>
 			) : null}
