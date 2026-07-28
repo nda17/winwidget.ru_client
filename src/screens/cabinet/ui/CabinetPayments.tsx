@@ -535,7 +535,7 @@ const CabinetPayments = () => {
 									onClick={() => setDisableConfirmationOpen(true)}
 									disabled={disableAutoRenewalMutation.isPending}
 								>
-									Отключить автопродление
+									Отвязать карту и отключить автопродление
 								</button>
 							)}
 							{!autoRenewal.active && autoRenewal.canEnableViaCheckout && (
@@ -706,18 +706,18 @@ const CabinetPayments = () => {
 
 			{disableConfirmationOpen && autoRenewal && (
 				<ConfirmDialog
-					title="Отключить автопродление?"
+					title="Отвязать карту и отключить автопродление?"
 					message={
 						scheduledRetry
-							? `Запланированное повторное списание ${formatDate(
+							? `Сохранённая карта будет отвязана и больше не будет использоваться для автоматических списаний. Текущий оплаченный период сохранится. Запланированное повторное списание ${formatDate(
 									scheduledRetryAt
-								)} будет отменено. Новых автоматических списаний не будет.`
-							: 'Будущие автоматические списания прекратятся. Уже оплаченный период подписки продолжит действовать до указанной даты.'
+								)} будет отменено.`
+							: 'Сохранённая карта будет отвязана и больше не будет использоваться для автоматических списаний. Текущий оплаченный период сохранится.'
 					}
 					confirmLabel={
 						disableAutoRenewalMutation.isPending
-							? 'Отключаем…'
-							: 'Отключить'
+							? 'Отвязываем…'
+							: 'Отвязать карту'
 					}
 					confirmDisabled={disableAutoRenewalMutation.isPending}
 					onCancel={() => setDisableConfirmationOpen(false)}
