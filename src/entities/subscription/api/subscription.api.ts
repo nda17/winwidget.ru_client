@@ -96,12 +96,112 @@ export interface IAdminExtendDaysResult {
 
 export interface IPendingPayment {
 	id: string
-	yookassaId: string
+	yookassaId: string | null
 	amount: string
+	currency: string
 	plan: Plan | null
 	billingPeriod: BillingPeriod | null
+	status: PaymentStatus
+	kind: PaymentKind
+	autoRenew: boolean
 	confirmationUrl: string | null
 	createdAt: string
+	expiresAt: string
+	providerExpiresAt: string | null
+	serverTime: string
+}
+
+export type PaymentStatus =
+	| 'PENDING'
+	| 'SUCCEEDED'
+	| 'CANCELLED'
+	| 'EXPIRED'
+export type PaymentKind = 'ONE_TIME' | 'RECURRING'
+
+export interface ICreatePaymentResponse {
+	id: string
+	confirmationUrl: string
+	status: 'PENDING'
+	kind: PaymentKind
+	autoRenew: boolean
+	expiresAt: string
+	providerExpiresAt: string | null
+	serverTime: string
+}
+
+export type AutoRenewalStatus =
+	| 'NEVER_CONSENTED'
+	| 'ACTIVE'
+	| 'USER_DISABLED'
+	| 'ADMIN_PAUSED'
+	| 'TECHNICAL_PAUSE'
+	| 'REVOKED'
+
+export interface IAutoRenewalPriceChange {
+	required: boolean
+	previousAmount: string | null
+	newAmount: string | null
+	currency: string | null
+	detectedAt: string | null
+	canConfirm: boolean
+}
+
+export interface IAutoRenewalRetry {
+	active: boolean
+	attempt: number
+	maxAttempts: number
+	startedAt: string | null
+	nextRetryAt: string | null
+	lastErrorCode: string | null
+}
+
+export interface IAutoRenewal {
+	status: AutoRenewalStatus
+	active: boolean
+	plan: Plan | null
+	billingPeriod: BillingPeriod | null
+	amount: string | null
+	currency: string
+	nextChargeAt: string | null
+	retry: IAutoRenewalRetry | null
+	disabledAt: string | null
+	disableReason: string | null
+	canDisable: boolean
+	canEnableViaCheckout: boolean
+	serverTime: string
+	priceChange: IAutoRenewalPriceChange
+}
+
+export interface IUserPaymentReceipt {
+	status: string
+	registeredAt: string | null
+	url: string | null
+	fiscalDocumentNumber: string | null
+}
+
+export interface IUserPayment {
+	id: string
+	yookassaId: string | null
+	status: PaymentStatus
+	kind: PaymentKind
+	amount: string
+	currency: string
+	plan: Plan | null
+	billingPeriod: BillingPeriod | null
+	autoRenew: boolean
+	createdAt: string
+	succeededAt: string | null
+	receiptSyncEligible: boolean
+	receipt: IUserPaymentReceipt | null
+}
+
+export interface IUserPaymentsResponse {
+	items: IUserPayment[]
+	total: number
+	page: number
+	limit: number
+	totalPages: number
+	serverTime: string
 }
 
 export interface IPaymentVerification {
@@ -122,21 +222,31 @@ const subscriptionService = {
 
 	async createPayment(
 		plan: Plan,
-		billingPeriod: BillingPeriod
-	): Promise<{ confirmationUrl: string }> {
+		billingPeriod: BillingPeriod,
+		expectedAmount: number,
+		autoRenew = false,
+		consentVersion?: string
+	): Promise<ICreatePaymentResponse> {
 		const { data } = await axiosInterceptorsRequest.post(
 			'/payments/create',
 			{
 				plan,
-				billingPeriod
+				billingPeriod,
+				expectedAmount,
+				autoRenew,
+				...(autoRenew ? { consentVersion } : {})
 			}
 		)
 		return data
 	},
 
-	async verifyPayment(): Promise<IPaymentVerification> {
-		const { data } =
-			await axiosInterceptorsRequest.post('/payments/verify')
+	async verifyPayment(paymentId?: string): Promise<IPaymentVerification> {
+		const { data } = await axiosInterceptorsRequest.post(
+			'/payments/verify',
+			{
+				paymentId
+			}
+		)
 		return data
 	},
 
@@ -149,11 +259,49 @@ const subscriptionService = {
 
 	async cancelPendingPayment(): Promise<{
 		cancelled: boolean
+		awaitingProvider: boolean
 		message: string
 		cancelledAt: string
 	}> {
 		const { data } = await axiosInterceptorsRequest.post(
 			'/payments/pending/cancel'
+		)
+		return data
+	},
+
+	async getAutoRenewal(): Promise<IAutoRenewal> {
+		const { data } = await axiosInterceptorsRequest.get(
+			'/payments/auto-renewal'
+		)
+		return data
+	},
+
+	async disableAutoRenewal(): Promise<IAutoRenewal> {
+		const { data } = await axiosInterceptorsRequest.delete(
+			'/payments/auto-renewal'
+		)
+		return data
+	},
+
+	async confirmAutoRenewalPrice(): Promise<{
+		autoRenewal: IAutoRenewal
+		message: string
+	}> {
+		const { data } = await axiosInterceptorsRequest.post(
+			'/payments/auto-renewal/confirm-price'
+		)
+		return data
+	},
+
+	async getMyPayments(
+		page = 1,
+		limit = 10
+	): Promise<IUserPaymentsResponse> {
+		const { data } = await axiosInterceptorsRequest.get(
+			'/payments/history',
+			{
+				params: { page, limit }
+			}
 		)
 		return data
 	},

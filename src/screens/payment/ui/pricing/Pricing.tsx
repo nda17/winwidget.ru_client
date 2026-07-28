@@ -19,8 +19,19 @@ import {
 import type { BillingPeriod, Plan } from '@/entities/subscription'
 import { validEmail, validPhoneCode } from '@/shared/regex'
 import { useAuthStore } from '@/entities/user'
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { type ReactNode, useState } from 'react'
+import {
+	useMutation,
+	useQuery,
+	useQueryClient
+} from '@tanstack/react-query'
+import Link from 'next/link'
+import {
+	type ReactNode,
+	useCallback,
+	useEffect,
+	useRef,
+	useState
+} from 'react'
 import toast from 'react-hot-toast'
 import styles from './Pricing.module.scss'
 
@@ -48,6 +59,9 @@ const BILLING_PERIOD_LABEL: Record<BillingPeriod, string> = {
 	YEARLY: 'год'
 }
 
+const PENDING_PAYMENT_FALLBACK_TTL_MS = 60 * 60 * 1000
+const PENDING_PAYMENT_WARNING_MS = 5 * 60 * 1000
+
 const PAYMENT_COPY = {
 	title: 'Оплата',
 	paymentDisabledNotice: 'Оплата временно недоступна. Попробуйте позже.',
@@ -64,6 +78,23 @@ const PAYMENT_COPY = {
 	pendingPaymentResumeButtonText: 'Вернуться к оплате',
 	pendingPaymentCancelButtonText: 'Отменить платёж',
 	pendingPaymentCancelLoadingText: 'Отменяем...',
+	pendingPaymentTypeOneTime: 'Разовый платёж',
+	pendingPaymentTypeAutoRenew: 'С автопродлением',
+	pendingPaymentCountdownText: 'Ссылка на оплату действует ещё',
+	pendingPaymentWarningText: 'До окончания оплаты осталось меньше 5 минут',
+	pendingPaymentVerifyingText: 'Срок ссылки завершён. Проверяем статус…',
+	pendingPaymentAwaitingProviderTitle: 'Срок ссылки на оплату истёк',
+	pendingPaymentAwaitingProviderText:
+		'Ссылка больше недоступна. Ждём окончательный статус ЮKassa, чтобы исключить двойное списание.',
+	pendingPaymentAwaitingProviderStatus:
+		'Ожидаем окончательный статус ЮKassa',
+	pendingPaymentExpiredTitle: 'Срок незавершённого платежа истёк',
+	pendingPaymentExpiredText:
+		'Статус обновлён. Теперь можно создать новый платёж.',
+	pendingPaymentErrorTitle: 'Не удалось проверить платёж',
+	pendingPaymentErrorText:
+		'Ссылка на оплату временно недоступна. Повторите проверку статуса.',
+	pendingPaymentRetryButtonText: 'Проверить ещё раз',
 	periodLegendText: 'Период оплаты',
 	pricePerMonthText: '/мес',
 	yearlyTotalText: '{amount} ₽ / год',
@@ -79,6 +110,8 @@ const PAYMENT_COPY = {
 		'Telegram не передаёт email или телефон. Для создания платежа ЮKassa нужен подтверждённый контакт в профиле.',
 	contactRequiredPendingText:
 		'После подтверждения email продолжим оплату тарифа {payment}.',
+	contactRequiredAutoRenewText:
+		'Выбранный режим: {paymentType}. Выбор сохранится после подтверждения email.',
 	contactEmailPlaceholder: 'Email для оплаты',
 	contactEmailCodePlaceholder: 'Код из email',
 	contactEmailSendButtonText: 'Получить код',
@@ -152,26 +185,84 @@ const getPendingPaymentLabel = (
 	return `${paymentPlanLabel} на ${periodLabel}`
 }
 
+const getPaymentTypeLabel = (autoRenew: boolean) =>
+	autoRenew
+		? PAYMENT_COPY.pendingPaymentTypeAutoRenew
+		: PAYMENT_COPY.pendingPaymentTypeOneTime
+
+const getPendingExpiresAt = (pendingPayment: IPendingPayment) => {
+	const expiresAt = Date.parse(pendingPayment.expiresAt)
+
+	if (Number.isFinite(expiresAt)) return expiresAt
+
+	const createdAt = Date.parse(pendingPayment.createdAt)
+	return Number.isFinite(createdAt)
+		? createdAt + PENDING_PAYMENT_FALLBACK_TTL_MS
+		: 0
+}
+
+const formatCountdown = (remainingMs: number) => {
+	const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000))
+	const minutes = Math.floor(totalSeconds / 60)
+	const seconds = totalSeconds % 60
+
+	return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
+type PendingPaymentRequest = {
+	plan: PaidPlan
+	billingPeriod: BillingPeriod
+	expectedAmount: number
+	autoRenew: boolean
+}
+
+type PendingResolutionState =
+	| 'counting'
+	| 'verifying'
+	| 'awaitingProvider'
+	| 'expired'
+	| 'error'
+
 interface PricingProps {
 	pricingContent: HomePagePricingContent
 	paymentEnabled?: boolean
+	autoRenewalSignupEnabled?: boolean
+	autoRenewalTerms?: {
+		version: string
+		text: string
+	} | null
 	tariffPrices?: TariffPrice[] | null
 }
 
 const Pricing = ({
 	pricingContent,
 	paymentEnabled = true,
+	autoRenewalSignupEnabled = false,
+	autoRenewalTerms = null,
 	tariffPrices = null
 }: PricingProps) => {
 	const auth = useAuthStore(state => state.auth)
+	const queryClient = useQueryClient()
 	const { user, isLoading: isUserLoading } = useUser()
 	const [period, setPeriod] = useState<BillingPeriod>('YEARLY')
+	const [autoRenewByPlan, setAutoRenewByPlan] = useState<
+		Record<PaidPlan, boolean>
+	>({
+		EASY: false,
+		HARD: false
+	})
 	const [paymentEmail, setPaymentEmail] = useState('')
 	const [paymentEmailCode, setPaymentEmailCode] = useState('')
-	const [pendingPaymentRequest, setPendingPaymentRequest] = useState<{
-		plan: PaidPlan
-		billingPeriod: BillingPeriod
-	} | null>(null)
+	const [pendingPaymentRequest, setPendingPaymentRequest] =
+		useState<PendingPaymentRequest | null>(null)
+	const [pendingResolutionState, setPendingResolutionState] =
+		useState<PendingResolutionState>('counting')
+	const [expiredPendingPayment, setExpiredPendingPayment] =
+		useState<IPendingPayment | null>(null)
+	const [nowMs, setNowMs] = useState(() => Date.now())
+	const [serverOffsetMs, setServerOffsetMs] = useState(0)
+	const [serverOffsetKey, setServerOffsetKey] = useState('')
+	const reconcilingPaymentIdRef = useRef<string | null>(null)
 	const {
 		emailCodeRequested,
 		isSendingEmailCode,
@@ -207,7 +298,8 @@ const Pricing = ({
 	const {
 		data: pendingPayment,
 		isLoading: pendingLoading,
-		refetch
+		isError: pendingLoadError,
+		refetch: refetchPendingPayment
 	} = useQuery({
 		queryKey: ['pending-payment'],
 		queryFn: subscriptionService.getPendingPayment,
@@ -217,11 +309,17 @@ const Pricing = ({
 	const payMutation = useMutation({
 		mutationFn: ({
 			plan,
-			billingPeriod
-		}: {
-			plan: Plan
-			billingPeriod: BillingPeriod
-		}) => subscriptionService.createPayment(plan, billingPeriod),
+			billingPeriod,
+			expectedAmount,
+			autoRenew
+		}: PendingPaymentRequest) =>
+			subscriptionService.createPayment(
+				plan,
+				billingPeriod,
+				expectedAmount,
+				autoRenew,
+				autoRenew ? autoRenewalTerms?.version : undefined
+			),
 		onMutate: () =>
 			toast.loading('Создаём платёж, пожалуйста подождите...'),
 		onSuccess: ({ confirmationUrl }, _, toastId) => {
@@ -239,7 +337,12 @@ const Pricing = ({
 		mutationFn: subscriptionService.cancelPendingPayment,
 		onMutate: () => toast.loading('Отменяем незавершённый платёж...'),
 		onSuccess: async (result, _, toastId) => {
-			await refetch()
+			setExpiredPendingPayment(null)
+			setPendingResolutionState('counting')
+			await Promise.all([
+				refetchPendingPayment(),
+				queryClient.invalidateQueries({ queryKey: ['payment-history'] })
+			])
 			toast.success(result.message, {
 				id: toastId
 			})
@@ -251,6 +354,15 @@ const Pricing = ({
 					id: toastId
 				}
 			)
+		},
+		onSettled: async () => {
+			await Promise.all([
+				refetchPendingPayment(),
+				queryClient.invalidateQueries({ queryKey: ['subscription'] }),
+				queryClient.invalidateQueries({ queryKey: ['payment-history'] }),
+				queryClient.invalidateQueries({ queryKey: ['auto-renewal'] }),
+				queryClient.invalidateQueries({ queryKey: ['widgets'] })
+			])
 		}
 	})
 
@@ -259,9 +371,8 @@ const Pricing = ({
 	const currentPlan = subscription?.plan
 	const currentPeriod = subscription?.billingPeriod
 	const isActive = subscription?.status === 'ACTIVE'
-	const activePendingPayment = pendingPayment?.confirmationUrl
-		? pendingPayment
-		: null
+	const activePendingPayment = pendingPayment ?? null
+	const activePendingPaymentId = activePendingPayment?.id ?? null
 	const hasPendingPayment = Boolean(activePendingPayment)
 	const pendingPaymentLabel = activePendingPayment
 		? getPendingPaymentLabel(activePendingPayment, planLabel)
@@ -279,23 +390,276 @@ const Pricing = ({
 		payMutation.isPending ||
 		cancelPendingMutation.isPending ||
 		pendingLoading ||
+		pendingLoadError ||
 		isUserLoading
 	const hasPaymentContact = Boolean(user?.email || user?.phone)
 	const shouldShowPaymentContactPrompt = Boolean(
 		auth && user?.id && !hasPaymentContact
 	)
+	const pendingExpiresAtMs = activePendingPayment
+		? getPendingExpiresAt(activePendingPayment)
+		: 0
+	const pendingServerTimeMs = activePendingPayment
+		? Date.parse(activePendingPayment.serverTime)
+		: Number.NaN
+	const pendingServerOffsetKey = activePendingPayment
+		? `${activePendingPayment.id}:${activePendingPayment.serverTime}`
+		: ''
+	const pendingServerNowMs =
+		serverOffsetKey === pendingServerOffsetKey
+			? nowMs + serverOffsetMs
+			: Number.isFinite(pendingServerTimeMs)
+				? pendingServerTimeMs
+				: nowMs
+	const pendingRemainingMs = activePendingPayment
+		? Math.max(0, pendingExpiresAtMs - pendingServerNowMs)
+		: 0
+	const pendingCountdownState = pendingLoadError
+		? 'error'
+		: pendingResolutionState === 'counting'
+			? pendingRemainingMs <= PENDING_PAYMENT_WARNING_MS
+				? 'warning'
+				: 'active'
+			: pendingResolutionState
+	const isPendingLinkAvailable = Boolean(
+		activePendingPayment?.confirmationUrl &&
+		!pendingLoadError &&
+		pendingRemainingMs > 0 &&
+		(pendingCountdownState === 'active' ||
+			pendingCountdownState === 'warning')
+	)
+
+	const reconcileExpiredPayment = useCallback(async () => {
+		const payment = activePendingPayment
+
+		if (!payment || reconcilingPaymentIdRef.current === payment.id) {
+			return
+		}
+
+		reconcilingPaymentIdRef.current = payment.id
+		setPendingResolutionState('verifying')
+		const toastId = `pending-payment-status-${payment.id}`
+		toast.loading('Проверяем статус незавершённого платежа...', {
+			id: toastId
+		})
+
+		try {
+			const result = await refetchPendingPayment()
+
+			if (result.isError) {
+				throw result.error
+			}
+
+			const freshPayment = result.data
+
+			if (!freshPayment || freshPayment.id !== payment.id) {
+				const verification = await subscriptionService.verifyPayment(
+					payment.id
+				)
+
+				if (verification.status === 'succeeded') {
+					await Promise.all([
+						queryClient.invalidateQueries({
+							queryKey: ['subscription']
+						}),
+						queryClient.invalidateQueries({
+							queryKey: ['payment-history']
+						}),
+						queryClient.invalidateQueries({
+							queryKey: ['auto-renewal']
+						}),
+						queryClient.invalidateQueries({ queryKey: ['widgets'] })
+					])
+					toast.success('Оплата подтверждена', { id: toastId })
+					window.location.assign(
+						`/payment/success?paymentId=${encodeURIComponent(payment.id)}`
+					)
+					return
+				}
+
+				if (verification.status === 'pending') {
+					setPendingResolutionState('error')
+					toast.error(verification.message, { id: toastId })
+					return
+				}
+
+				setExpiredPendingPayment(payment)
+				setPendingResolutionState('expired')
+				await Promise.all([
+					queryClient.invalidateQueries({ queryKey: ['subscription'] }),
+					queryClient.invalidateQueries({ queryKey: ['payment-history'] }),
+					queryClient.invalidateQueries({ queryKey: ['auto-renewal'] }),
+					queryClient.invalidateQueries({ queryKey: ['widgets'] })
+				])
+				toast.success(verification.message, { id: toastId })
+				return
+			}
+
+			const freshServerTime = Date.parse(freshPayment.serverTime)
+			const freshServerNow = Number.isFinite(freshServerTime)
+				? freshServerTime
+				: Date.now()
+			const freshExpiresAt = getPendingExpiresAt(freshPayment)
+
+			if (
+				freshPayment.confirmationUrl &&
+				freshExpiresAt > freshServerNow
+			) {
+				setExpiredPendingPayment(null)
+				setPendingResolutionState('counting')
+				setNowMs(Date.now())
+				toast.success('Статус платежа обновлён', { id: toastId })
+				return
+			}
+
+			setPendingResolutionState('awaitingProvider')
+			toast.success(PAYMENT_COPY.pendingPaymentAwaitingProviderStatus, {
+				id: toastId
+			})
+		} catch {
+			setPendingResolutionState('error')
+			toast.error('Не удалось проверить статус платежа', {
+				id: toastId
+			})
+		} finally {
+			reconcilingPaymentIdRef.current = null
+		}
+	}, [activePendingPayment, queryClient, refetchPendingPayment])
+
+	useEffect(() => {
+		if (!activePendingPayment) return
+
+		const serverTime = Date.parse(activePendingPayment.serverTime)
+		setServerOffsetMs(
+			Number.isFinite(serverTime) ? serverTime - Date.now() : 0
+		)
+		setServerOffsetKey(
+			`${activePendingPayment.id}:${activePendingPayment.serverTime}`
+		)
+		setNowMs(Date.now())
+	}, [activePendingPayment])
+
+	useEffect(() => {
+		if (!activePendingPaymentId) return
+
+		setExpiredPendingPayment(null)
+		setPendingResolutionState('counting')
+		reconcilingPaymentIdRef.current = null
+	}, [activePendingPaymentId])
+
+	useEffect(() => {
+		if (!activePendingPayment) return
+
+		const updateClock = () => setNowMs(Date.now())
+		const handleVisibilityChange = () => {
+			if (document.visibilityState === 'visible') updateClock()
+		}
+		const intervalId =
+			pendingResolutionState === 'counting'
+				? window.setInterval(updateClock, 1000)
+				: null
+
+		window.addEventListener('focus', updateClock)
+		document.addEventListener('visibilitychange', handleVisibilityChange)
+
+		return () => {
+			if (intervalId !== null) window.clearInterval(intervalId)
+			window.removeEventListener('focus', updateClock)
+			document.removeEventListener(
+				'visibilitychange',
+				handleVisibilityChange
+			)
+		}
+	}, [activePendingPayment, pendingResolutionState])
+
+	useEffect(() => {
+		if (
+			activePendingPayment &&
+			pendingResolutionState === 'counting' &&
+			pendingRemainingMs <= 0
+		) {
+			void reconcileExpiredPayment()
+		}
+	}, [
+		activePendingPayment,
+		pendingRemainingMs,
+		pendingResolutionState,
+		reconcileExpiredPayment
+	])
 
 	const handlePaymentClick = (
 		plan: PaidPlan,
-		billingPeriod: BillingPeriod
+		billingPeriod: BillingPeriod,
+		expectedAmount: number,
+		autoRenew: boolean
 	) => {
 		if (shouldShowPaymentContactPrompt) {
-			setPendingPaymentRequest({ plan, billingPeriod })
+			setPendingPaymentRequest({
+				plan,
+				billingPeriod,
+				expectedAmount,
+				autoRenew
+			})
 			toast.error('Для оплаты сначала подтвердите email')
 			return
 		}
 
-		payMutation.mutate({ plan, billingPeriod })
+		payMutation.mutate({
+			plan,
+			billingPeriod,
+			expectedAmount,
+			autoRenew
+		})
+	}
+
+	const handlePeriodChange = (billingPeriod: BillingPeriod) => {
+		setPeriod(billingPeriod)
+		setPendingPaymentRequest(current =>
+			current
+				? {
+						...current,
+						billingPeriod,
+						expectedAmount: tariffPriceMap[current.plan][billingPeriod]
+					}
+				: current
+		)
+	}
+
+	const handleAutoRenewChange = (plan: PaidPlan, autoRenew: boolean) => {
+		setAutoRenewByPlan(current => ({ ...current, [plan]: autoRenew }))
+		setPendingPaymentRequest(current =>
+			current?.plan === plan ? { ...current, autoRenew } : current
+		)
+		toast.success(
+			autoRenew
+				? 'Для следующего платежа выбрано автопродление'
+				: 'Следующий платёж будет разовым',
+			{ id: `auto-renew-choice-${plan}` }
+		)
+	}
+
+	const retryPendingPaymentStatus = async () => {
+		if (activePendingPayment) {
+			await reconcileExpiredPayment()
+			return
+		}
+
+		const toastId = 'pending-payment-status-retry'
+		toast.loading('Проверяем незавершённые платежи...', {
+			id: toastId
+		})
+
+		const result = await refetchPendingPayment()
+
+		if (result.isError) {
+			toast.error('Не удалось проверить незавершённые платежи', {
+				id: toastId
+			})
+			return
+		}
+
+		setPendingResolutionState('counting')
+		toast.success('Статус платежей обновлён', { id: toastId })
 	}
 
 	const requestPaymentEmailCode = async () => {
@@ -421,16 +785,53 @@ const Pricing = ({
 						/>
 					</div>
 				</div>
-			) : hasPendingPayment ? (
-				<div className={styles.pendingNotice}>
+			) : pendingLoadError && !hasPendingPayment ? (
+				<div
+					className={`${styles.pendingNotice} ${styles.pendingNoticeError}`}
+					role="alert"
+				>
 					<div className={styles.pendingCopy}>
 						<p className={styles.pendingTitle}>
-							{isPendingDowngradeBlocked
-								? PAYMENT_COPY.pendingPaymentUnavailableTitle
-								: PAYMENT_COPY.pendingPaymentTitle}
+							{PAYMENT_COPY.pendingPaymentErrorTitle}
 						</p>
 						<p className={styles.pendingText}>
-							{isPendingDowngradeBlocked ? (
+							{PAYMENT_COPY.pendingPaymentErrorText}
+						</p>
+					</div>
+					<div className={styles.pendingActions}>
+						<button
+							type="button"
+							className={styles.pendingRetryBtn}
+							onClick={() => void retryPendingPaymentStatus()}
+						>
+							{PAYMENT_COPY.pendingPaymentRetryButtonText}
+						</button>
+					</div>
+				</div>
+			) : hasPendingPayment ? (
+				<div
+					className={`${styles.pendingNotice} ${
+						pendingCountdownState === 'warning'
+							? styles.pendingNoticeWarning
+							: pendingCountdownState === 'error'
+								? styles.pendingNoticeError
+								: ''
+					}`}
+				>
+					<div className={styles.pendingCopy}>
+						<p className={styles.pendingTitle}>
+							{pendingCountdownState === 'error'
+								? PAYMENT_COPY.pendingPaymentErrorTitle
+								: pendingCountdownState === 'awaitingProvider'
+									? PAYMENT_COPY.pendingPaymentAwaitingProviderTitle
+									: isPendingDowngradeBlocked
+										? PAYMENT_COPY.pendingPaymentUnavailableTitle
+										: PAYMENT_COPY.pendingPaymentTitle}
+						</p>
+						<p className={styles.pendingText}>
+							{pendingCountdownState === 'awaitingProvider' ? (
+								PAYMENT_COPY.pendingPaymentAwaitingProviderText
+							) : isPendingDowngradeBlocked ? (
 								<>
 									{renderTemplate(
 										PAYMENT_COPY.pendingPaymentUnavailableText,
@@ -458,9 +859,51 @@ const Pricing = ({
 								</>
 							)}
 						</p>
+						<div className={styles.pendingMeta}>
+							<span className={styles.pendingTypeBadge}>
+								{getPaymentTypeLabel(
+									Boolean(activePendingPayment?.autoRenew)
+								)}
+							</span>
+							{pendingCountdownState === 'active' ||
+							pendingCountdownState === 'warning' ? (
+								<span
+									className={`${styles.pendingCountdown} ${
+										pendingCountdownState === 'warning'
+											? styles.pendingCountdownWarning
+											: ''
+									}`}
+								>
+									<span>{PAYMENT_COPY.pendingPaymentCountdownText} </span>
+									<strong aria-hidden="true">
+										{formatCountdown(pendingRemainingMs)}
+									</strong>
+									<span className="srOnly">
+										{`${Math.max(1, Math.ceil(pendingRemainingMs / 60000))} мин.`}
+									</span>
+								</span>
+							) : pendingCountdownState === 'verifying' ? (
+								<span className={styles.pendingStatus} role="status">
+									{PAYMENT_COPY.pendingPaymentVerifyingText}
+								</span>
+							) : pendingCountdownState === 'awaitingProvider' ? (
+								<span className={styles.pendingStatus} role="status">
+									{PAYMENT_COPY.pendingPaymentAwaitingProviderStatus}
+								</span>
+							) : (
+								<span className={styles.pendingStatus} role="alert">
+									{PAYMENT_COPY.pendingPaymentErrorText}
+								</span>
+							)}
+						</div>
+						{pendingCountdownState === 'warning' && (
+							<p className={styles.pendingWarning} role="status">
+								{PAYMENT_COPY.pendingPaymentWarningText}
+							</p>
+						)}
 					</div>
 					<div className={styles.pendingActions}>
-						{!isPendingDowngradeBlocked && (
+						{!isPendingDowngradeBlocked && isPendingLinkAvailable && (
 							<a
 								href={activePendingPayment?.confirmationUrl ?? undefined}
 								className={styles.pendingResumeBtn}
@@ -468,16 +911,54 @@ const Pricing = ({
 								{PAYMENT_COPY.pendingPaymentResumeButtonText}
 							</a>
 						)}
+						{pendingCountdownState === 'verifying' && (
+							<button
+								type="button"
+								className={styles.pendingResumeBtn}
+								disabled
+							>
+								Проверяем…
+							</button>
+						)}
+						{(pendingCountdownState === 'error' ||
+							pendingCountdownState === 'awaitingProvider') && (
+							<button
+								type="button"
+								className={styles.pendingRetryBtn}
+								onClick={() => void retryPendingPaymentStatus()}
+							>
+								{PAYMENT_COPY.pendingPaymentRetryButtonText}
+							</button>
+						)}
 						<button
 							type="button"
 							className={styles.pendingCancelBtn}
 							onClick={() => cancelPendingMutation.mutate()}
-							disabled={cancelPendingMutation.isPending}
+							disabled={
+								cancelPendingMutation.isPending ||
+								pendingCountdownState === 'verifying'
+							}
 						>
 							{cancelPendingMutation.isPending
 								? PAYMENT_COPY.pendingPaymentCancelLoadingText
 								: PAYMENT_COPY.pendingPaymentCancelButtonText}
 						</button>
+					</div>
+				</div>
+			) : expiredPendingPayment ? (
+				<div className={styles.pendingNotice} role="status">
+					<div className={styles.pendingCopy}>
+						<p className={styles.pendingTitle}>
+							{PAYMENT_COPY.pendingPaymentExpiredTitle}
+						</p>
+						<p className={styles.pendingText}>
+							{PAYMENT_COPY.pendingPaymentExpiredText}
+						</p>
+						<span className={styles.pendingTypeBadge}>
+							{getPaymentTypeLabel(
+								Boolean(expiredPendingPayment.autoRenew)
+							)}
+						</span>
 					</div>
 				</div>
 			) : null}
@@ -492,15 +973,34 @@ const Pricing = ({
 							{PAYMENT_COPY.contactRequiredText}
 						</p>
 						{pendingPaymentRequest && (
-							<p className={styles.contactRequiredText}>
-								{renderTemplate(PAYMENT_COPY.contactRequiredPendingText, {
-									payment: (
-										<strong key="payment">
-											{`${planLabel[pendingPaymentRequest.plan]} на ${BILLING_PERIOD_LABEL[pendingPaymentRequest.billingPeriod]}`}
-										</strong>
-									)
-								})}
-							</p>
+							<>
+								<p className={styles.contactRequiredText}>
+									{renderTemplate(
+										PAYMENT_COPY.contactRequiredPendingText,
+										{
+											payment: (
+												<strong key="payment">
+													{`${planLabel[pendingPaymentRequest.plan]} на ${BILLING_PERIOD_LABEL[pendingPaymentRequest.billingPeriod]}`}
+												</strong>
+											)
+										}
+									)}
+								</p>
+								<p className={styles.contactRequiredText}>
+									{renderTemplate(
+										PAYMENT_COPY.contactRequiredAutoRenewText,
+										{
+											paymentType: (
+												<strong key="paymentType">
+													{getPaymentTypeLabel(
+														pendingPaymentRequest.autoRenew
+													)}
+												</strong>
+											)
+										}
+									)}
+								</p>
+							</>
 						)}
 					</div>
 					<div className={styles.contactRequiredForm}>
@@ -572,14 +1072,14 @@ const Pricing = ({
 					<button
 						type="button"
 						className={`${styles.periodBtn} ${!isYearly ? styles.periodActive : ''}`}
-						onClick={() => setPeriod('MONTHLY')}
+						onClick={() => handlePeriodChange('MONTHLY')}
 					>
 						{pricingContent.monthlyToggleText}
 					</button>
 					<button
 						type="button"
 						className={`${styles.periodBtn} ${isYearly ? styles.periodActive : ''}`}
-						onClick={() => setPeriod('YEARLY')}
+						onClick={() => handlePeriodChange('YEARLY')}
 					>
 						{pricingContent.yearlyToggleText}
 						{pricingContent.discountText && (
@@ -597,6 +1097,10 @@ const Pricing = ({
 					const price = isYearly
 						? Math.round(planPrices.YEARLY / 12)
 						: planPrices.MONTHLY
+					const paymentTotal = isYearly
+						? planPrices.YEARLY
+						: planPrices.MONTHLY
+					const autoRenew = autoRenewByPlan[plan.key]
 					const isDowngradeBlocked = Boolean(
 						isActive &&
 						currentPlan &&
@@ -607,6 +1111,8 @@ const Pricing = ({
 						(!currentPeriod || currentPeriod === period) &&
 						isActive
 					const titleId = `plan-${plan.key.toLowerCase()}-title`
+					const autoRenewInputId = `plan-${plan.key.toLowerCase()}-auto-renew`
+					const autoRenewDescriptionId = `plan-${plan.key.toLowerCase()}-auto-renew-description`
 
 					return (
 						<article
@@ -646,6 +1152,64 @@ const Pricing = ({
 								))}
 							</ul>
 
+							<div className={styles.autoRenewBlock}>
+								<label
+									className={styles.autoRenewOption}
+									htmlFor={autoRenewInputId}
+									aria-label={`Автопродление: ${formatRub(paymentTotal)} ₽ ${
+										isYearly ? 'раз в год' : 'каждый месяц'
+									}`}
+								>
+									<input
+										id={autoRenewInputId}
+										type="checkbox"
+										className={styles.autoRenewInput}
+										checked={autoRenew}
+										onChange={event =>
+											handleAutoRenewChange(plan.key, event.target.checked)
+										}
+										disabled={
+											!autoRenewalSignupEnabled ||
+											!autoRenewalTerms ||
+											isActionsDisabled ||
+											hasPendingPayment ||
+											isDowngradeBlocked
+										}
+										aria-describedby={autoRenewDescriptionId}
+									/>
+									<span
+										className={styles.autoRenewVisual}
+										aria-hidden="true"
+									>
+										<span>✓</span>
+									</span>
+									<span className={styles.autoRenewCopy}>
+										<strong>
+											{autoRenewalSignupEnabled
+												? 'Автопродление'
+												: 'Автопродление временно недоступно'}
+										</strong>
+										<span>
+											{`${formatRub(paymentTotal)} ₽ ${
+												isYearly ? 'раз в год' : 'каждый месяц'
+											}`}
+										</span>
+									</span>
+								</label>
+								<p
+									id={autoRenewDescriptionId}
+									className={styles.autoRenewDescription}
+								>
+									{autoRenewalTerms?.text ??
+										'Условия автопродления временно недоступны.'}{' '}
+									Условия — в{' '}
+									<Link href="/legal-documentation/oferta">
+										договоре-оферте
+									</Link>
+									. Отключить можно в личном кабинете.
+								</p>
+							</div>
+
 							<button
 								type="button"
 								className={styles.buyBtn}
@@ -655,7 +1219,14 @@ const Pricing = ({
 									hasPendingPayment ||
 									isDowngradeBlocked
 								}
-								onClick={() => handlePaymentClick(plan.key, period)}
+								onClick={() =>
+									handlePaymentClick(
+										plan.key,
+										period,
+										paymentTotal,
+										autoRenew
+									)
+								}
 							>
 								{isDowngradeBlocked
 									? PAYMENT_COPY.unavailableButtonText

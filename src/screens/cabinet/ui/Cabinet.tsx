@@ -2,6 +2,7 @@
 
 import styles from '@/screens/cabinet/ui/Cabinet.module.scss'
 import CabinetAffiliate from '@/screens/cabinet/ui/CabinetAffiliate'
+import CabinetPayments from '@/screens/cabinet/ui/CabinetPayments'
 import CabinetProfile from '@/screens/cabinet/ui/CabinetProfile'
 import CabinetSessions from '@/screens/cabinet/ui/CabinetSessions'
 import CabinetWidgets from '@/screens/cabinet/ui/CabinetWidgets'
@@ -12,10 +13,17 @@ import { widgetService } from '@/entities/site-widget'
 import { useAuthStore } from '@/entities/user'
 import { useQuery } from '@tanstack/react-query'
 import Image from 'next/image'
-import { useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { FC, useEffect, useState } from 'react'
 
-type Tab = 'widgets' | 'profile' | 'sessions' | 'affiliate'
+type Tab = 'widgets' | 'payments' | 'profile' | 'sessions' | 'affiliate'
+
+const isTab = (value: string | null): value is Tab =>
+	value === 'widgets' ||
+	value === 'payments' ||
+	value === 'profile' ||
+	value === 'sessions' ||
+	value === 'affiliate'
 
 const planLabel: Record<string, string> = {
 	TRIAL: 'Тест-драйв',
@@ -34,12 +42,11 @@ const formatSubscriptionExpiresAt = (value: string) =>
 	}).format(new Date(value))} МСК`
 
 const Cabinet: FC = () => {
+	const router = useRouter()
+	const pathname = usePathname()
 	const searchParams = useSearchParams()
 	const requestedTab = searchParams.get('tab')
-	const initialTab: Tab =
-		requestedTab === 'profile' || requestedTab === 'sessions'
-			? requestedTab
-			: 'widgets'
+	const initialTab: Tab = isTab(requestedTab) ? requestedTab : 'widgets'
 	const [tab, setTab] = useState<Tab>(initialTab)
 	const auth = useAuthStore(state => state.auth)
 	const { user, isLoading } = useUser()
@@ -49,11 +56,12 @@ const Cabinet: FC = () => {
 		queryFn: widgetService.getMyWidgets,
 		enabled: auth
 	})
-	const { data: affiliateSettings } = useQuery({
-		queryKey: ['affiliate-public-settings'],
-		queryFn: affiliateService.getPublicSettings,
-		enabled: auth
-	})
+	const { data: affiliateSettings, isLoading: affiliateSettingsLoading } =
+		useQuery({
+			queryKey: ['affiliate-public-settings'],
+			queryFn: affiliateService.getPublicSettings,
+			enabled: auth
+		})
 
 	const subscription = data?.subscription
 	const isAffiliateEnabled = Boolean(affiliateSettings?.enabled)
@@ -65,10 +73,45 @@ const Cabinet: FC = () => {
 	const displaySub = user?.email || user?.phone || ''
 
 	useEffect(() => {
-		if (tab === 'affiliate' && !isAffiliateEnabled) {
+		if (
+			!affiliateSettingsLoading &&
+			tab === 'affiliate' &&
+			!isAffiliateEnabled
+		) {
 			setTab('widgets')
 		}
-	}, [isAffiliateEnabled, tab])
+	}, [affiliateSettingsLoading, isAffiliateEnabled, tab])
+
+	useEffect(() => {
+		const nextTab = isTab(requestedTab) ? requestedTab : 'widgets'
+
+		if (
+			nextTab === 'affiliate' &&
+			!affiliateSettingsLoading &&
+			!isAffiliateEnabled
+		) {
+			setTab('widgets')
+			return
+		}
+
+		setTab(nextTab)
+	}, [affiliateSettingsLoading, isAffiliateEnabled, requestedTab])
+
+	const changeTab = (nextTab: Tab) => {
+		setTab(nextTab)
+		const nextSearchParams = new URLSearchParams(searchParams.toString())
+
+		if (nextTab === 'widgets') {
+			nextSearchParams.delete('tab')
+		} else {
+			nextSearchParams.set('tab', nextTab)
+		}
+
+		const query = nextSearchParams.toString()
+		router.replace(query ? `${pathname}?${query}` : pathname, {
+			scroll: false
+		})
+	}
 
 	return (
 		<div className={styles.cabinet}>
@@ -130,29 +173,54 @@ const Cabinet: FC = () => {
 			</div>
 
 			{/* ── Tabs ────────────────────────────────────────────── */}
-			<div className={styles.tabs}>
+			<div
+				className={styles.tabs}
+				role="tablist"
+				aria-label="Разделы кабинета"
+			>
 				<button
+					type="button"
+					role="tab"
+					aria-selected={tab === 'widgets'}
 					className={`${styles.tab} ${tab === 'widgets' ? styles.tabActive : ''}`}
-					onClick={() => setTab('widgets')}
+					onClick={() => changeTab('widgets')}
 				>
 					Виджеты
 				</button>
 				<button
+					type="button"
+					role="tab"
+					aria-selected={tab === 'payments'}
+					className={`${styles.tab} ${tab === 'payments' ? styles.tabActive : ''}`}
+					onClick={() => changeTab('payments')}
+				>
+					Платежи
+				</button>
+				<button
+					type="button"
+					role="tab"
+					aria-selected={tab === 'profile'}
 					className={`${styles.tab} ${tab === 'profile' ? styles.tabActive : ''}`}
-					onClick={() => setTab('profile')}
+					onClick={() => changeTab('profile')}
 				>
 					Профиль
 				</button>
 				<button
+					type="button"
+					role="tab"
+					aria-selected={tab === 'sessions'}
 					className={`${styles.tab} ${tab === 'sessions' ? styles.tabActive : ''}`}
-					onClick={() => setTab('sessions')}
+					onClick={() => changeTab('sessions')}
 				>
 					Активные сессии
 				</button>
 				{isAffiliateEnabled && (
 					<button
+						type="button"
+						role="tab"
+						aria-selected={tab === 'affiliate'}
 						className={`${styles.tab} ${tab === 'affiliate' ? styles.tabActive : ''}`}
-						onClick={() => setTab('affiliate')}
+						onClick={() => changeTab('affiliate')}
 					>
 						Партнёрская программа
 					</button>
@@ -162,6 +230,7 @@ const Cabinet: FC = () => {
 			{/* ── Content ─────────────────────────────────────────── */}
 			<div className={styles.content}>
 				{tab === 'widgets' && <CabinetWidgets />}
+				{tab === 'payments' && <CabinetPayments />}
 				{tab === 'profile' && <CabinetProfile />}
 				{tab === 'sessions' && <CabinetSessions />}
 				{tab === 'affiliate' && isAffiliateEnabled && <CabinetAffiliate />}

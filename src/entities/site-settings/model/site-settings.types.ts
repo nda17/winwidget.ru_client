@@ -4,6 +4,9 @@ export interface SiteSettings {
 	bannerText: string
 	snowflakeEnabled: boolean
 	paymentEnabled: boolean
+	autoRenewalSignupEnabled: boolean
+	autoRenewalChargesEnabled: boolean
+	autoRenewalChargesEnabledAt: string
 	recaptchaEnabled: boolean
 	googleAuthEnabled: boolean
 	yandexAuthEnabled: boolean
@@ -12,5 +15,9 @@ export interface SiteSettings {
 	telegramAuthEnabled: boolean
 	affiliateProgramEnabled: boolean
 	affiliateCashbackPercent: number
+	autoRenewalTerms: {
+		version: string
+		text: string
+	}
 	updatedAt: string
 }

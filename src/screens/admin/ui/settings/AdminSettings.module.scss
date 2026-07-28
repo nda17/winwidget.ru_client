@@ -38,6 +38,10 @@
 	@apply text-[0.9rem] font-semibold text-[#1a1a1a];
 }
 
+.fieldLabelRow {
+	@apply flex items-center gap-2;
+}
+
 .fieldHint {
 	@apply text-[0.8rem] text-[#aaa] mt-[2px];
 }

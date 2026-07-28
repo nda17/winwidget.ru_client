@@ -246,6 +246,291 @@
 .sessionsError {
 	@apply border-[#f0b5b5] bg-[#fff5f5] text-[#c0392b];
 }
+
+.paymentsSectionHeading {
+	@apply mb-5 flex items-start justify-between gap-4;
+}
+
+.paymentsTitle {
+	@apply m-0 text-[1.15rem] font-bold text-[#1a1a1a];
+}
+
+.paymentsDescription {
+	@apply mt-2 text-[0.9rem] leading-[1.55] text-[#888];
+}
+
+.paymentsUpdating {
+	@apply shrink-0 text-xs font-medium text-[#8a6ba3];
+}
+
+.autoRenewalSkeleton,
+.autoRenewalCard {
+	@apply flex flex-col gap-4 rounded-xl border border-[#e8def2] bg-[#fcfaff] p-5;
+}
+
+.autoRenewalHeader {
+	@apply flex items-start justify-between gap-4;
+}
+
+.autoRenewalLabel {
+	@apply text-[0.75rem] font-medium uppercase tracking-[0.05em] text-[#aaa];
+}
+
+.autoRenewalTitle {
+	@apply mt-1 text-[1.05rem] font-semibold text-[#3d304b];
+}
+
+.autoRenewalBadge {
+	@apply rounded-full border px-3 py-1 text-xs font-semibold;
+}
+
+.autoRenewalBadgeActive {
+	@apply border-[#b9e5c8] bg-[#eaf8ef] text-[#25834b];
+}
+
+.autoRenewalBadgeInactive {
+	@apply border-[#ded9e7] bg-[#f5f3f7] text-[#77717e];
+}
+
+.autoRenewalBadgeRetry {
+	@apply border-[#efcf94] bg-[#fff8e8] text-[#81540d];
+}
+
+.autoRenewalMeta {
+	@apply grid grid-cols-4 gap-3;
+}
+
+.autoRenewalMeta div {
+	@apply min-w-0 rounded-lg border border-[#eee7f5] bg-white px-3 py-3;
+}
+
+.autoRenewalMeta dt,
+.paymentMobileMeta dt {
+	@apply text-[0.72rem] text-[#aaa];
+}
+
+.autoRenewalMeta dd,
+.paymentMobileMeta dd {
+	@apply m-0 mt-1 break-words text-[0.85rem] font-medium text-[#4f4658];
+}
+
+.autoRenewalReason {
+	@apply rounded-lg border border-[#f0d6a8] bg-[#fffaf0] px-4 py-3 text-[0.85rem] leading-[1.5] text-[#8a5a13];
+}
+
+.autoRenewalRetryCard {
+	@apply flex flex-col gap-3 rounded-xl border border-[#efcf94] bg-[#fffaf0] p-4;
+}
+
+.autoRenewalRetryTitle {
+	@apply text-[0.95rem] font-semibold text-[#784b08];
+}
+
+.autoRenewalRetryReason {
+	@apply mt-1 text-[0.82rem] leading-[1.5] text-[#8a611e];
+}
+
+.autoRenewalRetryReason strong {
+	@apply font-semibold text-[#6f4708];
+}
+
+.autoRenewalRetryMeta {
+	@apply grid grid-cols-3 gap-2;
+}
+
+.autoRenewalRetryMeta div {
+	@apply min-w-0 rounded-lg border border-[#f2dfbd] bg-white px-3 py-2;
+}
+
+.autoRenewalRetryMeta dt {
+	@apply text-[0.72rem] text-[#a17b3c];
+}
+
+.autoRenewalRetryMeta dd {
+	@apply m-0 mt-1 break-words text-[0.85rem] font-semibold text-[#65440f];
+}
+
+.autoRenewalRetryWarning {
+	@apply rounded-lg bg-[#fff3d8] px-3 py-2 text-[0.8rem] leading-[1.5] text-[#805713];
+}
+
+.priceChangeCard {
+	@apply flex flex-col items-start gap-3 rounded-xl border border-[#efcf94] bg-[#fffaf0] p-4;
+}
+
+.priceChangeTitle {
+	@apply text-[0.95rem] font-semibold text-[#784b08];
+}
+
+.priceChangeText {
+	@apply mt-1 text-[0.82rem] leading-[1.5] text-[#8a611e];
+}
+
+.priceChangeAmounts {
+	@apply flex flex-wrap items-center gap-3 rounded-lg bg-white px-3 py-2 text-[0.82rem] text-[#7b5b28];
+}
+
+.priceChangeAmounts strong {
+	@apply text-[#5f3c05];
+}
+
+.priceChangeDetectedAt {
+	@apply text-[0.75rem] text-[#9a7943];
+}
+
+.priceChangeRetryWarning {
+	@apply rounded-lg border border-[#e9bd68] bg-[#fff3d8] px-3 py-2 text-[0.82rem] font-medium leading-[1.5] text-[#744804];
+}
+
+.autoRenewalActions {
+	@apply flex flex-wrap items-center gap-3;
+}
+
+.disableAutoRenewalButton,
+.enableAutoRenewalLink,
+.paymentRetryButton,
+.confirmPriceButton {
+	@apply inline-flex min-h-[40px] items-center justify-center rounded-lg px-4 text-sm font-semibold transition-[opacity,background,border-color] duration-200;
+}
+
+.disableAutoRenewalButton {
+	@apply cursor-pointer border border-[#e4a4a4] bg-white text-[#c0392b];
+}
+
+.disableAutoRenewalButton:hover {
+	@apply border-[#d97777] bg-[#fff1f1];
+}
+
+.disableAutoRenewalButton:disabled {
+	@apply cursor-not-allowed opacity-50;
+}
+
+.enableAutoRenewalLink {
+	@apply border border-[#d8c7e8] bg-[#f8f3ff] text-[#7b3fa0] no-underline;
+}
+
+.enableAutoRenewalLink:hover,
+.enableAutoRenewalLink:focus-visible {
+	@apply border-[#b999d2] bg-[#f2e9fb];
+}
+
+.confirmPriceButton {
+	@apply cursor-pointer border border-[#d6a954] bg-[#fff] text-[#81540d];
+}
+
+.confirmPriceButton:hover {
+	@apply border-[#bd8727] bg-[#fff8e8];
+}
+
+.confirmPriceButton:disabled {
+	@apply cursor-not-allowed opacity-50;
+}
+
+.paymentsError {
+	@apply flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#f0b5b5] bg-[#fff5f5] px-5 py-5 text-sm text-[#a83636];
+}
+
+.paymentRetryButton {
+	@apply cursor-pointer border border-[#ddb0b0] bg-white text-[#a83636];
+}
+
+.paymentRetryButton:hover {
+	@apply bg-[#fff0f0];
+}
+
+.paymentsEmpty {
+	@apply rounded-xl border border-dashed border-[#ddd2e8] bg-[#fcfaff] px-6 py-10 text-center;
+}
+
+.paymentsEmptyTitle {
+	@apply text-base font-semibold text-[#4c4057];
+}
+
+.paymentsEmptyText {
+	@apply mt-2 text-[0.88rem] text-[#968b9f];
+}
+
+.paymentHistorySkeleton {
+	@apply overflow-hidden;
+}
+
+.paymentsDesktop {
+	@apply w-full overflow-x-auto rounded-xl border border-[#e5dbea];
+}
+
+.paymentsTable {
+	@apply w-full min-w-[940px] border-collapse text-left text-[0.82rem];
+}
+
+.paymentsTable th {
+	@apply whitespace-nowrap bg-[#f8f5ff] px-4 py-3 font-semibold text-[#6d6375];
+}
+
+.paymentsTable td {
+	@apply border-t border-[#eee8f2] px-4 py-3 align-middle text-[#4f4658];
+}
+
+.paymentsTable tbody tr:hover {
+	@apply bg-[#fdfbff];
+}
+
+.paymentStatus {
+	@apply inline-flex w-fit whitespace-nowrap rounded-full border px-2 py-[3px] text-[0.72rem] font-semibold;
+}
+
+.paymentStatusSucceeded {
+	@apply border-[#b9e5c8] bg-[#eaf8ef] text-[#25834b];
+}
+
+.paymentStatusPending {
+	@apply border-[#efd19d] bg-[#fff8eb] text-[#a56406];
+}
+
+.paymentStatusCancelled {
+	@apply border-[#e5dfe9] bg-[#f5f3f7] text-[#77717e];
+}
+
+.paymentStatusExpired {
+	@apply border-[#edc1c1] bg-[#fff1f1] text-[#a94141];
+}
+
+.paymentReceiptLink {
+	@apply whitespace-nowrap font-semibold text-[#7b3fa0] underline underline-offset-2;
+}
+
+.paymentReceiptLink:hover,
+.paymentReceiptLink:focus-visible {
+	@apply text-[#c21b84];
+}
+
+.paymentReceiptPending {
+	@apply whitespace-nowrap text-[0.76rem] text-[#9a8da4];
+}
+
+.paymentValueMuted {
+	@apply text-[#b7aebe];
+}
+
+.paymentsMobile {
+	@apply hidden;
+}
+
+.paymentMobileCard {
+	@apply rounded-xl border border-[#e5dbea] bg-white p-4;
+}
+
+.paymentMobileHeader {
+	@apply flex items-start justify-between gap-3;
+}
+
+.paymentMobileHeader > strong {
+	@apply text-base text-[#33283e];
+}
+
+.paymentMobileMeta {
+	@apply mt-4 grid grid-cols-2 gap-x-4 gap-y-3;
+}
+
 @media (max-width: 760px) {
 	.tabs {
 		@apply grid grid-cols-2;
@@ -263,6 +548,36 @@
 	}
 	.sessionMeta {
 		@apply grid-cols-1;
+	}
+	.paymentsSectionHeading,
+	.autoRenewalHeader {
+		@apply flex-col items-stretch;
+	}
+	.autoRenewalMeta {
+		@apply grid-cols-2;
+	}
+	.paymentsDesktop {
+		@apply hidden;
+	}
+	.paymentsMobile {
+		@apply flex flex-col gap-3;
+	}
+}
+
+@media (max-width: 580px) {
+	.autoRenewalMeta,
+	.autoRenewalRetryMeta,
+	.paymentMobileMeta {
+		@apply grid-cols-1;
+	}
+	.disableAutoRenewalButton,
+	.enableAutoRenewalLink,
+	.paymentRetryButton,
+	.confirmPriceButton {
+		@apply w-full;
+	}
+	.paymentsError {
+		@apply flex-col items-stretch text-center;
 	}
 }
 .identityTitle {

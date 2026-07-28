@@ -1,7 +1,11 @@
 import { axiosInterceptorsRequest } from '@/shared/api'
 import type { BillingPeriod, Plan } from '@/entities/subscription'
 
-export type AdminPaymentStatus = 'PENDING' | 'SUCCEEDED' | 'CANCELLED'
+export type AdminPaymentStatus =
+	| 'PENDING'
+	| 'SUCCEEDED'
+	| 'CANCELLED'
+	| 'EXPIRED'
 
 export interface IAdminPaymentUser {
 	id: string
@@ -12,7 +16,7 @@ export interface IAdminPaymentUser {
 
 export interface IAdminPayment {
 	id: string
-	yookassaId: string
+	yookassaId: string | null
 	status: AdminPaymentStatus
 	amount: string
 	plan: Plan | null
@@ -20,6 +24,7 @@ export interface IAdminPayment {
 	confirmationUrl: string | null
 	createdAt: string
 	updatedAt: string
+	succeededAt: string | null
 	user: IAdminPaymentUser
 }
 

@@ -254,6 +254,232 @@
 	}
 }
 
+.renewalLoading {
+	@apply flex flex-col gap-3 rounded-xl border border-gray-300 bg-gray-300 bg-opacity-10 p-4;
+}
+
+.loadingRenewalStatus {
+	@apply h-8 w-56;
+}
+
+.loadingRenewalDetails {
+	@apply h-32 w-full;
+}
+
+.loadingRenewalActions {
+	@apply h-10 w-full;
+}
+
+.renewalError {
+	@apply rounded-xl border border-red-200 bg-red-50 px-4 py-4;
+}
+
+.renewalErrorTitle {
+	@apply text-sm font-semibold text-red-700;
+}
+
+.renewalErrorText {
+	@apply mt-1 text-xs leading-snug text-red-600;
+}
+
+.renewalPanel {
+	@apply flex flex-col gap-4 rounded-xl border border-gray-300 bg-gray-300 bg-opacity-10 p-4;
+}
+
+.renewalHeader {
+	@apply flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between;
+}
+
+.renewalLabel {
+	@apply mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-gray-500;
+}
+
+.renewalStatus {
+	@apply inline-flex rounded-full px-3 py-1 text-xs font-semibold;
+}
+
+.renewalStatusSuccess {
+	@apply bg-green-100 text-green-700;
+}
+
+.renewalStatusWarning {
+	@apply bg-yellow-100 text-yellow-700;
+}
+
+.renewalStatusDanger {
+	@apply bg-red-100 text-red-700;
+}
+
+.renewalStatusMuted {
+	@apply bg-gray-200 text-gray-600;
+}
+
+.renewalStatusDescription {
+	@apply max-w-2xl text-xs leading-snug text-gray-600 lg:text-right;
+}
+
+.renewalDetailsGrid {
+	@apply grid gap-3 md:grid-cols-2;
+}
+
+.renewalDetail {
+	@apply rounded-lg border border-gray-200 bg-white px-3 py-3;
+}
+
+.renewalDetailWide {
+	@apply md:col-span-2;
+}
+
+.renewalDetailLabel {
+	@apply block text-xs text-gray-500;
+}
+
+.renewalDetailValue {
+	@apply mt-1 block break-words text-sm font-semibold leading-snug text-gray-700;
+}
+
+.renewalDetailMeta {
+	@apply mt-1 block text-xs leading-snug text-gray-500;
+}
+
+.renewalValidity {
+	@apply flex flex-wrap gap-2;
+}
+
+.renewalValidityBadge {
+	@apply inline-flex rounded-full px-3 py-1 text-xs font-semibold;
+}
+
+.renewalValiditySuccess {
+	@apply bg-green-100 text-green-700;
+}
+
+.renewalValidityDanger {
+	@apply bg-red-100 text-red-700;
+}
+
+.renewalPriceChange {
+	@apply flex flex-col gap-2 rounded-lg border px-3 py-3 lg:flex-row lg:items-start lg:justify-between;
+}
+
+.renewalPriceChangeRequired {
+	@apply border-yellow-300 bg-yellow-50;
+}
+
+.renewalPriceChangeClear {
+	@apply border-green-200 bg-green-50;
+}
+
+.renewalPriceChangeTitle {
+	@apply text-sm font-semibold text-gray-700;
+}
+
+.renewalPriceChangeText {
+	@apply mt-1 text-xs font-semibold leading-snug text-gray-600;
+}
+
+.renewalPriceChangeMeta {
+	@apply mt-1 text-xs leading-snug text-gray-500;
+}
+
+.renewalPriceChangeNotice {
+	@apply max-w-xl text-xs leading-snug text-yellow-800 lg:text-right;
+}
+
+.renewalDiagnostics {
+	@apply rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-3 text-xs leading-snug text-yellow-800;
+
+	p {
+		@apply break-words;
+	}
+
+	p + p {
+		@apply mt-1;
+	}
+}
+
+.renewalActions {
+	@apply flex flex-col gap-2 sm:flex-row sm:flex-wrap;
+}
+
+.renewalPrimaryButton,
+.renewalSecondaryButton,
+.renewalDangerButton {
+	@apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold transition-opacity;
+
+	&:hover:not(:disabled) {
+		@apply opacity-80;
+	}
+
+	&:disabled {
+		@apply cursor-not-allowed opacity-50;
+	}
+}
+
+.renewalPrimaryButton {
+	@apply bg-red-500 text-white;
+}
+
+.renewalSecondaryButton {
+	@apply border border-gray-300 bg-white text-gray-700;
+}
+
+.renewalDangerButton {
+	@apply border border-red-300 bg-red-50 text-red-700;
+}
+
+.renewalTechnicalPanel {
+	@apply relative overflow-hidden rounded-lg border border-gray-300 bg-white;
+}
+
+.renewalTechnicalPanelLocked {
+	@apply min-h-[8.5rem];
+}
+
+.renewalTechnicalContent {
+	@apply flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between;
+}
+
+.renewalTechnicalContentBlurred {
+	@apply pointer-events-none select-none opacity-60 blur-[2px];
+}
+
+.renewalTechnicalTitle {
+	@apply text-sm font-semibold text-gray-700;
+}
+
+.renewalTechnicalText {
+	@apply mt-1 max-w-2xl text-xs leading-snug text-gray-500;
+}
+
+.renewalTechnicalActions {
+	@apply flex flex-col gap-2 sm:flex-row;
+}
+
+.renewalTechnicalOverlay {
+	@apply absolute inset-0 flex items-center justify-center gap-2 bg-white bg-opacity-70 px-4 text-center backdrop-blur-[1px];
+}
+
+.renewalTechnicalBadge {
+	@apply rounded-full border border-gray-300 bg-white px-3 py-1 text-xs font-semibold text-gray-700 shadow-sm;
+}
+
+.confirmReason {
+	@apply mt-4 flex flex-col gap-2 text-left;
+}
+
+.confirmReasonLabel {
+	@apply text-sm font-semibold text-gray-700;
+}
+
+.confirmReasonInput {
+	@apply min-h-24 w-full resize-y rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 outline-none transition-colors focus:border-red-500 disabled:cursor-not-allowed disabled:opacity-60;
+}
+
+.confirmReasonHint {
+	@apply text-xs leading-snug text-gray-500;
+}
+
 .activationPanel {
 	@apply flex flex-col gap-4 rounded-xl border border-gray-300 bg-gray-300 bg-opacity-10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between;
 }

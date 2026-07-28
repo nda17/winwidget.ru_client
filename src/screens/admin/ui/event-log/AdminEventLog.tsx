@@ -40,6 +40,13 @@ const SECTION_LABELS: Record<AdminEventLogSection, string> = {
 const ACTION_LABELS: Record<AdminEventLogAction, string> = {
 	PAYMENT_MANUAL_CHECK: 'Проверка платежа',
 	PAYMENT_CLEANUP_RUN: 'Очистка платежей',
+	AUTO_RENEWAL_ADMIN_PAUSE: 'Пауза автопродления',
+	AUTO_RENEWAL_ADMIN_RESUME: 'Возобновление автопродления',
+	AUTO_RENEWAL_REVOKE: 'Отзыв согласия на автопродление',
+	AUTO_RENEWAL_RECONCILE: 'Сверка автопродления',
+	AUTO_RENEWAL_TECHNICAL_RESUME: 'Снятие технической паузы',
+	TARIFF_PRICES_UPDATE: 'Изменение тарифных цен',
+	LEGAL_PAGE_UPDATE: 'Изменение юридической страницы',
 	MAILING_BROADCAST_SEND: 'Ручная рассылка',
 	MAILING_BROADCAST_CANCEL: 'Отмена рассылки',
 	SUBSCRIPTION_ACTIVATE: 'Активация подписки',
@@ -180,6 +187,18 @@ const formatMetadata = (item: IAdminEventLogItem) => {
 	const providerStatus = getPrimitiveMetadata(item, 'providerStatus')
 	const localStatus = getPrimitiveMetadata(item, 'localStatus')
 	const status = getPrimitiveMetadata(item, 'status')
+	const reason = getPrimitiveMetadata(item, 'reason')
+	const previousStatus = getPrimitiveMetadata(item, 'previousStatus')
+	const newStatus = getPrimitiveMetadata(item, 'newStatus')
+	const amount = getPrimitiveMetadata(item, 'amount')
+	const currency = getPrimitiveMetadata(item, 'currency')
+	const nextChargeAt = getPrimitiveMetadata(item, 'nextChargeAt')
+	const priceChangeRequired = getPrimitiveMetadata(
+		item,
+		'priceChangeRequired'
+	)
+	const stateVersion = getPrimitiveMetadata(item, 'stateVersion')
+	const result = getPrimitiveMetadata(item, 'result')
 	const dailySummaryEnabled = getPrimitiveMetadata(
 		item,
 		'dailySummaryEnabled'
@@ -196,6 +215,26 @@ const formatMetadata = (item: IAdminEventLogItem) => {
 	if (providerStatus) parts.push(`YooKassa: ${providerStatus}`)
 	if (localStatus) parts.push(`Локально: ${localStatus}`)
 	if (status) parts.push(`Статус: ${status}`)
+	if (reason) parts.push(`Причина: ${reason}`)
+	if (previousStatus) parts.push(`Было: ${previousStatus}`)
+	if (newStatus) parts.push(`Стало: ${newStatus}`)
+	if (amount) {
+		parts.push(`Сумма: ${amount}${currency ? ` ${currency}` : ''}`)
+	}
+	if (nextChargeAt) {
+		parts.push(`Следующее списание: ${formatDateTime(nextChargeAt)}`)
+	}
+	if (priceChangeRequired) {
+		parts.push(
+			`Новая цена: ${
+				priceChangeRequired === 'true'
+					? 'требует подтверждения'
+					: 'подтверждена'
+			}`
+		)
+	}
+	if (stateVersion) parts.push(`Версия: ${stateVersion}`)
+	if (result) parts.push(`Результат: ${result}`)
 	if (dailySummaryEnabled) {
 		parts.push(
 			`Сводка: ${dailySummaryEnabled === 'true' ? 'включена' : 'выключена'}`

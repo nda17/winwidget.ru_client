@@ -2,6 +2,7 @@
 
 import AdminNavigation from '@/screens/admin/ui/common/admin-navigation/AdminNavigation'
 import AdminSectionHeading from '@/screens/admin/ui/common/admin-section-heading/AdminSectionHeading'
+import AdminTooltip from '@/screens/admin/ui/common/admin-tooltip/AdminTooltip'
 import Heading from '@/shared/ui/heading/Heading'
 import SkeletonLoader from '@/shared/ui/skeleton-loader/SkeletonLoader'
 import {
@@ -68,7 +69,12 @@ const AdminSettings: NextPage = () => {
 		Partial<Record<ManualAdminTaskId, ManualAdminTaskRunResult>>
 	>({})
 
-	const { data: settings, isLoading } = useQuery({
+	const {
+		data: settings,
+		isLoading,
+		isError,
+		refetch: refetchSettings
+	} = useQuery({
 		queryKey: ['site-settings'],
 		queryFn: siteSettingsService.get
 	})
@@ -127,6 +133,75 @@ const AdminSettings: NextPage = () => {
 		})
 	}
 
+	const retrySettingsWithToast = () => {
+		const promise = refetchSettings().then(result => {
+			if (result.isError || !result.data) {
+				throw result.error ?? new Error('Настройки не получены')
+			}
+			return result.data
+		})
+
+		toast.promise(promise, {
+			loading: 'Повторно загружаем настройки...',
+			success: 'Настройки загружены',
+			error: 'Не удалось загрузить настройки'
+		})
+	}
+
+	if (isLoading) {
+		return (
+			<section className={styles.wrapper}>
+				<Heading text="Панель администратора" />
+				<AdminNavigation />
+				<AdminSectionHeading
+					title="Настройки сайта"
+					description="Загружаем актуальные значения настроек."
+					text="Настройки"
+				/>
+				<div className={styles.section}>
+					{Array.from({ length: 3 }).map((_, index) => (
+						<div key={index} className={styles.toggleRow}>
+							<div style={{ flex: 1 }}>
+								<SkeletonLoader count={1} className="h-[18px] w-48 mb-2" />
+								<SkeletonLoader count={1} className="h-[14px] w-72" />
+							</div>
+							<SkeletonLoader count={1} className="h-[28px] w-[52px]" />
+						</div>
+					))}
+				</div>
+			</section>
+		)
+	}
+
+	if (isError || !settings) {
+		return (
+			<section className={styles.wrapper}>
+				<Heading text="Панель администратора" />
+				<AdminNavigation />
+				<AdminSectionHeading
+					title="Настройки недоступны"
+					description="Тумблеры заблокированы, потому что актуальные значения не удалось получить с сервера."
+					risk="high"
+					riskText="Не меняйте критические настройки вслепую. Сначала восстановите загрузку текущего состояния."
+					text="Ошибка загрузки"
+				/>
+				<div className={styles.section}>
+					<p className={styles.fieldHint}>
+						Повторите загрузку. До успешного ответа сервера никакие
+						настройки не будут изменены.
+					</p>
+					<button
+						type="button"
+						className={styles.taskBtn}
+						onClick={retrySettingsWithToast}
+					>
+						Загрузить ещё раз
+					</button>
+				</div>
+			</section>
+		)
+	}
+
 	return (
 		<section className={styles.wrapper}>
 			<Heading text="Панель администратора" />
@@ -142,37 +217,132 @@ const AdminSettings: NextPage = () => {
 
 			<div className={styles.section}>
 				{isLoading ? (
-					<div className={styles.toggleRow}>
-						<div style={{ flex: 1 }}>
-							<SkeletonLoader count={1} className="h-[18px] w-48 mb-2" />
-							<SkeletonLoader count={1} className="h-[14px] w-72" />
-						</div>
-						<SkeletonLoader count={1} className="h-[28px] w-[52px]" />
-					</div>
+					<>
+						{Array.from({ length: 3 }).map((_, index) => (
+							<div key={index} className={styles.toggleRow}>
+								<div style={{ flex: 1 }}>
+									<SkeletonLoader
+										count={1}
+										className="h-[18px] w-48 mb-2"
+									/>
+									<SkeletonLoader count={1} className="h-[14px] w-72" />
+								</div>
+								<SkeletonLoader count={1} className="h-[28px] w-[52px]" />
+							</div>
+						))}
+					</>
 				) : (
-					<div className={styles.toggleRow}>
-						<div>
-							<p className={styles.fieldLabel}>
-								Приём платежей через ЮKassa
-							</p>
-							<p className={styles.fieldHint}>
-								Если выключено, кнопки оплаты тарифов недоступны для
-								пользователей
-							</p>
+					<>
+						<div className={styles.toggleRow}>
+							<div>
+								<div className={styles.fieldLabelRow}>
+									<p className={styles.fieldLabel}>
+										Приём платежей через ЮKassa
+									</p>
+									<AdminTooltip
+										title="Общий стоп платежей"
+										description="Останавливает новые разовые оплаты, новые подключения автопродления и выполнение уже запланированных автоматических списаний."
+										risk="high"
+										riskText="После обратного включения списания, расчётная дата которых пришлась на остановку, не догоняются: автопродление переводится на безопасную паузу."
+									/>
+								</div>
+								<p className={styles.fieldHint}>
+									Главный выключатель новых и автоматических платежей
+								</p>
+							</div>
+							<button
+								type="button"
+								aria-label="Приём платежей через ЮKassa"
+								aria-pressed={settings.paymentEnabled}
+								className={`${styles.toggle} ${settings.paymentEnabled ? styles.toggleOn : ''}`}
+								onClick={() =>
+									saveWithToast(
+										{ paymentEnabled: !settings.paymentEnabled },
+										'Применяем настройку...'
+									)
+								}
+								disabled={mutation.isPending}
+							>
+								<span className={styles.toggleThumb} />
+							</button>
 						</div>
-						<button
-							className={`${styles.toggle} ${settings?.paymentEnabled ? styles.toggleOn : ''}`}
-							onClick={() =>
-								saveWithToast(
-									{ paymentEnabled: !settings?.paymentEnabled },
-									'Применяем настройку...'
-								)
-							}
-							disabled={mutation.isPending}
-						>
-							<span className={styles.toggleThumb} />
-						</button>
-					</div>
+						<div className={styles.toggleRow}>
+							<div>
+								<div className={styles.fieldLabelRow}>
+									<p className={styles.fieldLabel}>
+										Разрешать подключение автопродления
+									</p>
+									<AdminTooltip
+										title="Новые подключения"
+										description="Влияет только на новые оплаты: при выключении пользователь не сможет выбрать автопродление, но разовая оплата и уже действующие согласия продолжат работать."
+										risk="medium"
+										riskText="Настройка не останавливает уже запланированные списания."
+									/>
+								</div>
+								<p className={styles.fieldHint}>
+									Управляет галочкой автопродления на странице оплаты
+								</p>
+							</div>
+							<button
+								type="button"
+								aria-label="Разрешать подключение автопродления"
+								aria-pressed={settings.autoRenewalSignupEnabled}
+								className={`${styles.toggle} ${
+									settings.autoRenewalSignupEnabled ? styles.toggleOn : ''
+								}`}
+								onClick={() =>
+									saveWithToast(
+										{
+											autoRenewalSignupEnabled:
+												!settings.autoRenewalSignupEnabled
+										},
+										'Обновляем доступность автопродления...'
+									)
+								}
+								disabled={mutation.isPending}
+							>
+								<span className={styles.toggleThumb} />
+							</button>
+						</div>
+						<div className={styles.toggleRow}>
+							<div>
+								<div className={styles.fieldLabelRow}>
+									<p className={styles.fieldLabel}>
+										Выполнять автоматические списания
+									</p>
+									<AdminTooltip
+										title="Аварийная остановка"
+										description="Останавливает scheduler и повторные попытки для всех пользователей, не удаляя их согласия и сохранённые настройки."
+										risk="high"
+										riskText="Если расчётная дата наступила во время остановки, после включения такое списание не догоняется задним числом: цикл переводится на безопасную паузу."
+									/>
+								</div>
+								<p className={styles.fieldHint}>
+									Глобальный стоп плановых списаний и retry 24/72
+								</p>
+							</div>
+							<button
+								type="button"
+								aria-label="Выполнять автоматические списания"
+								aria-pressed={settings.autoRenewalChargesEnabled}
+								className={`${styles.toggle} ${
+									settings.autoRenewalChargesEnabled ? styles.toggleOn : ''
+								}`}
+								onClick={() =>
+									saveWithToast(
+										{
+											autoRenewalChargesEnabled:
+												!settings.autoRenewalChargesEnabled
+										},
+										'Обновляем выполнение автосписаний...'
+									)
+								}
+								disabled={mutation.isPending}
+							>
+								<span className={styles.toggleThumb} />
+							</button>
+						</div>
+					</>
 				)}
 			</div>
 

@@ -23,6 +23,10 @@ const PaymentPage = async () => {
 		<Pricing
 			pricingContent={content.pricing}
 			paymentEnabled={settings?.paymentEnabled ?? true}
+			autoRenewalSignupEnabled={
+				settings?.autoRenewalSignupEnabled ?? false
+			}
+			autoRenewalTerms={settings?.autoRenewalTerms ?? null}
 			tariffPrices={tariffPrices}
 		/>
 	)

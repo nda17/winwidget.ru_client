@@ -8,6 +8,7 @@ import {
 import { useAuthStore } from '@/entities/user'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import styles from './payment-success.module.scss'
 
@@ -21,6 +22,8 @@ const planLabel: Record<string, string> = {
 
 const PaymentSuccess = () => {
 	const auth = useAuthStore(state => state.auth)
+	const searchParams = useSearchParams()
+	const paymentId = searchParams.get('paymentId')?.trim() || undefined
 	const queryClient = useQueryClient()
 	const [isVerifying, setIsVerifying] = useState(false)
 	const [verification, setVerification] =
@@ -44,7 +47,7 @@ const PaymentSuccess = () => {
 		setIsVerifying(true)
 		setVerificationError('')
 		try {
-			const result = await subscriptionService.verifyPayment()
+			const result = await subscriptionService.verifyPayment(paymentId)
 			setVerification(result)
 			queryClient.invalidateQueries({ queryKey: ['pending-payment'] })
 
@@ -64,7 +67,7 @@ const PaymentSuccess = () => {
 		} finally {
 			setIsVerifying(false)
 		}
-	}, [queryClient])
+	}, [paymentId, queryClient])
 
 	useEffect(() => {
 		handleVerify()

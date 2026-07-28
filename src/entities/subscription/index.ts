@@ -2,7 +2,11 @@ export { default as subscriptionService } from './api/subscription.api'
 export { default as tariffPricesService } from './api/tariff-prices.api'
 export type {
 	AdminBonusAudience,
+	AutoRenewalStatus,
 	AdminSubscriptionPeriodFilter,
+	IAutoRenewal,
+	IAutoRenewalPriceChange,
+	IAutoRenewalRetry,
 	IAdminActivateInput,
 	IAdminExtendDaysInput,
 	IAdminExtendDaysResult,
@@ -12,8 +16,14 @@ export type {
 	IAdminSubscriptionHistoryFilters,
 	IAdminSubscriptionHistoryResponse,
 	IAdminSubscriptionsResponse,
+	ICreatePaymentResponse,
 	IPaymentVerification,
 	IPendingPayment,
+	IUserPayment,
+	IUserPaymentReceipt,
+	IUserPaymentsResponse,
+	PaymentKind,
+	PaymentStatus,
 	SubscriptionHistoryAction
 } from './api/subscription.api'
 export type {

@@ -42,7 +42,8 @@ const PERIOD_LABELS: Record<BillingPeriod, string> = {
 const STATUS_LABELS: Record<AdminPaymentStatus, string> = {
 	PENDING: 'Ожидает',
 	SUCCEEDED: 'Оплачен',
-	CANCELLED: 'Отменён'
+	CANCELLED: 'Отменён',
+	EXPIRED: 'Срок истёк'
 }
 
 type StatusFilter = AdminPaymentStatus | 'ALL'
@@ -65,7 +66,8 @@ const STATUS_FILTER_OPTIONS: Array<{
 	{ value: 'ALL', label: 'Все' },
 	{ value: 'PENDING', label: STATUS_LABELS.PENDING },
 	{ value: 'SUCCEEDED', label: STATUS_LABELS.SUCCEEDED },
-	{ value: 'CANCELLED', label: STATUS_LABELS.CANCELLED }
+	{ value: 'CANCELLED', label: STATUS_LABELS.CANCELLED },
+	{ value: 'EXPIRED', label: STATUS_LABELS.EXPIRED }
 ]
 
 const PLAN_FILTER_OPTIONS: Array<{
@@ -140,6 +142,9 @@ const getUserName = (payment: IAdminPayment) =>
 
 const isActiveCheck = (payment: IAdminPayment, activePaymentId?: string) =>
 	activePaymentId === payment.id || activePaymentId === payment.yookassaId
+
+const getPaymentReference = (payment: IAdminPayment) =>
+	payment.yookassaId ?? payment.id
 
 const AdminPayments: NextPage = () => {
 	const queryClient = useQueryClient()
@@ -227,7 +232,9 @@ const AdminPayments: NextPage = () => {
 
 	const renderPaymentLink = (payment: IAdminPayment) => (
 		<div className={styles.paymentRef}>
-			<span className={styles.paymentId}>{payment.yookassaId}</span>
+			<span className={styles.paymentId}>
+				{getPaymentReference(payment)}
+			</span>
 			{payment.confirmationUrl && (
 				<a
 					className={styles.paymentLink}
@@ -248,7 +255,7 @@ const AdminPayments: NextPage = () => {
 			<button
 				type="button"
 				className={styles.checkBtn}
-				onClick={() => runCheck(payment.yookassaId)}
+				onClick={() => runCheck(getPaymentReference(payment))}
 				disabled={checkPaymentMutation.isPending}
 			>
 				{checking ? 'Проверка..' : 'Проверить'}
@@ -316,7 +323,7 @@ const AdminPayments: NextPage = () => {
 						<div>
 							<span className={styles.resultLabel}>Платёж</span>
 							<span className={styles.resultValue}>
-								{lastResult.payment.yookassaId}
+								{getPaymentReference(lastResult.payment)}
 							</span>
 						</div>
 						<div>
@@ -539,7 +546,9 @@ const AdminPayments: NextPage = () => {
 										<div className={styles.cardRow}>
 											<span className={styles.cardLabel}>Дата</span>
 											<span className={styles.cardValue}>
-												{formatDate(payment.createdAt)}
+												{formatDate(
+													payment.succeededAt ?? payment.createdAt
+												)}
 											</span>
 										</div>
 										<div className={styles.cardRow}>
@@ -616,7 +625,11 @@ const AdminPayments: NextPage = () => {
 														: '—'}
 												</td>
 												<td>{formatAmount(payment.amount)}</td>
-												<td>{formatDate(payment.createdAt)}</td>
+												<td>
+													{formatDate(
+														payment.succeededAt ?? payment.createdAt
+													)}
+												</td>
 												<td>{renderPaymentLink(payment)}</td>
 												<td>{renderCheckButton(payment)}</td>
 											</tr>

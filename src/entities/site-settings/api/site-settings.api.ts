@@ -15,6 +15,8 @@ const siteSettingsService = {
 				| 'bannerText'
 				| 'snowflakeEnabled'
 				| 'paymentEnabled'
+				| 'autoRenewalSignupEnabled'
+				| 'autoRenewalChargesEnabled'
 				| 'recaptchaEnabled'
 				| 'googleAuthEnabled'
 				| 'yandexAuthEnabled'

@@ -58,6 +58,72 @@ export type AdminUserOverviewPaymentStatus =
 	| 'PENDING'
 	| 'SUCCEEDED'
 	| 'CANCELLED'
+	| 'EXPIRED'
+
+export type AdminAutoRenewalStatus =
+	| 'NEVER_CONSENTED'
+	| 'ACTIVE'
+	| 'USER_DISABLED'
+	| 'ADMIN_PAUSED'
+	| 'TECHNICAL_PAUSE'
+	| 'REVOKED'
+
+export interface IAdminAutoRenewalMaskedMethod {
+	type: string | null
+	title: string | null
+	last4: string | null
+	savedAt: string
+}
+
+export interface IAdminAutoRenewalDetail {
+	id: string | null
+	user: {
+		id: string
+		name: string | null
+		email: string | null
+	}
+	status: AdminAutoRenewalStatus
+	active: boolean
+	plan: Plan | null
+	billingPeriod: BillingPeriod | null
+	amount: string | null
+	currency: string | null
+	nextChargeAt: string | null
+	consentedAt: string | null
+	consentVersion: string | null
+	disabledAt: string | null
+	disableReason: string | null
+	lastChargeAttemptAt: string | null
+	lastChargeErrorCode: string | null
+	maskedMethod: IAdminAutoRenewalMaskedMethod | null
+	validity: {
+		hasConsent: boolean
+		hasPaymentMethod: boolean
+		userEligible: boolean
+	}
+	priceChange: {
+		required: boolean
+		previousAmount: string | null
+		newAmount: string | null
+		currency: string | null
+		detectedAt: string | null
+		canConfirm: boolean
+	}
+	capabilities: {
+		canPause: boolean
+		canResumeAdminPause: boolean
+		canRevoke: boolean
+		canReconcile: boolean
+		canResumeTechnical: boolean
+	}
+	updatedAt: string | null
+	serverTime: string
+}
+
+export interface IAdminAutoRenewalMutationResponse {
+	autoRenewal: IAdminAutoRenewalDetail
+	message: string
+}
 
 export type AdminUserOverviewWidgetType =
 	| 'WHEEL'
@@ -71,7 +137,7 @@ export type AdminUserOverviewActivityRole = 'TARGET' | 'ADMIN'
 
 export interface IAdminUserOverviewPayment {
 	id: string
-	yookassaId: string
+	yookassaId: string | null
 	status: AdminUserOverviewPaymentStatus
 	amount: string
 	plan: Plan | null
@@ -188,6 +254,46 @@ class UserService {
 	async fetchUserOverview(id: string) {
 		return axiosInterceptorsRequest.get<IAdminUserOverview>(
 			`${this._BASE_URL}/edit/${id}/overview`
+		)
+	}
+
+	async fetchAdminUserAutoRenewal(id: string) {
+		return axiosInterceptorsRequest.get<IAdminAutoRenewalDetail>(
+			`/payments/admin/auto-renewals/${id}`
+		)
+	}
+
+	async pauseAdminUserAutoRenewal(id: string, reason: string) {
+		return axiosInterceptorsRequest.post<IAdminAutoRenewalMutationResponse>(
+			`/payments/admin/auto-renewals/${id}/pause`,
+			{ reason }
+		)
+	}
+
+	async resumeAdminUserAutoRenewal(id: string, reason: string) {
+		return axiosInterceptorsRequest.post<IAdminAutoRenewalMutationResponse>(
+			`/payments/admin/auto-renewals/${id}/resume`,
+			{ reason }
+		)
+	}
+
+	async revokeAdminUserAutoRenewal(id: string, reason: string) {
+		return axiosInterceptorsRequest.post<IAdminAutoRenewalMutationResponse>(
+			`/payments/admin/auto-renewals/${id}/revoke`,
+			{ reason }
+		)
+	}
+
+	async reconcileAdminUserAutoRenewal(id: string) {
+		return axiosInterceptorsRequest.post<IAdminAutoRenewalMutationResponse>(
+			`/payments/dev/auto-renewals/${id}/reconcile`
+		)
+	}
+
+	async resumeTechnicalAdminUserAutoRenewal(id: string, reason: string) {
+		return axiosInterceptorsRequest.post<IAdminAutoRenewalMutationResponse>(
+			`/payments/dev/auto-renewals/${id}/resume-technical`,
+			{ reason }
 		)
 	}
 

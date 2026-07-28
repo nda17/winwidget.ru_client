@@ -363,7 +363,7 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 		faqButtonLabel: 'Прокрутить к вопросам и ответам',
 		benefits: [
 			{ text: '7 дней бесплатно' },
-			{ text: 'Без привязки карты' },
+			{ text: 'Оплата через ЮKassa' },
 			{ text: 'Установка за 10 минут' }
 		]
 	},
@@ -1016,7 +1016,7 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 		buttonText: 'Начать бесплатный период',
 		benefits: [
 			{
-				text: 'Без привязки\nбанковской карты'
+				text: 'Безопасная оплата\nчерез ЮKassa'
 			},
 			{
 				text: '7 дней полного\nдоступа'

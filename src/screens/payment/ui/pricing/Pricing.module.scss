@@ -25,6 +25,14 @@
 	@apply py-3;
 }
 
+.pendingNoticeWarning {
+	@apply border-[#f0c877] bg-[#fffaf0]/[0.9];
+}
+
+.pendingNoticeError {
+	@apply border-[#efb2b2] bg-[#fff7f7]/[0.94];
+}
+
 .pendingCopy {
 	@apply flex flex-col gap-2;
 }
@@ -37,12 +45,45 @@
 	@apply text-[0.88rem] leading-[1.55] text-[#6f6482];
 }
 
+.pendingMeta {
+	@apply flex flex-wrap items-center gap-2;
+}
+
+.pendingTypeBadge {
+	@apply inline-flex w-fit items-center rounded-full border border-[#dfd3ef] bg-[#f8f4fd] px-2 py-[3px] text-[0.72rem] font-semibold text-[#76588f];
+}
+
+.pendingCountdown {
+	@apply text-[0.78rem] text-[#716681];
+}
+
+.pendingCountdown strong {
+	@apply tabular-nums text-[#49375c];
+}
+
+.pendingCountdownWarning {
+	@apply text-[#9a5c05];
+}
+
+.pendingCountdownWarning strong {
+	@apply text-[#9a5c05];
+}
+
+.pendingStatus {
+	@apply text-[0.78rem] font-medium text-[#8d5260];
+}
+
+.pendingWarning {
+	@apply text-[0.78rem] font-medium text-[#9a5c05];
+}
+
 .pendingActions {
 	@apply flex items-center gap-3 shrink-0;
 }
 
 .pendingResumeBtn,
-.pendingCancelBtn {
+.pendingCancelBtn,
+.pendingRetryBtn {
 	@apply inline-flex items-center justify-center min-h-[44px] rounded-xl px-4 text-sm font-semibold no-underline cursor-pointer transition-[opacity,transform,border-color] duration-200;
 }
 
@@ -57,17 +98,24 @@
 	);
 }
 
+.pendingRetryBtn {
+	@apply border border-[#d5bde8] bg-[#f8f3ff] text-[#7b3fa0];
+}
+
 .pendingCancelBtn {
 	@apply bg-transparent text-[#7b3fa0] border border-[#e0d6f0];
 	background-image: none;
 }
 
 .pendingResumeBtn:hover,
-.pendingCancelBtn:hover {
+.pendingCancelBtn:hover,
+.pendingRetryBtn:hover {
 	@apply opacity-90 -translate-y-px;
 }
 
-.pendingCancelBtn:disabled {
+.pendingResumeBtn:disabled,
+.pendingCancelBtn:disabled,
+.pendingRetryBtn:disabled {
 	@apply opacity-50 cursor-not-allowed translate-y-0;
 }
 
@@ -163,6 +211,65 @@
 	content: '✓';
 	@apply mt-[1px] flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-[#7b3fa0] text-[11px] font-bold leading-none text-white;
 }
+
+.autoRenewBlock {
+	@apply mb-4 w-full rounded-xl border border-[#ece4f5] bg-[#fbf9fd] p-3;
+}
+
+.autoRenewOption {
+	@apply flex min-h-[40px] cursor-pointer items-center gap-3;
+}
+
+.autoRenewInput {
+	@apply sr-only;
+}
+
+.autoRenewVisual {
+	@apply flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded border border-[#cdbddd] bg-white text-[11px] font-bold text-transparent transition-[background,border-color,box-shadow] duration-150;
+}
+
+.autoRenewVisual span {
+	@apply translate-y-[-0.5px];
+}
+
+.autoRenewInput:checked + .autoRenewVisual {
+	@apply border-[#7b3fa0] bg-[#7b3fa0] text-white;
+}
+
+.autoRenewInput:focus-visible + .autoRenewVisual {
+	@apply outline-none ring-2 ring-[#9b6fbd] ring-offset-2;
+}
+
+.autoRenewInput:disabled + .autoRenewVisual,
+.autoRenewInput:disabled ~ .autoRenewCopy {
+	@apply cursor-not-allowed opacity-50;
+}
+
+.autoRenewCopy {
+	@apply flex min-w-0 flex-1 items-baseline justify-between gap-3 text-left;
+}
+
+.autoRenewCopy strong {
+	@apply text-[0.82rem] font-semibold text-[#49375c];
+}
+
+.autoRenewCopy span {
+	@apply text-[0.75rem] text-[#82758e];
+}
+
+.autoRenewDescription {
+	@apply mt-2 pl-[30px] text-left text-[0.75rem] leading-[1.5] text-[#75677f];
+}
+
+.autoRenewDescription a {
+	@apply font-medium text-[#7b3fa0] underline underline-offset-2;
+}
+
+.autoRenewDescription a:hover,
+.autoRenewDescription a:focus-visible {
+	@apply text-[#c21b84];
+}
+
 .buyBtn {
 	@apply mt-auto w-full py-3 rounded-[16px] font-bold text-sm cursor-pointer border-none text-white transition-[opacity,transform,box-shadow] duration-200;
 	background: linear-gradient(
@@ -324,7 +431,8 @@
 		@apply w-full;
 	}
 	.pendingResumeBtn,
-	.pendingCancelBtn {
+	.pendingCancelBtn,
+	.pendingRetryBtn {
 		@apply w-full;
 	}
 	.pendingSkeletonLine,
@@ -346,6 +454,9 @@
 	}
 	.planCard {
 		@apply w-full max-w-none p-6;
+	}
+	.autoRenewCopy {
+		@apply flex-col items-start gap-1;
 	}
 	.planCard:hover {
 		@apply translate-y-0;
