@@ -406,7 +406,6 @@ const CalculatorSettingsModal = ({
 	onPreviewDeviceChange,
 	onPreviewConfigChange
 }: Props) => {
-	const settingsPanelRef = useRef<HTMLDivElement | null>(null)
 	const titleId = useId()
 	const buttonImageInputId = useId()
 	const [tab, setTab] = useState<Tab>('main')
@@ -1370,7 +1369,6 @@ const CalculatorSettingsModal = ({
 				/>
 			)}
 			<div
-				ref={settingsPanelRef}
 				className={
 					isPagePresentation ? pageStyles.pagePanel : styles.modal
 				}
@@ -1425,7 +1423,6 @@ const CalculatorSettingsModal = ({
 						isHardPlan={canUseCustomButtonImage}
 						onDeviceChange={onPreviewDeviceChange}
 						onConfigChange={onPreviewConfigChange}
-						scrollTargetRef={settingsPanelRef}
 						autoCollapse={
 							!isPagePresentation &&
 							['integrations', 'code', 'info'].includes(tab)

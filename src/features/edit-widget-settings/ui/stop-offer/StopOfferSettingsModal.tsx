@@ -154,7 +154,6 @@ const StopOfferSettingsModal = ({
 	onPreviewDeviceChange,
 	onPreviewConfigChange
 }: Props) => {
-	const settingsPanelRef = useRef<HTMLDivElement | null>(null)
 	const titleId = useId()
 	const [tab, setTab] = useState<Tab>('main')
 	const [cfg, setCfg] = useState<StopOfferConfig>(
@@ -691,7 +690,6 @@ const StopOfferSettingsModal = ({
 				/>
 			)}
 			<div
-				ref={settingsPanelRef}
 				className={isPagePresentation ? styles.pagePanel : styles.modal}
 				role={isPagePresentation ? 'region' : 'dialog'}
 				aria-modal={isPagePresentation ? undefined : true}
@@ -745,7 +743,6 @@ const StopOfferSettingsModal = ({
 						isHardPlan={canUseCustomButtonImage}
 						onDeviceChange={onPreviewDeviceChange}
 						onConfigChange={onPreviewConfigChange}
-						scrollTargetRef={settingsPanelRef}
 						autoCollapse={
 							!isPagePresentation &&
 							['integrations', 'code', 'info'].includes(tab)

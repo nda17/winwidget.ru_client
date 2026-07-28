@@ -8,7 +8,7 @@ import { QuizConfig } from '@/entities/site-widget'
 import { StopOfferConfig } from '@/entities/site-widget'
 import { WidgetConfig } from '@/entities/site-widget'
 import { useDebounce } from '@/shared/lib/hooks/useDebounce'
-import type { CSSProperties, RefObject } from 'react'
+import type { CSSProperties } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import ActionTooltip from './ActionTooltip'
 import styles from './WidgetLivePreview.module.scss'
@@ -64,7 +64,6 @@ type WidgetLivePreviewProps = WidgetLivePreviewEntityProps & {
 	autoCollapse?: boolean
 	onDeviceChange?: (device: PreviewDevice) => void
 	onConfigChange?: () => void
-	scrollTargetRef?: RefObject<HTMLElement | null>
 }
 
 type PreviewDevice = 'desktop' | 'mobile'
@@ -165,85 +164,6 @@ const getPreviewLayout = (
 		frameWidth: frame.width,
 		frameHeight: frame.height,
 		scale
-	}
-}
-
-const scrollNearestScrollableParent = (
-	element: HTMLElement | null,
-	deltaY: number,
-	explicitTarget?: HTMLElement | null
-) => {
-	if (!element || !Number.isFinite(deltaY) || deltaY === 0) return
-
-	const scrollableParents: HTMLElement[] = []
-	let parent = element.parentElement
-
-	while (parent) {
-		const style = window.getComputedStyle(parent)
-		const isScrollable =
-			/(auto|scroll)/.test(style.overflowY) &&
-			parent.scrollHeight > parent.clientHeight
-
-		if (isScrollable) scrollableParents.push(parent)
-
-		parent = parent.parentElement
-	}
-
-	const canScrollElement = (target: HTMLElement) => {
-		const maxScrollTop = target.scrollHeight - target.clientHeight
-
-		return deltaY < 0
-			? target.scrollTop > 0
-			: target.scrollTop < maxScrollTop
-	}
-	const scrollElement = (target: HTMLElement) => {
-		if (!canScrollElement(target)) return false
-
-		target.scrollBy({ top: deltaY, behavior: 'auto' })
-		return true
-	}
-	const scrollWindow = () => {
-		const scrollingElement =
-			document.scrollingElement || document.documentElement
-		const maxScrollTop = Math.max(
-			0,
-			scrollingElement.scrollHeight - window.innerHeight
-		)
-		const scrollTop = window.scrollY || scrollingElement.scrollTop
-		const canScroll = deltaY < 0 ? scrollTop > 0 : scrollTop < maxScrollTop
-
-		if (!canScroll) return false
-
-		window.scrollBy({ top: deltaY, behavior: 'auto' })
-		return true
-	}
-	const triedTargets = new Set<HTMLElement>()
-	const scrollExplicitTarget = () => {
-		if (!explicitTarget || triedTargets.has(explicitTarget)) return false
-
-		triedTargets.add(explicitTarget)
-		return scrollElement(explicitTarget)
-	}
-	const scrollAncestors = () => {
-		for (const target of scrollableParents) {
-			if (triedTargets.has(target)) continue
-
-			triedTargets.add(target)
-			if (scrollElement(target)) return true
-		}
-
-		return false
-	}
-
-	if (deltaY < 0) {
-		if (scrollExplicitTarget() || scrollAncestors() || scrollWindow())
-			return
-	} else if (
-		scrollAncestors() ||
-		scrollWindow() ||
-		scrollExplicitTarget()
-	) {
-		return
 	}
 }
 
@@ -533,6 +453,12 @@ const buildPreviewSandboxDocument = (
 
 		body::-webkit-scrollbar {
 			display: none;
+		}
+
+		html,
+		body,
+		body * {
+			cursor: not-allowed !important;
 		}
 
 		.winwidget-preview-site {
@@ -1043,7 +969,6 @@ const buildPreviewSandboxDocument = (
 			var publicConfig = ${escapeScriptJson(publicConfig)};
 			var nativeFetch = window.fetch.bind(window);
 			var restartNoticeSent = false;
-			var previewTouchLastY = null;
 			var previewStoragePrefixes = [
 				'winwidget_played_',
 				'wintimer_submitted_',
@@ -1083,84 +1008,21 @@ const buildPreviewSandboxDocument = (
 				}
 			};
 
-			function sendParentScroll(deltaY, inputType) {
-				if (!Number.isFinite(deltaY) || deltaY === 0) return;
-
-				window.parent.postMessage(
-					{
-						source: 'winwidget-live-preview',
-						previewKey: previewKey,
-						event: 'scroll-parent',
-						deltaY: deltaY,
-						inputType: inputType
-					},
-					'*'
-				);
-			}
-
 			window.addEventListener(
 				'wheel',
 				function (event) {
 					if (event.ctrlKey) return;
-
-					var deltaMultiplier =
-						event.deltaMode === 1
-							? 16
-							: event.deltaMode === 2
-								? window.innerHeight
-								: 1;
-
-					sendParentScroll(event.deltaY * deltaMultiplier, 'wheel');
+					event.preventDefault();
 				},
-				{ passive: true, capture: true }
-			);
-
-			window.addEventListener(
-				'touchstart',
-				function (event) {
-					if (!event.touches || event.touches.length !== 1) {
-						previewTouchLastY = null;
-						return;
-					}
-
-					previewTouchLastY = event.touches[0].clientY;
-				},
-				{ passive: true, capture: true }
+				{ passive: false, capture: true }
 			);
 
 			window.addEventListener(
 				'touchmove',
 				function (event) {
-					if (
-						!event.touches ||
-						event.touches.length !== 1 ||
-						previewTouchLastY === null
-					) {
-						previewTouchLastY = null;
-						return;
-					}
-
-					var nextY = event.touches[0].clientY;
-					sendParentScroll(previewTouchLastY - nextY, 'touch');
-					previewTouchLastY = nextY;
+					event.preventDefault();
 				},
-				{ passive: true, capture: true }
-			);
-
-			window.addEventListener(
-				'touchend',
-				function () {
-					previewTouchLastY = null;
-				},
-				{ passive: true, capture: true }
-			);
-
-			window.addEventListener(
-				'touchcancel',
-				function () {
-					previewTouchLastY = null;
-				},
-				{ passive: true, capture: true }
+				{ passive: false, capture: true }
 			);
 
 			function isPreviewStorageKey(key) {
@@ -1347,7 +1209,8 @@ const buildPreviewSandboxDocument = (
 					root.appendChild(style);
 				}
 
-				style.textContent = target.css;
+				style.textContent =
+					target.css + '*{cursor:not-allowed!important}';
 
 				return true;
 			}
@@ -1604,8 +1467,6 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 						source?: string
 						previewKey?: string
 						event?: string
-						deltaY?: number
-						inputType?: 'wheel' | 'touch'
 				  }
 				| undefined
 
@@ -1618,19 +1479,6 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 				return
 			}
 
-			if (data.event === 'scroll-parent') {
-				const deltaY =
-					(data.deltaY || 0) *
-					(data.inputType === 'touch' ? previewLayout.scale : 1)
-
-				scrollNearestScrollableParent(
-					previewViewportRef.current,
-					deltaY,
-					props.scrollTargetRef?.current
-				)
-				return
-			}
-
 			if (data.event !== 'ready-to-restart' || surface !== 'dialog') return
 
 			setCanRestartPreview(true)
@@ -1639,7 +1487,7 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 		window.addEventListener('message', handleMessage)
 
 		return () => window.removeEventListener('message', handleMessage)
-	}, [previewKey, previewLayout.scale, props.scrollTargetRef, surface])
+	}, [previewKey, surface])
 
 	const restartPreview = () => {
 		setCanRestartPreview(false)

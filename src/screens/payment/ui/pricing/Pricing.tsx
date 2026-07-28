@@ -85,6 +85,11 @@ const PAYMENT_COPY = {
 	pendingPaymentErrorTitle: 'Не удалось загрузить незавершённый платёж',
 	pendingPaymentErrorText:
 		'Обновите страницу перед созданием нового платежа.',
+	paymentPopupBlockedText:
+		'Браузер заблокировал новую вкладку. Разрешите всплывающие окна для WinWidget и повторите оплату.',
+	paymentOpenedInNewTabText: 'Страница оплаты открыта в новой вкладке',
+	paymentCreatedWithoutOpenTabText:
+		'Платёж создан. Вернуться к нему можно из карточки незавершённого платежа.',
 	periodLegendText: 'Период оплаты',
 	pricePerMonthText: '/мес',
 	yearlyTotalText: '{amount} ₽ / год',
@@ -206,6 +211,22 @@ type PendingPaymentRequest = {
 	autoRenew: boolean
 }
 
+type PaymentMutationRequest = PendingPaymentRequest & {
+	paymentWindow: Window
+}
+
+const openPaymentWindow = (): Window | null => {
+	if (typeof window === 'undefined') return null
+
+	const paymentWindow = window.open('about:blank', '_blank')
+
+	if (paymentWindow) {
+		paymentWindow.opener = null
+	}
+
+	return paymentWindow
+}
+
 interface PricingProps {
 	pricingContent: HomePagePricingContent
 	paymentEnabled?: boolean
@@ -244,6 +265,7 @@ const Pricing = ({
 	const [serverOffsetMs, setServerOffsetMs] = useState(0)
 	const [serverOffsetKey, setServerOffsetKey] = useState('')
 	const expiredPaymentCheckIdRef = useRef<string | null>(null)
+	const paymentStateRefreshInFlightRef = useRef(false)
 	const {
 		emailCodeRequested,
 		isSendingEmailCode,
@@ -292,7 +314,7 @@ const Pricing = ({
 			billingPeriod,
 			expectedAmount,
 			autoRenew
-		}: PendingPaymentRequest) =>
+		}: PaymentMutationRequest) =>
 			subscriptionService.createPayment(
 				plan,
 				billingPeriod,
@@ -302,16 +324,46 @@ const Pricing = ({
 			),
 		onMutate: () =>
 			toast.loading('Создаём платёж, пожалуйста подождите...'),
-		onSuccess: ({ confirmationUrl }, _, toastId) => {
-			toast.dismiss(toastId)
-			window.location.href = confirmationUrl
+		onSuccess: async ({ confirmationUrl }, { paymentWindow }, toastId) => {
+			const isPaymentWindowOpen = !paymentWindow.closed
+
+			if (isPaymentWindowOpen) {
+				paymentWindow.location.replace(confirmationUrl)
+			}
+
+			await queryClient.invalidateQueries({
+				queryKey: ['pending-payment']
+			})
+
+			toast.success(
+				isPaymentWindowOpen
+					? PAYMENT_COPY.paymentOpenedInNewTabText
+					: PAYMENT_COPY.paymentCreatedWithoutOpenTabText,
+				{ id: toastId }
+			)
 		},
-		onError: (e: any, _, toastId) => {
+		onError: (e: any, { paymentWindow }, toastId) => {
+			paymentWindow.close()
 			toast.error(e?.response?.data?.message || 'Ошибка оплаты', {
 				id: toastId
 			})
 		}
 	})
+
+	const startPayment = (
+		request: PendingPaymentRequest,
+		paymentWindow = openPaymentWindow()
+	) => {
+		if (!paymentWindow) {
+			toast.error(PAYMENT_COPY.paymentPopupBlockedText)
+			return
+		}
+
+		payMutation.mutate({
+			...request,
+			paymentWindow
+		})
+	}
 
 	const cancelPendingMutation = useMutation({
 		mutationFn: (paymentId: string) =>
@@ -413,6 +465,26 @@ const Pricing = ({
 		pendingRemainingMs > 0
 	)
 
+	const refreshPaymentState = useCallback(async () => {
+		if (paymentStateRefreshInFlightRef.current) return
+
+		paymentStateRefreshInFlightRef.current = true
+
+		try {
+			await queryClient.invalidateQueries({
+				queryKey: ['pending-payment']
+			})
+			await Promise.all([
+				queryClient.invalidateQueries({ queryKey: ['subscription'] }),
+				queryClient.invalidateQueries({ queryKey: ['payment-history'] }),
+				queryClient.invalidateQueries({ queryKey: ['auto-renewal'] }),
+				queryClient.invalidateQueries({ queryKey: ['widgets'] })
+			])
+		} finally {
+			paymentStateRefreshInFlightRef.current = false
+		}
+	}, [queryClient])
+
 	const resolveExpiredPayment = useCallback(async () => {
 		const payment = activePendingPayment
 
@@ -470,22 +542,29 @@ const Pricing = ({
 
 		const updateClock = () => setNowMs(Date.now())
 		const handleVisibilityChange = () => {
-			if (document.visibilityState === 'visible') updateClock()
+			if (document.visibilityState === 'visible') {
+				updateClock()
+				void refreshPaymentState()
+			}
+		}
+		const handleWindowFocus = () => {
+			updateClock()
+			void refreshPaymentState()
 		}
 		const intervalId = window.setInterval(updateClock, 1000)
 
-		window.addEventListener('focus', updateClock)
+		window.addEventListener('focus', handleWindowFocus)
 		document.addEventListener('visibilitychange', handleVisibilityChange)
 
 		return () => {
 			window.clearInterval(intervalId)
-			window.removeEventListener('focus', updateClock)
+			window.removeEventListener('focus', handleWindowFocus)
 			document.removeEventListener(
 				'visibilitychange',
 				handleVisibilityChange
 			)
 		}
-	}, [activePendingPayment])
+	}, [activePendingPayment, refreshPaymentState])
 
 	useEffect(() => {
 		if (activePendingPayment && pendingRemainingMs <= 0) {
@@ -510,7 +589,7 @@ const Pricing = ({
 			return
 		}
 
-		payMutation.mutate({
+		startPayment({
 			plan,
 			billingPeriod,
 			expectedAmount,
@@ -570,8 +649,18 @@ const Pricing = ({
 			return
 		}
 
+		const paymentWindow = openPaymentWindow()
+
+		if (!paymentWindow) {
+			toast.error(PAYMENT_COPY.paymentPopupBlockedText)
+			return
+		}
+
 		const confirmed = await confirmEmailCode({ email, code })
-		if (!confirmed) return
+		if (!confirmed) {
+			paymentWindow.close()
+			return
+		}
 
 		const nextPayment = pendingPaymentRequest
 		setPaymentEmail('')
@@ -580,7 +669,9 @@ const Pricing = ({
 		resetEmailBinding()
 
 		if (nextPayment) {
-			payMutation.mutate(nextPayment)
+			startPayment(nextPayment, paymentWindow)
+		} else {
+			paymentWindow.close()
 		}
 	}
 
@@ -758,7 +849,14 @@ const Pricing = ({
 						{!isPendingDowngradeBlocked && isPendingLinkAvailable && (
 							<a
 								href={activePendingPayment?.confirmationUrl ?? undefined}
+								target="_blank"
+								rel="noopener noreferrer"
 								className={styles.pendingResumeBtn}
+								onClick={() =>
+									toast.success(PAYMENT_COPY.paymentOpenedInNewTabText, {
+										id: `pending-payment-open-${activePendingPaymentId}`
+									})
+								}
 							>
 								{PAYMENT_COPY.pendingPaymentResumeButtonText}
 							</a>

@@ -130,7 +130,6 @@ const WheelSettingsModal = ({
 		widget.installDomain ?? ''
 	)
 	const draftRevisionRef = useRef(widget.draftRevision)
-	const settingsPanelRef = useRef<HTMLDivElement | null>(null)
 	const titleId = useId()
 	const buttonImageInputId = useId()
 	const [validationIssue, setValidationIssue] =
@@ -861,7 +860,6 @@ const WheelSettingsModal = ({
 				/>
 			)}
 			<div
-				ref={settingsPanelRef}
 				className={
 					isPagePresentation ? pageStyles.pagePanel : styles.modal
 				}
@@ -922,7 +920,6 @@ const WheelSettingsModal = ({
 						isHardPlan={canUseCustomButtonImage}
 						onDeviceChange={onPreviewDeviceChange}
 						onConfigChange={onPreviewConfigChange}
-						scrollTargetRef={settingsPanelRef}
 						autoCollapse={
 							!isPagePresentation &&
 							['integrations', 'code', 'info'].includes(tab)

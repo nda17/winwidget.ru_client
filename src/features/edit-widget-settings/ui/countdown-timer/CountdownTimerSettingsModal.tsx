@@ -188,7 +188,6 @@ const CountdownTimerSettingsModal = ({
 	onPreviewDeviceChange,
 	onPreviewConfigChange
 }: Props) => {
-	const settingsPanelRef = useRef<HTMLDivElement | null>(null)
 	const titleId = useId()
 	const buttonImageInputId = useId()
 	const [tab, setTab] = useState<Tab>('main')
@@ -847,7 +846,6 @@ const CountdownTimerSettingsModal = ({
 				/>
 			)}
 			<div
-				ref={settingsPanelRef}
 				className={isPagePresentation ? styles.pagePanel : styles.modal}
 				role={isPagePresentation ? 'region' : 'dialog'}
 				aria-modal={isPagePresentation ? undefined : true}
@@ -899,7 +897,6 @@ const CountdownTimerSettingsModal = ({
 						isHardPlan={canUseCustomButtonImage}
 						onDeviceChange={onPreviewDeviceChange}
 						onConfigChange={onPreviewConfigChange}
-						scrollTargetRef={settingsPanelRef}
 						autoCollapse={
 							!isPagePresentation &&
 							['integrations', 'code', 'info'].includes(tab)

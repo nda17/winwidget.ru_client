@@ -482,7 +482,6 @@ const QuizSettingsModal = ({
 		quiz.installDomain ?? ''
 	)
 	const draftRevisionRef = useRef(quiz.draftRevision)
-	const settingsPanelRef = useRef<HTMLDivElement | null>(null)
 	const [scoreMode, setScoreMode] = useState<ScoreMode>('simple')
 	const titleId = useId()
 	const buttonImageInputId = useId()
@@ -1328,7 +1327,6 @@ const QuizSettingsModal = ({
 				/>
 			)}
 			<div
-				ref={settingsPanelRef}
 				className={
 					isPagePresentation ? pageStyles.pagePanel : styles.modal
 				}
@@ -1397,7 +1395,6 @@ const QuizSettingsModal = ({
 						isHardPlan={canUseCustomButtonImage}
 						onDeviceChange={onPreviewDeviceChange}
 						onConfigChange={onPreviewConfigChange}
-						scrollTargetRef={settingsPanelRef}
 						autoCollapse={
 							!isPagePresentation &&
 							['integrations', 'code', 'info'].includes(tab)
