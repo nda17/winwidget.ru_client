@@ -25,6 +25,7 @@ const quizService = {
 			isActive: boolean
 			installDomain: string
 			config: Partial<QuizConfig>
+			expectedDraftRevision: number
 		}>
 	) {
 		const { data } = await axiosInterceptorsRequest.patch(

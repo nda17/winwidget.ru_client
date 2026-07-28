@@ -101,7 +101,7 @@ select.input {
 }
 
 .colorRow .input {
-	@apply min-w-0;
+	@apply w-auto min-w-0 flex-1;
 }
 
 .colorPicker {
@@ -254,6 +254,14 @@ select.input {
 		@apply pr-8 text-xl;
 	}
 
+	.tabs {
+		@apply grid grid-cols-3 justify-stretch gap-1 pb-2;
+	}
+
+	.tab {
+		@apply min-h-10 w-full whitespace-normal rounded-md px-1 py-2 text-center text-xs leading-4;
+	}
+
 	.gridTwo,
 	.gridThree,
 	.optionRow {
@@ -288,6 +296,6 @@ select.input {
 	}
 
 	.colorRow {
-		@apply flex-wrap;
+		@apply flex-nowrap;
 	}
 }

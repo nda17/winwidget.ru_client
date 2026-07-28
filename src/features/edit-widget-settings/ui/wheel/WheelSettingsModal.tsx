@@ -4,11 +4,17 @@ import { widgetService } from '@/entities/site-widget'
 import { Widget, WidgetConfig } from '@/entities/site-widget'
 import { useMutation } from '@tanstack/react-query'
 import Image from 'next/image'
-import { ChangeEvent, useId, useState } from 'react'
+import { ChangeEvent, useEffect, useId, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import DirectLinkQr from '../shared/DirectLinkQr'
+import {
+	findInvalidWidgetColor,
+	getWidgetColorPreview,
+	isWidgetHexColor
+} from '../shared/widgetColor'
 import useWidgetSettingsCloseGuard from '../shared/useWidgetSettingsCloseGuard'
 import WidgetLivePreview from '../shared/WidgetLivePreview'
+import WidgetPresetButtons from '../shared/WidgetPresetButtons'
 import pageStyles from '../shared/WidgetSettingsModal.module.scss'
 import type {
 	WidgetSettingsPersistence,
@@ -107,7 +113,10 @@ const WheelSettingsModal = ({
 	onSaved,
 	persistence,
 	presentation = 'modal',
-	previewPortalTarget
+	previewPortalTarget,
+	onDirtyChange,
+	onRevisionConflict,
+	lifecycleActions
 }: Props) => {
 	const [tab, setTab] = useState<Tab>('main')
 	const [config, setConfig] = useState<WidgetConfig>({ ...widget.config })
@@ -115,6 +124,7 @@ const WheelSettingsModal = ({
 	const [installDomain, setInstallDomain] = useState(
 		widget.installDomain ?? ''
 	)
+	const draftRevisionRef = useRef(widget.draftRevision)
 	const titleId = useId()
 	const buttonImageInputId = useId()
 	const [validationIssue, setValidationIssue] =
@@ -130,6 +140,38 @@ const WheelSettingsModal = ({
 	)
 	const currentSnapshot = JSON.stringify({ name, installDomain, config })
 	const hasUnsavedChanges = currentSnapshot !== savedSnapshot
+	useEffect(() => {
+		onDirtyChange?.(hasUnsavedChanges)
+	}, [hasUnsavedChanges, onDirtyChange])
+	const reportMutationError = (
+		error: any,
+		fallback: string,
+		toastId: string
+	) => {
+		if (error?.response?.status === 409) {
+			const conflictRefresh = onRevisionConflict?.()
+			void conflictRefresh
+				?.then(latestRevision => {
+					if (typeof latestRevision === 'number') {
+						draftRevisionRef.current = latestRevision
+					}
+				})
+				.catch(() =>
+					toast.error(
+						'Не удалось обновить ревизию черновика. Проверьте соединение и повторите.',
+						{ id: toastId, duration: 6000 }
+					)
+				)
+			toast.error(
+				'Черновик изменился в другой вкладке. Ваши поля сохранены — после обновления повторите действие.',
+				{ id: toastId, duration: 6000 }
+			)
+			return
+		}
+		toast.error(error?.response?.data?.message || fallback, {
+			id: toastId
+		})
+	}
 	const activeBonusCount = Math.max(
 		2,
 		config.bonuses.filter(bonus => bonus.active).length
@@ -246,11 +288,13 @@ const WheelSettingsModal = ({
 				(payload => widgetService.updateWidget(widget.id, payload))
 			)({
 				...data,
-				installDomain: data.installDomain ?? installDomain
+				installDomain: data.installDomain ?? installDomain,
+				expectedDraftRevision: draftRevisionRef.current
 			}),
 		onMutate: () =>
 			toast.loading('Сохраняем настройки, пожалуйста подождите...'),
 		onSuccess: (updated, _, toastId) => {
+			draftRevisionRef.current = updated.draftRevision
 			toast.success('Сохранено', { id: toastId })
 			setName(updated.name)
 			setInstallDomain(updated.installDomain ?? '')
@@ -265,11 +309,8 @@ const WheelSettingsModal = ({
 			)
 			onSaved(updated)
 		},
-		onError: (e: any, _, toastId) => {
-			toast.error(e?.response?.data?.message || 'Ошибка сохранения', {
-				id: toastId
-			})
-		}
+		onError: (error: any, _, toastId) =>
+			reportMutationError(error, 'Ошибка сохранения', toastId)
 	})
 
 	const resetAttemptsMutation = useMutation({
@@ -279,11 +320,13 @@ const WheelSettingsModal = ({
 				(payload => widgetService.updateWidget(widget.id, payload))
 			)({
 				name,
-				config: { ...config, spinResetToken: newToken }
+				config: { ...config, spinResetToken: newToken },
+				expectedDraftRevision: draftRevisionRef.current
 			}),
 		onMutate: () =>
 			toast.loading('Сбрасываем попытки, пожалуйста подождите...'),
 		onSuccess: (updated, _, toastId) => {
+			draftRevisionRef.current = updated.draftRevision
 			toast.success('Попытки всех посетителей сброшены', { id: toastId })
 			setName(updated.name)
 			setInstallDomain(updated.installDomain ?? '')
@@ -298,16 +341,17 @@ const WheelSettingsModal = ({
 			)
 			onSaved(updated)
 		},
-		onError: (e: any, _, toastId) => {
-			toast.error(e?.response?.data?.message || 'Ошибка сброса', {
-				id: toastId
-			})
-		}
+		onError: (error: any, _, toastId) =>
+			reportMutationError(error, 'Ошибка сброса', toastId)
 	})
 	const buttonImageMutation = useMutation({
 		mutationFn: (file: File) => {
 			const formData = new FormData()
 			formData.append('file', file)
+			formData.append(
+				'expectedDraftRevision',
+				String(draftRevisionRef.current)
+			)
 			return persistence?.uploadButtonImage
 				? persistence.uploadButtonImage(formData)
 				: widgetService.uploadButtonImage(widget.id, formData)
@@ -315,6 +359,7 @@ const WheelSettingsModal = ({
 		onMutate: () =>
 			toast.loading('Загружаем картинку кнопки, пожалуйста подождите...'),
 		onSuccess: (updated, _, toastId) => {
+			draftRevisionRef.current = updated.draftRevision
 			toast.success('Картинка кнопки обновлена', { id: toastId })
 			setName(updated.name)
 			setInstallDomain(updated.installDomain ?? '')
@@ -329,11 +374,8 @@ const WheelSettingsModal = ({
 			)
 			onSaved(updated)
 		},
-		onError: (e: any, _, toastId) => {
-			toast.error(e?.response?.data?.message || 'Ошибка загрузки', {
-				id: toastId
-			})
-		}
+		onError: (error: any, _, toastId) =>
+			reportMutationError(error, 'Ошибка загрузки', toastId)
 	})
 	const isDangerActionPending =
 		saveMutation.isPending ||
@@ -493,6 +535,15 @@ const WheelSettingsModal = ({
 	}
 
 	const handleSave = () => {
+		const invalidColor = !isWidgetHexColor(config.color)
+			? 'color'
+			: findInvalidWidgetColor(config)
+		if (invalidColor) {
+			setTab(invalidColor.startsWith('bonuses') ? 'bonuses' : 'main')
+			toast.error('Цвет должен быть указан в формате #RRGGBB')
+			return
+		}
+
 		if (!name.trim()) {
 			reportValidationIssue({
 				tab: 'main',
@@ -722,6 +773,7 @@ const WheelSettingsModal = ({
 				<h2 id={titleId} className={styles.modalTitle}>
 					Настройки колеса
 				</h2>
+				{lifecycleActions}
 
 				<div
 					className={styles.tabs}
@@ -742,11 +794,11 @@ const WheelSettingsModal = ({
 							className={`${styles.tab} ${tab === t ? styles.tabActive : ''}`}
 							onClick={() => setTab(t)}
 						>
-							{t === 'main' && 'Главные'}
+							{t === 'main' && 'Основные'}
 							{t === 'bonuses' && 'Бонусы'}
 							{t === 'integrations' && 'Интеграции'}
 							{t === 'code' && 'Установка'}
-							{t === 'info' && 'Инфо'}
+							{t === 'info' && 'Проверка'}
 						</button>
 					))}
 				</div>
@@ -774,6 +826,73 @@ const WheelSettingsModal = ({
 				>
 					{tab === 'main' && (
 						<div className={styles.fields}>
+							<WidgetPresetButtons
+								presets={[
+									{
+										id: 'discount',
+										label: 'Розыгрыш скидок',
+										description: 'Телефон клиента и понятное предложение.'
+									},
+									{
+										id: 'promo',
+										label: 'Промокод',
+										description:
+											'Получение результата по электронной почте.'
+									},
+									{
+										id: 'engagement',
+										label: 'Без формы',
+										description:
+											'Только игровая механика без сбора контактов.'
+									}
+								]}
+								onApply={preset => {
+									setValidationIssue(null)
+									setConfig(previous => {
+										if (preset === 'promo') {
+											return {
+												...previous,
+												dataType: 'EMAIL',
+												title: 'Испытайте удачу!',
+												subtitle:
+													'Крутите колесо и получите промокод на почту',
+												buttonText: 'Получить промокод',
+												winMessage:
+													'Промокод уже ваш — проверьте электронную почту',
+												bubbleEnabled: true,
+												bubbleText: 'Заберите промокод!'
+											}
+										}
+
+										if (preset === 'engagement') {
+											return {
+												...previous,
+												dataType: 'NONE',
+												title: 'Крутите колесо!',
+												subtitle: 'Узнайте, какой бонус выпал сегодня',
+												buttonText: 'Крутить',
+												winMessage: 'Ваш результат готов!',
+												bubbleEnabled: true,
+												bubbleText: 'Испытайте удачу!'
+											}
+										}
+
+										return {
+											...previous,
+											dataType: 'PHONE',
+											title: 'Крутите колесо скидок!',
+											subtitle:
+												'Оставьте номер телефона и выиграйте бонус',
+											buttonText: 'Выиграть скидку',
+											winMessage:
+												'Скидка закреплена — мы скоро свяжемся с вами',
+											bubbleEnabled: true,
+											bubbleText: 'Ваша скидка внутри!'
+										}
+									})
+									toast.success('Сценарий применён. Сохраните черновик')
+								}}
+							/>
 							<div className={styles.settingsGroup}>
 								<div className={styles.settingsGroupHeader}>
 									<h3 className={styles.settingsGroupTitle}>
@@ -806,20 +925,28 @@ const WheelSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Основной цвет:</p>
+									<p className={styles.label}>Цвет акцентов:</p>
 									<div className={styles.colorRow}>
 										<input
 											type="color"
 											className={styles.colorPicker}
-											value={config.color}
+											value={getWidgetColorPreview(
+												config.color,
+												'#4705fb'
+											)}
 											onChange={e => setField('color', e.target.value)}
 										/>
 										<input
-											className={styles.input}
+											className={`${styles.input} ${
+												!isWidgetHexColor(config.color)
+													? pageStyles.inputError
+													: ''
+											}`}
 											value={config.color}
 											onChange={e => setField('color', e.target.value)}
 											placeholder="#4705fb"
 											maxLength={7}
+											aria-invalid={!isWidgetHexColor(config.color)}
 										/>
 										{config.color && config.color !== '#4705fb' && (
 											<button
@@ -832,6 +959,11 @@ const WheelSettingsModal = ({
 											</button>
 										)}
 									</div>
+									{!isWidgetHexColor(config.color) && (
+										<p className={pageStyles.fieldError}>
+											Введите цвет в формате #RRGGBB
+										</p>
+									)}
 									<p className={styles.hint}>
 										Цвет фона карточки и секторов по умолчанию (если не
 										задан свой цвет сектора).
@@ -844,7 +976,10 @@ const WheelSettingsModal = ({
 										<input
 											type="color"
 											className={styles.colorPicker}
-											value={config.wheelBorderColor || config.color}
+											value={getWidgetColorPreview(
+												config.wheelBorderColor,
+												getWidgetColorPreview(config.color, '#4705fb')
+											)}
 											onChange={e =>
 												setField('wheelBorderColor', e.target.value)
 											}
@@ -855,7 +990,7 @@ const WheelSettingsModal = ({
 											onChange={e =>
 												setField('wheelBorderColor', e.target.value)
 											}
-											placeholder="Как основной цвет"
+											placeholder="Как цвет акцентов"
 											maxLength={7}
 										/>
 										{config.wheelBorderColor && (
@@ -863,7 +998,7 @@ const WheelSettingsModal = ({
 												type="button"
 												className={styles.clearColorBtn}
 												onClick={() => setField('wheelBorderColor', '')}
-												title="Вернуть основной цвет"
+												title="Вернуть цвет акцентов"
 											>
 												✕
 											</button>
@@ -871,7 +1006,7 @@ const WheelSettingsModal = ({
 									</div>
 									<p className={styles.hint}>
 										Отдельный цвет внешнего кольца колеса. Оставьте пустым,
-										чтобы использовать основной цвет.
+										чтобы использовать цвет акцентов.
 									</p>
 								</div>
 
@@ -881,7 +1016,10 @@ const WheelSettingsModal = ({
 										<input
 											type="color"
 											className={styles.colorPicker}
-											value={config.bgColor || '#4705fb'}
+											value={getWidgetColorPreview(
+												config.bgColor,
+												'#4705fb'
+											)}
 											onChange={e => setField('bgColor', e.target.value)}
 										/>
 										<input
@@ -933,12 +1071,15 @@ const WheelSettingsModal = ({
 										<input
 											type="color"
 											className={styles.colorPicker}
-											value={
-												config.textColor ||
+											value={getWidgetColorPreview(
+												config.textColor,
 												getReadableTextColor(
-													config.bgColor || config.color
+													getWidgetColorPreview(
+														config.bgColor,
+														getWidgetColorPreview(config.color, '#4705fb')
+													)
 												)
-											}
+											)}
 											onChange={e => setField('textColor', e.target.value)}
 										/>
 										<input
@@ -971,7 +1112,10 @@ const WheelSettingsModal = ({
 										<input
 											type="color"
 											className={styles.colorPicker}
-											value={config.buttonColor || '#6a11cb'}
+											value={getWidgetColorPreview(
+												config.buttonColor,
+												'#6a11cb'
+											)}
 											onChange={e =>
 												setField('buttonColor', e.target.value)
 											}
@@ -1009,7 +1153,10 @@ const WheelSettingsModal = ({
 										<input
 											type="color"
 											className={styles.colorPicker}
-											value={config.centerColor || '#ffffff'}
+											value={getWidgetColorPreview(
+												config.centerColor,
+												'#ffffff'
+											)}
 											onChange={e =>
 												setField('centerColor', e.target.value)
 											}
@@ -1048,7 +1195,10 @@ const WheelSettingsModal = ({
 										<input
 											type="color"
 											className={styles.colorPicker}
-											value={config.arrowColor || '#ffcc00'}
+											value={getWidgetColorPreview(
+												config.arrowColor,
+												'#ffcc00'
+											)}
 											onChange={e =>
 												setField('arrowColor', e.target.value)
 											}
@@ -1256,9 +1406,7 @@ const WheelSettingsModal = ({
 
 								<div className={styles.field}>
 									<div className={pageStyles.rangeHeader}>
-										<p className={styles.label}>
-											Высота кнопки от низа экрана:
-										</p>
+										<p className={styles.label}>Отступ снизу:</p>
 										<span className={pageStyles.rangeValue}>
 											{config.buttonBottom ?? 3}%
 										</span>
@@ -1266,7 +1414,7 @@ const WheelSettingsModal = ({
 									<input
 										id={`${titleId}-button-bottom`}
 										type="range"
-										aria-label="Высота кнопки от низа экрана"
+										aria-label="Отступ снизу"
 										min={1}
 										max={50}
 										value={config.buttonBottom ?? 3}
@@ -1288,16 +1436,14 @@ const WheelSettingsModal = ({
 
 								<div className={styles.field}>
 									<div className={pageStyles.rangeHeader}>
-										<p className={styles.label}>
-											Отступ кнопки от края экрана:
-										</p>
+										<p className={styles.label}>Отступ сбоку:</p>
 										<span className={pageStyles.rangeValue}>
 											{config.buttonOffset ?? 3}%
 										</span>
 									</div>
 									<input
 										type="range"
-										aria-label="Отступ кнопки от края экрана"
+										aria-label="Отступ сбоку"
 										min={1}
 										max={50}
 										value={config.buttonOffset ?? 3}
@@ -1354,7 +1500,7 @@ const WheelSettingsModal = ({
 											htmlFor={`${titleId}-auto-open-enabled`}
 											className={styles.checkLabel}
 										>
-											Открывать виджет автоматически
+											Автоматически показывать
 										</label>
 									</div>
 									{config.autoOpenDelay != null && (
@@ -1409,12 +1555,18 @@ const WheelSettingsModal = ({
 										<option value="PHONE_AND_EMAIL">
 											Номер телефона и Email
 										</option>
-										<option value="NONE">Ничего не собираем</option>
+										<option value="NONE">Не собирать контакты</option>
 									</select>
 									<p className={styles.hint}>
 										Какие данные клиента нужно собрать в обмен на попытку
 										покрутить барабан.
 									</p>
+									{config.dataType === 'NONE' && (
+										<p className={pageStyles.notice}>
+											Контакты отключены: политика конфиденциальности,
+											фильтр контактов и CRM не используются.
+										</p>
+									)}
 								</div>
 
 								<div className={styles.field}>
@@ -1498,33 +1650,39 @@ const WheelSettingsModal = ({
 									</p>
 								</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Ссылка на политику конфиденциальности:
-									</p>
-									<input
-										id={`${titleId}-privacy-url`}
-										type="url"
-										className={inputClassName(`${titleId}-privacy-url`)}
-										value={config.privacyUrl}
-										onChange={e => setField('privacyUrl', e.target.value)}
-										placeholder="https://winwidget.ru/legal-documentation/consent-processing"
-										maxLength={500}
-										aria-invalid={
-											validationIssue?.fieldId === `${titleId}-privacy-url`
-										}
-										aria-describedby={
-											validationIssue?.fieldId === `${titleId}-privacy-url`
-												? `${titleId}-privacy-url-error`
-												: undefined
-										}
-									/>
-									{fieldError(`${titleId}-privacy-url`)}
-									<p className={styles.hint}>
-										По умолчанию ссылка ведёт на политику нашего сервиса.
-										Можно оставить как есть или добавить свою ссылку.
-									</p>
-								</div>
+								{config.dataType !== 'NONE' && (
+									<div className={styles.field}>
+										<p className={styles.label}>
+											Ссылка на политику конфиденциальности:
+										</p>
+										<input
+											id={`${titleId}-privacy-url`}
+											type="url"
+											className={inputClassName(`${titleId}-privacy-url`)}
+											value={config.privacyUrl}
+											onChange={e =>
+												setField('privacyUrl', e.target.value)
+											}
+											placeholder="https://winwidget.ru/legal-documentation/consent-processing"
+											maxLength={500}
+											aria-invalid={
+												validationIssue?.fieldId ===
+												`${titleId}-privacy-url`
+											}
+											aria-describedby={
+												validationIssue?.fieldId ===
+												`${titleId}-privacy-url`
+													? `${titleId}-privacy-url-error`
+													: undefined
+											}
+										/>
+										{fieldError(`${titleId}-privacy-url`)}
+										<p className={styles.hint}>
+											По умолчанию ссылка ведёт на политику нашего сервиса.
+											Можно оставить как есть или добавить свою ссылку.
+										</p>
+									</div>
+								)}
 							</div>
 
 							<div className={styles.settingsGroup}>
@@ -1632,31 +1790,33 @@ const WheelSettingsModal = ({
 									</p>
 								</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>Фильтр заявок:</p>
-									<div className={styles.checkRow}>
-										<input
-											type="checkbox"
-											id="filterDuplicates"
-											checked={config.filterDuplicates}
-											onChange={e =>
-												setField('filterDuplicates', e.target.checked)
-											}
-										/>
-										<label
-											htmlFor="filterDuplicates"
-											className={styles.checkLabel}
-										>
-											Не учитывать повторные контакты
-										</label>
+								{config.dataType !== 'NONE' && (
+									<div className={styles.field}>
+										<p className={styles.label}>Фильтр заявок:</p>
+										<div className={styles.checkRow}>
+											<input
+												type="checkbox"
+												id="filterDuplicates"
+												checked={config.filterDuplicates}
+												onChange={e =>
+													setField('filterDuplicates', e.target.checked)
+												}
+											/>
+											<label
+												htmlFor="filterDuplicates"
+												className={styles.checkLabel}
+											>
+												Не учитывать повторные контакты
+											</label>
+										</div>
+										<p className={styles.hint}>
+											Дополнительный антифрод-фактор. Если посетитель
+											введёт номер телефона или email, который уже есть в
+											базе этого виджета — повторная заявка не сохранится и
+											уведомления о заявках не будут вам отправлены.
+										</p>
 									</div>
-									<p className={styles.hint}>
-										Дополнительный антифрод-фактор. Если посетитель введёт
-										номер телефона или email, который уже есть в базе этого
-										виджета — повторная заявка не сохранится и уведомления
-										о заявках не будут вам отправлены.
-									</p>
-								</div>
+								)}
 							</div>
 
 							<div className={styles.settingsGroup}>
@@ -1737,7 +1897,9 @@ const WheelSettingsModal = ({
 										<div className={styles.dangerItem}>
 											<p className={styles.hint}>
 												Все настройки виджета будут заменены на
-												стандартные. Действие необратимо после сохранения.
+												стандартные. Интеграции, своя картинка кнопки и
+												история попыток сохранятся. Изменения останутся в
+												форме до сохранения черновика.
 											</p>
 											<div className={styles.footerActions}>
 												<button
@@ -1745,12 +1907,21 @@ const WheelSettingsModal = ({
 													className={styles.resetAttemptsBtn}
 													disabled={isDangerActionPending}
 													onClick={() => {
-														setConfig(DEFAULT_CONFIG)
-														setConfirmReset(false)
-														saveMutation.mutate({
-															name: name.trim() || 'Колесо',
-															config: DEFAULT_CONFIG
+														setConfig({
+															...DEFAULT_CONFIG,
+															bonuses: DEFAULT_CONFIG.bonuses.map(
+																bonus => ({
+																	...bonus
+																})
+															),
+															integrations: { ...config.integrations },
+															buttonImageUrl: config.buttonImageUrl,
+															spinResetToken: config.spinResetToken
 														})
+														setConfirmReset(false)
+														toast.success(
+															'Стандартные настройки применены. Сохраните черновик'
+														)
 													}}
 												>
 													Да, сбросить
@@ -1902,7 +2073,10 @@ const WheelSettingsModal = ({
 												<input
 													type="color"
 													className={styles.colorPicker}
-													value={bonus.color || '#4705fb'}
+													value={getWidgetColorPreview(
+														bonus.color,
+														'#4705fb'
+													)}
 													onChange={e =>
 														setBonus(i, 'color', e.target.value)
 													}
@@ -1926,13 +2100,20 @@ const WheelSettingsModal = ({
 												<input
 													type="color"
 													className={styles.colorPicker}
-													value={
-														bonus.textColor ||
+													value={getWidgetColorPreview(
+														bonus.textColor,
 														getReadableTextColor(
-															bonus.color ||
-																(i % 2 === 0 ? config.color : '#ffffff')
+															getWidgetColorPreview(
+																bonus.color,
+																i % 2 === 0
+																	? getWidgetColorPreview(
+																			config.color,
+																			'#4705fb'
+																		)
+																	: '#ffffff'
+															)
 														)
-													}
+													)}
 													onChange={e =>
 														setBonus(i, 'textColor', e.target.value)
 													}
@@ -2029,154 +2210,178 @@ const WheelSettingsModal = ({
 
 					{tab === 'integrations' && (
 						<div className={styles.fields}>
-							<div className={styles.settingsGroup}>
-								<div className={styles.settingsGroupHeader}>
+							{config.dataType === 'NONE' && (
+								<div className={styles.settingsGroup}>
 									<h3 className={styles.settingsGroupTitle}>
-										Уведомления
+										Контакты отключены
 									</h3>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>Отправка заявок на Email</p>
-									<input
-										className={styles.input}
-										type="email"
-										value={config.integrations.email || ''}
-										onChange={e =>
-											setField('integrations', {
-												...config.integrations,
-												email: e.target.value
-											})
-										}
-										placeholder="your@email.com"
-										maxLength={200}
-									/>
 									<p className={styles.hint}>
-										Новые заявки будут отправляться на этот email
+										Email, Telegram, webhook и CRM не используются без
+										заявок. Настройки аналитики остаются доступными ниже.
 									</p>
 								</div>
+							)}
+							{config.dataType !== 'NONE' && (
+								<>
+									<div className={styles.settingsGroup}>
+										<div className={styles.settingsGroupHeader}>
+											<h3 className={styles.settingsGroupTitle}>
+												Уведомления
+											</h3>
+										</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Отправка заявок в Telegram
-									</p>
-									<input
-										className={styles.input}
-										value={config.integrations.telegramChatId || ''}
-										onChange={e =>
-											setField('integrations', {
-												...config.integrations,
-												telegramChatId: e.target.value
-											})
-										}
-										placeholder="-1234567890"
-										maxLength={50}
-									/>
-									<p className={styles.hint}>
-										Напишите боту <b>@winwidget_info_bot</b> команду
-										/start, затем укажите сюда ваш Telegram ID. Узнать ID
-										можно через бот <b>@getmyid_bot</b>
-									</p>
-								</div>
-							</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Отправка заявок на Email
+											</p>
+											<input
+												className={styles.input}
+												type="email"
+												value={config.integrations.email || ''}
+												onChange={e =>
+													setField('integrations', {
+														...config.integrations,
+														email: e.target.value
+													})
+												}
+												placeholder="your@email.com"
+												maxLength={200}
+											/>
+											<p className={styles.hint}>
+												Новые заявки будут отправляться на этот email
+											</p>
+										</div>
 
-							<div className={styles.settingsGroup}>
-								<div className={styles.settingsGroupHeader}>
-									<h3 className={styles.settingsGroupTitle}>
-										Webhooks и CRM
-									</h3>
-								</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Отправка заявок в Telegram
+											</p>
+											<input
+												className={styles.input}
+												value={config.integrations.telegramChatId || ''}
+												onChange={e =>
+													setField('integrations', {
+														...config.integrations,
+														telegramChatId: e.target.value
+													})
+												}
+												placeholder="-1234567890"
+												maxLength={50}
+											/>
+											<p className={styles.hint}>
+												Напишите боту <b>@winwidget_info_bot</b> команду
+												/start, затем укажите сюда ваш Telegram ID. Узнать
+												ID можно через бот <b>@getmyid_bot</b>
+											</p>
+										</div>
+									</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>Внешний URL (Webhook)</p>
-									<input
-										className={styles.input}
-										type="url"
-										value={config.integrations.webhookUrl || ''}
-										onChange={e =>
-											setField('integrations', {
-												...config.integrations,
-												webhookUrl: e.target.value
-											})
-										}
-										placeholder="https://example.com/webhook"
-										maxLength={500}
-									/>
-									<p className={styles.hint}>
-										На указанный URL придёт POST-запрос с данными:{' '}
-										<b>name</b> — название виджета, <b>lead</b> — контакт,{' '}
-										<b>phone</b>, <b>email</b>, <b>bonus</b> — выигранный
-										приз, <b>time</b> — время выигрыша
-									</p>
-								</div>
+									<div className={styles.settingsGroup}>
+										<div className={styles.settingsGroupHeader}>
+											<h3 className={styles.settingsGroupTitle}>
+												Webhooks и CRM
+											</h3>
+										</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Отправка заявок в Битрикс24
-									</p>
-									<input
-										className={styles.input}
-										type="url"
-										value={config.integrations.bitrix24WebhookUrl || ''}
-										onChange={e =>
-											setField('integrations', {
-												...config.integrations,
-												bitrix24WebhookUrl: e.target.value
-											})
-										}
-										placeholder="https://name.bitrix24.ru/rest/1/ключ/"
-										maxLength={500}
-									/>
-									<p className={styles.hint}>
-										Укажите URL вашего входящего вебхука из Битрикс24.
-										Перейдите в Битрикс24 → Приложения → Вебхуки → Входящий
-										вебхук → скопируйте «Пример URL для вызова REST». Новые
-										заявки будут создаваться как лиды в CRM
-									</p>
-								</div>
+										<div className={styles.field}>
+											<p className={styles.label}>Внешний URL (Webhook)</p>
+											<input
+												className={styles.input}
+												type="url"
+												value={config.integrations.webhookUrl || ''}
+												onChange={e =>
+													setField('integrations', {
+														...config.integrations,
+														webhookUrl: e.target.value
+													})
+												}
+												placeholder="https://example.com/webhook"
+												maxLength={500}
+											/>
+											<p className={styles.hint}>
+												На указанный URL придёт POST-запрос с данными:{' '}
+												<b>name</b> — название виджета, <b>lead</b> —
+												контакт, <b>phone</b>, <b>email</b>, <b>bonus</b> —
+												выигранный приз, <b>time</b> — время выигрыша
+											</p>
+										</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>amoCRM — домен аккаунта</p>
-									<input
-										className={styles.input}
-										value={config.integrations.amoCrmDomain || ''}
-										onChange={e =>
-											setField('integrations', {
-												...config.integrations,
-												amoCrmDomain: e.target.value
-											})
-										}
-										placeholder="mycompany.amocrm.ru"
-										maxLength={100}
-									/>
-									<p className={styles.hint}>
-										Домен вашего аккаунта amoCRM, например{' '}
-										<b>mycompany.amocrm.ru</b>
-									</p>
-								</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Отправка заявок в Битрикс24
+											</p>
+											<input
+												className={styles.input}
+												type="url"
+												value={
+													config.integrations.bitrix24WebhookUrl || ''
+												}
+												onChange={e =>
+													setField('integrations', {
+														...config.integrations,
+														bitrix24WebhookUrl: e.target.value
+													})
+												}
+												placeholder="https://name.bitrix24.ru/rest/1/ключ/"
+												maxLength={500}
+											/>
+											<p className={styles.hint}>
+												Укажите URL вашего входящего вебхука из Битрикс24.
+												Перейдите в Битрикс24 → Приложения → Вебхуки →
+												Входящий вебхук → скопируйте «Пример URL для вызова
+												REST». Новые заявки будут создаваться как лиды в
+												CRM
+											</p>
+										</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>amoCRM — токен доступа</p>
-									<input
-										className={styles.input}
-										type="password"
-										value={config.integrations.amoCrmToken || ''}
-										onChange={e =>
-											setField('integrations', {
-												...config.integrations,
-												amoCrmToken: e.target.value
-											})
-										}
-										placeholder="Долгосрочный токен из настроек API"
-										maxLength={500}
-									/>
-									<p className={styles.hint}>
-										Перейдите в amoCRM → Настройки → Интеграции → API →
-										скопируйте долгосрочный токен. При каждой заявке будут
-										создаваться сделка и контакт
-									</p>
-								</div>
-							</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												amoCRM — домен аккаунта
+											</p>
+											<input
+												className={styles.input}
+												value={config.integrations.amoCrmDomain || ''}
+												onChange={e =>
+													setField('integrations', {
+														...config.integrations,
+														amoCrmDomain: e.target.value
+													})
+												}
+												placeholder="mycompany.amocrm.ru"
+												maxLength={100}
+											/>
+											<p className={styles.hint}>
+												Домен вашего аккаунта amoCRM, например{' '}
+												<b>mycompany.amocrm.ru</b>
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<p className={styles.label}>
+												amoCRM — токен доступа
+											</p>
+											<input
+												className={styles.input}
+												type="password"
+												value={config.integrations.amoCrmToken || ''}
+												onChange={e =>
+													setField('integrations', {
+														...config.integrations,
+														amoCrmToken: e.target.value
+													})
+												}
+												placeholder="Долгосрочный токен из настроек API"
+												maxLength={500}
+											/>
+											<p className={styles.hint}>
+												Перейдите в amoCRM → Настройки → Интеграции → API →
+												скопируйте долгосрочный токен. При каждой заявке
+												будут создаваться сделка и контакт
+											</p>
+										</div>
+									</div>
+								</>
+							)}
 
 							<div className={styles.settingsGroup}>
 								<div className={styles.settingsGroupHeader}>
@@ -2381,7 +2586,7 @@ const WheelSettingsModal = ({
 								</p>
 								<ul className={styles.infoList}>
 									<li>
-										В разделе «Главные» настройте внешний вид, кнопку
+										В разделе «Основные» настройте внешний вид, кнопку
 										открытия и тексты формы.
 									</li>
 									<li>
@@ -2452,7 +2657,9 @@ const WheelSettingsModal = ({
 							onClick={handleSave}
 							disabled={saveMutation.isPending || !hasUnsavedChanges}
 						>
-							{saveMutation.isPending ? 'Сохранение...' : 'Сохранить'}
+							{saveMutation.isPending
+								? 'Сохранение...'
+								: 'Сохранить черновик'}
 						</button>
 					</div>
 				</div>

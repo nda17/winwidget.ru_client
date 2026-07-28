@@ -7,7 +7,8 @@ import type {
 	OnlineConsultant,
 	Quiz,
 	StopOffer,
-	Widget
+	Widget,
+	WidgetLifecycleState
 } from '@/entities/site-widget'
 
 export type AdminWidgetType =
@@ -85,6 +86,7 @@ export interface IAdminWidgetUpdatePayload<TType extends AdminWidgetType> {
 	isActive?: boolean
 	installDomain?: string
 	config?: Partial<AdminWidgetEntityMap[TType]['config']>
+	expectedDraftRevision?: number
 }
 
 export interface IAdminWidgetMutationResponse<
@@ -134,6 +136,30 @@ const adminWidgetsService = {
 		const { data } = await axiosInterceptorsRequest.patch(
 			`/widgets/admin/${type}/${id}`,
 			payload
+		)
+		return data
+	},
+
+	async publish<TType extends AdminWidgetType>(
+		type: TType,
+		id: string,
+		expectedDraftRevision: number
+	): Promise<WidgetLifecycleState<AdminWidgetEntityMap[TType]['config']>> {
+		const { data } = await axiosInterceptorsRequest.post(
+			`/widgets/admin/${type}/${id}/publish`,
+			{ expectedDraftRevision }
+		)
+		return data
+	},
+
+	async discardDraft<TType extends AdminWidgetType>(
+		type: TType,
+		id: string,
+		expectedDraftRevision: number
+	): Promise<WidgetLifecycleState<AdminWidgetEntityMap[TType]['config']>> {
+		const { data } = await axiosInterceptorsRequest.post(
+			`/widgets/admin/${type}/${id}/discard-draft`,
+			{ expectedDraftRevision }
 		)
 		return data
 	},

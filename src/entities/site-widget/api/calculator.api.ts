@@ -25,6 +25,7 @@ const calculatorService = {
 			isActive: boolean
 			installDomain: string
 			config: Partial<CalculatorConfig>
+			expectedDraftRevision: number
 		}>
 	) {
 		const { data } = await axiosInterceptorsRequest.patch(

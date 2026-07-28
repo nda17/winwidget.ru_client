@@ -11,6 +11,7 @@ import { useDebounce } from '@/shared/lib/hooks/useDebounce'
 import type { CSSProperties } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import styles from './WidgetLivePreview.module.scss'
+import { stabilizeWidgetPreviewColors } from './widgetColor'
 
 type PreviewType =
 	| 'wheel'
@@ -95,8 +96,8 @@ const DESKTOP_PREVIEW_FRAME = {
 	height: 520
 }
 const MOBILE_PREVIEW_FRAME = {
-	width: 430,
-	height: 750
+	width: 390,
+	height: 844
 }
 const MOBILE_PREVIEW_MAX_SCALE = 390 / MOBILE_PREVIEW_FRAME.width
 const PREVIEW_DEVICE_HORIZONTAL_INSET: Record<PreviewDevice, number> = {
@@ -994,7 +995,7 @@ const buildPreviewSandboxDocument = (
 			var sandboxStageLayouts = {
 				wheel: {
 					host: 'wheel-widget-host',
-					css: '#main-wrapper{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:clamp(16px,8vw,52px)!important;padding-right:clamp(16px,8vw,52px)!important}#main-wrapper::-webkit-scrollbar{display:none!important}#banner-wrapper{max-width:calc(100vw - 32px)!important;max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
+					css: '#main-wrapper{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:16px!important;padding-right:16px!important}#main-wrapper::-webkit-scrollbar{display:none!important}#banner-wrapper{max-width:calc(100vw - 32px)!important;max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
 				},
 				quiz: {
 					host: 'quiz-widget-host',
@@ -1232,6 +1233,13 @@ const buildPreviewSandboxDocument = (
 
 				if (
 					url &&
+					url.indexOf('/api/v1/widget-events/') !== -1
+				) {
+					return Promise.resolve(new Response(null, { status: 204 }));
+				}
+
+				if (
+					url &&
 					(
 						url.indexOf('/' + previewKey + '/lead') !== -1 ||
 						(method !== 'GET' && url.indexOf('/api/v1/') !== -1)
@@ -1401,7 +1409,13 @@ const getTypeLabel = (type: PreviewType) => {
 }
 
 const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
-	const serializedConfig = JSON.stringify(props.config)
+	const lastStableConfigRef = useRef(props.config)
+	const stableConfig = stabilizeWidgetPreviewColors(
+		props.config,
+		lastStableConfigRef.current
+	)
+	lastStableConfigRef.current = stableConfig
+	const serializedConfig = JSON.stringify(stableConfig)
 	const debouncedSerializedConfig = useDebounce(serializedConfig, 300)
 	const [previewRunId, setPreviewRunId] = useState(0)
 	const [canRestartPreview, setCanRestartPreview] = useState(false)

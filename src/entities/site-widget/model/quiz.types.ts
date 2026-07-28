@@ -76,6 +76,10 @@ export interface Quiz {
 	isActive: boolean
 	installDomain: string
 	config: QuizConfig
+	draftRevision: number
+	publishedVersion: number
+	publishedFromDraftRevision: number
+	publishedAt: string | null
 	createdAt: string
 	updatedAt: string
 	_count?: { leads: number }

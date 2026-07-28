@@ -586,6 +586,10 @@ const CabinetWidgets = () => {
 					{allItems.length > 0 ? (
 						allItems.map(entry => {
 							const { kind, item } = entry
+							const lifecycle = item as typeof item & {
+								publishedVersion?: number
+								hasUnpublishedChanges?: boolean
+							}
 							const isDeleting =
 								(kind === 'wheel'
 									? deleteWidgetMutation.isPending
@@ -602,43 +606,66 @@ const CabinetWidgets = () => {
 														: deleteCalculatorMutation.isPending) &&
 								confirmDeleteId === item.id
 
-							const widgetStatus = !item.isActive
-								? {
-										label: 'Выключен',
-										description:
-											'Виджет отключён вручную и не показывается на сайте.',
-										className: styles.widgetStatusDisabled
-									}
-								: subscription?.status !== 'ACTIVE'
+							const widgetStatus =
+								lifecycle.publishedVersion === 0
 									? {
-											label:
-												subscription?.status === 'CANCELLED'
-													? 'Подписка отменена'
-													: 'Подписка неактивна',
+											label: 'Не опубликован',
 											description:
-												'Виджет не работает, пока подписка не активна.',
-											className: styles.widgetStatusBlocked
+												'Сохраните настройки и опубликуйте первую версию.',
+											className: styles.widgetStatusWarning
 										}
-									: isLeadLimitReached
+									: !item.isActive
 										? {
-												label: 'Лимит заявок',
+												label: 'Выключен',
 												description:
-													'Виджет может отображаться, но новые заявки временно не принимаются.',
-												className: styles.widgetStatusBlocked
+													'Виджет отключён вручную и не показывается на сайте.',
+												className: styles.widgetStatusDisabled
 											}
-										: !item.installDomain.trim()
+										: subscription?.status !== 'ACTIVE'
 											? {
-													label: 'Требует настройки',
+													label:
+														subscription?.status === 'CANCELLED'
+															? 'Подписка отменена'
+															: 'Подписка неактивна',
 													description:
-														'Добавьте домен в настройках, чтобы подключить виджет к сайту.',
-													className: styles.widgetStatusWarning
+														'Виджет не работает, пока подписка не активна.',
+													className: styles.widgetStatusBlocked
 												}
-											: {
-													label: 'Активен',
-													description:
-														'Виджет включён, домен настроен. Убедитесь, что код добавлен на сайт.',
-													className: styles.widgetStatusActive
-												}
+											: isLeadLimitReached
+												? {
+														label: 'Лимит заявок',
+														description:
+															'Виджет может отображаться, но новые заявки временно не принимаются.',
+														className: styles.widgetStatusBlocked
+													}
+												: !item.installDomain.trim()
+													? {
+															label: 'Требует настройки',
+															description:
+																'Добавьте домен в настройках, чтобы подключить виджет к сайту.',
+															className: styles.widgetStatusWarning
+														}
+													: {
+															label: 'Включён',
+															description:
+																'Работа виджета разрешена. Фактическую установку можно проверить в настройках.',
+															className: styles.widgetStatusActive
+														}
+							const publicationStatus =
+								lifecycle.publishedVersion === 0
+									? null
+									: lifecycle.hasUnpublishedChanges
+										? {
+												label: 'Есть черновик',
+												description:
+													'Сохранённые изменения ещё не опубликованы.',
+												className: styles.widgetStatusWarning
+											}
+										: {
+												label: `Версия ${lifecycle.publishedVersion ?? 1}`,
+												description: 'Опубликованная версия виджета.',
+												className: styles.widgetStatusPublished
+											}
 
 							const pageUrl =
 								kind === 'wheel'
@@ -757,6 +784,14 @@ const CabinetWidgets = () => {
 											>
 												{widgetStatus.label}
 											</span>
+											{publicationStatus && (
+												<span
+													className={`${styles.widgetStatus} ${publicationStatus.className}`}
+													title={publicationStatus.description}
+												>
+													{publicationStatus.label}
+												</span>
+											)}
 											<span
 												className={`${styles.widgetDomain} ${!item.installDomain ? styles.widgetDomainEmpty : ''}`}
 												data-tooltip={
@@ -767,7 +802,7 @@ const CabinetWidgets = () => {
 											>
 												<span className={styles.widgetDomainText}>
 													{item.installDomain
-														? `Домен: ${item.installDomain}`
+														? `Домен настроен: ${item.installDomain}`
 														: 'Домен не добавлен'}
 												</span>
 											</span>

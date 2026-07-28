@@ -85,12 +85,52 @@
 	@apply flex flex-col gap-2;
 }
 
+.presetBlock {
+	@apply rounded-xl border border-[#e5daf1] bg-[#faf7fd] p-4;
+}
+
+.presetTitle {
+	@apply text-sm font-semibold text-[#4d315d];
+}
+
+.presetDescription {
+	@apply mt-1 text-xs leading-5 text-[#777];
+}
+
+.presetGrid {
+	@apply mt-3 grid grid-cols-3 gap-2;
+}
+
+.presetCard {
+	@apply flex min-h-20 cursor-pointer flex-col items-start rounded-lg border border-[#ded3eb] bg-white p-3 text-left transition-colors duration-200 hover:border-[#b995d5] hover:bg-[#f8f2fc];
+}
+
+.presetCard strong {
+	@apply text-xs text-[#5b3672];
+}
+
+.presetCard span {
+	@apply mt-1 text-[11px] leading-4 text-[#777];
+}
+
 .rangeHeader {
 	@apply flex items-baseline justify-between gap-3;
 }
 
 .rangeValue {
 	@apply shrink-0 rounded-md bg-[#f3eeff] px-2 py-1 text-xs font-semibold text-[#7b3fa0];
+}
+
+.presetRow {
+	@apply mt-2 flex flex-wrap gap-2;
+}
+
+.presetButton {
+	@apply min-h-9 cursor-pointer rounded-lg border border-[#ded3eb] bg-white px-3 py-1.5 text-xs font-semibold text-[#765f89] transition-colors duration-200 hover:bg-[#f6f1fb];
+}
+
+.presetButtonActive {
+	@apply border-[#7b3fa0] bg-[#f3eafa] text-[#6a328d];
 }
 
 .rangeInput {
@@ -358,12 +398,20 @@ select.input {
 	}
 
 	.tabs {
-		@apply gap-x-3 gap-y-2 pb-2;
+		@apply grid grid-cols-3 justify-stretch gap-1 pb-2;
+	}
+
+	.tab {
+		@apply min-h-10 w-full whitespace-normal rounded-md px-1 py-2 text-center text-xs leading-4;
 	}
 
 	.stickyFooter {
 		@apply -mx-5 px-5 py-3;
 		padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+	}
+
+	.presetGrid {
+		@apply grid-cols-1;
 	}
 }
 
@@ -386,7 +434,11 @@ select.input {
 	}
 
 	.colorRow {
-		@apply flex-wrap gap-2;
+		@apply flex-nowrap items-center gap-2;
+	}
+
+	.colorRow > .input {
+		@apply w-auto min-w-0 flex-1;
 	}
 
 	.directLink {

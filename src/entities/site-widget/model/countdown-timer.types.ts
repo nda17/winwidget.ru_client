@@ -62,6 +62,10 @@ export interface CountdownTimer {
 	isActive: boolean
 	installDomain: string
 	config: CountdownTimerConfig
+	draftRevision: number
+	publishedVersion: number
+	publishedFromDraftRevision: number
+	publishedAt: string | null
 	createdAt: string
 	updatedAt: string
 	_count?: { leads: number }

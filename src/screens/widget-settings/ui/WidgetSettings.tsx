@@ -8,6 +8,7 @@ import {
 	onlineConsultantService,
 	quizService,
 	stopOfferService,
+	widgetExperienceService,
 	widgetService
 } from '@/entities/site-widget'
 import type {
@@ -17,7 +18,8 @@ import type {
 	OnlineConsultant,
 	Quiz,
 	StopOffer,
-	Widget
+	Widget,
+	WidgetLifecycleState
 } from '@/entities/site-widget'
 import { useAuthStore } from '@/entities/user'
 import {
@@ -31,10 +33,15 @@ import {
 } from '@/features/edit-widget-settings'
 import { errorCatch } from '@/shared/api'
 import SkeletonLoader from '@/shared/ui/skeleton-loader/SkeletonLoader'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+	useMutation,
+	useQuery,
+	useQueryClient
+} from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
+import WidgetExperiencePanel from './WidgetExperiencePanel'
 import styles from './WidgetSettings.module.scss'
 
 const WIDGET_SETTINGS_TYPES = [
@@ -218,6 +225,14 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 	const isAuthResolved = useAuthStore(state => state.isAuthResolved)
 	const [previewPortalTarget, setPreviewPortalTarget] =
 		useState<HTMLDivElement | null>(null)
+	const [versionsPage, setVersionsPage] = useState(1)
+	const [editorResetKey, setEditorResetKey] = useState(0)
+	const [hasEditorUnsavedChanges, setHasEditorUnsavedChanges] =
+		useState(false)
+	const [isCheckingInstallation, setIsCheckingInstallation] =
+		useState(false)
+	const installationCheckIdRef = useRef(0)
+	const installationToastIdRef = useRef<string | null>(null)
 	const previewColumnRef = useRef<HTMLElement | null>(null)
 	const editorColumnRef = useRef<HTMLElement | null>(null)
 	const source = WIDGET_SETTINGS_SOURCES[type]
@@ -237,6 +252,164 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 		queryKey: settingsQueryKey,
 		queryFn: () => source.load(id),
 		enabled: isAuthResolved && auth
+	})
+	const canUseAnalytics =
+		selection?.subscription?.plan === 'HARD' &&
+		selection.subscription.status === 'ACTIVE'
+	const lifecycleQueryKey = ['widget-settings', type, id] as const
+	const lifecycleQuery = useQuery({
+		queryKey: lifecycleQueryKey,
+		queryFn: () => widgetExperienceService.getLifecycle(type, id),
+		enabled: isAuthResolved && auth
+	})
+	const runtimeStatusQuery = useQuery({
+		queryKey: ['widget-runtime-status', type, id],
+		queryFn: () => widgetExperienceService.getRuntimeStatus(type, id),
+		enabled: isAuthResolved && auth,
+		retry: 1
+	})
+	const analyticsQuery = useQuery({
+		queryKey: ['widget-runtime-analytics', type, id, 30],
+		queryFn: () => widgetExperienceService.getAnalytics(type, id, 30),
+		enabled: isAuthResolved && Boolean(auth) && canUseAnalytics,
+		retry: 1
+	})
+	const versionsQuery = useQuery({
+		queryKey: ['widget-settings-versions', type, id, versionsPage],
+		queryFn: () =>
+			widgetExperienceService.getVersions(type, id, versionsPage, 10),
+		enabled: isAuthResolved && auth,
+		placeholderData: previous => previous
+	})
+
+	const refreshWidgetQueries = () =>
+		Promise.all([
+			queryClient.invalidateQueries({ queryKey: [source.ownerQueryKey] }),
+			queryClient.invalidateQueries({ queryKey: lifecycleQueryKey }),
+			queryClient.invalidateQueries({
+				queryKey: ['widget-settings-versions', type, id]
+			}),
+			queryClient.invalidateQueries({
+				queryKey: ['widget-runtime-status', type, id]
+			}),
+			queryClient.invalidateQueries({
+				queryKey: ['widget-runtime-analytics', type, id]
+			})
+		])
+
+	const publishMutation = useMutation({
+		mutationFn: () => {
+			if (!lifecycleQuery.data) {
+				throw new Error('Состояние черновика ещё не загружено')
+			}
+
+			return widgetExperienceService.publish(
+				type,
+				id,
+				lifecycleQuery.data.draftRevision
+			)
+		},
+		onMutate: () => toast.loading('Публикуем виджет…'),
+		onSuccess: async (published, _, toastId) => {
+			queryClient.setQueryData(lifecycleQueryKey, published)
+			await refreshWidgetQueries()
+			toast.success('Новая версия опубликована', { id: toastId })
+		},
+		onError: (mutationError, _, toastId) => {
+			if ((mutationError as any)?.response?.status === 409) {
+				void handleRevisionConflict()
+			}
+			toast.error(
+				errorCatch(mutationError) ||
+					'Не удалось опубликовать виджет. Обновите страницу и повторите.',
+				{ id: toastId }
+			)
+		}
+	})
+
+	const discardMutation = useMutation({
+		mutationFn: () => {
+			if (!lifecycleQuery.data) {
+				throw new Error('Состояние черновика ещё не загружено')
+			}
+
+			return widgetExperienceService.discardDraft(
+				type,
+				id,
+				lifecycleQuery.data.draftRevision
+			)
+		},
+		onMutate: () => toast.loading('Возвращаем опубликованные настройки…'),
+		onSuccess: async (discarded, _, toastId) => {
+			queryClient.setQueryData(lifecycleQueryKey, discarded)
+			setEditorResetKey(current => current + 1)
+			await refreshWidgetQueries()
+			toast.success('Изменения черновика отменены', { id: toastId })
+		},
+		onError: (mutationError, _, toastId) => {
+			if ((mutationError as any)?.response?.status === 409) {
+				void handleRevisionConflict()
+			}
+			toast.error(
+				errorCatch(mutationError) || 'Не удалось отменить изменения',
+				{ id: toastId }
+			)
+		}
+	})
+
+	const cloneMutation = useMutation({
+		mutationFn: () => widgetExperienceService.clone(type, id),
+		onMutate: () => toast.loading('Создаём независимую копию…'),
+		onSuccess: async (cloned, _, toastId) => {
+			await queryClient.invalidateQueries({
+				queryKey: [source.ownerQueryKey]
+			})
+			toast.success(
+				cloned.warning
+					? `Копия создана. ${cloned.warning}`
+					: 'Копия виджета создана',
+				{ id: toastId, duration: cloned.warning ? 6500 : 3000 }
+			)
+			router.push(`/cabinet/widgets/${cloned.type}/${cloned.id}`)
+		},
+		onError: (mutationError, _, toastId) => {
+			toast.error(
+				errorCatch(mutationError) || 'Не удалось создать копию виджета',
+				{ id: toastId }
+			)
+		}
+	})
+
+	const restoreMutation = useMutation({
+		mutationFn: (version: number) => {
+			if (!lifecycleQuery.data) {
+				throw new Error('Состояние черновика ещё не загружено')
+			}
+
+			return widgetExperienceService.restoreVersion(
+				type,
+				id,
+				version,
+				lifecycleQuery.data.draftRevision
+			)
+		},
+		onMutate: version =>
+			toast.loading(`Восстанавливаем версию ${version} в черновик…`),
+		onSuccess: async (restored, _, toastId) => {
+			queryClient.setQueryData(lifecycleQueryKey, restored)
+			setEditorResetKey(current => current + 1)
+			await refreshWidgetQueries()
+			toast.success('Версия восстановлена в черновик', { id: toastId })
+		},
+		onError: (mutationError, _, toastId) => {
+			if ((mutationError as any)?.response?.status === 409) {
+				void handleRevisionConflict()
+			}
+			toast.error(
+				errorCatch(mutationError) || 'Не удалось восстановить версию',
+				{ id: toastId }
+			)
+		}
 	})
 
 	useEffect(() => {
@@ -293,14 +466,136 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 		}
 	}, [previewPortalTarget])
 
+	useEffect(
+		() => () => {
+			installationCheckIdRef.current += 1
+			if (installationToastIdRef.current) {
+				toast.dismiss(installationToastIdRef.current)
+				installationToastIdRef.current = null
+			}
+		},
+		[]
+	)
+
 	const closeSettings = () => {
 		router.push('/cabinet?tab=widgets')
 	}
 
-	const handleSaved = () => {
-		void queryClient.invalidateQueries({
-			queryKey: [source.ownerQueryKey]
-		})
+	const handleSaved = (updated: WidgetSettingsSelection['entity']) => {
+		queryClient.setQueryData<WidgetLifecycleState<unknown>>(
+			lifecycleQueryKey,
+			current =>
+				current
+					? {
+							...current,
+							name: updated.name,
+							installDomain: updated.installDomain,
+							config: updated.config,
+							updatedAt: updated.updatedAt,
+							draftRevision: updated.draftRevision,
+							hasUnpublishedChanges: true,
+							status:
+								current.publishedVersion > 0
+									? 'CHANGES_PENDING'
+									: 'DRAFT_ONLY'
+						}
+					: current
+		)
+		void Promise.all([
+			queryClient.invalidateQueries({
+				queryKey: [source.ownerQueryKey]
+			}),
+			queryClient.invalidateQueries({
+				queryKey: lifecycleQueryKey
+			})
+		])
+	}
+
+	const handleCheckInstallation = async () => {
+		const currentStatus = runtimeStatusQuery.data
+		if (!currentStatus?.installation.domain) {
+			toast.error('Сначала сохраните и опубликуйте домен установки')
+			return
+		}
+		if (isCheckingInstallation || installationToastIdRef.current) return
+
+		const checkId = installationCheckIdRef.current + 1
+		installationCheckIdRef.current = checkId
+		setIsCheckingInstallation(true)
+		const toastId = toast.loading('Подготавливаем проверку установки…')
+		installationToastIdRef.current = toastId
+
+		try {
+			const baselineResult = await runtimeStatusQuery.refetch()
+			if (installationCheckIdRef.current !== checkId) {
+				toast.dismiss(toastId)
+				return
+			}
+			if (baselineResult.error || !baselineResult.data) {
+				toast.error('Не удалось начать проверку установки', {
+					id: toastId
+				})
+				return
+			}
+
+			const baselineLastSeenAt =
+				baselineResult.data.installation.lastSeenAt
+			const baselineLastSeenTimestamp = baselineLastSeenAt
+				? new Date(baselineLastSeenAt).getTime()
+				: 0
+			let consecutivePollingErrors = 0
+
+			toast.loading(
+				'Откройте страницу сайта с виджетом. Ждём новый сигнал…',
+				{ id: toastId }
+			)
+
+			for (let attempt = 0; attempt < 20; attempt += 1) {
+				await new Promise(resolve => window.setTimeout(resolve, 3000))
+				if (installationCheckIdRef.current !== checkId) {
+					toast.dismiss(toastId)
+					return
+				}
+
+				const result = await runtimeStatusQuery.refetch()
+				if (result.error) {
+					consecutivePollingErrors += 1
+					if (consecutivePollingErrors >= 3) {
+						throw result.error
+					}
+					continue
+				}
+				consecutivePollingErrors = 0
+				const lastSeenAt = result.data?.installation.lastSeenAt
+				const lastSeenTimestamp = lastSeenAt
+					? new Date(lastSeenAt).getTime()
+					: 0
+
+				if (lastSeenTimestamp > baselineLastSeenTimestamp) {
+					toast.success('Установка подтверждена новым сигналом', {
+						id: toastId
+					})
+					return
+				}
+			}
+
+			toast.error(
+				'Новый сигнал не получен. Проверьте домен, код установки и откройте страницу ещё раз.',
+				{ id: toastId, duration: 6500 }
+			)
+		} catch (checkError) {
+			toast.error(
+				errorCatch(checkError) || 'Не удалось проверить установку',
+				{ id: toastId }
+			)
+		} finally {
+			if (installationCheckIdRef.current === checkId) {
+				setIsCheckingInstallation(false)
+			}
+			if (installationToastIdRef.current === toastId) {
+				installationToastIdRef.current = null
+			}
+		}
 	}
 
 	const handleRetry = async () => {
@@ -317,6 +612,18 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 		}
 
 		toast.success('Настройки загружены', { id: toastId })
+	}
+
+	const handleRevisionConflict = async () => {
+		const [, lifecycleResult] = await Promise.all([
+			refetch(),
+			lifecycleQuery.refetch()
+		])
+		if (lifecycleResult.error || !lifecycleResult.data) {
+			throw lifecycleResult.error || new Error('Черновик не загружен')
+		}
+
+		return lifecycleResult.data.draftRevision
 	}
 
 	const canUseCustomButtonImage =
@@ -391,13 +698,20 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 		)
 	}
 
+	const editorSelection = mergeLifecycleSelection(
+		selection,
+		lifecycleQuery.data
+	)
 	const editor = previewPortalTarget
 		? renderWidgetEditor({
-				selection,
+				selection: editorSelection,
 				canUseCustomButtonImage,
 				previewPortalTarget,
+				editorResetKey,
 				onClose: closeSettings,
-				onSaved: handleSaved
+				onSaved: handleSaved,
+				onDirtyChange: setHasEditorUnsavedChanges,
+				onRevisionConflict: handleRevisionConflict
 			})
 		: null
 
@@ -409,7 +723,8 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 					{selection.entity.name || WIDGET_TYPE_LABELS[type]}
 				</h1>
 				<p className={styles.pageDescription}>
-					Изменения сразу отображаются в предпросмотре слева.
+					Изменения сразу видны в предпросмотре и не попадут на сайт до
+					публикации.
 				</p>
 			</header>
 
@@ -430,6 +745,30 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 					className={styles.editorColumn}
 					aria-label="Параметры виджета"
 				>
+					<WidgetExperiencePanel
+						lifecycle={lifecycleQuery.data}
+						runtimeStatus={runtimeStatusQuery.data}
+						analytics={analyticsQuery.data}
+						canUseAnalytics={canUseAnalytics}
+						versions={versionsQuery.data}
+						isRuntimeStatusError={runtimeStatusQuery.isError}
+						isAnalyticsError={analyticsQuery.isError}
+						isVersionsError={versionsQuery.isError}
+						versionsPage={versionsPage}
+						isLoading={lifecycleQuery.isPending}
+						isPublishing={publishMutation.isPending}
+						isDiscarding={discardMutation.isPending}
+						isCloning={cloneMutation.isPending}
+						isRestoring={restoreMutation.isPending}
+						isCheckingInstallation={isCheckingInstallation}
+						hasLocalChanges={hasEditorUnsavedChanges}
+						onPublish={() => publishMutation.mutate()}
+						onDiscard={() => discardMutation.mutate()}
+						onClone={() => cloneMutation.mutate()}
+						onRestore={version => restoreMutation.mutate(version)}
+						onCheckInstallation={() => void handleCheckInstallation()}
+						onVersionsPageChange={setVersionsPage}
+					/>
 					{editor}
 				</section>
 			</div>
@@ -441,25 +780,56 @@ interface WidgetEditorRendererProps {
 	selection: WidgetSettingsSelection
 	canUseCustomButtonImage: boolean
 	previewPortalTarget: HTMLElement
+	editorResetKey: number
 	onClose: () => void
-	onSaved: () => void
+	onSaved: (updated: WidgetSettingsSelection['entity']) => void
+	onDirtyChange: (hasUnsavedChanges: boolean) => void
+	onRevisionConflict: () => Promise<number | null>
+}
+
+const mergeLifecycleSelection = (
+	selection: WidgetSettingsSelection,
+	lifecycle?: WidgetLifecycleState<unknown>
+): WidgetSettingsSelection => {
+	if (!lifecycle) return selection
+
+	return {
+		...selection,
+		entity: {
+			...selection.entity,
+			name: lifecycle.name,
+			publicKey: lifecycle.publicKey,
+			isActive: lifecycle.isActive,
+			installDomain: lifecycle.installDomain,
+			config: lifecycle.config,
+			draftRevision: lifecycle.draftRevision,
+			createdAt: lifecycle.createdAt,
+			updatedAt: lifecycle.updatedAt
+		}
+	} as unknown as WidgetSettingsSelection
 }
 
 const renderWidgetEditor = ({
 	selection,
 	canUseCustomButtonImage,
 	previewPortalTarget,
+	editorResetKey,
 	onClose,
-	onSaved
+	onSaved,
+	onDirtyChange,
+	onRevisionConflict
 }: WidgetEditorRendererProps) => {
 	switch (selection.type) {
 		case 'wheel':
 			return (
 				<WheelSettingsModal
+					key={editorResetKey}
 					widget={selection.entity}
 					canUseCustomButtonImage={canUseCustomButtonImage}
 					onClose={onClose}
 					onSaved={onSaved}
+					onDirtyChange={onDirtyChange}
+					onRevisionConflict={onRevisionConflict}
 					presentation="page"
 					previewPortalTarget={previewPortalTarget}
 				/>
@@ -467,10 +837,13 @@ const renderWidgetEditor = ({
 		case 'quiz':
 			return (
 				<QuizSettingsModal
+					key={editorResetKey}
 					quiz={selection.entity}
 					canUseCustomButtonImage={canUseCustomButtonImage}
 					onClose={onClose}
 					onSaved={onSaved}
+					onDirtyChange={onDirtyChange}
+					onRevisionConflict={onRevisionConflict}
 					presentation="page"
 					previewPortalTarget={previewPortalTarget}
 				/>
@@ -478,10 +851,13 @@ const renderWidgetEditor = ({
 		case 'callback':
 			return (
 				<CallbackSettingsModal
+					key={editorResetKey}
 					callback={selection.entity}
 					canUseCustomButtonImage={canUseCustomButtonImage}
 					onClose={onClose}
 					onSaved={onSaved}
+					onDirtyChange={onDirtyChange}
+					onRevisionConflict={onRevisionConflict}
 					presentation="page"
 					previewPortalTarget={previewPortalTarget}
 				/>
@@ -489,10 +865,13 @@ const renderWidgetEditor = ({
 		case 'timer':
 			return (
 				<CountdownTimerSettingsModal
+					key={editorResetKey}
 					timer={selection.entity}
 					canUseCustomButtonImage={canUseCustomButtonImage}
 					onClose={onClose}
 					onSaved={onSaved}
+					onDirtyChange={onDirtyChange}
+					onRevisionConflict={onRevisionConflict}
 					presentation="page"
 					previewPortalTarget={previewPortalTarget}
 				/>
@@ -500,10 +879,13 @@ const renderWidgetEditor = ({
 		case 'stop-offer':
 			return (
 				<StopOfferSettingsModal
+					key={editorResetKey}
 					stopOffer={selection.entity}
 					canUseCustomButtonImage={canUseCustomButtonImage}
 					onClose={onClose}
 					onSaved={onSaved}
+					onDirtyChange={onDirtyChange}
+					onRevisionConflict={onRevisionConflict}
 					presentation="page"
 					previewPortalTarget={previewPortalTarget}
 				/>
@@ -511,10 +893,13 @@ const renderWidgetEditor = ({
 		case 'online-consultant':
 			return (
 				<OnlineConsultantSettingsModal
+					key={editorResetKey}
 					onlineConsultant={selection.entity}
 					canUseCustomButtonImage={canUseCustomButtonImage}
 					onClose={onClose}
 					onSaved={onSaved}
+					onDirtyChange={onDirtyChange}
+					onRevisionConflict={onRevisionConflict}
 					presentation="page"
 					previewPortalTarget={previewPortalTarget}
 				/>
@@ -522,10 +907,13 @@ const renderWidgetEditor = ({
 		case 'calculator':
 			return (
 				<CalculatorSettingsModal
+					key={editorResetKey}
 					calculator={selection.entity}
 					canUseCustomButtonImage={canUseCustomButtonImage}
 					onClose={onClose}
 					onSaved={onSaved}
+					onDirtyChange={onDirtyChange}
+					onRevisionConflict={onRevisionConflict}
 					presentation="page"
 					previewPortalTarget={previewPortalTarget}
 				/>

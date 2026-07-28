@@ -17,13 +17,19 @@ import {
 	InputHTMLAttributes,
 	useEffect,
 	useId,
+	useRef,
 	useState
 } from 'react'
 import toast from 'react-hot-toast'
 import styles from './CalculatorSettingsModal.module.scss'
 import DirectLinkQr from '../shared/DirectLinkQr'
+import {
+	findInvalidWidgetColor,
+	isWidgetHexColor
+} from '../shared/widgetColor'
 import useWidgetSettingsCloseGuard from '../shared/useWidgetSettingsCloseGuard'
 import WidgetLivePreview from '../shared/WidgetLivePreview'
+import WidgetPresetButtons from '../shared/WidgetPresetButtons'
 import pageStyles from '../shared/WidgetSettingsModal.module.scss'
 import type {
 	WidgetSettingsPersistence,
@@ -64,7 +70,7 @@ interface CalculatorColorSetting {
 const CALCULATOR_COLOR_SETTINGS: CalculatorColorSetting[] = [
 	{
 		key: 'color',
-		label: 'Основной цвет:',
+		label: 'Цвет акцентов:',
 		pickerFallback: '#4705fb',
 		placeholder: '#4705fb',
 		resetValue: '#4705fb',
@@ -105,12 +111,12 @@ const CALCULATOR_COLOR_SETTINGS: CalculatorColorSetting[] = [
 ]
 
 const TABS: { id: Tab; label: string }[] = [
-	{ id: 'main', label: 'Главные' },
+	{ id: 'main', label: 'Основные' },
 	{ id: 'fields', label: 'Поля' },
 	{ id: 'calculation', label: 'Расчёт' },
 	{ id: 'integrations', label: 'Интеграции' },
 	{ id: 'code', label: 'Установка' },
-	{ id: 'info', label: 'Инфо' }
+	{ id: 'info', label: 'Проверка' }
 ]
 
 const makeId = () => Math.random().toString(36).slice(2, 10)
@@ -392,7 +398,10 @@ const CalculatorSettingsModal = ({
 	onSaved,
 	persistence,
 	presentation = 'modal',
-	previewPortalTarget
+	previewPortalTarget,
+	onDirtyChange,
+	onRevisionConflict,
+	lifecycleActions
 }: Props) => {
 	const titleId = useId()
 	const buttonImageInputId = useId()
@@ -401,6 +410,7 @@ const CalculatorSettingsModal = ({
 	const [installDomain, setInstallDomain] = useState(
 		calculator.installDomain ?? ''
 	)
+	const draftRevisionRef = useRef(calculator.draftRevision)
 	const [config, setConfig] = useState<CalculatorConfig>(() =>
 		normalizeConfig(calculator.config)
 	)
@@ -417,6 +427,38 @@ const CalculatorSettingsModal = ({
 
 	const currentSnapshot = JSON.stringify({ name, installDomain, config })
 	const hasUnsavedChanges = currentSnapshot !== savedSnapshot
+	useEffect(() => {
+		onDirtyChange?.(hasUnsavedChanges)
+	}, [hasUnsavedChanges, onDirtyChange])
+	const reportMutationError = (
+		error: any,
+		fallback: string,
+		toastId: string
+	) => {
+		if (error?.response?.status === 409) {
+			const conflictRefresh = onRevisionConflict?.()
+			void conflictRefresh
+				?.then(latestRevision => {
+					if (typeof latestRevision === 'number') {
+						draftRevisionRef.current = latestRevision
+					}
+				})
+				.catch(() =>
+					toast.error(
+						'Не удалось обновить ревизию черновика. Проверьте соединение и повторите.',
+						{ id: toastId, duration: 6000 }
+					)
+				)
+			toast.error(
+				'Черновик изменился в другой вкладке. Ваши поля сохранены — после обновления повторите действие.',
+				{ id: toastId, duration: 6000 }
+			)
+			return
+		}
+		toast.error(error?.response?.data?.message || fallback, {
+			id: toastId
+		})
+	}
 
 	const saveMutation = useMutation({
 		mutationFn: (payload: {
@@ -424,11 +466,18 @@ const CalculatorSettingsModal = ({
 			installDomain?: string
 			config: CalculatorConfig
 		}) =>
-			persistence?.update(payload) ??
-			calculatorService.updateCalculator(calculator.id, payload),
+			persistence?.update({
+				...payload,
+				expectedDraftRevision: draftRevisionRef.current
+			}) ??
+			calculatorService.updateCalculator(calculator.id, {
+				...payload,
+				expectedDraftRevision: draftRevisionRef.current
+			}),
 		onMutate: () =>
 			toast.loading('Сохраняем настройки, пожалуйста подождите...'),
 		onSuccess: (updated: Calculator, _, toastId) => {
+			draftRevisionRef.current = updated.draftRevision
 			const nextConfig = normalizeConfig(updated.config)
 			toast.success('Сохранено', { id: toastId })
 			setName(updated.name)
@@ -443,17 +492,18 @@ const CalculatorSettingsModal = ({
 			)
 			onSaved({ ...updated, config: nextConfig })
 		},
-		onError: (error: any, _, toastId) => {
-			toast.error(error?.response?.data?.message || 'Ошибка сохранения', {
-				id: toastId
-			})
-		}
+		onError: (error: any, _, toastId) =>
+			reportMutationError(error, 'Ошибка сохранения', toastId)
 	})
 
 	const buttonImageMutation = useMutation({
 		mutationFn: (file: File) => {
 			const formData = new FormData()
 			formData.append('file', file)
+			formData.append(
+				'expectedDraftRevision',
+				String(draftRevisionRef.current)
+			)
 			return persistence?.uploadButtonImage
 				? persistence.uploadButtonImage(formData)
 				: calculatorService.uploadButtonImage(calculator.id, formData)
@@ -461,6 +511,7 @@ const CalculatorSettingsModal = ({
 		onMutate: () =>
 			toast.loading('Загружаем картинку кнопки, пожалуйста подождите...'),
 		onSuccess: (updated: Calculator, _, toastId) => {
+			draftRevisionRef.current = updated.draftRevision
 			const nextConfig = normalizeConfig(updated.config)
 			toast.success('Картинка кнопки обновлена', { id: toastId })
 			setConfig(nextConfig)
@@ -473,11 +524,8 @@ const CalculatorSettingsModal = ({
 			)
 			onSaved({ ...updated, config: nextConfig })
 		},
-		onError: (error: any, _, toastId) => {
-			toast.error(error?.response?.data?.message || 'Ошибка загрузки', {
-				id: toastId
-			})
-		}
+		onError: (error: any, _, toastId) =>
+			reportMutationError(error, 'Ошибка загрузки', toastId)
 	})
 	const isDangerActionPending =
 		saveMutation.isPending || buttonImageMutation.isPending
@@ -911,6 +959,15 @@ const CalculatorSettingsModal = ({
 	}
 
 	const handleSave = () => {
+		const invalidColor = !isWidgetHexColor(config.color)
+			? 'color'
+			: findInvalidWidgetColor(config)
+		if (invalidColor) {
+			setTab('main')
+			toast.error('Цвет должен быть указан в формате #RRGGBB')
+			return
+		}
+
 		if (!validate()) return
 
 		const sanitizedName = name.trim()
@@ -976,16 +1033,16 @@ const CalculatorSettingsModal = ({
 	}
 
 	const resetSettings = () => {
-		const nextConfig = cloneConfig(DEFAULT_CONFIG)
+		const nextConfig = {
+			...cloneConfig(DEFAULT_CONFIG),
+			integrations: { ...config.integrations },
+			buttonImageUrl: config.buttonImageUrl
+		}
 
 		setConfig(nextConfig)
 		setValidationError(null)
 		setIsResetConfirmOpen(false)
-		saveMutation.mutate({
-			name: name.trim() || 'Калькулятор стоимости',
-			installDomain,
-			config: nextConfig
-		})
+		toast.success('Стандартные настройки применены. Сохраните черновик')
 	}
 
 	return (
@@ -1023,6 +1080,7 @@ const CalculatorSettingsModal = ({
 				<h2 id={titleId} className={styles.modalTitle}>
 					Настройки калькулятора
 				</h2>
+				{lifecycleActions}
 
 				<div
 					className={styles.tabs}
@@ -1069,6 +1127,119 @@ const CalculatorSettingsModal = ({
 				>
 					{tab === 'main' && (
 						<div className={styles.fields}>
+							<WidgetPresetButtons
+								presets={[
+									{
+										id: 'service',
+										label: 'Стоимость услуги',
+										description: 'Базовая цена и дополнительные параметры.'
+									},
+									{
+										id: 'quantity',
+										label: 'Цена за количество',
+										description: 'Расчёт стоимости по объёму заказа.'
+									},
+									{
+										id: 'tariff',
+										label: 'Сравнение тарифов',
+										description: 'Выбор пакета с разной стоимостью.'
+									}
+								]}
+								onApply={preset => {
+									setValidationError(null)
+									setConfig(previous => {
+										const preserved = {
+											color: previous.color,
+											bgColor: previous.bgColor,
+											glassEffect: previous.glassEffect,
+											buttonColor: previous.buttonColor,
+											openButtonColor: previous.openButtonColor,
+											textColor: previous.textColor,
+											buttonSide: previous.buttonSide,
+											buttonPulse: previous.buttonPulse,
+											buttonBottom: previous.buttonBottom,
+											buttonOffset: previous.buttonOffset,
+											buttonSize: previous.buttonSize,
+											buttonImageUrl: previous.buttonImageUrl,
+											autoOpenDelay: previous.autoOpenDelay,
+											privacyUrl: previous.privacyUrl,
+											developInfoActive: previous.developInfoActive,
+											integrations: previous.integrations
+										}
+
+										if (preset === 'quantity') {
+											return normalizeConfig({
+												...DEFAULT_CONFIG,
+												...preserved,
+												title: 'Рассчитайте стоимость заказа',
+												subtitle: 'Укажите необходимое количество',
+												basePrice: 0,
+												fields: [
+													{
+														id: 'quantity',
+														label: 'Количество',
+														type: 'number',
+														required: true,
+														min: 1,
+														max: 1000,
+														step: 1,
+														defaultValue: 1,
+														unit: 'шт.',
+														unitPrice: 1000
+													}
+												]
+											})
+										}
+
+										if (preset === 'tariff') {
+											return normalizeConfig({
+												...DEFAULT_CONFIG,
+												...preserved,
+												title: 'Подберите тариф',
+												subtitle:
+													'Выберите подходящий пакет и получите расчёт',
+												fields: [
+													{
+														id: 'tariff',
+														label: 'Тариф',
+														type: 'select',
+														required: true,
+														options: [
+															{
+																id: 'start',
+																label: 'Старт',
+																add: 0,
+																multiplier: 1
+															},
+															{
+																id: 'business',
+																label: 'Бизнес',
+																add: 10000,
+																multiplier: 1
+															},
+															{
+																id: 'pro',
+																label: 'Профессиональный',
+																add: 25000,
+																multiplier: 1
+															}
+														]
+													}
+												]
+											})
+										}
+
+										return normalizeConfig({
+											...DEFAULT_CONFIG,
+											...preserved,
+											title: 'Рассчитайте стоимость услуги',
+											subtitle:
+												'Выберите параметры и получите предварительный расчёт'
+										})
+									})
+									toast.success('Сценарий применён. Сохраните черновик')
+								}}
+							/>
 							<div className={styles.settingsGroup}>
 								<div className={styles.settingsGroupHeader}>
 									<h3 className={styles.settingsGroupTitle}>
@@ -1115,6 +1286,9 @@ const CalculatorSettingsModal = ({
 													)
 												: setting.pickerFallback
 										const value = config[setting.key]
+										const isInvalidColor =
+											(setting.key === 'color' || value !== '') &&
+											!isWidgetHexColor(value)
 
 										return (
 											<div key={setting.key} className={styles.field}>
@@ -1133,13 +1307,16 @@ const CalculatorSettingsModal = ({
 														aria-label={`${setting.label} выбор цвета`}
 													/>
 													<input
-														className={styles.input}
+														className={`${styles.input} ${
+															isInvalidColor ? pageStyles.inputError : ''
+														}`}
 														value={value}
 														placeholder={setting.placeholder}
 														maxLength={7}
 														onChange={event =>
 															setField(setting.key, event.target.value)
 														}
+														aria-invalid={isInvalidColor}
 													/>
 													{value !== setting.resetValue && (
 														<button
@@ -1155,6 +1332,11 @@ const CalculatorSettingsModal = ({
 														</button>
 													)}
 												</div>
+												{isInvalidColor && (
+													<p className={pageStyles.fieldError}>
+														Введите цвет в формате #RRGGBB
+													</p>
+												)}
 												<p className={styles.hint}>{setting.hint}</p>
 											</div>
 										)
@@ -1352,9 +1534,7 @@ const CalculatorSettingsModal = ({
 
 								<div className={styles.field}>
 									<div className={pageStyles.rangeHeader}>
-										<p className={styles.label}>
-											Высота кнопки от низа экрана:
-										</p>
+										<p className={styles.label}>Отступ снизу:</p>
 										<span className={pageStyles.rangeValue}>
 											{config.buttonBottom}%
 										</span>
@@ -1362,7 +1542,7 @@ const CalculatorSettingsModal = ({
 									<input
 										id={validationTargetId('button-bottom')}
 										type="range"
-										aria-label="Высота кнопки от низа экрана"
+										aria-label="Отступ снизу"
 										min={1}
 										max={50}
 										step={1}
@@ -1396,16 +1576,14 @@ const CalculatorSettingsModal = ({
 
 								<div className={styles.field}>
 									<div className={pageStyles.rangeHeader}>
-										<p className={styles.label}>
-											Отступ кнопки от края экрана:
-										</p>
+										<p className={styles.label}>Отступ сбоку:</p>
 										<span className={pageStyles.rangeValue}>
 											{config.buttonOffset}%
 										</span>
 									</div>
 									<input
 										type="range"
-										aria-label="Отступ кнопки от края экрана"
+										aria-label="Отступ сбоку"
 										min={1}
 										max={50}
 										step={1}
@@ -1458,7 +1636,7 @@ const CalculatorSettingsModal = ({
 											}
 										/>
 										<span className={styles.checkLabel}>
-											Открывать виджет автоматически
+											Автоматически показывать
 										</span>
 									</label>
 									{config.autoOpenDelay != null && (
@@ -1588,7 +1766,7 @@ const CalculatorSettingsModal = ({
 										<option value="PHONE_AND_EMAIL">
 											Номер телефона и Email
 										</option>
-										<option value="NONE">Ничего не собираем</option>
+										<option value="NONE">Не собирать контакты</option>
 									</select>
 									<p className={styles.hint}>
 										Если сбор включён, контакт запрашивается перед
@@ -1732,8 +1910,8 @@ const CalculatorSettingsModal = ({
 								<div className={styles.dangerActions}>
 									<p className={styles.hint}>
 										Сброс заменит внешний вид, тексты, поля, формулу и
-										интеграции стандартными значениями. Название и домен
-										установки сохранятся.
+										параметры показа стандартными значениями. Название,
+										домен, интеграции и своя картинка сохранятся.
 									</p>
 									<button
 										type="button"
@@ -2180,129 +2358,161 @@ const CalculatorSettingsModal = ({
 
 					{tab === 'integrations' && (
 						<div className={styles.fields}>
-							<div className={styles.settingsGroup}>
-								<div className={styles.settingsGroupHeader}>
+							{config.dataType === 'NONE' && (
+								<div className={styles.settingsGroup}>
 									<h3 className={styles.settingsGroupTitle}>
-										Уведомления
+										Контакты отключены
 									</h3>
-								</div>
-								<p className={styles.infoText}>
-									Можно включить email и Telegram одновременно. Оба
-									уведомления отправляются после сохранения заявки.
-								</p>
-								<div className={styles.field}>
-									<p className={styles.label}>Отправка заявок на Email</p>
-									<input
-										type="email"
-										className={styles.input}
-										value={config.integrations.email || ''}
-										placeholder="mail@example.ru"
-										maxLength={200}
-										onChange={event =>
-											setIntegration('email', event.target.value)
-										}
-									/>
 									<p className={styles.hint}>
-										На этот адрес будут приходить новые заявки
-										калькулятора.
+										Уведомления, webhook и CRM не используются без заявок.
+										Аналитика открытия остаётся доступной.
 									</p>
 								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Отправка заявок в Telegram
-									</p>
-									<input
-										className={styles.input}
-										value={config.integrations.telegramChatId || ''}
-										placeholder="123456789"
-										maxLength={100}
-										onChange={event =>
-											setIntegration('telegramChatId', event.target.value)
-										}
-									/>
-									<p className={styles.hint}>
-										Напишите боту <b>@winwidget_info_bot</b> команду
-										/start, затем укажите ваш Telegram ID. Узнать его можно
-										через <b>@getmyid_bot</b>.
-									</p>
-								</div>
-							</div>
-							<div className={styles.settingsGroup}>
-								<div className={styles.settingsGroupHeader}>
-									<h3 className={styles.settingsGroupTitle}>
-										Webhooks и CRM
-									</h3>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Внешний URL (Webhook)</p>
-									<input
-										type="url"
-										className={styles.input}
-										value={config.integrations.webhookUrl || ''}
-										placeholder="https://example.ru/webhook"
-										maxLength={500}
-										onChange={event =>
-											setIntegration('webhookUrl', event.target.value)
-										}
-									/>
-									<p className={styles.hint}>
-										Winwidget отправит данные заявки POST-запросом на
-										указанный адрес.
-									</p>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Отправка заявок в Битрикс24
-									</p>
-									<input
-										type="url"
-										className={styles.input}
-										value={config.integrations.bitrix24WebhookUrl || ''}
-										placeholder="https://company.bitrix24.ru/rest/..."
-										maxLength={500}
-										onChange={event =>
-											setIntegration(
-												'bitrix24WebhookUrl',
-												event.target.value
-											)
-										}
-									/>
-									<p className={styles.hint}>
-										Новые заявки будут создаваться как лиды в Битрикс24.
-									</p>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>amoCRM — домен аккаунта</p>
-									<input
-										className={styles.input}
-										value={config.integrations.amoCrmDomain || ''}
-										placeholder="company.amocrm.ru"
-										maxLength={100}
-										onChange={event =>
-											setIntegration('amoCrmDomain', event.target.value)
-										}
-									/>
-									<p className={styles.hint}>
-										Например, company.amocrm.ru без пути и протокола.
-									</p>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>amoCRM — токен доступа</p>
-									<input
-										type="password"
-										className={styles.input}
-										value={config.integrations.amoCrmToken || ''}
-										placeholder="Долгосрочный токен из настроек API"
-										maxLength={500}
-										onChange={event =>
-											setIntegration('amoCrmToken', event.target.value)
-										}
-									/>
-									<p className={styles.hint}>
-										При каждой заявке будут создаваться сделка и контакт.
-									</p>
-								</div>
-							</div>
+							)}
+							{config.dataType !== 'NONE' && (
+								<>
+									<div className={styles.settingsGroup}>
+										<div className={styles.settingsGroupHeader}>
+											<h3 className={styles.settingsGroupTitle}>
+												Уведомления
+											</h3>
+										</div>
+										<p className={styles.infoText}>
+											Можно включить email и Telegram одновременно. Оба
+											уведомления отправляются после сохранения заявки.
+										</p>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Отправка заявок на Email
+											</p>
+											<input
+												type="email"
+												className={styles.input}
+												value={config.integrations.email || ''}
+												placeholder="mail@example.ru"
+												maxLength={200}
+												onChange={event =>
+													setIntegration('email', event.target.value)
+												}
+											/>
+											<p className={styles.hint}>
+												На этот адрес будут приходить новые заявки
+												калькулятора.
+											</p>
+										</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Отправка заявок в Telegram
+											</p>
+											<input
+												className={styles.input}
+												value={config.integrations.telegramChatId || ''}
+												placeholder="123456789"
+												maxLength={100}
+												onChange={event =>
+													setIntegration(
+														'telegramChatId',
+														event.target.value
+													)
+												}
+											/>
+											<p className={styles.hint}>
+												Напишите боту <b>@winwidget_info_bot</b> команду
+												/start, затем укажите ваш Telegram ID. Узнать его
+												можно через <b>@getmyid_bot</b>.
+											</p>
+										</div>
+									</div>
+									<div className={styles.settingsGroup}>
+										<div className={styles.settingsGroupHeader}>
+											<h3 className={styles.settingsGroupTitle}>
+												Webhooks и CRM
+											</h3>
+										</div>
+										<div className={styles.field}>
+											<p className={styles.label}>Внешний URL (Webhook)</p>
+											<input
+												type="url"
+												className={styles.input}
+												value={config.integrations.webhookUrl || ''}
+												placeholder="https://example.ru/webhook"
+												maxLength={500}
+												onChange={event =>
+													setIntegration('webhookUrl', event.target.value)
+												}
+											/>
+											<p className={styles.hint}>
+												Winwidget отправит данные заявки POST-запросом на
+												указанный адрес.
+											</p>
+										</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Отправка заявок в Битрикс24
+											</p>
+											<input
+												type="url"
+												className={styles.input}
+												value={
+													config.integrations.bitrix24WebhookUrl || ''
+												}
+												placeholder="https://company.bitrix24.ru/rest/..."
+												maxLength={500}
+												onChange={event =>
+													setIntegration(
+														'bitrix24WebhookUrl',
+														event.target.value
+													)
+												}
+											/>
+											<p className={styles.hint}>
+												Новые заявки будут создаваться как лиды в
+												Битрикс24.
+											</p>
+										</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												amoCRM — домен аккаунта
+											</p>
+											<input
+												className={styles.input}
+												value={config.integrations.amoCrmDomain || ''}
+												placeholder="company.amocrm.ru"
+												maxLength={100}
+												onChange={event =>
+													setIntegration(
+														'amoCrmDomain',
+														event.target.value
+													)
+												}
+											/>
+											<p className={styles.hint}>
+												Например, company.amocrm.ru без пути и протокола.
+											</p>
+										</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												amoCRM — токен доступа
+											</p>
+											<input
+												type="password"
+												className={styles.input}
+												value={config.integrations.amoCrmToken || ''}
+												placeholder="Долгосрочный токен из настроек API"
+												maxLength={500}
+												onChange={event =>
+													setIntegration('amoCrmToken', event.target.value)
+												}
+											/>
+											<p className={styles.hint}>
+												При каждой заявке будут создаваться сделка и
+												контакт.
+											</p>
+										</div>
+									</div>
+								</>
+							)}
+
 							<div className={styles.settingsGroup}>
 								<div className={styles.settingsGroupHeader}>
 									<h3 className={styles.settingsGroupTitle}>Аналитика</h3>
@@ -2477,7 +2687,7 @@ const CalculatorSettingsModal = ({
 										перед показом результата.
 									</li>
 									<li>
-										Если выбран вариант «Ничего не собираем», результат
+										Если выбран вариант «Не собирать контакты», результат
 										показывается сразу, а заявка не создаётся.
 									</li>
 									<li>
@@ -2529,7 +2739,9 @@ const CalculatorSettingsModal = ({
 							onClick={handleSave}
 							disabled={saveMutation.isPending || !hasUnsavedChanges}
 						>
-							{saveMutation.isPending ? 'Сохранение...' : 'Сохранить'}
+							{saveMutation.isPending
+								? 'Сохранение...'
+								: 'Сохранить черновик'}
 						</button>
 					</div>
 				</div>
@@ -2537,7 +2749,7 @@ const CalculatorSettingsModal = ({
 				{isResetConfirmOpen && (
 					<ConfirmDialog
 						title="Сбросить настройки калькулятора?"
-						message="Внешний вид, тексты, поля, формула и интеграции будут заменены стандартными значениями. Название виджета и домен установки сохранятся."
+						message="Внешний вид, тексты, поля, формула и параметры показа будут заменены стандартными значениями. Название, домен, интеграции и своя картинка сохранятся."
 						confirmLabel="Да, сбросить"
 						cancelLabel="Отмена"
 						confirmDisabled={isDangerActionPending}

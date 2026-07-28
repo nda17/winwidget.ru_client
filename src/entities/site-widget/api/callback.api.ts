@@ -25,6 +25,7 @@ const callbackService = {
 			isActive: boolean
 			installDomain: string
 			config: Partial<CallbackConfig>
+			expectedDraftRevision: number
 		}>
 	) {
 		const { data } = await axiosInterceptorsRequest.patch(

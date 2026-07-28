@@ -8,12 +8,18 @@ import {
 } from '@/entities/site-widget'
 import { useMutation } from '@tanstack/react-query'
 import Image from 'next/image'
-import { ChangeEvent, useId, useState } from 'react'
+import { ChangeEvent, useEffect, useId, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import DirectLinkQr from '../shared/DirectLinkQr'
+import {
+	findInvalidWidgetColor,
+	getWidgetColorPreview,
+	isWidgetHexColor
+} from '../shared/widgetColor'
 import styles from '../shared/WidgetSettingsModal.module.scss'
 import useWidgetSettingsCloseGuard from '../shared/useWidgetSettingsCloseGuard'
 import WidgetLivePreview from '../shared/WidgetLivePreview'
+import WidgetPresetButtons from '../shared/WidgetPresetButtons'
 import type {
 	WidgetSettingsPersistence,
 	WidgetSettingsPresentationProps
@@ -43,12 +49,12 @@ type ValidationIssue = {
 }
 
 const TABS: { id: Tab; label: string }[] = [
-	{ id: 'main', label: 'Главные' },
+	{ id: 'main', label: 'Основные' },
 	{ id: 'actions', label: 'Вопросы' },
 	{ id: 'form', label: 'Форма' },
 	{ id: 'integrations', label: 'Интеграции' },
 	{ id: 'code', label: 'Установка' },
-	{ id: 'info', label: 'Инфо' }
+	{ id: 'info', label: 'Проверка' }
 ]
 
 const getDefaultActions = (): OnlineConsultantQuickAction[] => [
@@ -212,7 +218,10 @@ const OnlineConsultantSettingsModal = ({
 	onSaved,
 	persistence,
 	presentation = 'modal',
-	previewPortalTarget
+	previewPortalTarget,
+	onDirtyChange,
+	onRevisionConflict,
+	lifecycleActions
 }: Props) => {
 	const titleId = useId()
 	const buttonImageInputId = useId()
@@ -224,6 +233,7 @@ const OnlineConsultantSettingsModal = ({
 	const [installDomain, setInstallDomain] = useState(
 		onlineConsultant.installDomain ?? ''
 	)
+	const draftRevisionRef = useRef(onlineConsultant.draftRevision)
 	const [confirmResetDefaults, setConfirmResetDefaults] = useState(false)
 	const [validationIssue, setValidationIssue] =
 		useState<ValidationIssue | null>(null)
@@ -240,6 +250,38 @@ const OnlineConsultantSettingsModal = ({
 		config: cfg
 	})
 	const hasUnsavedChanges = currentSnapshot !== savedSnapshot
+	useEffect(() => {
+		onDirtyChange?.(hasUnsavedChanges)
+	}, [hasUnsavedChanges, onDirtyChange])
+	const reportMutationError = (
+		error: any,
+		fallback: string,
+		toastId: string
+	) => {
+		if (error?.response?.status === 409) {
+			const conflictRefresh = onRevisionConflict?.()
+			void conflictRefresh
+				?.then(latestRevision => {
+					if (typeof latestRevision === 'number') {
+						draftRevisionRef.current = latestRevision
+					}
+				})
+				.catch(() =>
+					toast.error(
+						'Не удалось обновить ревизию черновика. Проверьте соединение и повторите.',
+						{ id: toastId, duration: 6000 }
+					)
+				)
+			toast.error(
+				'Черновик изменился в другой вкладке. Ваши поля сохранены — после обновления повторите действие.',
+				{ id: toastId, duration: 6000 }
+			)
+			return
+		}
+		toast.error(error?.response?.data?.message || fallback, {
+			id: toastId
+		})
+	}
 
 	const mutation = useMutation({
 		mutationFn: (data?: {
@@ -257,11 +299,13 @@ const OnlineConsultantSettingsModal = ({
 			)({
 				name: data?.name ?? name,
 				installDomain: data?.installDomain ?? installDomain,
-				config: data?.config ?? cfg
+				config: data?.config ?? cfg,
+				expectedDraftRevision: draftRevisionRef.current
 			}),
 		onMutate: () =>
 			toast.loading('Сохраняем настройки, пожалуйста подождите...'),
 		onSuccess: (updated, _, toastId) => {
+			draftRevisionRef.current = updated.draftRevision
 			const nextConfig = mergeConfig(updated.config)
 			toast.success('Сохранено', { id: toastId })
 			setName(updated.name)
@@ -278,17 +322,18 @@ const OnlineConsultantSettingsModal = ({
 			onSaved({ ...updated, config: nextConfig })
 			notifyOnlineConsultantUpdated(onlineConsultant.publicKey)
 		},
-		onError: (e: any, _, toastId) => {
-			toast.error(e?.response?.data?.message || 'Ошибка сохранения', {
-				id: toastId
-			})
-		}
+		onError: (error: any, _, toastId) =>
+			reportMutationError(error, 'Ошибка сохранения', toastId)
 	})
 
 	const buttonImageMutation = useMutation({
 		mutationFn: (file: File) => {
 			const formData = new FormData()
 			formData.append('file', file)
+			formData.append(
+				'expectedDraftRevision',
+				String(draftRevisionRef.current)
+			)
 			return persistence?.uploadButtonImage
 				? persistence.uploadButtonImage(formData)
 				: onlineConsultantService.uploadButtonImage(
@@ -298,6 +343,7 @@ const OnlineConsultantSettingsModal = ({
 		},
 		onMutate: () => toast.loading('Загружаем картинку кнопки...'),
 		onSuccess: (updated, _, toastId) => {
+			draftRevisionRef.current = updated.draftRevision
 			const nextConfig = mergeConfig(updated.config)
 			setName(updated.name)
 			setInstallDomain(updated.installDomain ?? '')
@@ -314,12 +360,8 @@ const OnlineConsultantSettingsModal = ({
 			toast.success('Картинка кнопки обновлена', { id: toastId })
 			notifyOnlineConsultantUpdated(onlineConsultant.publicKey)
 		},
-		onError: (e: any, _, toastId) => {
-			toast.error(
-				e?.response?.data?.message || 'Ошибка загрузки картинки',
-				{ id: toastId }
-			)
-		}
+		onError: (error: any, _, toastId) =>
+			reportMutationError(error, 'Ошибка загрузки картинки', toastId)
 	})
 
 	const isDangerActionPending =
@@ -501,13 +543,26 @@ const OnlineConsultantSettingsModal = ({
 	}
 
 	const handleResetDefaults = () => {
-		const nextConfig = getDefaultConfig()
+		const nextConfig = {
+			...getDefaultConfig(),
+			integrations: { ...cfg.integrations },
+			buttonImageUrl: cfg.buttonImageUrl
+		}
 		setCfg(nextConfig)
 		setConfirmResetDefaults(false)
-		mutation.mutate({ name, installDomain, config: nextConfig })
+		toast.success('Стандартные настройки применены. Сохраните черновик')
 	}
 
 	const save = () => {
+		const invalidColor = !isWidgetHexColor(cfg.color)
+			? 'color'
+			: findInvalidWidgetColor(cfg)
+		if (invalidColor) {
+			setTab('main')
+			toast.error('Цвет должен быть указан в формате #RRGGBB')
+			return
+		}
+
 		if (!name.trim()) {
 			reportValidationIssue({
 				tab: 'main',
@@ -662,6 +717,7 @@ const OnlineConsultantSettingsModal = ({
 				<h2 id={titleId} className={styles.modalTitle}>
 					Настройки онлайн-консультанта
 				</h2>
+				{lifecycleActions}
 
 				<div
 					className={styles.tabs}
@@ -710,6 +766,97 @@ const OnlineConsultantSettingsModal = ({
 				>
 					{tab === 'main' && (
 						<div className={styles.fields}>
+							<WidgetPresetButtons
+								presets={[
+									{
+										id: 'faq',
+										label: 'Частые вопросы',
+										description: 'Цена, доставка, сроки и подбор.'
+									},
+									{
+										id: 'service',
+										label: 'Подбор услуги',
+										description: 'Быстрые ответы перед заявкой.'
+									},
+									{
+										id: 'manager',
+										label: 'Связь с менеджером',
+										description:
+											'Короткий путь к персональной консультации.'
+									}
+								]}
+								onApply={preset => {
+									setValidationIssue(null)
+									setCfg(previous => {
+										if (preset === 'service') {
+											return {
+												...previous,
+												title: 'Поможем выбрать услугу',
+												subtitle:
+													'Выберите вопрос и получите быстрый ответ.',
+												contactTitle:
+													'Нужна рекомендация? Оставьте контакт',
+												quickActions: normalizeQuickActions([
+													{
+														id: 'formats',
+														label: 'Какие есть варианты?',
+														answer:
+															'Расскажем о доступных форматах и поможем сравнить их.',
+														buttonText: '',
+														buttonUrl: ''
+													},
+													{
+														id: 'price',
+														label: 'Сколько стоит?',
+														answer:
+															'Стоимость зависит от задачи. Оставьте контакт для точного расчёта.',
+														buttonText: '',
+														buttonUrl: ''
+													}
+												])
+											}
+										}
+
+										if (preset === 'manager') {
+											return {
+												...previous,
+												title: 'Связаться с менеджером',
+												subtitle:
+													'Уточните популярный вопрос или оставьте контакт.',
+												contactTitle: 'Куда вам ответить?',
+												submitButtonText: 'Связаться со мной',
+												quickActions: normalizeQuickActions([
+													{
+														id: 'call',
+														label: 'Заказать звонок',
+														answer:
+															'Оставьте контакт, и менеджер свяжется с вами.',
+														buttonText: '',
+														buttonUrl: ''
+													},
+													{
+														id: 'offer',
+														label: 'Получить предложение',
+														answer:
+															'Подготовим предложение под вашу задачу.',
+														buttonText: '',
+														buttonUrl: ''
+													}
+												])
+											}
+										}
+
+										return {
+											...previous,
+											title: 'Онлайн-консультант',
+											subtitle:
+												'Выберите популярный вопрос и получите быстрый ответ.',
+											quickActions: getDefaultActions()
+										}
+									})
+									toast.success('Сценарий применён. Сохраните черновик')
+								}}
+							/>
 							<div className={styles.settingsGroup}>
 								<div className={styles.settingsGroupHeader}>
 									<h3 className={styles.settingsGroupTitle}>
@@ -737,19 +884,25 @@ const OnlineConsultantSettingsModal = ({
 									</p>
 								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>Основной цвет:</p>
+									<p className={styles.label}>Цвет акцентов:</p>
 									<div className={styles.colorRow}>
 										<input
 											className={styles.colorPicker}
 											type="color"
-											value={cfg.color || '#ef2b17'}
+											value={getWidgetColorPreview(cfg.color, '#ef2b17')}
 											onChange={e => set({ color: e.target.value })}
 										/>
 										<input
-											className={styles.input}
-											value={cfg.color || '#ef2b17'}
+											className={`${styles.input} ${
+												!isWidgetHexColor(cfg.color)
+													? styles.inputError
+													: ''
+											}`}
+											value={cfg.color}
 											onChange={e => set({ color: e.target.value })}
 											placeholder="#ef2b17"
+											maxLength={7}
+											aria-invalid={!isWidgetHexColor(cfg.color)}
 										/>
 										{cfg.color && cfg.color !== '#ef2b17' && (
 											<button
@@ -762,6 +915,11 @@ const OnlineConsultantSettingsModal = ({
 											</button>
 										)}
 									</div>
+									{!isWidgetHexColor(cfg.color) && (
+										<p className={styles.fieldError}>
+											Введите цвет в формате #RRGGBB
+										</p>
+									)}
 									<p className={styles.hint}>
 										Цвет акцентов внутри окна онлайн-консультанта.
 									</p>
@@ -773,7 +931,7 @@ const OnlineConsultantSettingsModal = ({
 										<input
 											className={styles.colorPicker}
 											type="color"
-											value={cfg.bgColor || '#ffffff'}
+											value={getWidgetColorPreview(cfg.bgColor, '#ffffff')}
 											onChange={e => set({ bgColor: e.target.value })}
 										/>
 										<input
@@ -806,7 +964,10 @@ const OnlineConsultantSettingsModal = ({
 										<input
 											className={styles.colorPicker}
 											type="color"
-											value={cfg.buttonColor || cfg.color || '#ef2b17'}
+											value={getWidgetColorPreview(
+												cfg.buttonColor,
+												getWidgetColorPreview(cfg.color, '#ef2b17')
+											)}
 											onChange={e => set({ buttonColor: e.target.value })}
 										/>
 										<input
@@ -957,16 +1118,14 @@ const OnlineConsultantSettingsModal = ({
 
 								<div className={styles.field}>
 									<div className={styles.rangeHeader}>
-										<p className={styles.label}>
-											Высота кнопки от низа экрана:
-										</p>
+										<p className={styles.label}>Отступ снизу:</p>
 										<span className={styles.rangeValue}>
 											{cfg.buttonBottom ?? 3}%
 										</span>
 									</div>
 									<input
 										type="range"
-										aria-label="Высота кнопки от низа экрана"
+										aria-label="Отступ снизу"
 										min={1}
 										max={50}
 										value={cfg.buttonBottom ?? 3}
@@ -983,16 +1142,14 @@ const OnlineConsultantSettingsModal = ({
 
 								<div className={styles.field}>
 									<div className={styles.rangeHeader}>
-										<p className={styles.label}>
-											Отступ кнопки от края экрана:
-										</p>
+										<p className={styles.label}>Отступ сбоку:</p>
 										<span className={styles.rangeValue}>
 											{cfg.buttonOffset ?? 3}%
 										</span>
 									</div>
 									<input
 										type="range"
-										aria-label="Отступ кнопки от края экрана"
+										aria-label="Отступ сбоку"
 										min={1}
 										max={50}
 										value={cfg.buttonOffset ?? 3}
@@ -1044,7 +1201,7 @@ const OnlineConsultantSettingsModal = ({
 											}
 										/>
 										<span className={styles.checkLabel}>
-											Открывать виджет автоматически
+											Автоматически показывать
 										</span>
 									</label>
 									{cfg.autoOpenDelay != null && (
@@ -1086,8 +1243,8 @@ const OnlineConsultantSettingsModal = ({
 										<div className={styles.dangerItem}>
 											<p className={styles.hint}>
 												Все настройки онлайн-консультанта будут заменены на
-												стандартные. Название и домен установки останутся
-												без изменений.
+												стандартные. Название, домен, интеграции и своя
+												картинка останутся без изменений.
 											</p>
 											<div className={styles.footerActions}>
 												<button
@@ -1331,10 +1488,10 @@ const OnlineConsultantSettingsModal = ({
 										<option value="PHONE_AND_EMAIL">
 											Номер телефона и Email
 										</option>
-										<option value="NONE">Ничего не собираем</option>
+										<option value="NONE">Не собирать контакты</option>
 									</select>
 									<p className={styles.hint}>
-										Если выбрать «Ничего не собираем», консультант
+										Если выбрать «Не собирать контакты», консультант
 										останется справочным блоком без формы заявки.
 									</p>
 								</div>
@@ -1474,71 +1631,92 @@ const OnlineConsultantSettingsModal = ({
 
 					{tab === 'integrations' && (
 						<div className={styles.fields}>
-							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>Уведомления</h3>
-								{[
-									['email', 'Отправка заявок на Email'],
-									['telegramChatId', 'Отправка заявок в Telegram']
-								].map(([key, label]) => (
-									<div className={styles.field} key={key}>
-										<p className={styles.label}>{label}</p>
-										<input
-											className={styles.input}
-											type={key === 'email' ? 'email' : 'text'}
-											value={String(
-												cfg.integrations[
-													key as keyof OnlineConsultantConfig['integrations']
-												] || ''
-											)}
-											onChange={e =>
-												setIntegration(
-													key as keyof OnlineConsultantConfig['integrations'],
-													e.target.value
-												)
-											}
-										/>
+							{cfg.dataType === 'NONE' && (
+								<div className={styles.settingsGroup}>
+									<h3 className={styles.settingsGroupTitle}>
+										Контакты отключены
+									</h3>
+									<p className={styles.hint}>
+										Уведомления, webhook и CRM не используются без заявок.
+										Аналитика открытия остаётся доступной.
+									</p>
+								</div>
+							)}
+							{cfg.dataType !== 'NONE' && (
+								<>
+									<div className={styles.settingsGroup}>
+										<h3 className={styles.settingsGroupTitle}>
+											Уведомления
+										</h3>
+										{[
+											['email', 'Отправка заявок на Email'],
+											['telegramChatId', 'Отправка заявок в Telegram']
+										].map(([key, label]) => (
+											<div className={styles.field} key={key}>
+												<p className={styles.label}>{label}</p>
+												<input
+													className={styles.input}
+													type={key === 'email' ? 'email' : 'text'}
+													value={String(
+														cfg.integrations[
+															key as keyof OnlineConsultantConfig['integrations']
+														] || ''
+													)}
+													onChange={e =>
+														setIntegration(
+															key as keyof OnlineConsultantConfig['integrations'],
+															e.target.value
+														)
+													}
+												/>
+											</div>
+										))}
 									</div>
-								))}
-							</div>
-							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>
-									Webhooks и CRM
-								</h3>
-								{[
-									['webhookUrl', 'Внешний URL (Webhook)'],
-									['bitrix24WebhookUrl', 'Отправка заявок в Битрикс24'],
-									['amoCrmDomain', 'amoCRM — домен аккаунта'],
-									['amoCrmToken', 'amoCRM — токен доступа']
-								].map(([key, label]) => (
-									<div className={styles.field} key={key}>
-										<p className={styles.label}>{label}</p>
-										<input
-											className={styles.input}
-											type={
-												key === 'amoCrmToken'
-													? 'password'
-													: key.endsWith('Url')
-														? 'url'
-														: 'text'
-											}
-											autoComplete={
-												key === 'amoCrmToken' ? 'off' : undefined
-											}
-											value={String(
-												cfg.integrations[
-													key as keyof OnlineConsultantConfig['integrations']
-												] || ''
-											)}
-											onChange={e =>
-												setIntegration(
-													key as keyof OnlineConsultantConfig['integrations'],
-													e.target.value
-												)
-											}
-										/>
+									<div className={styles.settingsGroup}>
+										<h3 className={styles.settingsGroupTitle}>
+											Webhooks и CRM
+										</h3>
+										{[
+											['webhookUrl', 'Внешний URL (Webhook)'],
+											[
+												'bitrix24WebhookUrl',
+												'Отправка заявок в Битрикс24'
+											],
+											['amoCrmDomain', 'amoCRM — домен аккаунта'],
+											['amoCrmToken', 'amoCRM — токен доступа']
+										].map(([key, label]) => (
+											<div className={styles.field} key={key}>
+												<p className={styles.label}>{label}</p>
+												<input
+													className={styles.input}
+													type={
+														key === 'amoCrmToken'
+															? 'password'
+															: key.endsWith('Url')
+																? 'url'
+																: 'text'
+													}
+													autoComplete={
+														key === 'amoCrmToken' ? 'off' : undefined
+													}
+													value={String(
+														cfg.integrations[
+															key as keyof OnlineConsultantConfig['integrations']
+														] || ''
+													)}
+													onChange={e =>
+														setIntegration(
+															key as keyof OnlineConsultantConfig['integrations'],
+															e.target.value
+														)
+													}
+												/>
+											</div>
+										))}
 									</div>
-								))}
-							</div>
+								</>
+							)}
+
 							<div className={styles.settingsGroup}>
 								<h3 className={styles.settingsGroupTitle}>Аналитика</h3>
 								{[
@@ -1753,7 +1931,7 @@ const OnlineConsultantSettingsModal = ({
 							onClick={save}
 							disabled={isDangerActionPending || !hasUnsavedChanges}
 						>
-							{mutation.isPending ? 'Сохраняем...' : 'Сохранить'}
+							{mutation.isPending ? 'Сохраняем...' : 'Сохранить черновик'}
 						</button>
 					</div>
 				</div>

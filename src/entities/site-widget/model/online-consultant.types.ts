@@ -56,6 +56,10 @@ export interface OnlineConsultant {
 	isActive: boolean
 	installDomain: string
 	config: OnlineConsultantConfig
+	draftRevision: number
+	publishedVersion: number
+	publishedFromDraftRevision: number
+	publishedAt: string | null
 	createdAt: string
 	updatedAt: string
 	_count?: { leads: number }

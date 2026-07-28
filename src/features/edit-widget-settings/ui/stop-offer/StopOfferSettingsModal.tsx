@@ -3,12 +3,18 @@
 import { stopOfferService } from '@/entities/site-widget'
 import { StopOffer, StopOfferConfig } from '@/entities/site-widget'
 import { useMutation } from '@tanstack/react-query'
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import DirectLinkQr from '../shared/DirectLinkQr'
+import {
+	findInvalidWidgetColor,
+	getWidgetColorPreview,
+	isWidgetHexColor
+} from '../shared/widgetColor'
 import styles from '../shared/WidgetSettingsModal.module.scss'
 import useWidgetSettingsCloseGuard from '../shared/useWidgetSettingsCloseGuard'
 import WidgetLivePreview from '../shared/WidgetLivePreview'
+import WidgetPresetButtons from '../shared/WidgetPresetButtons'
 import type {
 	WidgetSettingsPersistence,
 	WidgetSettingsPresentationProps
@@ -32,12 +38,12 @@ type ValidationIssue = {
 }
 
 const TABS: { id: Tab; label: string }[] = [
-	{ id: 'main', label: 'Главные' },
+	{ id: 'main', label: 'Основные' },
 	{ id: 'trigger', label: 'Показ' },
 	{ id: 'form', label: 'Форма' },
 	{ id: 'integrations', label: 'Интеграции' },
 	{ id: 'code', label: 'Установка' },
-	{ id: 'info', label: 'Инфо' }
+	{ id: 'info', label: 'Проверка' }
 ]
 
 const getDefaultConfig = (): StopOfferConfig => ({
@@ -140,7 +146,10 @@ const StopOfferSettingsModal = ({
 	onSaved,
 	persistence,
 	presentation = 'modal',
-	previewPortalTarget
+	previewPortalTarget,
+	onDirtyChange,
+	onRevisionConflict,
+	lifecycleActions
 }: Props) => {
 	const titleId = useId()
 	const [tab, setTab] = useState<Tab>('main')
@@ -151,6 +160,7 @@ const StopOfferSettingsModal = ({
 	const [installDomain, setInstallDomain] = useState(
 		stopOffer.installDomain ?? ''
 	)
+	const draftRevisionRef = useRef(stopOffer.draftRevision)
 	const [confirmResetShows, setConfirmResetShows] = useState(false)
 	const [confirmResetSubmissions, setConfirmResetSubmissions] =
 		useState(false)
@@ -170,6 +180,38 @@ const StopOfferSettingsModal = ({
 		config: cfg
 	})
 	const hasUnsavedChanges = currentSnapshot !== savedSnapshot
+	useEffect(() => {
+		onDirtyChange?.(hasUnsavedChanges)
+	}, [hasUnsavedChanges, onDirtyChange])
+	const reportMutationError = (
+		error: any,
+		fallback: string,
+		toastId: string
+	) => {
+		if (error?.response?.status === 409) {
+			const conflictRefresh = onRevisionConflict?.()
+			void conflictRefresh
+				?.then(latestRevision => {
+					if (typeof latestRevision === 'number') {
+						draftRevisionRef.current = latestRevision
+					}
+				})
+				.catch(() =>
+					toast.error(
+						'Не удалось обновить ревизию черновика. Проверьте соединение и повторите.',
+						{ id: toastId, duration: 6000 }
+					)
+				)
+			toast.error(
+				'Черновик изменился в другой вкладке. Ваши поля сохранены — после обновления повторите действие.',
+				{ id: toastId, duration: 6000 }
+			)
+			return
+		}
+		toast.error(error?.response?.data?.message || fallback, {
+			id: toastId
+		})
+	}
 
 	const mutation = useMutation({
 		mutationFn: (data?: {
@@ -184,11 +226,13 @@ const StopOfferSettingsModal = ({
 			)({
 				name: data?.name ?? name,
 				installDomain: data?.installDomain ?? installDomain,
-				config: data?.config ?? cfg
+				config: data?.config ?? cfg,
+				expectedDraftRevision: draftRevisionRef.current
 			}),
 		onMutate: () =>
 			toast.loading('Сохраняем настройки, пожалуйста подождите...'),
 		onSuccess: (updated, _, toastId) => {
+			draftRevisionRef.current = updated.draftRevision
 			const nextConfig = mergeConfig(updated.config)
 			toast.success('Сохранено', { id: toastId })
 			setName(updated.name)
@@ -205,11 +249,8 @@ const StopOfferSettingsModal = ({
 			onSaved({ ...updated, config: nextConfig })
 			notifyStopOfferUpdated(stopOffer.publicKey)
 		},
-		onError: (e: any, _, toastId) => {
-			toast.error(e?.response?.data?.message || 'Ошибка сохранения', {
-				id: toastId
-			})
-		}
+		onError: (error: any, _, toastId) =>
+			reportMutationError(error, 'Ошибка сохранения', toastId)
 	})
 	const isDangerActionPending = mutation.isPending
 	const { requestClose, closeGuardDialog } = useWidgetSettingsCloseGuard({
@@ -300,6 +341,15 @@ const StopOfferSettingsModal = ({
 	}
 
 	const save = () => {
+		const invalidColor = !isWidgetHexColor(cfg.color)
+			? 'color'
+			: findInvalidWidgetColor(cfg)
+		if (invalidColor) {
+			setTab('main')
+			toast.error('Цвет должен быть указан в формате #RRGGBB')
+			return
+		}
+
 		if (!name.trim()) {
 			reportValidationIssue({
 				tab: 'main',
@@ -432,10 +482,15 @@ const StopOfferSettingsModal = ({
 	}
 
 	const handleResetDefaults = () => {
-		const nextConfig = getDefaultConfig()
+		const nextConfig = {
+			...getDefaultConfig(),
+			integrations: { ...cfg.integrations },
+			displayResetToken: cfg.displayResetToken,
+			submissionResetToken: cfg.submissionResetToken
+		}
 		setCfg(nextConfig)
 		setConfirmResetDefaults(false)
-		mutation.mutate({ name, installDomain, config: nextConfig })
+		toast.success('Стандартные настройки применены. Сохраните черновик')
 	}
 
 	return (
@@ -468,6 +523,7 @@ const StopOfferSettingsModal = ({
 				<h2 id={titleId} className={styles.modalTitle}>
 					Настройки стоп-оффера
 				</h2>
+				{lifecycleActions}
 
 				<div
 					className={styles.tabs}
@@ -516,6 +572,73 @@ const StopOfferSettingsModal = ({
 				>
 					{tab === 'main' && (
 						<div className={styles.fields}>
+							<WidgetPresetButtons
+								presets={[
+									{
+										id: 'discount',
+										label: 'Скидка при уходе',
+										description: 'Собрать телефон и закрепить скидку.'
+									},
+									{
+										id: 'link',
+										label: 'Перейти к акции',
+										description: 'Кнопка без формы сбора контактов.'
+									},
+									{
+										id: 'consultation',
+										label: 'Помощь с выбором',
+										description:
+											'Остановить уход предложением консультации.'
+									}
+								]}
+								onApply={preset => {
+									setValidationIssue(null)
+									setCfg(previous => {
+										if (preset === 'link') {
+											return {
+												...previous,
+												dataType: 'NONE',
+												badgeText: 'Не уходите',
+												title: 'Для вас есть специальное предложение',
+												subtitle:
+													'Перейдите к акции, пока предложение доступно',
+												offerText: 'Только сейчас',
+												actionButtonEnabled: true,
+												actionButtonText: 'Посмотреть предложение'
+											}
+										}
+
+										if (preset === 'consultation') {
+											return {
+												...previous,
+												dataType: 'PHONE',
+												badgeText: 'Подождите',
+												title: 'Поможем сделать правильный выбор',
+												subtitle:
+													'Оставьте номер — специалист бесплатно проконсультирует',
+												offerText: 'Бесплатная консультация',
+												contactTitle: 'Куда вам перезвонить?',
+												submitButtonText: 'Получить консультацию',
+												actionButtonEnabled: false
+											}
+										}
+
+										return {
+											...previous,
+											dataType: 'PHONE',
+											badgeText: 'Не уходите',
+											title: 'Заберите персональную скидку',
+											subtitle:
+												'Оставьте номер, и мы закрепим предложение за вами',
+											offerText: 'Скидка 10%',
+											contactTitle: 'Куда отправить скидку?',
+											submitButtonText: 'Забрать скидку',
+											actionButtonEnabled: false
+										}
+									})
+									toast.success('Сценарий применён. Сохраните черновик')
+								}}
+							/>
 							<div className={styles.settingsGroup}>
 								<h3 className={styles.settingsGroupTitle}>Внешний вид</h3>
 								<div className={styles.field}>
@@ -536,19 +659,24 @@ const StopOfferSettingsModal = ({
 									{fieldError(`${titleId}-name`)}
 								</div>
 								<div className={styles.field}>
-									<p className={styles.label}>Основной цвет:</p>
+									<p className={styles.label}>Цвет акцентов:</p>
 									<div className={styles.colorRow}>
 										<input
 											className={styles.colorPicker}
 											type="color"
-											value={getColorPickerValue(cfg.color, '#4705fb')}
+											value={getWidgetColorPreview(cfg.color, '#4705fb')}
 											onChange={e => set({ color: e.target.value })}
 										/>
 										<input
-											className={styles.input}
+											className={`${styles.input} ${
+												!isWidgetHexColor(cfg.color)
+													? styles.inputError
+													: ''
+											}`}
 											value={cfg.color}
 											onChange={e => set({ color: e.target.value })}
 											maxLength={7}
+											aria-invalid={!isWidgetHexColor(cfg.color)}
 										/>
 										{cfg.color !== '#4705fb' && (
 											<button
@@ -561,6 +689,11 @@ const StopOfferSettingsModal = ({
 											</button>
 										)}
 									</div>
+									{!isWidgetHexColor(cfg.color) && (
+										<p className={styles.fieldError}>
+											Введите цвет в формате #RRGGBB
+										</p>
+									)}
 									<p className={styles.hint}>
 										Используется для акцентов и элементов предложения.
 									</p>
@@ -681,8 +814,8 @@ const StopOfferSettingsModal = ({
 										<div className={styles.dangerItem}>
 											<p className={styles.hint}>
 												Все настройки стоп-оффера будут заменены на
-												стандартные. Название и домен установки останутся
-												без изменений.
+												стандартные. Название, домен, интеграции и история
+												показов и заявок останутся без изменений.
 											</p>
 											<div className={styles.footerActions}>
 												<button
@@ -969,7 +1102,7 @@ const StopOfferSettingsModal = ({
 										<option value="PHONE_AND_EMAIL">
 											Номер телефона и Email
 										</option>
-										<option value="NONE">Ничего не собираем</option>
+										<option value="NONE">Не собирать контакты</option>
 									</select>
 								</div>
 								{cfg.dataType !== 'NONE' ? (
@@ -1261,85 +1394,114 @@ const StopOfferSettingsModal = ({
 
 					{tab === 'integrations' && (
 						<div className={styles.fields}>
-							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>Уведомления</h3>
-								<div className={styles.field}>
-									<p className={styles.label}>Отправка заявок на Email</p>
-									<input
-										className={styles.input}
-										type="email"
-										value={cfg.integrations.email || ''}
-										onChange={e => setIntegration('email', e.target.value)}
-									/>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Отправка заявок в Telegram
+							{cfg.dataType === 'NONE' && (
+								<div className={styles.settingsGroup}>
+									<h3 className={styles.settingsGroupTitle}>
+										Контакты отключены
+									</h3>
+									<p className={styles.hint}>
+										Уведомления, webhook и CRM не используются без заявок.
+										Аналитика открытия остаётся доступной.
 									</p>
-									<input
-										className={styles.input}
-										value={cfg.integrations.telegramChatId || ''}
-										onChange={e =>
-											setIntegration('telegramChatId', e.target.value)
-										}
-									/>
 								</div>
-							</div>
-							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>
-									Webhooks и CRM
-								</h3>
-								<div className={styles.field}>
-									<p className={styles.label}>Внешний URL (Webhook)</p>
-									<input
-										className={styles.input}
-										type="url"
-										value={cfg.integrations.webhookUrl || ''}
-										onChange={e =>
-											setIntegration('webhookUrl', e.target.value)
-										}
-										placeholder="https://example.com/webhook"
-									/>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Отправка заявок в Битрикс24
-									</p>
-									<input
-										className={styles.input}
-										type="url"
-										value={cfg.integrations.bitrix24WebhookUrl || ''}
-										onChange={e =>
-											setIntegration('bitrix24WebhookUrl', e.target.value)
-										}
-										placeholder="https://example.bitrix24.ru/rest/..."
-									/>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>amoCRM — домен аккаунта</p>
-									<input
-										className={styles.input}
-										value={cfg.integrations.amoCrmDomain || ''}
-										onChange={e =>
-											setIntegration('amoCrmDomain', e.target.value)
-										}
-										placeholder="mycompany.amocrm.ru"
-									/>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>amoCRM — токен доступа</p>
-									<input
-										className={styles.input}
-										type="password"
-										autoComplete="off"
-										value={cfg.integrations.amoCrmToken || ''}
-										onChange={e =>
-											setIntegration('amoCrmToken', e.target.value)
-										}
-										placeholder="Долгосрочный access token"
-									/>
-								</div>
-							</div>
+							)}
+							{cfg.dataType !== 'NONE' && (
+								<>
+									<div className={styles.settingsGroup}>
+										<h3 className={styles.settingsGroupTitle}>
+											Уведомления
+										</h3>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Отправка заявок на Email
+											</p>
+											<input
+												className={styles.input}
+												type="email"
+												value={cfg.integrations.email || ''}
+												onChange={e =>
+													setIntegration('email', e.target.value)
+												}
+											/>
+										</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Отправка заявок в Telegram
+											</p>
+											<input
+												className={styles.input}
+												value={cfg.integrations.telegramChatId || ''}
+												onChange={e =>
+													setIntegration('telegramChatId', e.target.value)
+												}
+											/>
+										</div>
+									</div>
+									<div className={styles.settingsGroup}>
+										<h3 className={styles.settingsGroupTitle}>
+											Webhooks и CRM
+										</h3>
+										<div className={styles.field}>
+											<p className={styles.label}>Внешний URL (Webhook)</p>
+											<input
+												className={styles.input}
+												type="url"
+												value={cfg.integrations.webhookUrl || ''}
+												onChange={e =>
+													setIntegration('webhookUrl', e.target.value)
+												}
+												placeholder="https://example.com/webhook"
+											/>
+										</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Отправка заявок в Битрикс24
+											</p>
+											<input
+												className={styles.input}
+												type="url"
+												value={cfg.integrations.bitrix24WebhookUrl || ''}
+												onChange={e =>
+													setIntegration(
+														'bitrix24WebhookUrl',
+														e.target.value
+													)
+												}
+												placeholder="https://example.bitrix24.ru/rest/..."
+											/>
+										</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												amoCRM — домен аккаунта
+											</p>
+											<input
+												className={styles.input}
+												value={cfg.integrations.amoCrmDomain || ''}
+												onChange={e =>
+													setIntegration('amoCrmDomain', e.target.value)
+												}
+												placeholder="mycompany.amocrm.ru"
+											/>
+										</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												amoCRM — токен доступа
+											</p>
+											<input
+												className={styles.input}
+												type="password"
+												autoComplete="off"
+												value={cfg.integrations.amoCrmToken || ''}
+												onChange={e =>
+													setIntegration('amoCrmToken', e.target.value)
+												}
+												placeholder="Долгосрочный access token"
+											/>
+										</div>
+									</div>
+								</>
+							)}
+
 							<div className={styles.settingsGroup}>
 								<h3 className={styles.settingsGroupTitle}>Аналитика</h3>
 								<div className={styles.field}>
@@ -1562,7 +1724,7 @@ const StopOfferSettingsModal = ({
 							onClick={save}
 							disabled={mutation.isPending || !hasUnsavedChanges}
 						>
-							{mutation.isPending ? 'Сохраняем...' : 'Сохранить'}
+							{mutation.isPending ? 'Сохраняем...' : 'Сохранить черновик'}
 						</button>
 					</div>
 				</div>

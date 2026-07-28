@@ -10,11 +10,17 @@ import {
 } from '@/entities/site-widget'
 import { useMutation } from '@tanstack/react-query'
 import Image from 'next/image'
-import { ChangeEvent, useId, useState } from 'react'
+import { ChangeEvent, useEffect, useId, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import DirectLinkQr from '../shared/DirectLinkQr'
+import {
+	findInvalidWidgetColor,
+	getWidgetColorPreview,
+	isWidgetHexColor
+} from '../shared/widgetColor'
 import useWidgetSettingsCloseGuard from '../shared/useWidgetSettingsCloseGuard'
 import WidgetLivePreview from '../shared/WidgetLivePreview'
+import WidgetPresetButtons from '../shared/WidgetPresetButtons'
 import pageStyles from '../shared/WidgetSettingsModal.module.scss'
 import type {
 	WidgetSettingsPersistence,
@@ -459,7 +465,10 @@ const QuizSettingsModal = ({
 	onSaved,
 	persistence,
 	presentation = 'modal',
-	previewPortalTarget
+	previewPortalTarget,
+	onDirtyChange,
+	onRevisionConflict,
+	lifecycleActions
 }: Props) => {
 	const [tab, setTab] = useState<Tab>('main')
 	const [config, setConfig] = useState<QuizConfig>({ ...quiz.config })
@@ -467,6 +476,7 @@ const QuizSettingsModal = ({
 	const [installDomain, setInstallDomain] = useState(
 		quiz.installDomain ?? ''
 	)
+	const draftRevisionRef = useRef(quiz.draftRevision)
 	const [scoreMode, setScoreMode] = useState<ScoreMode>('simple')
 	const titleId = useId()
 	const buttonImageInputId = useId()
@@ -485,6 +495,38 @@ const QuizSettingsModal = ({
 	)
 	const currentSnapshot = JSON.stringify({ name, installDomain, config })
 	const hasUnsavedChanges = currentSnapshot !== savedSnapshot
+	useEffect(() => {
+		onDirtyChange?.(hasUnsavedChanges)
+	}, [hasUnsavedChanges, onDirtyChange])
+	const reportMutationError = (
+		error: any,
+		fallback: string,
+		toastId: string
+	) => {
+		if (error?.response?.status === 409) {
+			const conflictRefresh = onRevisionConflict?.()
+			void conflictRefresh
+				?.then(latestRevision => {
+					if (typeof latestRevision === 'number') {
+						draftRevisionRef.current = latestRevision
+					}
+				})
+				.catch(() =>
+					toast.error(
+						'Не удалось обновить ревизию черновика. Проверьте соединение и повторите.',
+						{ id: toastId, duration: 6000 }
+					)
+				)
+			toast.error(
+				'Черновик изменился в другой вкладке. Ваши поля сохранены — после обновления повторите действие.',
+				{ id: toastId, duration: 6000 }
+			)
+			return
+		}
+		toast.error(error?.response?.data?.message || fallback, {
+			id: toastId
+		})
+	}
 
 	const saveMutation = useMutation({
 		mutationFn: (data: {
@@ -497,11 +539,13 @@ const QuizSettingsModal = ({
 				(payload => quizService.updateQuiz(quiz.id, payload))
 			)({
 				...data,
-				installDomain: data.installDomain ?? installDomain
+				installDomain: data.installDomain ?? installDomain,
+				expectedDraftRevision: draftRevisionRef.current
 			}),
 		onMutate: () =>
 			toast.loading('Сохраняем настройки, пожалуйста подождите...'),
 		onSuccess: (updated, _, toastId) => {
+			draftRevisionRef.current = updated.draftRevision
 			toast.success('Сохранено', { id: toastId })
 			setName(updated.name)
 			setInstallDomain(updated.installDomain ?? '')
@@ -515,11 +559,8 @@ const QuizSettingsModal = ({
 			)
 			onSaved(updated)
 		},
-		onError: (e: any, _, toastId) => {
-			toast.error(e?.response?.data?.message || 'Ошибка сохранения', {
-				id: toastId
-			})
-		}
+		onError: (error: any, _, toastId) =>
+			reportMutationError(error, 'Ошибка сохранения', toastId)
 	})
 
 	const resetAttemptsMutation = useMutation({
@@ -529,11 +570,13 @@ const QuizSettingsModal = ({
 				(payload => quizService.updateQuiz(quiz.id, payload))
 			)({
 				name,
-				config: { ...config, quizResetToken: newToken }
+				config: { ...config, quizResetToken: newToken },
+				expectedDraftRevision: draftRevisionRef.current
 			}),
 		onMutate: () =>
 			toast.loading('Сбрасываем попытки, пожалуйста подождите...'),
 		onSuccess: (updated, _, toastId) => {
+			draftRevisionRef.current = updated.draftRevision
 			toast.success('Попытки всех посетителей сброшены', { id: toastId })
 			setName(updated.name)
 			setInstallDomain(updated.installDomain ?? '')
@@ -547,16 +590,17 @@ const QuizSettingsModal = ({
 			)
 			onSaved(updated)
 		},
-		onError: (e: any, _, toastId) => {
-			toast.error(e?.response?.data?.message || 'Ошибка сброса', {
-				id: toastId
-			})
-		}
+		onError: (error: any, _, toastId) =>
+			reportMutationError(error, 'Ошибка сброса', toastId)
 	})
 	const buttonImageMutation = useMutation({
 		mutationFn: (file: File) => {
 			const formData = new FormData()
 			formData.append('file', file)
+			formData.append(
+				'expectedDraftRevision',
+				String(draftRevisionRef.current)
+			)
 			return persistence?.uploadButtonImage
 				? persistence.uploadButtonImage(formData)
 				: quizService.uploadButtonImage(quiz.id, formData)
@@ -564,6 +608,7 @@ const QuizSettingsModal = ({
 		onMutate: () =>
 			toast.loading('Загружаем картинку кнопки, пожалуйста подождите...'),
 		onSuccess: (updated, _, toastId) => {
+			draftRevisionRef.current = updated.draftRevision
 			toast.success('Картинка кнопки обновлена', { id: toastId })
 			setName(updated.name)
 			setInstallDomain(updated.installDomain ?? '')
@@ -577,11 +622,8 @@ const QuizSettingsModal = ({
 			)
 			onSaved(updated)
 		},
-		onError: (e: any, _, toastId) => {
-			toast.error(e?.response?.data?.message || 'Ошибка загрузки', {
-				id: toastId
-			})
-		}
+		onError: (error: any, _, toastId) =>
+			reportMutationError(error, 'Ошибка загрузки', toastId)
 	})
 	const isDangerActionPending =
 		saveMutation.isPending ||
@@ -882,6 +924,15 @@ const QuizSettingsModal = ({
 	// ---
 
 	const handleSave = () => {
+		const invalidColor = !isWidgetHexColor(config.color)
+			? 'color'
+			: findInvalidWidgetColor(config)
+		if (invalidColor) {
+			setTab('main')
+			toast.error('Цвет должен быть указан в формате #RRGGBB')
+			return
+		}
+
 		if (!name.trim()) {
 			reportValidationIssue({
 				tab: 'main',
@@ -1186,6 +1237,7 @@ const QuizSettingsModal = ({
 				<h2 id={titleId} className={styles.modalTitle}>
 					Настройки квиза
 				</h2>
+				{lifecycleActions}
 
 				<div
 					className={styles.tabs}
@@ -1213,12 +1265,12 @@ const QuizSettingsModal = ({
 							className={`${styles.tab} ${tab === t ? styles.tabActive : ''}`}
 							onClick={() => setTab(t)}
 						>
-							{t === 'main' && 'Главные'}
+							{t === 'main' && 'Основные'}
 							{t === 'questions' && `Вопросы (${config.questions.length})`}
 							{t === 'results' && `Результаты (${config.results.length})`}
 							{t === 'integrations' && 'Интеграции'}
 							{t === 'code' && 'Установка'}
-							{t === 'info' && 'Инфо'}
+							{t === 'info' && 'Проверка'}
 						</button>
 					))}
 				</div>
@@ -1247,6 +1299,59 @@ const QuizSettingsModal = ({
 					{/* ===== ГЛАВНЫЕ ===== */}
 					{tab === 'main' && (
 						<div className={styles.fields}>
+							<WidgetPresetButtons
+								presets={[
+									{
+										id: 'tariff',
+										label: 'Подбор тарифа',
+										description: 'Сегментация по объёму и потребностям.'
+									},
+									{
+										id: 'service',
+										label: 'Подбор услуги',
+										description: 'Рекомендация подходящего формата работы.'
+									},
+									{
+										id: 'discount',
+										label: 'Квиз для скидки',
+										description: 'Вопросы, результат и готовый промокод.'
+									},
+									{
+										id: 'diagnostic',
+										label: 'Диагностика',
+										description:
+											'Определение готовности клиента к покупке.'
+									}
+								]}
+								onApply={preset =>
+									setPendingTemplate(preset as QuizTemplateKey)
+								}
+							/>
+							{pendingTemplate && (
+								<div className={styles.dangerItem}>
+									<p className={styles.hint}>
+										Шаблон «{QUIZ_TEMPLATE_LABELS[pendingTemplate]}»
+										заменит тексты, вопросы и результаты. Оформление, домен
+										и интеграции сохранятся.
+									</p>
+									<div className={styles.footerActions}>
+										<button
+											type="button"
+											className={styles.resetAttemptsBtn}
+											onClick={applyPendingTemplate}
+										>
+											Применить шаблон
+										</button>
+										<button
+											type="button"
+											className={styles.cancelBtn}
+											onClick={() => setPendingTemplate(null)}
+										>
+											Отмена
+										</button>
+									</div>
+								</div>
+							)}
 							<div className={styles.settingsGroup}>
 								<div className={styles.settingsGroupHeader}>
 									<h3 className={styles.settingsGroupTitle}>
@@ -1287,20 +1392,28 @@ const QuizSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Основной цвет:</p>
+									<p className={styles.label}>Цвет акцентов:</p>
 									<div className={styles.colorRow}>
 										<input
 											type="color"
 											className={styles.colorPicker}
-											value={config.color}
+											value={getWidgetColorPreview(
+												config.color,
+												'#4705fb'
+											)}
 											onChange={e => setField('color', e.target.value)}
 										/>
 										<input
-											className={styles.input}
+											className={`${styles.input} ${
+												!isWidgetHexColor(config.color)
+													? pageStyles.inputError
+													: ''
+											}`}
 											value={config.color}
 											onChange={e => setField('color', e.target.value)}
 											placeholder="#4705fb"
 											maxLength={7}
+											aria-invalid={!isWidgetHexColor(config.color)}
 										/>
 										{config.color && config.color !== '#4705fb' && (
 											<button
@@ -1313,9 +1426,13 @@ const QuizSettingsModal = ({
 											</button>
 										)}
 									</div>
+									{!isWidgetHexColor(config.color) && (
+										<p className={pageStyles.fieldError}>
+											Введите цвет в формате #RRGGBB
+										</p>
+									)}
 									<p className={styles.hint}>
-										Основной цвет акцентов: прогресс-бар, кнопки, бейдж
-										результата.
+										Цвет акцентов: прогресс-бар, кнопки и бейдж результата.
 									</p>
 								</div>
 
@@ -1325,7 +1442,10 @@ const QuizSettingsModal = ({
 										<input
 											type="color"
 											className={styles.colorPicker}
-											value={config.bgColor || '#4705fb'}
+											value={getWidgetColorPreview(
+												config.bgColor,
+												'#4705fb'
+											)}
 											onChange={e => setField('bgColor', e.target.value)}
 										/>
 										<input
@@ -1364,7 +1484,10 @@ const QuizSettingsModal = ({
 												<input
 													type="color"
 													className={styles.colorPicker}
-													value={config.buttonColor || config.color}
+													value={getWidgetColorPreview(
+														config.buttonColor,
+														getWidgetColorPreview(config.color, '#4705fb')
+													)}
 													onChange={e =>
 														setField('buttonColor', e.target.value)
 													}
@@ -1411,9 +1534,10 @@ const QuizSettingsModal = ({
 										<input
 											type="color"
 											className={styles.colorPicker}
-											value={
-												config.openButtonColor || config.color || '#4705fb'
-											}
+											value={getWidgetColorPreview(
+												config.openButtonColor,
+												getWidgetColorPreview(config.color, '#4705fb')
+											)}
 											onChange={e =>
 												setField('openButtonColor', e.target.value)
 											}
@@ -1621,9 +1745,7 @@ const QuizSettingsModal = ({
 
 								<div className={styles.field}>
 									<div className={pageStyles.rangeHeader}>
-										<p className={styles.label}>
-											Высота кнопки от низа экрана:
-										</p>
+										<p className={styles.label}>Отступ снизу:</p>
 										<span className={pageStyles.rangeValue}>
 											{config.buttonBottom}%
 										</span>
@@ -1631,7 +1753,7 @@ const QuizSettingsModal = ({
 									<input
 										id={getValidationFieldId('button-bottom')}
 										type="range"
-										aria-label="Высота кнопки от низа экрана"
+										aria-label="Отступ снизу"
 										min={1}
 										max={50}
 										value={config.buttonBottom}
@@ -1657,16 +1779,14 @@ const QuizSettingsModal = ({
 
 								<div className={styles.field}>
 									<div className={pageStyles.rangeHeader}>
-										<p className={styles.label}>
-											Отступ кнопки от края экрана:
-										</p>
+										<p className={styles.label}>Отступ сбоку:</p>
 										<span className={pageStyles.rangeValue}>
 											{config.buttonOffset ?? 3}%
 										</span>
 									</div>
 									<input
 										type="range"
-										aria-label="Отступ кнопки от края экрана"
+										aria-label="Отступ сбоку"
 										min={1}
 										max={50}
 										value={config.buttonOffset ?? 3}
@@ -1723,7 +1843,7 @@ const QuizSettingsModal = ({
 											htmlFor={`${titleId}-auto-open-enabled`}
 											className={styles.checkLabel}
 										>
-											Открывать виджет автоматически
+											Автоматически показывать
 										</label>
 									</div>
 									{config.autoOpenDelay != null && (
@@ -1895,7 +2015,7 @@ const QuizSettingsModal = ({
 										<option value="PHONE_AND_EMAIL">
 											Номер телефона и Email
 										</option>
-										<option value="NONE">Ничего не собираем</option>
+										<option value="NONE">Не собирать контакты</option>
 									</select>
 									<p className={styles.hint}>
 										Какие данные собирать у посетителя в обмен на
@@ -2155,9 +2275,11 @@ const QuizSettingsModal = ({
 									) : (
 										<div className={styles.dangerItem}>
 											<p className={styles.hint}>
-												Оформление, тексты, интеграции и параметры показа
-												будут заменены стандартными. Вопросы и результаты
-												сохранятся.
+												Оформление, тексты и параметры показа будут
+												заменены стандартными. Вопросы, результаты,
+												интеграции, своя картинка и история попыток
+												сохранятся. Изменения останутся в форме до
+												сохранения черновика.
 											</p>
 											<div className={styles.footerActions}>
 												<button
@@ -2168,15 +2290,17 @@ const QuizSettingsModal = ({
 														const resetConfig = {
 															...DEFAULT_CONFIG,
 															questions: config.questions,
-															results: config.results
+															results: config.results,
+															integrations: { ...config.integrations },
+															buttonImageUrl: config.buttonImageUrl,
+															quizResetToken: config.quizResetToken
 														}
 														setConfig(resetConfig)
 														setValidationIssue(null)
 														setConfirmResetDefaults(false)
-														saveMutation.mutate({
-															name: name.trim() || 'Квиз',
-															config: resetConfig
-														})
+														toast.success(
+															'Стандартные настройки применены. Сохраните черновик'
+														)
 													}}
 												>
 													Да, сбросить
@@ -2563,71 +2687,6 @@ const QuizSettingsModal = ({
 					{/* ===== РЕЗУЛЬТАТЫ ===== */}
 					{tab === 'results' && (
 						<div className={styles.fields}>
-							<div className={styles.templateBlock}>
-								<div>
-									<p className={styles.templateTitle}>Шаблоны квиза</p>
-									<p className={styles.hint}>
-										Быстрый старт: шаблон заменит тексты, вопросы и
-										результаты. Оформление и параметры показа сохранятся.
-									</p>
-								</div>
-								<div className={styles.templateGrid}>
-									<button
-										type="button"
-										className={styles.templateBtn}
-										onClick={() => setPendingTemplate('tariff')}
-									>
-										Подбор тарифа
-									</button>
-									<button
-										type="button"
-										className={styles.templateBtn}
-										onClick={() => setPendingTemplate('service')}
-									>
-										Подбор услуги
-									</button>
-									<button
-										type="button"
-										className={styles.templateBtn}
-										onClick={() => setPendingTemplate('discount')}
-									>
-										Квиз для скидки
-									</button>
-									<button
-										type="button"
-										className={styles.templateBtn}
-										onClick={() => setPendingTemplate('diagnostic')}
-									>
-										Диагностика потребности
-									</button>
-								</div>
-								{pendingTemplate && (
-									<div className={styles.dangerItem}>
-										<p className={styles.hint}>
-											Шаблон «{QUIZ_TEMPLATE_LABELS[pendingTemplate]}»
-											заменит тексты, вопросы и результаты. Оформление и
-											параметры показа сохранятся.
-										</p>
-										<div className={styles.footerActions}>
-											<button
-												type="button"
-												className={styles.resetAttemptsBtn}
-												onClick={applyPendingTemplate}
-											>
-												Применить шаблон
-											</button>
-											<button
-												type="button"
-												className={styles.cancelBtn}
-												onClick={() => setPendingTemplate(null)}
-											>
-												Отмена
-											</button>
-										</div>
-									</div>
-								)}
-							</div>
-
 							{config.results.map((r, rIdx) => (
 								<div key={r.id} className={styles.resultBlock}>
 									<div className={styles.resultHeader}>
@@ -2834,127 +2893,157 @@ const QuizSettingsModal = ({
 					{/* ===== ИНТЕГРАЦИИ ===== */}
 					{tab === 'integrations' && (
 						<div className={styles.fields}>
-							<div className={styles.settingsGroup}>
-								<div className={styles.settingsGroupHeader}>
+							{config.dataType === 'NONE' && (
+								<div className={styles.settingsGroup}>
 									<h3 className={styles.settingsGroupTitle}>
-										Уведомления
+										Контакты отключены
 									</h3>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>Отправка заявок на Email</p>
-									<input
-										className={styles.input}
-										type="email"
-										value={config.integrations?.email || ''}
-										onChange={e => setIntegration('email', e.target.value)}
-										placeholder="admin@example.com"
-									/>
 									<p className={styles.hint}>
-										Уведомление о каждой новой заявке придёт на этот email.
+										Email, Telegram, webhook и CRM не используются без
+										заявок. Настройки аналитики остаются доступными ниже.
 									</p>
 								</div>
+							)}
+							{config.dataType !== 'NONE' && (
+								<>
+									<div className={styles.settingsGroup}>
+										<div className={styles.settingsGroupHeader}>
+											<h3 className={styles.settingsGroupTitle}>
+												Уведомления
+											</h3>
+										</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Отправка заявок в Telegram
-									</p>
-									<input
-										className={styles.input}
-										value={config.integrations?.telegramChatId || ''}
-										onChange={e =>
-											setIntegration('telegramChatId', e.target.value)
-										}
-										placeholder="-123456789"
-									/>
-									<p className={styles.hint}>
-										Напишите боту <b>@winwidget_info_bot</b> команду
-										/start, затем укажите сюда ваш Telegram ID. Узнать ID
-										можно через бот <b>@getmyid_bot</b>
-									</p>
-								</div>
-							</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Отправка заявок на Email
+											</p>
+											<input
+												className={styles.input}
+												type="email"
+												value={config.integrations?.email || ''}
+												onChange={e =>
+													setIntegration('email', e.target.value)
+												}
+												placeholder="admin@example.com"
+											/>
+											<p className={styles.hint}>
+												Уведомление о каждой новой заявке придёт на этот
+												email.
+											</p>
+										</div>
 
-							<div className={styles.settingsGroup}>
-								<div className={styles.settingsGroupHeader}>
-									<h3 className={styles.settingsGroupTitle}>
-										Webhooks и CRM
-									</h3>
-								</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Отправка заявок в Telegram
+											</p>
+											<input
+												className={styles.input}
+												value={config.integrations?.telegramChatId || ''}
+												onChange={e =>
+													setIntegration('telegramChatId', e.target.value)
+												}
+												placeholder="-123456789"
+											/>
+											<p className={styles.hint}>
+												Напишите боту <b>@winwidget_info_bot</b> команду
+												/start, затем укажите сюда ваш Telegram ID. Узнать
+												ID можно через бот <b>@getmyid_bot</b>
+											</p>
+										</div>
+									</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>Внешний URL (Webhook)</p>
-									<input
-										className={styles.input}
-										type="url"
-										value={config.integrations?.webhookUrl || ''}
-										onChange={e =>
-											setIntegration('webhookUrl', e.target.value)
-										}
-										placeholder="https://..."
-									/>
-									<p className={styles.hint}>
-										На указанный URL придёт POST-запрос с данными:{' '}
-										<b>contact</b>, <b>phone</b>, <b>email</b>,{' '}
-										<b>result</b> — результат квиза, <b>answers</b> —
-										ответы, <b>url</b> — страница.
-									</p>
-								</div>
+									<div className={styles.settingsGroup}>
+										<div className={styles.settingsGroupHeader}>
+											<h3 className={styles.settingsGroupTitle}>
+												Webhooks и CRM
+											</h3>
+										</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Отправка заявок в Битрикс24
-									</p>
-									<input
-										className={styles.input}
-										type="url"
-										value={config.integrations?.bitrix24WebhookUrl || ''}
-										onChange={e =>
-											setIntegration('bitrix24WebhookUrl', e.target.value)
-										}
-										placeholder="https://yourcompany.bitrix24.ru/rest/..."
-									/>
-									<p className={styles.hint}>
-										Укажите URL вашего входящего вебхука из Битрикс24.
-										Перейдите в Битрикс24 → Приложения → Вебхуки → Входящий
-										вебхук. Новые заявки будут создаваться как лиды в CRM.
-									</p>
-								</div>
+										<div className={styles.field}>
+											<p className={styles.label}>Внешний URL (Webhook)</p>
+											<input
+												className={styles.input}
+												type="url"
+												value={config.integrations?.webhookUrl || ''}
+												onChange={e =>
+													setIntegration('webhookUrl', e.target.value)
+												}
+												placeholder="https://..."
+											/>
+											<p className={styles.hint}>
+												На указанный URL придёт POST-запрос с данными:{' '}
+												<b>contact</b>, <b>phone</b>, <b>email</b>,{' '}
+												<b>result</b> — результат квиза, <b>answers</b> —
+												ответы, <b>url</b> — страница.
+											</p>
+										</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>amoCRM — домен аккаунта</p>
-									<input
-										className={styles.input}
-										value={config.integrations?.amoCrmDomain || ''}
-										onChange={e =>
-											setIntegration('amoCrmDomain', e.target.value)
-										}
-										placeholder="yourcompany.amocrm.ru"
-									/>
-									<p className={styles.hint}>
-										Домен вашего аккаунта amoCRM, например{' '}
-										<b>mycompany.amocrm.ru</b>
-									</p>
-								</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Отправка заявок в Битрикс24
+											</p>
+											<input
+												className={styles.input}
+												type="url"
+												value={
+													config.integrations?.bitrix24WebhookUrl || ''
+												}
+												onChange={e =>
+													setIntegration(
+														'bitrix24WebhookUrl',
+														e.target.value
+													)
+												}
+												placeholder="https://yourcompany.bitrix24.ru/rest/..."
+											/>
+											<p className={styles.hint}>
+												Укажите URL вашего входящего вебхука из Битрикс24.
+												Перейдите в Битрикс24 → Приложения → Вебхуки →
+												Входящий вебхук. Новые заявки будут создаваться как
+												лиды в CRM.
+											</p>
+										</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>amoCRM — токен доступа</p>
-									<input
-										className={styles.input}
-										type="password"
-										value={config.integrations?.amoCrmToken || ''}
-										onChange={e =>
-											setIntegration('amoCrmToken', e.target.value)
-										}
-										placeholder="Долгосрочный токен из настроек API"
-									/>
-									<p className={styles.hint}>
-										Перейдите в amoCRM → Настройки → Интеграции → API →
-										скопируйте долгосрочный токен. При каждой заявке будут
-										создаваться сделка и контакт.
-									</p>
-								</div>
-							</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												amoCRM — домен аккаунта
+											</p>
+											<input
+												className={styles.input}
+												value={config.integrations?.amoCrmDomain || ''}
+												onChange={e =>
+													setIntegration('amoCrmDomain', e.target.value)
+												}
+												placeholder="yourcompany.amocrm.ru"
+											/>
+											<p className={styles.hint}>
+												Домен вашего аккаунта amoCRM, например{' '}
+												<b>mycompany.amocrm.ru</b>
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<p className={styles.label}>
+												amoCRM — токен доступа
+											</p>
+											<input
+												className={styles.input}
+												type="password"
+												value={config.integrations?.amoCrmToken || ''}
+												onChange={e =>
+													setIntegration('amoCrmToken', e.target.value)
+												}
+												placeholder="Долгосрочный токен из настроек API"
+											/>
+											<p className={styles.hint}>
+												Перейдите в amoCRM → Настройки → Интеграции → API →
+												скопируйте долгосрочный токен. При каждой заявке
+												будут создаваться сделка и контакт.
+											</p>
+										</div>
+									</div>
+								</>
+							)}
 
 							<div className={styles.settingsGroup}>
 								<div className={styles.settingsGroupHeader}>
@@ -3228,7 +3317,9 @@ const QuizSettingsModal = ({
 							onClick={handleSave}
 							disabled={saveMutation.isPending || !hasUnsavedChanges}
 						>
-							{saveMutation.isPending ? 'Сохранение...' : 'Сохранить'}
+							{saveMutation.isPending
+								? 'Сохранение...'
+								: 'Сохранить черновик'}
 						</button>
 					</div>
 				</div>

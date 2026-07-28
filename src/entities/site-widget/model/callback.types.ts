@@ -46,6 +46,10 @@ export interface Callback {
 	isActive: boolean
 	installDomain: string
 	config: CallbackConfig
+	draftRevision: number
+	publishedVersion: number
+	publishedFromDraftRevision: number
+	publishedAt: string | null
 	createdAt: string
 	updatedAt: string
 	_count?: { leads: number }

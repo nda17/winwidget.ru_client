@@ -123,6 +123,9 @@ select.input {
 .colorRow {
 	@apply flex items-end gap-3;
 }
+.colorRow > .input {
+	@apply w-auto min-w-0 flex-1;
+}
 
 .colorPicker {
 	@apply w-9 h-9 rounded-[6px] cursor-pointer border border-[#e0d6f0] p-[2px] bg-transparent;
@@ -320,7 +323,11 @@ select.input {
 	}
 
 	.tabs {
-		@apply gap-x-3 gap-y-2 pb-2;
+		@apply grid grid-cols-3 justify-stretch gap-1 pb-2;
+	}
+
+	.tab {
+		@apply min-h-10 w-full whitespace-normal rounded-md px-1 py-2 text-center text-xs leading-4;
 	}
 
 	.stickyFooter {
@@ -344,7 +351,7 @@ select.input {
 	}
 
 	.colorRow {
-		@apply flex-wrap gap-2;
+		@apply flex-nowrap items-center gap-2;
 	}
 
 	.directLink {

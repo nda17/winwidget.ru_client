@@ -81,6 +81,9 @@ select.input {
 .colorRow {
 	@apply flex items-end gap-3;
 }
+.colorRow > .input {
+	@apply w-auto min-w-0 flex-1;
+}
 .colorRowField {
 	@apply flex flex-col gap-1;
 }
@@ -228,14 +231,14 @@ select.input {
 		padding-bottom: 0;
 	}
 	.tabs {
-		@apply gap-x-3 gap-y-2 pb-2;
+		@apply grid grid-cols-3 justify-stretch gap-1 pb-2;
 	}
 	.stickyFooter {
 		@apply -mx-5 px-5 py-3;
 		padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
 	}
 	.tab {
-		@apply text-[0.85rem];
+		@apply min-h-10 w-full whitespace-normal rounded-md px-1 py-2 text-center text-xs leading-4;
 	}
 }
 
@@ -248,16 +251,16 @@ select.input {
 		@apply text-xl mb-5;
 	}
 	.tabs {
-		@apply gap-x-3 gap-y-2;
-	}
-	.tab {
-		@apply text-[0.8rem];
+		@apply gap-1;
 	}
 	.fields {
 		@apply gap-4;
 	}
 	.colorRow {
 		@apply flex-wrap gap-2;
+	}
+	.colorInputs > .input {
+		@apply w-auto min-w-0 flex-1;
 	}
 	.directLink {
 		@apply flex-col;

@@ -28,6 +28,7 @@ const onlineConsultantService = {
 			isActive: boolean
 			installDomain: string
 			config: Partial<OnlineConsultantConfig>
+			expectedDraftRevision: number
 		}>
 	) {
 		const { data } = await axiosInterceptorsRequest.patch(

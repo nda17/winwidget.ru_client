@@ -37,7 +37,11 @@
 }
 
 .previewPortalTarget > * {
-	@apply mb-0 h-full min-h-0;
+	@apply mb-0 min-h-0;
+}
+
+.previewPortalTarget[data-constrain-preview-height='true'] > * {
+	@apply h-full;
 }
 
 .editorColumn {
@@ -106,11 +110,16 @@
 	}
 
 	.previewColumn {
-		@apply static min-h-0;
+		@apply static h-auto min-h-0;
 	}
 
 	.previewPortalTarget {
-		@apply max-w-[56rem];
+		@apply h-auto max-w-[56rem];
+	}
+
+	.previewPortalTarget > *,
+	.previewPortalTarget[data-constrain-preview-height='true'] > * {
+		@apply h-auto;
 	}
 
 	.previewSkeleton {

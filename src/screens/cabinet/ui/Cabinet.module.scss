@@ -35,7 +35,7 @@
 	@apply text-[1.1rem] font-bold text-[#1a1a1a];
 }
 .headerSub {
-	@apply text-[0.85rem] text-[#888] mt-[2px];
+	@apply mt-[2px] overflow-hidden text-ellipsis whitespace-nowrap text-[0.85rem] text-[#888];
 }
 .headerPlanRow {
 	@apply flex flex-wrap items-center gap-2 mt-[6px];
@@ -723,6 +723,9 @@
 .widgetStatusActive {
 	@apply border-[#b9e5c8] bg-[#eaf8ef] text-[#25834b];
 }
+.widgetStatusPublished {
+	@apply border-[#d5c1ed] bg-[#f5effc] text-[#69418a];
+}
 .widgetStatusWarning {
 	@apply border-[#f4d2a3] bg-[#fff8f0] text-[#b45309];
 }
@@ -896,7 +899,10 @@
 		@apply mb-5;
 	}
 	.tabs {
-		@apply mb-6;
+		@apply mb-6 grid grid-cols-2;
+	}
+	.tab:last-child:nth-child(odd) {
+		@apply col-span-full;
 	}
 	.tab {
 		@apply text-[0.88rem] py-[10px] px-4;
@@ -962,8 +968,7 @@
 		@apply p-[14px];
 	}
 	.widgetRow {
-		@apply flex-wrap gap-2 py-[10px] px-3;
-		display: flex;
+		@apply grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 px-3 py-[10px];
 	}
 	.widgetRowSkeleton {
 		@apply min-h-[4.75rem];
@@ -992,11 +997,14 @@
 		@apply w-full;
 	}
 	.actions {
-		@apply w-full justify-end pt-[6px] gap-3 border-t border-[#f0eaf8];
-		justify-self: auto;
+		@apply col-span-full grid w-full grid-cols-2 justify-self-stretch gap-2 border-t border-[#f0eaf8] pt-2;
 	}
-	.actionBtn {
-		@apply text-[0.8rem] gap-[3px];
+	.actionBtn,
+	.actionBtnDanger {
+		@apply min-h-10 w-full justify-center gap-1 rounded-lg bg-[#faf8ff] px-2 py-2 text-[0.8rem];
+	}
+	.actions > :last-child:nth-child(odd) {
+		@apply col-span-full;
 	}
 	.createBtn {
 		@apply max-w-none;

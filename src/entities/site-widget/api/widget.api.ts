@@ -25,6 +25,7 @@ const widgetService = {
 			isActive: boolean
 			installDomain: string
 			config: Partial<WidgetConfig>
+			expectedDraftRevision: number
 		}>
 	) {
 		const { data } = await axiosInterceptorsRequest.patch(

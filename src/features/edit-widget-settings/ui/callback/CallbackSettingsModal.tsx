@@ -8,8 +8,14 @@ import { ChangeEvent, useEffect, useId, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import styles from './CallbackSettingsModal.module.scss'
 import DirectLinkQr from '../shared/DirectLinkQr'
+import {
+	findInvalidWidgetColor,
+	getWidgetColorPreview,
+	isWidgetHexColor
+} from '../shared/widgetColor'
 import useWidgetSettingsCloseGuard from '../shared/useWidgetSettingsCloseGuard'
 import WidgetLivePreview from '../shared/WidgetLivePreview'
+import WidgetPresetButtons from '../shared/WidgetPresetButtons'
 import pageStyles from '../shared/WidgetSettingsModal.module.scss'
 import type {
 	WidgetSettingsPersistence,
@@ -30,11 +36,11 @@ interface Props extends WidgetSettingsPresentationProps {
 }
 
 const TABS: { id: Tab; label: string }[] = [
-	{ id: 'main', label: 'Главные' },
+	{ id: 'main', label: 'Основные' },
 	{ id: 'form', label: 'Форма' },
 	{ id: 'integrations', label: 'Интеграции' },
 	{ id: 'code', label: 'Установка' },
-	{ id: 'info', label: 'Инфо' }
+	{ id: 'info', label: 'Проверка' }
 ]
 
 const DEFAULT_CONFIG: CallbackConfig = {
@@ -102,7 +108,10 @@ const CallbackSettingsModal = ({
 	onSaved,
 	persistence,
 	presentation = 'modal',
-	previewPortalTarget
+	previewPortalTarget,
+	onDirtyChange,
+	onRevisionConflict,
+	lifecycleActions
 }: Props) => {
 	const titleId = useId()
 	const buttonImageInputId = useId()
@@ -112,6 +121,7 @@ const CallbackSettingsModal = ({
 	const [installDomain, setInstallDomain] = useState(
 		callback.installDomain ?? ''
 	)
+	const draftRevisionRef = useRef(callback.draftRevision)
 	const [confirmResetDefaults, setConfirmResetDefaults] = useState(false)
 	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>(
 		{}
@@ -131,6 +141,38 @@ const CallbackSettingsModal = ({
 		config: cfg
 	})
 	const hasUnsavedChanges = currentSnapshot !== savedSnapshot
+	useEffect(() => {
+		onDirtyChange?.(hasUnsavedChanges)
+	}, [hasUnsavedChanges, onDirtyChange])
+	const reportMutationError = (
+		error: any,
+		fallback: string,
+		toastId: string
+	) => {
+		if (error?.response?.status === 409) {
+			const conflictRefresh = onRevisionConflict?.()
+			void conflictRefresh
+				?.then(latestRevision => {
+					if (typeof latestRevision === 'number') {
+						draftRevisionRef.current = latestRevision
+					}
+				})
+				.catch(() =>
+					toast.error(
+						'Не удалось обновить ревизию черновика. Проверьте соединение и повторите.',
+						{ id: toastId, duration: 6000 }
+					)
+				)
+			toast.error(
+				'Черновик изменился в другой вкладке. Ваши поля сохранены — после обновления повторите действие.',
+				{ id: toastId, duration: 6000 }
+			)
+			return
+		}
+		toast.error(error?.response?.data?.message || fallback, {
+			id: toastId
+		})
+	}
 
 	const mutation = useMutation({
 		mutationFn: (data?: {
@@ -144,11 +186,13 @@ const CallbackSettingsModal = ({
 			)({
 				name: data?.name ?? name,
 				installDomain: data?.installDomain ?? installDomain,
-				config: data?.config ?? cfg
+				config: data?.config ?? cfg,
+				expectedDraftRevision: draftRevisionRef.current
 			}),
 		onMutate: () =>
 			toast.loading('Сохраняем настройки, пожалуйста подождите...'),
 		onSuccess: (updated, _, toastId) => {
+			draftRevisionRef.current = updated.draftRevision
 			toast.success('Сохранено', { id: toastId })
 			setFieldErrors({})
 			setName(updated.name)
@@ -163,16 +207,17 @@ const CallbackSettingsModal = ({
 			)
 			onSaved(updated)
 		},
-		onError: (e: any, _, toastId) => {
-			toast.error(e?.response?.data?.message || 'Ошибка сохранения', {
-				id: toastId
-			})
-		}
+		onError: (error: any, _, toastId) =>
+			reportMutationError(error, 'Ошибка сохранения', toastId)
 	})
 	const buttonImageMutation = useMutation({
 		mutationFn: (file: File) => {
 			const formData = new FormData()
 			formData.append('file', file)
+			formData.append(
+				'expectedDraftRevision',
+				String(draftRevisionRef.current)
+			)
 			return persistence?.uploadButtonImage
 				? persistence.uploadButtonImage(formData)
 				: callbackService.uploadButtonImage(callback.id, formData)
@@ -180,6 +225,7 @@ const CallbackSettingsModal = ({
 		onMutate: () =>
 			toast.loading('Загружаем картинку кнопки, пожалуйста подождите...'),
 		onSuccess: (updated, _, toastId) => {
+			draftRevisionRef.current = updated.draftRevision
 			toast.success('Картинка кнопки обновлена', { id: toastId })
 			setName(updated.name)
 			setInstallDomain(updated.installDomain ?? '')
@@ -193,11 +239,8 @@ const CallbackSettingsModal = ({
 			)
 			onSaved(updated)
 		},
-		onError: (e: any, _, toastId) => {
-			toast.error(e?.response?.data?.message || 'Ошибка загрузки', {
-				id: toastId
-			})
-		}
+		onError: (error: any, _, toastId) =>
+			reportMutationError(error, 'Ошибка загрузки', toastId)
 	})
 	const isDangerActionPending =
 		mutation.isPending || buttonImageMutation.isPending
@@ -391,14 +434,27 @@ const CallbackSettingsModal = ({
 	}
 
 	const handleResetDefaults = () => {
-		const resetConfig = getDefaultConfig()
+		const resetConfig = {
+			...getDefaultConfig(),
+			integrations: { ...cfg.integrations },
+			buttonImageUrl: cfg.buttonImageUrl
+		}
 		setFieldErrors({})
 		setCfg(resetConfig)
 		setConfirmResetDefaults(false)
-		mutation.mutate({ name, config: resetConfig })
+		toast.success('Стандартные настройки применены. Сохраните черновик')
 	}
 
 	const handleSave = () => {
+		const invalidColor = !isWidgetHexColor(cfg.color)
+			? 'color'
+			: findInvalidWidgetColor(cfg)
+		if (invalidColor) {
+			setTab('main')
+			toast.error('Цвет должен быть указан в формате #RRGGBB')
+			return
+		}
+
 		const sanitizedName = name.trim()
 		const sanitizedSlots = (cfg.timeSlots || []).map(slot => slot.trim())
 		const firstEmptySlot = sanitizedSlots.findIndex(slot => !slot)
@@ -506,6 +562,7 @@ const CallbackSettingsModal = ({
 				<h2 id={titleId} className={styles.modalTitle}>
 					Настройки обратного звонка
 				</h2>
+				{lifecycleActions}
 
 				<div
 					className={styles.tabs}
@@ -553,6 +610,70 @@ const CallbackSettingsModal = ({
 					{/* ── Основное ── */}
 					{tab === 'main' && (
 						<div className={styles.fields}>
+							<WidgetPresetButtons
+								presets={[
+									{
+										id: 'quick',
+										label: 'Быстрый звонок',
+										description: 'Перезвонить клиенту как можно скорее.'
+									},
+									{
+										id: 'consultation',
+										label: 'Консультация',
+										description: 'Запрос на разговор со специалистом.'
+									},
+									{
+										id: 'booking',
+										label: 'Запись по времени',
+										description: 'Выбор удобного интервала для звонка.'
+									}
+								]}
+								onApply={preset => {
+									setFieldErrors({})
+									setCfg(previous => {
+										if (preset === 'consultation') {
+											return {
+												...previous,
+												title: 'Получите консультацию',
+												subtitle:
+													'Оставьте номер — специалист ответит на ваши вопросы',
+												submitButtonText: 'Заказать консультацию',
+												successTitle: 'Заявка принята',
+												bubbleText: 'Нужна консультация?'
+											}
+										}
+
+										if (preset === 'booking') {
+											return {
+												...previous,
+												title: 'Выберите время звонка',
+												subtitle: 'Оставьте номер и подходящий интервал',
+												submitButtonText: 'Запланировать звонок',
+												successTitle: 'Звонок запланирован',
+												bubbleText: 'Записаться на звонок',
+												timeSlots: [
+													'9:00–11:00',
+													'11:00–13:00',
+													'13:00–15:00',
+													'15:00–17:00',
+													'17:00–19:00'
+												]
+											}
+										}
+
+										return {
+											...previous,
+											title: 'Перезвоним за 5 минут',
+											subtitle:
+												'Оставьте номер телефона — мы уже на связи',
+											submitButtonText: 'Жду звонка',
+											successTitle: 'Спасибо! Уже набираем',
+											bubbleText: 'Перезвонить?'
+										}
+									})
+									toast.success('Сценарий применён. Сохраните черновик')
+								}}
+							/>
 							<div className={styles.settingsGroup}>
 								<div className={styles.settingsGroupHeader}>
 									<h3 className={styles.settingsGroupTitle}>
@@ -586,19 +707,25 @@ const CallbackSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
-									<p className={styles.label}>Основной цвет:</p>
+									<p className={styles.label}>Цвет акцентов:</p>
 									<div className={styles.colorRow}>
 										<input
 											type="color"
 											className={styles.colorPicker}
-											value={cfg.color || '#4705fb'}
+											value={getWidgetColorPreview(cfg.color, '#4705fb')}
 											onChange={e => set({ color: e.target.value })}
 										/>
 										<input
-											className={styles.input}
-											value={cfg.color || '#4705fb'}
+											className={`${styles.input} ${
+												!isWidgetHexColor(cfg.color)
+													? pageStyles.inputError
+													: ''
+											}`}
+											value={cfg.color}
 											onChange={e => set({ color: e.target.value })}
 											placeholder="#4705fb"
+											maxLength={7}
+											aria-invalid={!isWidgetHexColor(cfg.color)}
 										/>
 										{cfg.color && cfg.color !== '#4705fb' && (
 											<button
@@ -611,6 +738,11 @@ const CallbackSettingsModal = ({
 											</button>
 										)}
 									</div>
+									{!isWidgetHexColor(cfg.color) && (
+										<p className={pageStyles.fieldError}>
+											Введите цвет в формате #RRGGBB
+										</p>
+									)}
 									<p className={styles.hint}>
 										Цвет плавающей кнопки и акцентов внутри формы.
 									</p>
@@ -622,7 +754,7 @@ const CallbackSettingsModal = ({
 										<input
 											type="color"
 											className={styles.colorPicker}
-											value={cfg.bgColor || '#ffffff'}
+											value={getWidgetColorPreview(cfg.bgColor, '#ffffff')}
 											onChange={e => set({ bgColor: e.target.value })}
 										/>
 										<input
@@ -661,7 +793,10 @@ const CallbackSettingsModal = ({
 										<input
 											type="color"
 											className={styles.colorPicker}
-											value={cfg.openButtonColor || cfg.color || '#4705fb'}
+											value={getWidgetColorPreview(
+												cfg.openButtonColor,
+												getWidgetColorPreview(cfg.color, '#4705fb')
+											)}
 											onChange={e =>
 												set({ openButtonColor: e.target.value })
 											}
@@ -862,16 +997,14 @@ const CallbackSettingsModal = ({
 
 								<div className={styles.field}>
 									<div className={pageStyles.rangeHeader}>
-										<p className={styles.label}>
-											Высота кнопки от низа экрана:
-										</p>
+										<p className={styles.label}>Отступ снизу:</p>
 										<span className={pageStyles.rangeValue}>
 											{cfg.buttonBottom ?? 3}%
 										</span>
 									</div>
 									<input
 										type="range"
-										aria-label="Высота кнопки от низа экрана"
+										aria-label="Отступ снизу"
 										min={1}
 										max={50}
 										value={cfg.buttonBottom ?? 3}
@@ -890,16 +1023,14 @@ const CallbackSettingsModal = ({
 
 								<div className={styles.field}>
 									<div className={pageStyles.rangeHeader}>
-										<p className={styles.label}>
-											Отступ кнопки от края экрана:
-										</p>
+										<p className={styles.label}>Отступ сбоку:</p>
 										<span className={pageStyles.rangeValue}>
 											{cfg.buttonOffset ?? 3}%
 										</span>
 									</div>
 									<input
 										type="range"
-										aria-label="Отступ кнопки от края экрана"
+										aria-label="Отступ сбоку"
 										min={1}
 										max={50}
 										value={cfg.buttonOffset ?? 3}
@@ -959,7 +1090,7 @@ const CallbackSettingsModal = ({
 											htmlFor="callback-auto-open"
 											className={styles.checkLabel}
 										>
-											Открывать виджет автоматически
+											Автоматически показывать
 										</label>
 									</div>
 									{autoOpenEnabled && (
@@ -1038,8 +1169,8 @@ const CallbackSettingsModal = ({
 									)}
 									<p className={styles.hint}>
 										Сбросит цвета, тексты, слоты времени, автооткрытие,
-										интеграции и фильтр дублей. Название в кабинете не
-										изменится.
+										фильтр дублей и остальные параметры показа. Название,
+										домен, интеграции и своя картинка сохранятся.
 									</p>
 								</div>
 							</div>
@@ -1129,7 +1260,10 @@ const CallbackSettingsModal = ({
 										<input
 											type="color"
 											className={styles.colorPicker}
-											value={cfg.buttonColor || cfg.color || '#4705fb'}
+											value={getWidgetColorPreview(
+												cfg.buttonColor,
+												getWidgetColorPreview(cfg.color, '#4705fb')
+											)}
 											onChange={e => set({ buttonColor: e.target.value })}
 										/>
 										<input
@@ -1724,7 +1858,7 @@ const CallbackSettingsModal = ({
 							disabled={mutation.isPending || !hasUnsavedChanges}
 							onClick={handleSave}
 						>
-							{mutation.isPending ? 'Сохранение...' : 'Сохранить'}
+							{mutation.isPending ? 'Сохранение...' : 'Сохранить черновик'}
 						</button>
 					</div>
 				</div>

@@ -135,11 +135,31 @@
 	}
 
 	.previewControls {
-		@apply w-full justify-start;
+		@apply grid w-full grid-cols-2 gap-2;
+	}
+
+	.previewSegmented {
+		@apply w-full;
+	}
+
+	.previewSegmented .previewControlBtn {
+		@apply flex-1;
+	}
+
+	.previewToggle {
+		@apply col-span-full w-fit;
+	}
+
+	.previewViewport {
+		@apply flex-none p-2;
 	}
 
 	.previewControlBtn,
 	.previewToggle {
 		@apply min-h-8 px-3;
+	}
+
+	.previewNotice {
+		@apply mt-3 leading-5;
 	}
 }

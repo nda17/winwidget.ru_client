@@ -1,0 +1,251 @@
+.panel {
+	@apply mb-4 rounded-2xl border border-[#e0d6f0] bg-white p-5 shadow-sm;
+}
+
+.loading,
+.error {
+	@apply text-sm leading-6 text-[#777];
+}
+
+.error {
+	@apply text-[#a33b3b];
+}
+
+.summary {
+	@apply flex items-start justify-between gap-5;
+}
+
+.statusRow {
+	@apply flex flex-wrap items-center gap-2;
+}
+
+.statusBadge,
+.version,
+.inlineReady,
+.inlineMuted {
+	@apply inline-flex rounded-full px-2.5 py-1 text-xs font-semibold;
+}
+
+.statusReady,
+.inlineReady {
+	@apply bg-[#e8f8ee] text-[#237a43];
+}
+
+.statusPending {
+	@apply bg-[#fff4d9] text-[#936100];
+}
+
+.statusMuted,
+.inlineMuted {
+	@apply bg-[#f2edf7] text-[#765f89];
+}
+
+.version {
+	@apply bg-[#f7f4fb] text-[#777];
+}
+
+.summaryText {
+	@apply mt-3 max-w-[42rem] text-sm leading-6 text-[#555];
+}
+
+.meta {
+	@apply mt-1 text-xs text-[#999];
+}
+
+.primaryActions {
+	@apply flex flex-none flex-wrap justify-end gap-2;
+}
+
+.publishButton,
+.secondaryButton,
+.textButton {
+	@apply min-h-10 cursor-pointer rounded-lg px-4 py-2 text-sm font-semibold transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+.publishButton {
+	@apply bg-[#7b3fa0] text-white hover:bg-[#6a328d];
+}
+
+.secondaryButton {
+	@apply border border-[#c4a8e8] bg-white text-[#7b3fa0] hover:bg-[#f3eeff];
+}
+
+.textButton {
+	@apply min-h-0 px-0 py-1 text-[#7b3fa0] underline-offset-4 hover:underline;
+}
+
+.readiness {
+	@apply mt-4 rounded-xl border border-[#eadff5] bg-[#faf7fd] p-4;
+}
+
+.sectionTitle {
+	@apply text-sm font-semibold text-[#4d315d];
+}
+
+.issueList {
+	@apply mt-2 space-y-1.5 text-sm leading-5;
+}
+
+.blocker,
+.warning {
+	@apply relative pl-5;
+}
+
+.blocker {
+	@apply text-[#a33b3b];
+}
+
+.warning {
+	@apply text-[#936100];
+}
+
+.blocker::before,
+.warning::before {
+	@apply absolute left-0 top-0 font-bold;
+}
+
+.blocker::before {
+	content: '×';
+}
+
+.warning::before {
+	content: '!';
+}
+
+.detailsGrid {
+	@apply mt-4 grid gap-3;
+}
+
+.details {
+	@apply overflow-hidden rounded-xl border border-[#eadff5] bg-[#fcfaff];
+}
+
+.detailsSummary {
+	@apply flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-[#4d315d];
+}
+
+.detailsSummary::-webkit-details-marker {
+	@apply hidden;
+}
+
+.detailsSummary::after {
+	content: '+';
+	@apply ml-auto text-lg font-normal text-[#9a78b8];
+}
+
+.details[open] .detailsSummary::after {
+	content: '−';
+}
+
+.detailsContent {
+	@apply border-t border-[#eadff5] bg-white p-4;
+}
+
+.definitionList {
+	@apply grid gap-2 text-sm;
+}
+
+.definitionList > div {
+	@apply grid grid-cols-[8rem_minmax(0,1fr)] gap-3;
+}
+
+.definitionList dt {
+	@apply text-[#999];
+}
+
+.definitionList dd {
+	@apply min-w-0 break-words font-medium text-[#444];
+}
+
+.helpText,
+.notice {
+	@apply mt-3 text-xs leading-5 text-[#777];
+}
+
+.notice {
+	@apply rounded-lg bg-[#fff7e5] px-3 py-2 text-[#8a5a00];
+}
+
+.detailsContent > .secondaryButton {
+	@apply mt-3;
+}
+
+.funnel {
+	@apply grid grid-cols-4 gap-2;
+}
+
+.funnelItem {
+	@apply flex min-w-0 flex-col rounded-lg bg-[#f7f3fb] p-3;
+}
+
+.funnelItem span {
+	@apply truncate text-[11px] text-[#777];
+}
+
+.funnelItem strong {
+	@apply mt-1 text-lg text-[#4d315d];
+}
+
+.funnelItem small {
+	@apply mt-0.5 text-[11px] font-medium text-[#8b6ba0];
+}
+
+.versionList {
+	@apply divide-y divide-[#eee7f5];
+}
+
+.versionList li {
+	@apply flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0;
+}
+
+.versionList div {
+	@apply flex min-w-0 flex-col;
+}
+
+.versionList strong {
+	@apply text-sm text-[#444];
+}
+
+.versionList span {
+	@apply text-xs text-[#999];
+}
+
+.pagination {
+	@apply mt-4 flex items-center justify-between gap-3 border-t border-[#eee7f5] pt-4 text-xs text-[#777];
+}
+
+@media (max-width: 700px) {
+	.panel {
+		@apply p-4;
+	}
+
+	.summary {
+		@apply flex-col;
+	}
+
+	.primaryActions {
+		@apply w-full justify-stretch;
+	}
+
+	.primaryActions > * {
+		@apply flex-1;
+	}
+
+	.funnel {
+		@apply grid-cols-2;
+	}
+}
+
+@media (max-width: 420px) {
+	.primaryActions {
+		@apply flex-col;
+	}
+
+	.definitionList > div {
+		@apply grid-cols-1 gap-0.5;
+	}
+
+	.detailsSummary {
+		@apply flex-wrap;
+	}
+}

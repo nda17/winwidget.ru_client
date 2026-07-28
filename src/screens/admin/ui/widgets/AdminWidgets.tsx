@@ -366,6 +366,30 @@ const AdminWidgets: NextPage = () => {
 		})
 	}
 
+	const refreshEditor = async () => {
+		const currentEditor = editor
+		if (!currentEditor) return null
+
+		const details = await adminWidgetsService.getById(
+			currentEditor.details.type,
+			currentEditor.details.entity.id
+		)
+		queryClient.setQueryData(
+			getDetailsQueryKey(details.type, details.entity.id),
+			details
+		)
+		setEditor(current =>
+			current
+				? {
+						...current,
+						details
+					}
+				: current
+		)
+
+		return details
+	}
+
 	const confirmDelete = () => {
 		if (
 			!deleteTarget ||
@@ -432,7 +456,7 @@ const AdminWidgets: NextPage = () => {
 				title="Мониторинг и управление виджетами"
 				description="Показывает все виджеты пользователей, позволяет изменять их настройки и активность, а суперпользователям ADMIN и DEV — удалять виджеты."
 				risk="high"
-				riskText="Изменения сразу влияют на работающий виджет пользователя. Удаление необратимо и также удаляет связанные заявки."
+				riskText="Сохранённые настройки становятся черновиком и влияют на рабочий виджет только после публикации. Включение, отключение и удаление применяются сразу; удаление необратимо и также удаляет связанные заявки."
 			/>
 
 			<form className={styles.filters} onSubmit={applyFilters}>
@@ -819,6 +843,7 @@ const AdminWidgets: NextPage = () => {
 					subscriptionStatus={editor.subscriptionStatus}
 					onClose={() => setEditor(null)}
 					onSaved={handleEditorSaved}
+					onRefresh={refreshEditor}
 				/>
 			)}
 		</section>

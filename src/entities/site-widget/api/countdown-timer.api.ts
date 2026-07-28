@@ -28,6 +28,7 @@ const countdownTimerService = {
 			isActive: boolean
 			installDomain: string
 			config: Partial<CountdownTimerConfig>
+			expectedDraftRevision: number
 		}>
 	) {
 		const { data } = await axiosInterceptorsRequest.patch(

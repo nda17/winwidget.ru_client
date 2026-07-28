@@ -84,6 +84,10 @@ export interface Calculator {
 	isActive: boolean
 	installDomain: string
 	config: CalculatorConfig
+	draftRevision: number
+	publishedVersion: number
+	publishedFromDraftRevision: number
+	publishedAt: string | null
 	createdAt: string
 	updatedAt: string
 	_count?: { leads: number }

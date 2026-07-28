@@ -25,6 +25,7 @@ const stopOfferService = {
 			isActive: boolean
 			installDomain: string
 			config: Partial<StopOfferConfig>
+			expectedDraftRevision: number
 		}>
 	) {
 		const { data } = await axiosInterceptorsRequest.patch(
