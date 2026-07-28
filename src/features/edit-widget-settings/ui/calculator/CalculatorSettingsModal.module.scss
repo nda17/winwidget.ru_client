@@ -121,7 +121,19 @@ select.input {
 }
 
 .hint {
-	@apply m-0 text-xs leading-5 text-[#999];
+	@apply m-0 text-xs leading-[1.25rem] text-[#999];
+}
+
+.optionalDetails {
+	@apply rounded-lg border border-[#e0d6f0] bg-[#faf8ff] px-3 py-2;
+}
+
+.optionalSummary {
+	@apply cursor-pointer text-sm font-medium text-[#7b3fa0];
+}
+
+.optionalContent {
+	@apply mt-4 flex flex-col gap-4;
 }
 
 .buttonImageBox {
@@ -202,7 +214,7 @@ select.input {
 }
 
 .domainHint {
-	@apply m-0 text-xs leading-5 text-red-600;
+	@apply m-0 text-xs leading-[1.25rem] text-red-600;
 }
 
 .dangerActions {
@@ -259,7 +271,7 @@ select.input {
 	}
 
 	.tab {
-		@apply min-h-10 w-full whitespace-normal rounded-md px-1 py-2 text-center text-xs leading-4;
+		@apply min-h-10 w-full whitespace-normal rounded-md px-1 py-2 text-center text-xs leading-[1rem];
 	}
 
 	.gridTwo,

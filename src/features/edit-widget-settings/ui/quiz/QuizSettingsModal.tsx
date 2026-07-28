@@ -8,6 +8,7 @@ import {
 	QuizQuestion,
 	QuizResult
 } from '@/entities/site-widget'
+import ConfirmDialog from '@/shared/ui/confirm-dialog/ConfirmDialog'
 import { useMutation } from '@tanstack/react-query'
 import Image from 'next/image'
 import { ChangeEvent, useEffect, useId, useRef, useState } from 'react'
@@ -36,6 +37,7 @@ type Tab =
 	| 'integrations'
 	| 'code'
 	| 'info'
+type EditableTab = Exclude<Tab, 'code' | 'info'>
 type ScoreMode = 'simple' | 'advanced'
 type QuizTemplateKey = 'tariff' | 'service' | 'discount' | 'diagnostic'
 const BUTTON_IMAGE_MAX_SIZE_BYTES = 200 * 1024
@@ -466,6 +468,8 @@ const QuizSettingsModal = ({
 	persistence,
 	presentation = 'modal',
 	previewPortalTarget,
+	onPreviewDeviceChange,
+	onPreviewConfigChange,
 	onDirtyChange,
 	onRevisionConflict,
 	lifecycleActions
@@ -482,6 +486,8 @@ const QuizSettingsModal = ({
 	const buttonImageInputId = useId()
 	const [confirmResetAttempts, setConfirmResetAttempts] = useState(false)
 	const [confirmResetDefaults, setConfirmResetDefaults] = useState(false)
+	const [confirmResetSection, setConfirmResetSection] =
+		useState<EditableTab | null>(null)
 	const [pendingTemplate, setPendingTemplate] =
 		useState<QuizTemplateKey | null>(null)
 	const [validationIssue, setValidationIssue] =
@@ -574,10 +580,13 @@ const QuizSettingsModal = ({
 				expectedDraftRevision: draftRevisionRef.current
 			}),
 		onMutate: () =>
-			toast.loading('Сбрасываем попытки, пожалуйста подождите...'),
+			toast.loading('Сохраняем сброс в черновик, пожалуйста подождите...'),
 		onSuccess: (updated, _, toastId) => {
 			draftRevisionRef.current = updated.draftRevision
-			toast.success('Попытки всех посетителей сброшены', { id: toastId })
+			toast.success(
+				'Сброс сохранён в черновик; вступит в силу после публикации',
+				{ id: toastId }
+			)
 			setName(updated.name)
 			setInstallDomain(updated.installDomain ?? '')
 			setConfig(updated.config)
@@ -683,10 +692,21 @@ const QuizSettingsModal = ({
 			requestAnimationFrame(() => {
 				const field = document.getElementById(issue.fieldId)
 				if (!field) return
+				field.closest('details')?.setAttribute('open', '')
 				field.scrollIntoView({ behavior: 'smooth', block: 'center' })
 				field.focus({ preventScroll: true })
 			})
 		})
+	}
+
+	const setBlurValidationIssue = (
+		issue: ValidationIssue | null,
+		fieldId: string
+	) => {
+		setValidationIssue(
+			previous =>
+				issue ?? (previous?.fieldId === fieldId ? null : previous)
+		)
 	}
 
 	// --- Questions helpers ---
@@ -923,13 +943,73 @@ const QuizSettingsModal = ({
 
 	// ---
 
+	const getColorValidationIssue = (path: string): ValidationIssue => {
+		const fieldIds: Partial<Record<keyof QuizConfig, string>> = {
+			color: getValidationFieldId('color'),
+			bgColor: getValidationFieldId('bg-color'),
+			buttonColor: getValidationFieldId('button-color'),
+			openButtonColor: getValidationFieldId('open-button-color')
+		}
+
+		return {
+			tab: 'main',
+			fieldId:
+				fieldIds[path as keyof QuizConfig] ??
+				getValidationFieldId('color'),
+			message: 'Введите цвет в формате #RRGGBB'
+		}
+	}
+
+	const handleResetSection = () => {
+		if (!confirmResetSection) return
+
+		setConfig(previous => {
+			if (confirmResetSection === 'questions') {
+				return {
+					...previous,
+					questions: DEFAULT_CONFIG.questions.map(question => ({
+						...question,
+						options: question.options.map(option => ({
+							...option,
+							scores: { ...option.scores }
+						}))
+					}))
+				}
+			}
+
+			if (confirmResetSection === 'results') {
+				return {
+					...previous,
+					results: DEFAULT_CONFIG.results.map(result => ({ ...result }))
+				}
+			}
+
+			if (confirmResetSection === 'integrations') {
+				return {
+					...previous,
+					integrations: { ...DEFAULT_CONFIG.integrations }
+				}
+			}
+
+			return {
+				...DEFAULT_CONFIG,
+				questions: previous.questions,
+				results: previous.results,
+				integrations: previous.integrations,
+				quizResetToken: previous.quizResetToken
+			}
+		})
+		setValidationIssue(null)
+		setConfirmResetSection(null)
+		toast.success('Раздел сброшен в черновике; сохраните черновик')
+	}
+
 	const handleSave = () => {
 		const invalidColor = !isWidgetHexColor(config.color)
 			? 'color'
 			: findInvalidWidgetColor(config)
 		if (invalidColor) {
-			setTab('main')
-			toast.error('Цвет должен быть указан в формате #RRGGBB')
+			reportValidationIssue(getColorValidationIssue(invalidColor))
 			return
 		}
 
@@ -990,6 +1070,67 @@ const QuizSettingsModal = ({
 			return
 		}
 
+		const bottom = config.buttonBottom
+		if (!bottom || bottom < 1 || bottom > 50) {
+			reportValidationIssue({
+				tab: 'main',
+				fieldId: getValidationFieldId('button-bottom'),
+				message: 'Высота кнопки: выберите значение от 1 до 50%'
+			})
+			return
+		}
+
+		const cooldown = config.quizCooldownDays ?? 0
+		if (cooldown < 0 || cooldown > 365) {
+			reportValidationIssue({
+				tab: 'main',
+				fieldId: getValidationFieldId('cooldown'),
+				message:
+					'Повторное прохождение: выберите значение от 0 до 365 дней'
+			})
+			return
+		}
+
+		if (config.questions.length < 1) {
+			reportValidationIssue({
+				tab: 'questions',
+				fieldId: getValidationFieldId('questions-add'),
+				message: 'Добавьте хотя бы один вопрос'
+			})
+			return
+		}
+
+		for (
+			let questionIndex = 0;
+			questionIndex < config.questions.length;
+			questionIndex += 1
+		) {
+			const question = config.questions[questionIndex]
+			if (!question.text.trim()) {
+				reportValidationIssue({
+					tab: 'questions',
+					fieldId: getValidationFieldId(`question-${question.id}-text`),
+					message: `Вопрос ${questionIndex + 1}: заполните текст вопроса`
+				})
+				return
+			}
+
+			const emptyOptionIndex = question.options.findIndex(
+				option => !option.text.trim()
+			)
+			if (emptyOptionIndex !== -1) {
+				const option = question.options[emptyOptionIndex]
+				reportValidationIssue({
+					tab: 'questions',
+					fieldId: getValidationFieldId(
+						`question-${question.id}-option-${option.id}`
+					),
+					message: `Вопрос ${questionIndex + 1}, вариант ${emptyOptionIndex + 1}: заполните текст`
+				})
+				return
+			}
+		}
+
 		if (config.results.length < 2) {
 			reportValidationIssue({
 				tab: 'results',
@@ -1038,63 +1179,31 @@ const QuizSettingsModal = ({
 			}
 		}
 
-		if (config.questions.length < 1) {
-			reportValidationIssue({
-				tab: 'questions',
-				fieldId: getValidationFieldId('questions-add'),
-				message: 'Добавьте хотя бы один вопрос'
-			})
-			return
-		}
-
-		for (
-			let questionIndex = 0;
-			questionIndex < config.questions.length;
-			questionIndex += 1
+		const webhookUrl = config.integrations.webhookUrl?.trim() || ''
+		if (
+			config.dataType !== 'NONE' &&
+			webhookUrl &&
+			!isHttpUrl(webhookUrl)
 		) {
-			const question = config.questions[questionIndex]
-			if (!question.text.trim()) {
-				reportValidationIssue({
-					tab: 'questions',
-					fieldId: getValidationFieldId(`question-${question.id}-text`),
-					message: `Вопрос ${questionIndex + 1}: заполните текст вопроса`
-				})
-				return
-			}
-
-			const emptyOptionIndex = question.options.findIndex(
-				option => !option.text.trim()
-			)
-			if (emptyOptionIndex !== -1) {
-				const option = question.options[emptyOptionIndex]
-				reportValidationIssue({
-					tab: 'questions',
-					fieldId: getValidationFieldId(
-						`question-${question.id}-option-${option.id}`
-					),
-					message: `Вопрос ${questionIndex + 1}, вариант ${emptyOptionIndex + 1}: заполните текст`
-				})
-				return
-			}
-		}
-
-		const bottom = config.buttonBottom
-		if (!bottom || bottom < 1 || bottom > 50) {
 			reportValidationIssue({
-				tab: 'main',
-				fieldId: getValidationFieldId('button-bottom'),
-				message: 'Высота кнопки: выберите значение от 1 до 50%'
+				tab: 'integrations',
+				fieldId: getValidationFieldId('integration-webhook-url'),
+				message: 'Укажите полный URL webhook с http:// или https://'
 			})
 			return
 		}
 
-		const cooldown = config.quizCooldownDays ?? 0
-		if (cooldown < 0 || cooldown > 365) {
+		const bitrix24WebhookUrl =
+			config.integrations.bitrix24WebhookUrl?.trim() || ''
+		if (
+			config.dataType !== 'NONE' &&
+			bitrix24WebhookUrl &&
+			!isHttpUrl(bitrix24WebhookUrl)
+		) {
 			reportValidationIssue({
-				tab: 'main',
-				fieldId: getValidationFieldId('cooldown'),
-				message:
-					'Повторное прохождение: выберите значение от 0 до 365 дней'
+				tab: 'integrations',
+				fieldId: getValidationFieldId('integration-bitrix24-url'),
+				message: 'Укажите полный URL Bitrix24 с http:// или https://'
 			})
 			return
 		}
@@ -1247,8 +1356,8 @@ const QuizSettingsModal = ({
 					{(
 						[
 							'main',
-							'results',
 							'questions',
+							'results',
 							'integrations',
 							'code',
 							'info'
@@ -1283,6 +1392,8 @@ const QuizSettingsModal = ({
 						type="quiz"
 						config={config}
 						isHardPlan={canUseCustomButtonImage}
+						onDeviceChange={onPreviewDeviceChange}
+						onConfigChange={onPreviewConfigChange}
 						autoCollapse={
 							!isPagePresentation &&
 							['integrations', 'code', 'info'].includes(tab)
@@ -1375,6 +1486,19 @@ const QuizSettingsModal = ({
 											setValidationIssue(null)
 											setName(e.target.value)
 										}}
+										onBlur={() => {
+											const fieldId = getValidationFieldId('name')
+											setBlurValidationIssue(
+												name.trim()
+													? null
+													: {
+															tab: 'main',
+															fieldId,
+															message: 'Укажите название виджета'
+														},
+												fieldId
+											)
+										}}
 										placeholder="Квиз"
 										maxLength={50}
 										aria-invalid={isValidationFieldInvalid(
@@ -1404,16 +1528,34 @@ const QuizSettingsModal = ({
 											onChange={e => setField('color', e.target.value)}
 										/>
 										<input
+											id={getValidationFieldId('color')}
 											className={`${styles.input} ${
-												!isWidgetHexColor(config.color)
+												isValidationFieldInvalid(
+													getValidationFieldId('color')
+												)
 													? pageStyles.inputError
 													: ''
 											}`}
 											value={config.color}
 											onChange={e => setField('color', e.target.value)}
+											onBlur={() => {
+												const fieldId = getValidationFieldId('color')
+												setBlurValidationIssue(
+													isWidgetHexColor(config.color)
+														? null
+														: {
+																tab: 'main',
+																fieldId,
+																message: 'Введите цвет в формате #RRGGBB'
+															},
+													fieldId
+												)
+											}}
 											placeholder="#4705fb"
 											maxLength={7}
-											aria-invalid={!isWidgetHexColor(config.color)}
+											aria-invalid={isValidationFieldInvalid(
+												getValidationFieldId('color')
+											)}
 										/>
 										{config.color && config.color !== '#4705fb' && (
 											<button
@@ -1426,58 +1568,83 @@ const QuizSettingsModal = ({
 											</button>
 										)}
 									</div>
-									{!isWidgetHexColor(config.color) && (
-										<p className={pageStyles.fieldError}>
-											Введите цвет в формате #RRGGBB
-										</p>
-									)}
+									{renderValidationError(getValidationFieldId('color'))}
 									<p className={styles.hint}>
 										Цвет акцентов: прогресс-бар, кнопки и бейдж результата.
 									</p>
 								</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>Цвет фона виджета</p>
-									<div className={styles.colorRow}>
-										<input
-											type="color"
-											className={styles.colorPicker}
-											value={getWidgetColorPreview(
-												config.bgColor,
-												'#4705fb'
-											)}
-											onChange={e => setField('bgColor', e.target.value)}
-										/>
-										<input
-											className={styles.input}
-											value={config.bgColor || ''}
-											onChange={e => setField('bgColor', e.target.value)}
-											placeholder="#4705fb"
-											maxLength={7}
-										/>
-										{config.bgColor && (
-											<button
-												type="button"
-												className={styles.clearColorBtn}
-												onClick={() => setField('bgColor', '')}
-												title="Сбросить к стандартному"
-											>
-												✕
-											</button>
-										)}
-									</div>
-									<p className={styles.hint}>
-										Цвет фона карточки квиза. Оставьте пустым для
-										стандартного тёмного градиента.
-									</p>
-								</div>
-
 								<details className={styles.advancedBlock}>
 									<summary className={styles.advancedSummary}>
-										Дополнительно
+										Тонкая настройка оформления
 									</summary>
-
 									<div className={styles.advancedContent}>
+										<div className={styles.field}>
+											<p className={styles.label}>Цвет фона виджета</p>
+											<div className={styles.colorRow}>
+												<input
+													type="color"
+													className={styles.colorPicker}
+													value={getWidgetColorPreview(
+														config.bgColor,
+														'#4705fb'
+													)}
+													onChange={e =>
+														setField('bgColor', e.target.value)
+													}
+												/>
+												<input
+													id={getValidationFieldId('bg-color')}
+													className={`${styles.input} ${
+														isValidationFieldInvalid(
+															getValidationFieldId('bg-color')
+														)
+															? pageStyles.inputError
+															: ''
+													}`}
+													value={config.bgColor || ''}
+													onChange={e =>
+														setField('bgColor', e.target.value)
+													}
+													onBlur={() => {
+														const fieldId =
+															getValidationFieldId('bg-color')
+														setBlurValidationIssue(
+															!config.bgColor ||
+																isWidgetHexColor(config.bgColor)
+																? null
+																: {
+																		tab: 'main',
+																		fieldId,
+																		message:
+																			'Введите цвет в формате #RRGGBB'
+																	},
+															fieldId
+														)
+													}}
+													placeholder="#4705fb"
+													maxLength={7}
+												/>
+												{config.bgColor && (
+													<button
+														type="button"
+														className={styles.clearColorBtn}
+														onClick={() => setField('bgColor', '')}
+														title="Сбросить к стандартному"
+													>
+														✕
+													</button>
+												)}
+											</div>
+											{renderValidationError(
+												getValidationFieldId('bg-color')
+											)}
+											<p className={styles.hint}>
+												Цвет фона карточки квиза. Оставьте пустым для
+												стандартного тёмного градиента.
+											</p>
+										</div>
+
 										<div className={styles.field}>
 											<p className={styles.label}>Цвет кнопки:</p>
 											<div className={styles.colorRow}>
@@ -1493,28 +1660,53 @@ const QuizSettingsModal = ({
 													}
 												/>
 												<input
-													className={styles.input}
+													id={getValidationFieldId('button-color')}
+													className={`${styles.input} ${
+														isValidationFieldInvalid(
+															getValidationFieldId('button-color')
+														)
+															? pageStyles.inputError
+															: ''
+													}`}
 													value={config.buttonColor || ''}
 													onChange={e =>
 														setField('buttonColor', e.target.value)
 													}
-													placeholder="По умолчанию — основной цвет"
+													onBlur={() => {
+														const fieldId =
+															getValidationFieldId('button-color')
+														setBlurValidationIssue(
+															!config.buttonColor ||
+																isWidgetHexColor(config.buttonColor)
+																? null
+																: {
+																		tab: 'main',
+																		fieldId,
+																		message:
+																			'Введите цвет в формате #RRGGBB'
+																	},
+															fieldId
+														)
+													}}
+													placeholder="Как цвет акцентов"
 													maxLength={7}
 												/>
 												{config.buttonColor && (
 													<button
 														type="button"
-														className={styles.clearColorBtn}
+														className={styles.inheritColorBtn}
 														onClick={() => setField('buttonColor', '')}
-														title="Сбросить"
 													>
-														✕
+														Вернуть цвет акцентов
 													</button>
 												)}
 											</div>
+											{renderValidationError(
+												getValidationFieldId('button-color')
+											)}
 											<p className={styles.hint}>
 												Цвет кнопок «Далее» и «Получить результат».
-												Оставьте пустым, чтобы использовать основной цвет.
+												Оставьте пустым, чтобы использовать цвет акцентов.
 											</p>
 										</div>
 									</div>
@@ -1528,45 +1720,77 @@ const QuizSettingsModal = ({
 									</h3>
 								</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>Цвет кнопки открытия:</p>
-									<div className={styles.colorRow}>
-										<input
-											type="color"
-											className={styles.colorPicker}
-											value={getWidgetColorPreview(
-												config.openButtonColor,
-												getWidgetColorPreview(config.color, '#4705fb')
+								<details className={styles.advancedBlock}>
+									<summary className={styles.advancedSummary}>
+										Тонкая настройка оформления
+									</summary>
+									<div className={styles.advancedContent}>
+										<div className={styles.field}>
+											<p className={styles.label}>Цвет кнопки открытия:</p>
+											<div className={styles.colorRow}>
+												<input
+													type="color"
+													className={styles.colorPicker}
+													value={getWidgetColorPreview(
+														config.openButtonColor,
+														getWidgetColorPreview(config.color, '#4705fb')
+													)}
+													onChange={e =>
+														setField('openButtonColor', e.target.value)
+													}
+												/>
+												<input
+													id={getValidationFieldId('open-button-color')}
+													className={`${styles.input} ${
+														isValidationFieldInvalid(
+															getValidationFieldId('open-button-color')
+														)
+															? pageStyles.inputError
+															: ''
+													}`}
+													value={config.openButtonColor || ''}
+													onChange={e =>
+														setField('openButtonColor', e.target.value)
+													}
+													onBlur={() => {
+														const fieldId = getValidationFieldId(
+															'open-button-color'
+														)
+														setBlurValidationIssue(
+															!config.openButtonColor ||
+																isWidgetHexColor(config.openButtonColor)
+																? null
+																: {
+																		tab: 'main',
+																		fieldId,
+																		message:
+																			'Введите цвет в формате #RRGGBB'
+																	},
+															fieldId
+														)
+													}}
+													placeholder="Как цвет акцентов"
+													maxLength={7}
+												/>
+												{config.openButtonColor && (
+													<button
+														type="button"
+														className={styles.inheritColorBtn}
+														onClick={() => setField('openButtonColor', '')}
+													>
+														Вернуть цвет акцентов
+													</button>
+												)}
+											</div>
+											{renderValidationError(
+												getValidationFieldId('open-button-color')
 											)}
-											onChange={e =>
-												setField('openButtonColor', e.target.value)
-											}
-										/>
-										<input
-											className={styles.input}
-											value={config.openButtonColor || ''}
-											onChange={e =>
-												setField('openButtonColor', e.target.value)
-											}
-											placeholder="По умолчанию — основной цвет"
-											maxLength={7}
-										/>
-										{config.openButtonColor && (
-											<button
-												type="button"
-												className={styles.clearColorBtn}
-												onClick={() => setField('openButtonColor', '')}
-												title="Сбросить"
-											>
-												✕
-											</button>
-										)}
+											<p className={styles.hint}>
+												Оставьте пустым, чтобы использовать цвет акцентов.
+											</p>
+										</div>
 									</div>
-									<p className={styles.hint}>
-										Цвет плавающей кнопки, которая открывает квиз. Оставьте
-										пустым, чтобы использовать основной цвет.
-									</p>
-								</div>
+								</details>
 
 								<div className={styles.field}>
 									<p className={styles.label}>Картинка кнопки открытия:</p>
@@ -1635,245 +1859,291 @@ const QuizSettingsModal = ({
 									</div>
 								</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Кнопка открытия — пульсация
-									</p>
-									<div className={styles.checkRow}>
-										<input
-											id="quizPulse"
-											type="checkbox"
-											checked={config.buttonPulse}
-											onChange={e =>
-												setField('buttonPulse', e.target.checked)
-											}
-										/>
-										<label
-											htmlFor="quizPulse"
-											className={styles.checkLabel}
-										>
-											Включить пульсацию кнопки
-										</label>
-									</div>
-									<p className={styles.hint}>
-										Дополнительный эффект свечения на плавающей кнопке
-										открытия квиза.
-									</p>
-								</div>
+								<details className={styles.advancedBlock}>
+									<summary className={styles.advancedSummary}>
+										Расширенные настройки
+									</summary>
+									<div className={styles.advancedContent}>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Кнопка открытия — пульсация
+											</p>
+											<div className={styles.checkRow}>
+												<input
+													id="quizPulse"
+													type="checkbox"
+													checked={config.buttonPulse}
+													onChange={e =>
+														setField('buttonPulse', e.target.checked)
+													}
+												/>
+												<label
+													htmlFor="quizPulse"
+													className={styles.checkLabel}
+												>
+													Включить пульсацию кнопки
+												</label>
+											</div>
+											<p className={styles.hint}>
+												Дополнительный эффект свечения на плавающей кнопке
+												открытия квиза.
+											</p>
+										</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Сторона расположения кнопки для открытия виджета на
-										вашем сайте:
-									</p>
-									<select
-										className={styles.input}
-										value={config.buttonSide}
-										onChange={e =>
-											setField(
-												'buttonSide',
-												e.target.value as 'left' | 'right'
-											)
-										}
-									>
-										<option value="right">Справа</option>
-										<option value="left">Слева</option>
-									</select>
-									<p className={styles.hint}>
-										С какой стороны экрана будет показана плавающая кнопка
-										открытия квиза.
-									</p>
-								</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Сторона расположения кнопки для открытия виджета на
+												вашем сайте:
+											</p>
+											<select
+												className={styles.input}
+												value={config.buttonSide}
+												onChange={e =>
+													setField(
+														'buttonSide',
+														e.target.value as 'left' | 'right'
+													)
+												}
+											>
+												<option value="right">Справа</option>
+												<option value="left">Слева</option>
+											</select>
+											<p className={styles.hint}>
+												С какой стороны экрана будет показана плавающая
+												кнопка открытия квиза.
+											</p>
+										</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>Отображение облачка</p>
-									<div className={styles.checkRow}>
-										<input
-											id="quizBubbleEnabled"
-											type="checkbox"
-											checked={config.bubbleEnabled ?? true}
-											onChange={e =>
-												setField('bubbleEnabled', e.target.checked)
-											}
-										/>
-										<label
-											htmlFor="quizBubbleEnabled"
-											className={styles.checkLabel}
-										>
-											Показывать облачко рядом с кнопкой
-										</label>
-									</div>
-									<p className={styles.hint}>
-										Если выключить, останется только плавающая кнопка.
-									</p>
-								</div>
+										<div className={styles.field}>
+											<p className={styles.label}>Отображение облачка</p>
+											<div className={styles.checkRow}>
+												<input
+													id="quizBubbleEnabled"
+													type="checkbox"
+													checked={config.bubbleEnabled ?? true}
+													onChange={e =>
+														setField('bubbleEnabled', e.target.checked)
+													}
+												/>
+												<label
+													htmlFor="quizBubbleEnabled"
+													className={styles.checkLabel}
+												>
+													Показывать облачко рядом с кнопкой
+												</label>
+											</div>
+											<p className={styles.hint}>
+												Если выключить, останется только плавающая кнопка.
+											</p>
+										</div>
 
-								{config.bubbleEnabled && (
-									<div className={styles.field}>
-										<p className={styles.label}>Текст облачка:</p>
-										<input
-											id={getValidationFieldId('bubble-text')}
-											className={`${styles.input} ${
-												isValidationFieldInvalid(
+										{config.bubbleEnabled && (
+											<div className={styles.field}>
+												<p className={styles.label}>Текст облачка:</p>
+												<input
+													id={getValidationFieldId('bubble-text')}
+													className={`${styles.input} ${
+														isValidationFieldInvalid(
+															getValidationFieldId('bubble-text')
+														)
+															? pageStyles.inputError
+															: ''
+													}`}
+													value={config.bubbleText ?? ''}
+													onChange={e =>
+														setField('bubbleText', e.target.value)
+													}
+													onBlur={() => {
+														const fieldId =
+															getValidationFieldId('bubble-text')
+														setBlurValidationIssue(
+															config.bubbleText.trim()
+																? null
+																: {
+																		tab: 'main',
+																		fieldId,
+																		message:
+																			'Укажите текст облачка или отключите его'
+																	},
+															fieldId
+														)
+													}}
+													placeholder="Пройдите квиз!"
+													maxLength={80}
+													aria-invalid={isValidationFieldInvalid(
+														getValidationFieldId('bubble-text')
+													)}
+													aria-describedby={getValidationDescriptionId(
+														getValidationFieldId('bubble-text')
+													)}
+												/>
+												{renderValidationError(
 													getValidationFieldId('bubble-text')
-												)
-													? pageStyles.inputError
-													: ''
-											}`}
-											value={config.bubbleText ?? ''}
-											onChange={e =>
-												setField('bubbleText', e.target.value)
-											}
-											placeholder="Пройдите квиз!"
-											maxLength={80}
-											aria-invalid={isValidationFieldInvalid(
-												getValidationFieldId('bubble-text')
-											)}
-											aria-describedby={getValidationDescriptionId(
-												getValidationFieldId('bubble-text')
-											)}
-										/>
-										{renderValidationError(
-											getValidationFieldId('bubble-text')
+												)}
+												<p className={styles.hint}>
+													Подсказка рядом с плавающей кнопкой. Если
+													оставить пустым, будет показан стандартный текст.
+												</p>
+											</div>
 										)}
-										<p className={styles.hint}>
-											Подсказка рядом с плавающей кнопкой. Если оставить
-											пустым, будет показан стандартный текст.
-										</p>
-									</div>
-								)}
 
-								<div className={styles.field}>
-									<div className={pageStyles.rangeHeader}>
-										<p className={styles.label}>Отступ снизу:</p>
-										<span className={pageStyles.rangeValue}>
-											{config.buttonBottom}%
-										</span>
-									</div>
-									<input
-										id={getValidationFieldId('button-bottom')}
-										type="range"
-										aria-label="Отступ снизу"
-										min={1}
-										max={50}
-										value={config.buttonBottom}
-										onChange={e =>
-											setField('buttonBottom', Number(e.target.value))
-										}
-										className={pageStyles.rangeInput}
-										aria-invalid={isValidationFieldInvalid(
-											getValidationFieldId('button-bottom')
-										)}
-										aria-describedby={getValidationDescriptionId(
-											getValidationFieldId('button-bottom')
-										)}
-									/>
-									{renderValidationError(
-										getValidationFieldId('button-bottom')
-									)}
-									<p className={styles.hint}>
-										Отступ от нижнего края экрана в процентах. 3 — почти
-										внизу, 50 — по центру.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<div className={pageStyles.rangeHeader}>
-										<p className={styles.label}>Отступ сбоку:</p>
-										<span className={pageStyles.rangeValue}>
-											{config.buttonOffset ?? 3}%
-										</span>
-									</div>
-									<input
-										type="range"
-										aria-label="Отступ сбоку"
-										min={1}
-										max={50}
-										value={config.buttonOffset ?? 3}
-										onChange={e =>
-											setField('buttonOffset', Number(e.target.value))
-										}
-										className={pageStyles.rangeInput}
-									/>
-									<p className={styles.hint}>
-										Отступ кнопки от левого или правого края экрана в
-										процентах. 3 — почти у края, 50 — по центру.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<div className={pageStyles.rangeHeader}>
-										<p className={styles.label}>Размер кнопки открытия:</p>
-										<span className={pageStyles.rangeValue}>
-											{config.buttonSize ?? 60}px
-										</span>
-									</div>
-									<input
-										type="range"
-										aria-label="Размер кнопки открытия"
-										min={40}
-										max={100}
-										value={config.buttonSize ?? 60}
-										onChange={e =>
-											setField('buttonSize', Number(e.target.value))
-										}
-										className={pageStyles.rangeInput}
-									/>
-									<p className={styles.hint}>
-										Размер плавающей кнопки открытия квиза в пикселях. По
-										умолчанию 60px.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>Автооткрытие:</p>
-									<div className={styles.checkRow}>
-										<input
-											id={`${titleId}-auto-open-enabled`}
-											type="checkbox"
-											checked={config.autoOpenDelay != null}
-											onChange={e =>
-												setField(
-													'autoOpenDelay',
-													e.target.checked ? 5 : null
-												)
-											}
-										/>
-										<label
-											htmlFor={`${titleId}-auto-open-enabled`}
-											className={styles.checkLabel}
-										>
-											Автоматически показывать
-										</label>
-									</div>
-									{config.autoOpenDelay != null && (
-										<>
+										<div className={styles.field}>
 											<div className={pageStyles.rangeHeader}>
-												<p className={styles.label}>Автооткрытие через:</p>
+												<p className={styles.label}>Отступ снизу:</p>
 												<span className={pageStyles.rangeValue}>
-													{config.autoOpenDelay} сек.
+													{config.buttonBottom}%
+												</span>
+											</div>
+											<input
+												id={getValidationFieldId('button-bottom')}
+												type="range"
+												aria-label="Отступ снизу"
+												min={1}
+												max={50}
+												value={config.buttonBottom}
+												onChange={e =>
+													setField('buttonBottom', Number(e.target.value))
+												}
+												onBlur={() => {
+													const fieldId =
+														getValidationFieldId('button-bottom')
+													setBlurValidationIssue(
+														config.buttonBottom >= 1 &&
+															config.buttonBottom <= 50
+															? null
+															: {
+																	tab: 'main',
+																	fieldId,
+																	message:
+																		'Высота кнопки: выберите значение от 1 до 50%'
+																},
+														fieldId
+													)
+												}}
+												className={pageStyles.rangeInput}
+												aria-invalid={isValidationFieldInvalid(
+													getValidationFieldId('button-bottom')
+												)}
+												aria-describedby={getValidationDescriptionId(
+													getValidationFieldId('button-bottom')
+												)}
+											/>
+											{renderValidationError(
+												getValidationFieldId('button-bottom')
+											)}
+											<p className={styles.hint}>
+												Отступ от нижнего края экрана в процентах. 3 —
+												почти внизу, 50 — по центру.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<div className={pageStyles.rangeHeader}>
+												<p className={styles.label}>Отступ сбоку:</p>
+												<span className={pageStyles.rangeValue}>
+													{config.buttonOffset ?? 3}%
 												</span>
 											</div>
 											<input
 												type="range"
-												aria-label="Автооткрытие через"
+												aria-label="Отступ сбоку"
 												min={1}
-												max={60}
-												step={1}
-												className={pageStyles.rangeInput}
-												value={config.autoOpenDelay}
+												max={50}
+												value={config.buttonOffset ?? 3}
 												onChange={e =>
-													setField('autoOpenDelay', Number(e.target.value))
+													setField('buttonOffset', Number(e.target.value))
 												}
+												className={pageStyles.rangeInput}
 											/>
-										</>
-									)}
-									<p className={styles.hint}>
-										Через сколько секунд виджет откроется автоматически
-										после открытия страницы вашего сайта. Если пользователь
-										уже участвовал, автооткрытие не сработает.
-									</p>
-								</div>
+											<p className={styles.hint}>
+												Отступ кнопки от левого или правого края экрана в
+												процентах. 3 — почти у края, 50 — по центру.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<div className={pageStyles.rangeHeader}>
+												<p className={styles.label}>
+													Размер кнопки открытия:
+												</p>
+												<span className={pageStyles.rangeValue}>
+													{config.buttonSize ?? 60}px
+												</span>
+											</div>
+											<input
+												type="range"
+												aria-label="Размер кнопки открытия"
+												min={40}
+												max={100}
+												value={config.buttonSize ?? 60}
+												onChange={e =>
+													setField('buttonSize', Number(e.target.value))
+												}
+												className={pageStyles.rangeInput}
+											/>
+											<p className={styles.hint}>
+												Размер плавающей кнопки открытия квиза в пикселях.
+												По умолчанию 60px.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<p className={styles.label}>Автооткрытие:</p>
+											<div className={styles.checkRow}>
+												<input
+													id={`${titleId}-auto-open-enabled`}
+													type="checkbox"
+													checked={config.autoOpenDelay != null}
+													onChange={e =>
+														setField(
+															'autoOpenDelay',
+															e.target.checked ? 5 : null
+														)
+													}
+												/>
+												<label
+													htmlFor={`${titleId}-auto-open-enabled`}
+													className={styles.checkLabel}
+												>
+													Автоматически показывать
+												</label>
+											</div>
+											{config.autoOpenDelay != null && (
+												<>
+													<div className={pageStyles.rangeHeader}>
+														<p className={styles.label}>
+															Автооткрытие через:
+														</p>
+														<span className={pageStyles.rangeValue}>
+															{config.autoOpenDelay} сек.
+														</span>
+													</div>
+													<input
+														type="range"
+														aria-label="Автооткрытие через"
+														min={1}
+														max={60}
+														step={1}
+														className={pageStyles.rangeInput}
+														value={config.autoOpenDelay}
+														onChange={e =>
+															setField(
+																'autoOpenDelay',
+																Number(e.target.value)
+															)
+														}
+													/>
+												</>
+											)}
+											<p className={styles.hint}>
+												Через сколько секунд виджет откроется автоматически
+												после открытия страницы вашего сайта. Если
+												пользователь уже участвовал, автооткрытие не
+												сработает.
+											</p>
+										</div>
+									</div>
+								</details>
 							</div>
 
 							<div className={styles.settingsGroup}>
@@ -1894,6 +2164,19 @@ const QuizSettingsModal = ({
 										}`}
 										value={config.title}
 										onChange={e => setField('title', e.target.value)}
+										onBlur={() => {
+											const fieldId = getValidationFieldId('title')
+											setBlurValidationIssue(
+												config.title.trim()
+													? null
+													: {
+															tab: 'main',
+															fieldId,
+															message: 'Укажите заголовок квиза'
+														},
+												fieldId
+											)
+										}}
 										placeholder="Пройдите наш квиз!"
 										maxLength={60}
 										aria-invalid={isValidationFieldInvalid(
@@ -1936,6 +2219,19 @@ const QuizSettingsModal = ({
 										}`}
 										value={config.buttonText}
 										onChange={e => setField('buttonText', e.target.value)}
+										onBlur={() => {
+											const fieldId = getValidationFieldId('button-text')
+											setBlurValidationIssue(
+												config.buttonText.trim()
+													? null
+													: {
+															tab: 'main',
+															fieldId,
+															message: 'Укажите текст кнопки запуска'
+														},
+												fieldId
+											)
+										}}
 										placeholder="Начать квиз"
 										maxLength={30}
 										aria-invalid={isValidationFieldInvalid(
@@ -1971,6 +2267,21 @@ const QuizSettingsModal = ({
 											onChange={e =>
 												setField('contactTitle', e.target.value)
 											}
+											onBlur={() => {
+												const fieldId =
+													getValidationFieldId('contact-title')
+												setBlurValidationIssue(
+													config.contactTitle.trim()
+														? null
+														: {
+																tab: 'main',
+																fieldId,
+																message:
+																	'Укажите заголовок экрана контакта'
+															},
+													fieldId
+												)
+											}}
 											placeholder="Оставьте контакт для получения результата"
 											maxLength={80}
 											aria-invalid={isValidationFieldInvalid(
@@ -2043,6 +2354,22 @@ const QuizSettingsModal = ({
 												onChange={e =>
 													setField('privacyUrl', e.target.value)
 												}
+												onBlur={() => {
+													const fieldId =
+														getValidationFieldId('privacy-url')
+													setBlurValidationIssue(
+														config.privacyUrl.trim() &&
+															isHttpUrl(config.privacyUrl)
+															? null
+															: {
+																	tab: 'main',
+																	fieldId,
+																	message:
+																		'Укажите полную ссылку на политику с http:// или https://'
+																},
+														fieldId
+													)
+												}}
 												placeholder="https://..."
 												maxLength={500}
 												aria-invalid={isValidationFieldInvalid(
@@ -2063,7 +2390,7 @@ const QuizSettingsModal = ({
 
 										<details className={styles.advancedBlock}>
 											<summary className={styles.advancedSummary}>
-												Дополнительно
+												Расширенные настройки
 											</summary>
 
 											<div className={styles.advancedContent}>
@@ -2193,6 +2520,21 @@ const QuizSettingsModal = ({
 										onChange={e =>
 											setField('quizCooldownDays', Number(e.target.value))
 										}
+										onBlur={() => {
+											const fieldId = getValidationFieldId('cooldown')
+											const value = config.quizCooldownDays ?? 0
+											setBlurValidationIssue(
+												value >= 0 && value <= 365
+													? null
+													: {
+															tab: 'main',
+															fieldId,
+															message:
+																'Повторное прохождение: выберите значение от 0 до 365 дней'
+														},
+												fieldId
+											)
+										}}
 										aria-invalid={isValidationFieldInvalid(
 											getValidationFieldId('cooldown')
 										)}
@@ -2237,8 +2579,8 @@ const QuizSettingsModal = ({
 									) : (
 										<div className={styles.dangerItem}>
 											<p className={styles.hint}>
-												Все посетители смогут пройти квиз заново. Действие
-												необратимо.
+												Сброс сохранится в черновике. Все посетители смогут
+												пройти квиз заново только после публикации виджета.
 											</p>
 											<div className={styles.footerActions}>
 												<button
@@ -2471,6 +2813,21 @@ const QuizSettingsModal = ({
 										onChange={e =>
 											updateQuestion(qIdx, 'text', e.target.value)
 										}
+										onBlur={() => {
+											const fieldId = getValidationFieldId(
+												`question-${q.id}-text`
+											)
+											setBlurValidationIssue(
+												q.text.trim()
+													? null
+													: {
+															tab: 'questions',
+															fieldId,
+															message: `Вопрос ${qIdx + 1}: заполните текст вопроса`
+														},
+												fieldId
+											)
+										}}
 										placeholder={`Текст вопроса ${qIdx + 1}`}
 										maxLength={200}
 										aria-invalid={isValidationFieldInvalid(
@@ -2513,6 +2870,21 @@ const QuizSettingsModal = ({
 																e.target.value
 															)
 														}
+														onBlur={() => {
+															const fieldId = getValidationFieldId(
+																`question-${q.id}-option-${opt.id}`
+															)
+															setBlurValidationIssue(
+																opt.text.trim()
+																	? null
+																	: {
+																			tab: 'questions',
+																			fieldId,
+																			message: `Вопрос ${qIdx + 1}, вариант ${oIdx + 1}: заполните текст`
+																		},
+																fieldId
+															)
+														}}
 														placeholder={`Вариант ${oIdx + 1}`}
 														maxLength={150}
 														aria-invalid={isValidationFieldInvalid(
@@ -2726,6 +3098,21 @@ const QuizSettingsModal = ({
 											onChange={e =>
 												updateResult(rIdx, 'title', e.target.value)
 											}
+											onBlur={() => {
+												const fieldId = getValidationFieldId(
+													`result-${r.id}-title`
+												)
+												setBlurValidationIssue(
+													r.title.trim()
+														? null
+														: {
+																tab: 'results',
+																fieldId,
+																message: `Результат ${rIdx + 1}: заполните заголовок`
+															},
+													fieldId
+												)
+											}}
 											placeholder="Например: Вам подойдёт тариф HARD"
 											maxLength={80}
 											aria-invalid={isValidationFieldInvalid(
@@ -2801,6 +3188,21 @@ const QuizSettingsModal = ({
 											onChange={e =>
 												updateResult(rIdx, 'buttonText', e.target.value)
 											}
+											onBlur={() => {
+												const fieldId = getValidationFieldId(
+													`result-${r.id}-button-text`
+												)
+												setBlurValidationIssue(
+													r.buttonUrl.trim() && !r.buttonText.trim()
+														? {
+																tab: 'results',
+																fieldId,
+																message: `Результат ${rIdx + 1}: заполните текст кнопки или уберите ссылку`
+															}
+														: null,
+													fieldId
+												)
+											}}
 											placeholder="Получить скидку"
 											maxLength={40}
 											aria-invalid={isValidationFieldInvalid(
@@ -2839,6 +3241,28 @@ const QuizSettingsModal = ({
 											onChange={e =>
 												updateResult(rIdx, 'buttonUrl', e.target.value)
 											}
+											onBlur={() => {
+												const fieldId = getValidationFieldId(
+													`result-${r.id}-button-url`
+												)
+												const value = r.buttonUrl.trim()
+												const message =
+													r.buttonText.trim() && !value
+														? `Результат ${rIdx + 1}: заполните ссылку кнопки или уберите текст кнопки`
+														: value && !isHttpUrl(value)
+															? `Результат ${rIdx + 1}: укажите полную ссылку с http:// или https://`
+															: null
+												setBlurValidationIssue(
+													message
+														? {
+																tab: 'results',
+																fieldId,
+																message
+															}
+														: null,
+													fieldId
+												)
+											}}
 											placeholder="https://..."
 											maxLength={500}
 											aria-invalid={isValidationFieldInvalid(
@@ -2962,14 +3386,44 @@ const QuizSettingsModal = ({
 										<div className={styles.field}>
 											<p className={styles.label}>Внешний URL (Webhook)</p>
 											<input
-												className={styles.input}
+												id={getValidationFieldId(
+													'integration-webhook-url'
+												)}
+												className={`${styles.input} ${
+													isValidationFieldInvalid(
+														getValidationFieldId('integration-webhook-url')
+													)
+														? pageStyles.inputError
+														: ''
+												}`}
 												type="url"
 												value={config.integrations?.webhookUrl || ''}
 												onChange={e =>
 													setIntegration('webhookUrl', e.target.value)
 												}
+												onBlur={() => {
+													const fieldId = getValidationFieldId(
+														'integration-webhook-url'
+													)
+													const value =
+														config.integrations.webhookUrl?.trim() || ''
+													setBlurValidationIssue(
+														!value || isHttpUrl(value)
+															? null
+															: {
+																	tab: 'integrations',
+																	fieldId,
+																	message:
+																		'Укажите полный URL webhook с http:// или https://'
+																},
+														fieldId
+													)
+												}}
 												placeholder="https://..."
 											/>
+											{renderValidationError(
+												getValidationFieldId('integration-webhook-url')
+											)}
 											<p className={styles.hint}>
 												На указанный URL придёт POST-запрос с данными:{' '}
 												<b>contact</b>, <b>phone</b>, <b>email</b>,{' '}
@@ -2983,7 +3437,18 @@ const QuizSettingsModal = ({
 												Отправка заявок в Битрикс24
 											</p>
 											<input
-												className={styles.input}
+												id={getValidationFieldId(
+													'integration-bitrix24-url'
+												)}
+												className={`${styles.input} ${
+													isValidationFieldInvalid(
+														getValidationFieldId(
+															'integration-bitrix24-url'
+														)
+													)
+														? pageStyles.inputError
+														: ''
+												}`}
 												type="url"
 												value={
 													config.integrations?.bitrix24WebhookUrl || ''
@@ -2994,8 +3459,30 @@ const QuizSettingsModal = ({
 														e.target.value
 													)
 												}
+												onBlur={() => {
+													const fieldId = getValidationFieldId(
+														'integration-bitrix24-url'
+													)
+													const value =
+														config.integrations.bitrix24WebhookUrl?.trim() ||
+														''
+													setBlurValidationIssue(
+														!value || isHttpUrl(value)
+															? null
+															: {
+																	tab: 'integrations',
+																	fieldId,
+																	message:
+																		'Укажите полный URL Bitrix24 с http:// или https://'
+																},
+														fieldId
+													)
+												}}
 												placeholder="https://yourcompany.bitrix24.ru/rest/..."
 											/>
+											{renderValidationError(
+												getValidationFieldId('integration-bitrix24-url')
+											)}
 											<p className={styles.hint}>
 												Укажите URL вашего входящего вебхука из Битрикс24.
 												Перейдите в Битрикс24 → Приложения → Вебхуки →
@@ -3290,6 +3777,21 @@ const QuizSettingsModal = ({
 							</div>
 						</div>
 					)}
+					{tab !== 'code' && tab !== 'info' && (
+						<div className={styles.sectionReset}>
+							<button
+								type="button"
+								className={styles.resetAttemptsBtn}
+								onClick={() => setConfirmResetSection(tab)}
+								disabled={isDangerActionPending}
+							>
+								Сбросить раздел
+							</button>
+							<p className={styles.hint}>
+								Остальные разделы и домен установки не изменятся.
+							</p>
+						</div>
+					)}
 				</div>
 
 				<div className={styles.stickyFooter}>
@@ -3324,6 +3826,17 @@ const QuizSettingsModal = ({
 					</div>
 				</div>
 				{closeGuardDialog}
+				{confirmResetSection && (
+					<ConfirmDialog
+						title="Сбросить текущий раздел?"
+						message="Настройки только этого раздела будут заменены стандартными. Остальные разделы и домен установки сохранятся."
+						confirmLabel="Да, сбросить раздел"
+						cancelLabel="Отмена"
+						confirmDisabled={isDangerActionPending}
+						onConfirm={handleResetSection}
+						onCancel={() => setConfirmResetSection(null)}
+					/>
+				)}
 			</div>
 		</div>
 	)

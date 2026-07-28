@@ -221,7 +221,9 @@ const OnlineConsultantSettingsModal = ({
 	previewPortalTarget,
 	onDirtyChange,
 	onRevisionConflict,
-	lifecycleActions
+	lifecycleActions,
+	onPreviewDeviceChange,
+	onPreviewConfigChange
 }: Props) => {
 	const titleId = useId()
 	const buttonImageInputId = useId()
@@ -235,6 +237,10 @@ const OnlineConsultantSettingsModal = ({
 	)
 	const draftRevisionRef = useRef(onlineConsultant.draftRevision)
 	const [confirmResetDefaults, setConfirmResetDefaults] = useState(false)
+	const [confirmResetSection, setConfirmResetSection] = useState<Exclude<
+		Tab,
+		'code' | 'info'
+	> | null>(null)
 	const [validationIssue, setValidationIssue] =
 		useState<ValidationIssue | null>(null)
 	const [savedSnapshot, setSavedSnapshot] = useState(
@@ -420,6 +426,7 @@ const OnlineConsultantSettingsModal = ({
 		setTab(issue.tab)
 		window.requestAnimationFrame(() => {
 			const field = document.getElementById(issue.fieldId)
+			field?.closest('details')?.setAttribute('open', '')
 			field?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 			field?.focus({ preventScroll: true })
 		})
@@ -442,6 +449,140 @@ const OnlineConsultantSettingsModal = ({
 				{validationIssue.message}
 			</p>
 		) : null
+
+	const setInlineValidationIssue = (
+		tabId: Tab,
+		fieldId: string,
+		message?: string
+	) => {
+		setValidationIssue(current => {
+			if (message) return { tab: tabId, fieldId, message }
+			return current?.fieldId === fieldId ? null : current
+		})
+	}
+
+	const validateFieldOnBlur = (field: string) => {
+		const colorFieldIds: Record<string, string> = {
+			color: `${titleId}-color`,
+			bgColor: `${titleId}-bg-color`,
+			buttonColor: `${titleId}-button-color`,
+			openButtonColor: `${titleId}-open-button-color`
+		}
+		if (field in colorFieldIds) {
+			const colorValues: Record<string, string> = {
+				color: cfg.color,
+				bgColor: cfg.bgColor,
+				buttonColor: cfg.buttonColor,
+				openButtonColor: cfg.openButtonColor
+			}
+			const value = colorValues[field]
+			setInlineValidationIssue(
+				'main',
+				colorFieldIds[field],
+				!value || isWidgetHexColor(value)
+					? undefined
+					: 'Введите цвет в формате #RRGGBB'
+			)
+			return
+		}
+		if (field === 'name') {
+			setInlineValidationIssue(
+				'main',
+				`${titleId}-name`,
+				name.trim() ? undefined : 'Укажите название виджета'
+			)
+			return
+		}
+		if (field === 'title') {
+			setInlineValidationIssue(
+				'form',
+				`${titleId}-form-title`,
+				cfg.title.trim() ? undefined : 'Укажите заголовок виджета'
+			)
+			return
+		}
+		if (field === 'contactTitle') {
+			setInlineValidationIssue(
+				'form',
+				`${titleId}-contact-title`,
+				cfg.dataType === 'NONE' || cfg.contactTitle.trim()
+					? undefined
+					: 'Укажите заголовок формы'
+			)
+			return
+		}
+		if (field === 'submitButtonText') {
+			setInlineValidationIssue(
+				'form',
+				`${titleId}-submit-text`,
+				cfg.dataType === 'NONE' || cfg.submitButtonText.trim()
+					? undefined
+					: 'Укажите текст кнопки отправки'
+			)
+			return
+		}
+		if (field === 'privacyUrl') {
+			setInlineValidationIssue(
+				'form',
+				`${titleId}-privacy-url`,
+				cfg.dataType === 'NONE' ||
+					(cfg.privacyUrl.trim() && isHttpUrl(cfg.privacyUrl))
+					? undefined
+					: 'Укажите полную ссылку на политику с http:// или https://'
+			)
+		}
+	}
+
+	const validateActionFieldOnBlur = (
+		index: number,
+		field: 'label' | 'answer' | 'button' | 'url'
+	) => {
+		const action = cfg.quickActions[index]
+		if (!action) return
+		const prefix = `${titleId}-action-${action.id}`
+		const hasButtonText = Boolean(action.buttonText.trim())
+		const hasButtonUrl = Boolean(action.buttonUrl.trim())
+
+		if (field === 'label') {
+			setInlineValidationIssue(
+				'actions',
+				`${prefix}-label`,
+				action.label.trim()
+					? undefined
+					: `Вопрос ${index + 1}: укажите текст вопроса`
+			)
+			return
+		}
+		if (field === 'answer') {
+			setInlineValidationIssue(
+				'actions',
+				`${prefix}-answer`,
+				action.answer.trim()
+					? undefined
+					: `Вопрос ${index + 1}: укажите быстрый ответ`
+			)
+			return
+		}
+		if (field === 'button') {
+			setInlineValidationIssue(
+				'actions',
+				`${prefix}-button`,
+				hasButtonUrl && !hasButtonText
+					? `Вопрос ${index + 1}: заполните текст и ссылку кнопки вместе`
+					: undefined
+			)
+			return
+		}
+		setInlineValidationIssue(
+			'actions',
+			`${prefix}-url`,
+			hasButtonText !== hasButtonUrl
+				? `Вопрос ${index + 1}: заполните текст и ссылку кнопки вместе`
+				: hasButtonUrl && !isHttpUrl(action.buttonUrl)
+					? `Вопрос ${index + 1}: укажите полную ссылку с http:// или https://`
+					: undefined
+		)
+	}
 
 	const addAction = () => {
 		setValidationIssue(null)
@@ -553,13 +694,75 @@ const OnlineConsultantSettingsModal = ({
 		toast.success('Стандартные настройки применены. Сохраните черновик')
 	}
 
+	const handleResetSection = (section: Exclude<Tab, 'code' | 'info'>) => {
+		const defaults = getDefaultConfig()
+		setCfg(previous => {
+			if (section === 'main') {
+				return {
+					...previous,
+					color: defaults.color,
+					bgColor: defaults.bgColor,
+					buttonColor: defaults.buttonColor,
+					openButtonColor: defaults.openButtonColor,
+					buttonSide: defaults.buttonSide,
+					buttonPulse: defaults.buttonPulse,
+					buttonBottom: defaults.buttonBottom,
+					buttonOffset: defaults.buttonOffset,
+					buttonSize: defaults.buttonSize,
+					buttonImageUrl: defaults.buttonImageUrl,
+					autoOpenDelay: defaults.autoOpenDelay,
+					bubbleEnabled: defaults.bubbleEnabled,
+					bubbleText: defaults.bubbleText
+				}
+			}
+			if (section === 'actions') {
+				return {
+					...previous,
+					quickActions: normalizeQuickActions(defaults.quickActions)
+				}
+			}
+			if (section === 'form') {
+				return {
+					...previous,
+					title: defaults.title,
+					subtitle: defaults.subtitle,
+					dataType: defaults.dataType,
+					contactTitle: defaults.contactTitle,
+					submitButtonText: defaults.submitButtonText,
+					successTitle: defaults.successTitle,
+					successSubtitle: defaults.successSubtitle,
+					privacyUrl: defaults.privacyUrl,
+					developInfoActive: defaults.developInfoActive,
+					filterDuplicates: defaults.filterDuplicates
+				}
+			}
+			return {
+				...previous,
+				integrations: { ...defaults.integrations }
+			}
+		})
+		setValidationIssue(null)
+		setConfirmResetSection(null)
+		toast.success('Раздел сброшен в черновике. Сохраните черновик')
+	}
+
 	const save = () => {
 		const invalidColor = !isWidgetHexColor(cfg.color)
 			? 'color'
 			: findInvalidWidgetColor(cfg)
 		if (invalidColor) {
-			setTab('main')
-			toast.error('Цвет должен быть указан в формате #RRGGBB')
+			const colorField = invalidColor.split('.').pop() || 'color'
+			const fieldIds: Record<string, string> = {
+				color: `${titleId}-color`,
+				bgColor: `${titleId}-bg-color`,
+				buttonColor: `${titleId}-button-color`,
+				openButtonColor: `${titleId}-open-button-color`
+			}
+			reportValidationIssue({
+				tab: 'main',
+				fieldId: fieldIds[colorField] || `${titleId}-color`,
+				message: 'Введите цвет в формате #RRGGBB'
+			})
 			return
 		}
 
@@ -751,6 +954,8 @@ const OnlineConsultantSettingsModal = ({
 						type="onlineConsultant"
 						config={cfg}
 						isHardPlan={canUseCustomButtonImage}
+						onDeviceChange={onPreviewDeviceChange}
+						onConfigChange={onPreviewConfigChange}
 						autoCollapse={
 							!isPagePresentation &&
 							['integrations', 'code', 'info'].includes(tab)
@@ -873,6 +1078,7 @@ const OnlineConsultantSettingsModal = ({
 											setValidationIssue(null)
 											setName(e.target.value)
 										}}
+										onBlur={() => validateFieldOnBlur('name')}
 										maxLength={50}
 										aria-invalid={
 											validationIssue?.fieldId === `${titleId}-name`
@@ -893,16 +1099,16 @@ const OnlineConsultantSettingsModal = ({
 											onChange={e => set({ color: e.target.value })}
 										/>
 										<input
-											className={`${styles.input} ${
-												!isWidgetHexColor(cfg.color)
-													? styles.inputError
-													: ''
-											}`}
+											id={`${titleId}-color`}
+											className={inputClassName(`${titleId}-color`)}
 											value={cfg.color}
 											onChange={e => set({ color: e.target.value })}
+											onBlur={() => validateFieldOnBlur('color')}
 											placeholder="#ef2b17"
 											maxLength={7}
-											aria-invalid={!isWidgetHexColor(cfg.color)}
+											aria-invalid={
+												validationIssue?.fieldId === `${titleId}-color`
+											}
 										/>
 										{cfg.color && cfg.color !== '#ef2b17' && (
 											<button
@@ -915,83 +1121,159 @@ const OnlineConsultantSettingsModal = ({
 											</button>
 										)}
 									</div>
-									{!isWidgetHexColor(cfg.color) && (
-										<p className={styles.fieldError}>
-											Введите цвет в формате #RRGGBB
-										</p>
-									)}
+									{fieldError(`${titleId}-color`)}
 									<p className={styles.hint}>
 										Цвет акцентов внутри окна онлайн-консультанта.
 									</p>
 								</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>Цвет фона виджета</p>
-									<div className={styles.colorRow}>
-										<input
-											className={styles.colorPicker}
-											type="color"
-											value={getWidgetColorPreview(cfg.bgColor, '#ffffff')}
-											onChange={e => set({ bgColor: e.target.value })}
-										/>
-										<input
-											className={styles.input}
-											value={cfg.bgColor || ''}
-											onChange={e => set({ bgColor: e.target.value })}
-											placeholder="#ffffff"
-											maxLength={7}
-										/>
-										{cfg.bgColor && (
-											<button
-												type="button"
-												className={styles.clearColorBtn}
-												onClick={() => set({ bgColor: '' })}
-												title="Сбросить к стандартному"
-											>
-												✕
-											</button>
-										)}
+								<details className={styles.optionalDetails}>
+									<summary className={styles.optionalSummary}>
+										Тонкая настройка оформления
+									</summary>
+									<div className={styles.optionalContent}>
+										<div className={styles.field}>
+											<p className={styles.label}>Цвет фона виджета</p>
+											<div className={styles.colorRow}>
+												<input
+													className={styles.colorPicker}
+													type="color"
+													value={getWidgetColorPreview(
+														cfg.bgColor,
+														'#ffffff'
+													)}
+													onChange={e => set({ bgColor: e.target.value })}
+												/>
+												<input
+													id={`${titleId}-bg-color`}
+													className={inputClassName(`${titleId}-bg-color`)}
+													value={cfg.bgColor || ''}
+													onChange={e => set({ bgColor: e.target.value })}
+													onBlur={() => validateFieldOnBlur('bgColor')}
+													placeholder="#ffffff"
+													maxLength={7}
+													aria-invalid={
+														validationIssue?.fieldId ===
+														`${titleId}-bg-color`
+													}
+												/>
+												{cfg.bgColor && (
+													<button
+														type="button"
+														className={styles.clearColorBtn}
+														onClick={() => set({ bgColor: '' })}
+														title="Сбросить к стандартному"
+													>
+														✕
+													</button>
+												)}
+											</div>
+											{fieldError(`${titleId}-bg-color`)}
+											<p className={styles.hint}>
+												Цвет фона окна онлайн-консультанта. Оставьте пустым
+												для стандартного белого.
+											</p>
+										</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Цвет кнопки «Отправить»:
+											</p>
+											<div className={styles.colorRow}>
+												<input
+													className={styles.colorPicker}
+													type="color"
+													value={getWidgetColorPreview(
+														cfg.buttonColor,
+														getWidgetColorPreview(cfg.color, '#ef2b17')
+													)}
+													onChange={e =>
+														set({ buttonColor: e.target.value })
+													}
+												/>
+												<input
+													id={`${titleId}-button-color`}
+													className={inputClassName(
+														`${titleId}-button-color`
+													)}
+													value={cfg.buttonColor || ''}
+													placeholder="По умолчанию — цвет акцентов"
+													onChange={e =>
+														set({ buttonColor: e.target.value })
+													}
+													onBlur={() => validateFieldOnBlur('buttonColor')}
+													maxLength={7}
+													aria-invalid={
+														validationIssue?.fieldId ===
+														`${titleId}-button-color`
+													}
+												/>
+												{cfg.buttonColor && (
+													<button
+														type="button"
+														className={styles.clearColorBtn}
+														onClick={() => set({ buttonColor: '' })}
+														title="Вернуть цвет акцентов"
+														aria-label="Вернуть цвет акцентов"
+													>
+														✕
+													</button>
+												)}
+											</div>
+											{fieldError(`${titleId}-button-color`)}
+											<p className={styles.hint}>
+												Цвет кнопки «Отправить» внутри формы. Оставьте
+												пустым для использования цвета акцентов.
+											</p>
+										</div>
+										<div className={styles.field}>
+											<p className={styles.label}>Цвет кнопки открытия:</p>
+											<div className={styles.colorRow}>
+												<input
+													className={styles.colorPicker}
+													type="color"
+													value={getWidgetColorPreview(
+														cfg.openButtonColor,
+														getWidgetColorPreview(cfg.color, '#ef2b17')
+													)}
+													onChange={e =>
+														set({ openButtonColor: e.target.value })
+													}
+												/>
+												<input
+													id={`${titleId}-open-button-color`}
+													className={inputClassName(
+														`${titleId}-open-button-color`
+													)}
+													value={cfg.openButtonColor || ''}
+													placeholder="По умолчанию — цвет акцентов"
+													onChange={e =>
+														set({ openButtonColor: e.target.value })
+													}
+													onBlur={() =>
+														validateFieldOnBlur('openButtonColor')
+													}
+													maxLength={7}
+													aria-invalid={
+														validationIssue?.fieldId ===
+														`${titleId}-open-button-color`
+													}
+												/>
+												{cfg.openButtonColor && (
+													<button
+														type="button"
+														className={styles.clearColorBtn}
+														onClick={() => set({ openButtonColor: '' })}
+														title="Вернуть цвет акцентов"
+														aria-label="Вернуть цвет акцентов"
+													>
+														✕
+													</button>
+												)}
+											</div>
+											{fieldError(`${titleId}-open-button-color`)}
+										</div>
 									</div>
-									<p className={styles.hint}>
-										Цвет фона окна онлайн-консультанта. Оставьте пустым для
-										стандартного белого.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>Цвет кнопки «Отправить»:</p>
-									<div className={styles.colorRow}>
-										<input
-											className={styles.colorPicker}
-											type="color"
-											value={getWidgetColorPreview(
-												cfg.buttonColor,
-												getWidgetColorPreview(cfg.color, '#ef2b17')
-											)}
-											onChange={e => set({ buttonColor: e.target.value })}
-										/>
-										<input
-											className={styles.input}
-											value={cfg.buttonColor || ''}
-											placeholder="По умолчанию — основной цвет"
-											onChange={e => set({ buttonColor: e.target.value })}
-										/>
-										{cfg.buttonColor && (
-											<button
-												type="button"
-												className={styles.clearColorBtn}
-												onClick={() => set({ buttonColor: '' })}
-												title="Сбросить"
-											>
-												✕
-											</button>
-										)}
-									</div>
-									<p className={styles.hint}>
-										Цвет кнопки «Отправить» внутри формы. Оставьте пустым
-										для использования основного цвета.
-									</p>
-								</div>
+								</details>
 							</div>
 							<div className={styles.settingsGroup}>
 								<div className={styles.settingsGroupHeader}>
@@ -999,194 +1281,208 @@ const OnlineConsultantSettingsModal = ({
 										Кнопка открытия
 									</h3>
 								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Картинка кнопки открытия:</p>
-									<div className={styles.buttonImageBox}>
-										<div className={styles.buttonImagePreview}>
-											<Image
-												src={buttonImagePreviewUrl}
-												alt="Картинка кнопки открытия"
-												width={80}
-												height={80}
-												unoptimized
-											/>
-										</div>
-										<div className={styles.buttonImageContent}>
-											<p className={styles.hint}>
-												PNG с прозрачным фоном, до 320x320 px и до 200 КБ.
+								<details className={styles.optionalDetails}>
+									<summary className={styles.optionalSummary}>
+										Расширенные настройки
+									</summary>
+									<div className={styles.optionalContent}>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Картинка кнопки открытия:
 											</p>
-											<p className={styles.hint}>
-												После загрузки обновите страницу с установленным
-												виджетом. Если кнопка осталась старой, выполните
-												жёсткое обновление: Ctrl+F5 или Cmd+Shift+R.
-											</p>
-											<div className={styles.buttonImageActions}>
-												<label
-													htmlFor={buttonImageInputId}
-													className={`${styles.copyBtn} ${
-														buttonImageUploadDisabled
-															? styles.buttonImageUploadDisabled
-															: ''
-													}`}
-												>
-													Загрузить PNG
-												</label>
-												<input
-													id={buttonImageInputId}
-													type="file"
-													accept="image/png"
-													className={styles.fileInput}
-													disabled={buttonImageUploadDisabled}
-													onChange={handleButtonImageChange}
-												/>
-												{cfg.buttonImageUrl && (
-													<button
-														type="button"
-														className={styles.resetAttemptsBtn}
-														onClick={resetButtonImage}
-														disabled={isDangerActionPending}
-													>
-														Вернуть стандартную
-													</button>
-												)}
+											<div className={styles.buttonImageBox}>
+												<div className={styles.buttonImagePreview}>
+													<Image
+														src={buttonImagePreviewUrl}
+														alt="Картинка кнопки открытия"
+														width={80}
+														height={80}
+														unoptimized
+													/>
+												</div>
+												<div className={styles.buttonImageContent}>
+													<p className={styles.hint}>
+														PNG с прозрачным фоном, до 320x320 px и до 200
+														КБ.
+													</p>
+													<p className={styles.hint}>
+														После загрузки обновите страницу с
+														установленным виджетом. Если кнопка осталась
+														старой, выполните жёсткое обновление: Ctrl+F5
+														или Cmd+Shift+R.
+													</p>
+													<div className={styles.buttonImageActions}>
+														<label
+															htmlFor={buttonImageInputId}
+															className={`${styles.copyBtn} ${
+																buttonImageUploadDisabled
+																	? styles.buttonImageUploadDisabled
+																	: ''
+															}`}
+														>
+															Загрузить PNG
+														</label>
+														<input
+															id={buttonImageInputId}
+															type="file"
+															accept="image/png"
+															className={styles.fileInput}
+															disabled={buttonImageUploadDisabled}
+															onChange={handleButtonImageChange}
+														/>
+														{cfg.buttonImageUrl && (
+															<button
+																type="button"
+																className={styles.resetAttemptsBtn}
+																onClick={resetButtonImage}
+																disabled={isDangerActionPending}
+															>
+																Вернуть стандартную
+															</button>
+														)}
+													</div>
+													{!canUseCustomButtonImage && (
+														<p className={styles.domainHint}>
+															Своя картинка кнопки доступна только на
+															активном тарифе Hard.
+														</p>
+													)}
+													{canUseCustomButtonImage &&
+														hasUnsavedChanges && (
+															<p className={styles.hint}>
+																Перед загрузкой картинки сохраните текущие
+																настройки.
+															</p>
+														)}
+												</div>
 											</div>
-											{!canUseCustomButtonImage && (
-												<p className={styles.domainHint}>
-													Своя картинка кнопки доступна только на активном
-													тарифе Hard.
+										</div>
+
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Кнопка открытия — пульсация
+											</p>
+											<div className={styles.checkRow}>
+												<input
+													id="onlineConsultantPulse"
+													type="checkbox"
+													checked={cfg.buttonPulse !== false}
+													onChange={e =>
+														set({ buttonPulse: e.target.checked })
+													}
+												/>
+												<label
+													htmlFor="onlineConsultantPulse"
+													className={styles.checkLabel}
+												>
+													Включить пульсацию кнопки
+												</label>
+											</div>
+											<p className={styles.hint}>
+												Дополнительный эффект со свечением на кнопке
+												открытия виджета.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Сторона расположения кнопки для открытия виджета на
+												вашем сайте:
+											</p>
+											<select
+												className={styles.input}
+												value={cfg.buttonSide}
+												onChange={e =>
+													set({
+														buttonSide: e.target
+															.value as OnlineConsultantConfig['buttonSide']
+													})
+												}
+											>
+												<option value="right">Справа</option>
+												<option value="left">Слева</option>
+											</select>
+											<p className={styles.hint}>
+												Можно настроить с какой стороны экрана будет кнопка
+												открытия виджета.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<div className={styles.rangeHeader}>
+												<p className={styles.label}>Отступ снизу:</p>
+												<span className={styles.rangeValue}>
+													{cfg.buttonBottom ?? 3}%
+												</span>
+											</div>
+											<input
+												type="range"
+												aria-label="Отступ снизу"
+												min={1}
+												max={50}
+												value={cfg.buttonBottom ?? 3}
+												onChange={e =>
+													set({ buttonBottom: Number(e.target.value) })
+												}
+												className={styles.rangeInput}
+											/>
+											<p className={styles.hint}>
+												Отступ от нижнего края экрана в процентах. 3 —
+												почти внизу, 50 — по центру.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<div className={styles.rangeHeader}>
+												<p className={styles.label}>Отступ сбоку:</p>
+												<span className={styles.rangeValue}>
+													{cfg.buttonOffset ?? 3}%
+												</span>
+											</div>
+											<input
+												type="range"
+												aria-label="Отступ сбоку"
+												min={1}
+												max={50}
+												value={cfg.buttonOffset ?? 3}
+												onChange={e =>
+													set({ buttonOffset: Number(e.target.value) })
+												}
+												className={styles.rangeInput}
+											/>
+											<p className={styles.hint}>
+												Отступ кнопки от левого или правого края экрана в
+												процентах. 3 — почти у края, 50 — по центру.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<div className={styles.rangeHeader}>
+												<p className={styles.label}>
+													Размер кнопки открытия:
 												</p>
-											)}
-											{canUseCustomButtonImage && hasUnsavedChanges && (
-												<p className={styles.hint}>
-													Перед загрузкой картинки сохраните текущие
-													настройки.
-												</p>
-											)}
+												<span className={styles.rangeValue}>
+													{cfg.buttonSize ?? 60}px
+												</span>
+											</div>
+											<input
+												type="range"
+												aria-label="Размер кнопки открытия"
+												min={40}
+												max={100}
+												value={cfg.buttonSize ?? 60}
+												onChange={e =>
+													set({ buttonSize: Number(e.target.value) })
+												}
+												className={styles.rangeInput}
+											/>
+											<p className={styles.hint}>
+												Размер иконки плавающей кнопки в пикселях. По
+												умолчанию 60px.
+											</p>
 										</div>
 									</div>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Кнопка открытия — пульсация
-									</p>
-									<div className={styles.checkRow}>
-										<input
-											id="onlineConsultantPulse"
-											type="checkbox"
-											checked={cfg.buttonPulse !== false}
-											onChange={e =>
-												set({ buttonPulse: e.target.checked })
-											}
-										/>
-										<label
-											htmlFor="onlineConsultantPulse"
-											className={styles.checkLabel}
-										>
-											Включить пульсацию кнопки
-										</label>
-									</div>
-									<p className={styles.hint}>
-										Дополнительный эффект со свечением на кнопке открытия
-										виджета.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Сторона расположения кнопки для открытия виджета на
-										вашем сайте:
-									</p>
-									<select
-										className={styles.input}
-										value={cfg.buttonSide}
-										onChange={e =>
-											set({
-												buttonSide: e.target
-													.value as OnlineConsultantConfig['buttonSide']
-											})
-										}
-									>
-										<option value="right">Справа</option>
-										<option value="left">Слева</option>
-									</select>
-									<p className={styles.hint}>
-										Можно настроить с какой стороны экрана будет кнопка
-										открытия виджета.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<div className={styles.rangeHeader}>
-										<p className={styles.label}>Отступ снизу:</p>
-										<span className={styles.rangeValue}>
-											{cfg.buttonBottom ?? 3}%
-										</span>
-									</div>
-									<input
-										type="range"
-										aria-label="Отступ снизу"
-										min={1}
-										max={50}
-										value={cfg.buttonBottom ?? 3}
-										onChange={e =>
-											set({ buttonBottom: Number(e.target.value) })
-										}
-										className={styles.rangeInput}
-									/>
-									<p className={styles.hint}>
-										Отступ от нижнего края экрана в процентах. 3 — почти
-										внизу, 50 — по центру.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<div className={styles.rangeHeader}>
-										<p className={styles.label}>Отступ сбоку:</p>
-										<span className={styles.rangeValue}>
-											{cfg.buttonOffset ?? 3}%
-										</span>
-									</div>
-									<input
-										type="range"
-										aria-label="Отступ сбоку"
-										min={1}
-										max={50}
-										value={cfg.buttonOffset ?? 3}
-										onChange={e =>
-											set({ buttonOffset: Number(e.target.value) })
-										}
-										className={styles.rangeInput}
-									/>
-									<p className={styles.hint}>
-										Отступ кнопки от левого или правого края экрана в
-										процентах. 3 — почти у края, 50 — по центру.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<div className={styles.rangeHeader}>
-										<p className={styles.label}>Размер кнопки открытия:</p>
-										<span className={styles.rangeValue}>
-											{cfg.buttonSize ?? 60}px
-										</span>
-									</div>
-									<input
-										type="range"
-										aria-label="Размер кнопки открытия"
-										min={40}
-										max={100}
-										value={cfg.buttonSize ?? 60}
-										onChange={e =>
-											set({ buttonSize: Number(e.target.value) })
-										}
-										className={styles.rangeInput}
-									/>
-									<p className={styles.hint}>
-										Размер иконки плавающей кнопки в пикселях. По умолчанию
-										60px.
-									</p>
-								</div>
+								</details>
 
 								<div className={styles.field}>
 									<p className={styles.label}>Автооткрытие:</p>
@@ -1328,6 +1624,9 @@ const OnlineConsultantSettingsModal = ({
 													label: e.target.value
 												})
 											}
+											onBlur={() =>
+												validateActionFieldOnBlur(index, 'label')
+											}
 											aria-invalid={
 												validationIssue?.fieldId ===
 												`${titleId}-action-${action.id}-label`
@@ -1347,6 +1646,9 @@ const OnlineConsultantSettingsModal = ({
 												setAction(index, {
 													answer: e.target.value
 												})
+											}
+											onBlur={() =>
+												validateActionFieldOnBlur(index, 'answer')
 											}
 											aria-invalid={
 												validationIssue?.fieldId ===
@@ -1377,6 +1679,9 @@ const OnlineConsultantSettingsModal = ({
 															buttonText: e.target.value
 														})
 													}
+													onBlur={() =>
+														validateActionFieldOnBlur(index, 'button')
+													}
 													aria-invalid={
 														validationIssue?.fieldId ===
 														`${titleId}-action-${action.id}-button`
@@ -1399,6 +1704,9 @@ const OnlineConsultantSettingsModal = ({
 														setAction(index, {
 															buttonUrl: e.target.value
 														})
+													}
+													onBlur={() =>
+														validateActionFieldOnBlur(index, 'url')
 													}
 													aria-invalid={
 														validationIssue?.fieldId ===
@@ -1443,6 +1751,7 @@ const OnlineConsultantSettingsModal = ({
 										className={inputClassName(`${titleId}-form-title`)}
 										value={cfg.title}
 										onChange={e => set({ title: e.target.value })}
+										onBlur={() => validateFieldOnBlur('title')}
 										placeholder="Онлайн-консультант"
 										maxLength={80}
 										aria-invalid={
@@ -1508,6 +1817,7 @@ const OnlineConsultantSettingsModal = ({
 												onChange={e =>
 													set({ contactTitle: e.target.value })
 												}
+												onBlur={() => validateFieldOnBlur('contactTitle')}
 												aria-invalid={
 													validationIssue?.fieldId ===
 													`${titleId}-contact-title`
@@ -1528,6 +1838,9 @@ const OnlineConsultantSettingsModal = ({
 												onChange={e =>
 													set({ submitButtonText: e.target.value })
 												}
+												onBlur={() =>
+													validateFieldOnBlur('submitButtonText')
+												}
 												aria-invalid={
 													validationIssue?.fieldId ===
 													`${titleId}-submit-text`
@@ -1546,6 +1859,7 @@ const OnlineConsultantSettingsModal = ({
 												)}
 												value={cfg.privacyUrl}
 												onChange={e => set({ privacyUrl: e.target.value })}
+												onBlur={() => validateFieldOnBlur('privacyUrl')}
 												placeholder="https://winwidget.ru/legal-documentation/consent-processing"
 												maxLength={500}
 												aria-invalid={
@@ -1901,6 +2215,49 @@ const OnlineConsultantSettingsModal = ({
 										заявку.
 									</li>
 								</ul>
+							</div>
+						</div>
+					)}
+
+					{tab !== 'code' && tab !== 'info' && (
+						<div className={styles.fields}>
+							<div className={styles.settingsGroup}>
+								<h3 className={styles.settingsGroupTitle}>
+									Сброс раздела
+								</h3>
+								{confirmResetSection === tab ? (
+									<div className={styles.dangerItem}>
+										<p className={styles.hint}>
+											{tab === 'integrations'
+												? 'Только настройки интеграций вернутся к стандартным значениям. Остальные разделы и домен сохранятся.'
+												: 'Только настройки текущего раздела вернутся к стандартным значениям. Другие разделы, домен и интеграции сохранятся.'}
+										</p>
+										<div className={styles.footerActions}>
+											<button
+												type="button"
+												className={styles.resetAttemptsBtn}
+												onClick={() => handleResetSection(tab)}
+											>
+												Да, сбросить раздел
+											</button>
+											<button
+												type="button"
+												className={styles.cancelBtn}
+												onClick={() => setConfirmResetSection(null)}
+											>
+												Отмена
+											</button>
+										</div>
+									</div>
+								) : (
+									<button
+										type="button"
+										className={styles.resetAttemptsBtn}
+										onClick={() => setConfirmResetSection(tab)}
+									>
+										Сбросить раздел
+									</button>
+								)}
 							</div>
 						</div>
 					)}

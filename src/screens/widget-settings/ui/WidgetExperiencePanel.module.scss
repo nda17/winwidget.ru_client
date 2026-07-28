@@ -20,7 +20,6 @@
 }
 
 .statusBadge,
-.version,
 .inlineReady,
 .inlineMuted {
 	@apply inline-flex rounded-full px-2.5 py-1 text-xs font-semibold;
@@ -38,10 +37,6 @@
 .statusMuted,
 .inlineMuted {
 	@apply bg-[#f2edf7] text-[#765f89];
-}
-
-.version {
-	@apply bg-[#f7f4fb] text-[#777];
 }
 
 .summaryText {
@@ -83,7 +78,42 @@
 }
 
 .issueList {
-	@apply mt-2 space-y-1.5 text-sm leading-5;
+	@apply mt-2 space-y-1.5 text-sm leading-[1.25rem];
+}
+
+.checkList,
+.diagnosticList {
+	@apply mt-2 space-y-1.5 text-sm leading-[1.25rem];
+}
+
+.diagnosticList {
+	@apply mb-4 mt-0 rounded-lg bg-[#f7f3fb] p-3;
+}
+
+.checkReady,
+.checkPending {
+	@apply relative pl-5;
+}
+
+.checkReady {
+	@apply text-[#237a43];
+}
+
+.checkPending {
+	@apply text-[#765f89];
+}
+
+.checkReady::before,
+.checkPending::before {
+	@apply absolute left-0 top-0 font-bold;
+}
+
+.checkReady::before {
+	content: '✓';
+}
+
+.checkPending::before {
+	content: '○';
 }
 
 .blocker,
@@ -159,7 +189,7 @@
 
 .helpText,
 .notice {
-	@apply mt-3 text-xs leading-5 text-[#777];
+	@apply mt-3 text-xs leading-[1.25rem] text-[#777];
 }
 
 .notice {
@@ -188,6 +218,46 @@
 
 .funnelItem small {
 	@apply mt-0.5 text-[11px] font-medium text-[#8b6ba0];
+}
+
+.stepFunnel {
+	@apply mt-4 rounded-lg border border-[#eadff5] bg-[#fcfaff] p-3;
+}
+
+.stepFunnelTitle {
+	@apply text-sm font-semibold text-[#4d315d];
+}
+
+.stepList {
+	@apply mt-2 divide-y divide-[#eee7f5];
+}
+
+.stepItem {
+	@apply flex items-center justify-between gap-3 py-2.5 first:pt-1 last:pb-1;
+}
+
+.stepName {
+	@apply flex min-w-0 items-center gap-2;
+}
+
+.stepName > span {
+	@apply flex size-6 flex-none items-center justify-center rounded-full bg-[#eee5f7] text-[11px] font-semibold text-[#765f89];
+}
+
+.stepName strong {
+	@apply min-w-0 break-words text-sm font-medium text-[#444];
+}
+
+.stepValue {
+	@apply flex flex-none flex-col items-end;
+}
+
+.stepValue strong {
+	@apply text-sm text-[#4d315d];
+}
+
+.stepValue small {
+	@apply text-[11px] text-[#8b6ba0];
 }
 
 .versionList {
@@ -247,5 +317,13 @@
 
 	.detailsSummary {
 		@apply flex-wrap;
+	}
+
+	.stepItem {
+		@apply flex-col items-start;
+	}
+
+	.stepValue {
+		@apply items-start;
 	}
 }

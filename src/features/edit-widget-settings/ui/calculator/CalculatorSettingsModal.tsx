@@ -96,17 +96,17 @@ const CALCULATOR_COLOR_SETTINGS: CalculatorColorSetting[] = [
 		key: 'buttonColor',
 		label: 'Цвет кнопки расчёта:',
 		pickerFallback: 'primary',
-		placeholder: 'Как основной цвет',
+		placeholder: 'Как цвет акцентов',
 		resetValue: '',
-		hint: 'Кнопка внутри калькулятора. По умолчанию используется основной цвет.'
+		hint: 'Кнопка внутри калькулятора. По умолчанию используется цвет акцентов.'
 	},
 	{
 		key: 'openButtonColor',
 		label: 'Цвет кнопки открытия:',
 		pickerFallback: 'primary',
-		placeholder: 'Как основной цвет',
+		placeholder: 'Как цвет акцентов',
 		resetValue: '',
-		hint: 'Плавающая кнопка на сайте. По умолчанию используется основной цвет.'
+		hint: 'Плавающая кнопка на сайте. По умолчанию используется цвет акцентов.'
 	}
 ]
 
@@ -401,7 +401,9 @@ const CalculatorSettingsModal = ({
 	previewPortalTarget,
 	onDirtyChange,
 	onRevisionConflict,
-	lifecycleActions
+	lifecycleActions,
+	onPreviewDeviceChange,
+	onPreviewConfigChange
 }: Props) => {
 	const titleId = useId()
 	const buttonImageInputId = useId()
@@ -415,6 +417,10 @@ const CalculatorSettingsModal = ({
 		normalizeConfig(calculator.config)
 	)
 	const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false)
+	const [confirmResetSection, setConfirmResetSection] = useState<Exclude<
+		Tab,
+		'code' | 'info'
+	> | null>(null)
 	const [validationError, setValidationError] =
 		useState<ValidationError | null>(null)
 	const [savedSnapshot, setSavedSnapshot] = useState(() =>
@@ -568,6 +574,7 @@ const CalculatorSettingsModal = ({
 			window.requestAnimationFrame(() => {
 				const target = document.getElementById(targetId)
 
+				target?.closest('details')?.setAttribute('open', '')
 				target?.scrollIntoView({
 					behavior: 'smooth',
 					block: 'center'
@@ -577,6 +584,171 @@ const CalculatorSettingsModal = ({
 		})
 
 		return false
+	}
+
+	const showInlineValidationError = (
+		targetId: string,
+		message?: string
+	) => {
+		setValidationError(current => {
+			if (message) return { targetId, message }
+			return current?.targetId === targetId ? null : current
+		})
+	}
+
+	const validateMainFieldOnBlur = (
+		field:
+			| 'name'
+			| 'bubbleText'
+			| 'title'
+			| 'calculateButtonText'
+			| 'resultTitle'
+			| 'contactTitle'
+			| 'privacyUrl'
+	) => {
+		if (field === 'name') {
+			showInlineValidationError(
+				validationTargetId('name'),
+				name.trim() ? undefined : 'Укажите название виджета'
+			)
+			return
+		}
+		if (field === 'bubbleText') {
+			showInlineValidationError(
+				validationTargetId('bubble-text'),
+				!config.bubbleEnabled || config.bubbleText.trim()
+					? undefined
+					: 'Укажите текст облачка или отключите его'
+			)
+			return
+		}
+		if (field === 'title') {
+			showInlineValidationError(
+				validationTargetId('main-title'),
+				config.title.trim() ? undefined : 'Укажите заголовок виджета'
+			)
+			return
+		}
+		if (field === 'calculateButtonText') {
+			showInlineValidationError(
+				validationTargetId('main-calculateButtonText'),
+				config.calculateButtonText.trim()
+					? undefined
+					: 'Укажите текст кнопки расчёта'
+			)
+			return
+		}
+		if (field === 'resultTitle') {
+			showInlineValidationError(
+				validationTargetId('main-resultTitle'),
+				config.resultTitle.trim()
+					? undefined
+					: 'Укажите заголовок результата'
+			)
+			return
+		}
+		if (field === 'contactTitle') {
+			showInlineValidationError(
+				validationTargetId('contact-title'),
+				config.dataType === 'NONE' || config.contactTitle.trim()
+					? undefined
+					: 'Укажите заголовок формы контакта'
+			)
+			return
+		}
+		showInlineValidationError(
+			validationTargetId('privacy-url'),
+			config.dataType === 'NONE' ||
+				(config.privacyUrl.trim() && isHttpUrl(config.privacyUrl))
+				? undefined
+				: 'Укажите полную ссылку на политику с http:// или https://'
+		)
+	}
+
+	const validateOptionOnBlur = (
+		fieldIndex: number,
+		optionIndex: number,
+		key: 'label' | 'add' | 'multiplier'
+	) => {
+		const field = config.fields[fieldIndex]
+		const option = field?.options?.[optionIndex]
+		if (!field || !option) return
+		const targetId = validationTargetId(
+			`field-${field.id}-option-${option.id}-${key}`
+		)
+		const optionLabel = `Поле «${field.label}», вариант ${optionIndex + 1}`
+		const message =
+			key === 'label'
+				? option.label.trim()
+					? undefined
+					: `${optionLabel}: заполните название`
+				: key === 'add'
+					? Number.isFinite(option.add)
+						? undefined
+						: `${optionLabel}: проверьте надбавку`
+					: Number.isFinite(option.multiplier) && option.multiplier > 0
+						? undefined
+						: `${optionLabel}: множитель должен быть больше 0`
+		showInlineValidationError(targetId, message)
+	}
+
+	const validateNumberFieldOnBlur = (
+		fieldIndex: number,
+		key: 'min' | 'max' | 'step' | 'defaultValue' | 'unitPrice'
+	) => {
+		const field = config.fields[fieldIndex]
+		if (!field) return
+		const min = field.min ?? 0
+		const max = field.max ?? 0
+		const defaultValue = field.defaultValue ?? min
+		const targetId = validationTargetId(`field-${field.id}-${key}`)
+		let message: string | undefined
+
+		if ((key === 'min' || key === 'max') && max < min) {
+			message = `Поле «${field.label}»: максимум не может быть меньше минимума`
+		} else if (key === 'step' && (field.step ?? 0) <= 0) {
+			message = `Поле «${field.label}»: шаг должен быть больше 0`
+		} else if (
+			key === 'defaultValue' &&
+			(defaultValue < min || defaultValue > max)
+		) {
+			message = `Поле «${field.label}»: значение по умолчанию должно быть между минимумом и максимумом`
+		} else if (
+			key === 'unitPrice' &&
+			!Number.isFinite(field.unitPrice ?? 0)
+		) {
+			message = `Поле «${field.label}»: проверьте цену за единицу`
+		}
+		showInlineValidationError(targetId, message)
+	}
+
+	const validateCalculationFieldOnBlur = (
+		field: 'basePrice' | 'currency' | 'roundingStep'
+	) => {
+		if (field === 'basePrice') {
+			showInlineValidationError(
+				validationTargetId('calculation-base-price'),
+				Number.isFinite(config.basePrice) && config.basePrice >= 0
+					? undefined
+					: 'Базовая стоимость должна быть не меньше 0'
+			)
+			return
+		}
+		if (field === 'currency') {
+			showInlineValidationError(
+				validationTargetId('calculation-currency'),
+				/^[A-Z]{3}$/.test(config.currency.trim().toUpperCase())
+					? undefined
+					: 'Укажите валюту трёхбуквенным кодом, например RUB'
+			)
+			return
+		}
+		showInlineValidationError(
+			validationTargetId('calculation-rounding-step'),
+			Number.isFinite(config.roundingStep) && config.roundingStep > 0
+				? undefined
+				: 'Шаг округления должен быть больше 0'
+		)
 	}
 
 	const setField = <K extends keyof CalculatorConfig>(
@@ -796,33 +968,6 @@ const CalculatorSettingsModal = ({
 			)
 		}
 
-		if (!Number.isFinite(config.basePrice) || config.basePrice < 0) {
-			return showValidationError(
-				'calculation',
-				validationTargetId('calculation-base-price'),
-				'Базовая стоимость должна быть не меньше 0'
-			)
-		}
-
-		if (!/^[A-Z]{3}$/.test(config.currency.trim().toUpperCase())) {
-			return showValidationError(
-				'calculation',
-				validationTargetId('calculation-currency'),
-				'Укажите валюту трёхбуквенным кодом, например RUB'
-			)
-		}
-
-		if (
-			!Number.isFinite(config.roundingStep) ||
-			config.roundingStep <= 0
-		) {
-			return showValidationError(
-				'calculation',
-				validationTargetId('calculation-rounding-step'),
-				'Шаг округления должен быть больше 0'
-			)
-		}
-
 		if (!config.fields.length) {
 			return showValidationError(
 				'fields',
@@ -946,6 +1091,33 @@ const CalculatorSettingsModal = ({
 			}
 		}
 
+		if (!Number.isFinite(config.basePrice) || config.basePrice < 0) {
+			return showValidationError(
+				'calculation',
+				validationTargetId('calculation-base-price'),
+				'Базовая стоимость должна быть не меньше 0'
+			)
+		}
+
+		if (!/^[A-Z]{3}$/.test(config.currency.trim().toUpperCase())) {
+			return showValidationError(
+				'calculation',
+				validationTargetId('calculation-currency'),
+				'Укажите валюту трёхбуквенным кодом, например RUB'
+			)
+		}
+
+		if (
+			!Number.isFinite(config.roundingStep) ||
+			config.roundingStep <= 0
+		) {
+			return showValidationError(
+				'calculation',
+				validationTargetId('calculation-rounding-step'),
+				'Шаг округления должен быть больше 0'
+			)
+		}
+
 		if (config.buttonBottom < 1 || config.buttonBottom > 50) {
 			return showValidationError(
 				'main',
@@ -963,8 +1135,12 @@ const CalculatorSettingsModal = ({
 			? 'color'
 			: findInvalidWidgetColor(config)
 		if (invalidColor) {
-			setTab('main')
-			toast.error('Цвет должен быть указан в формате #RRGGBB')
+			const colorField = invalidColor.split('.').pop() || 'color'
+			showValidationError(
+				'main',
+				validationTargetId(`color-${colorField}`),
+				'Введите цвет в формате #RRGGBB'
+			)
 			return
 		}
 
@@ -1045,6 +1221,138 @@ const CalculatorSettingsModal = ({
 		toast.success('Стандартные настройки применены. Сохраните черновик')
 	}
 
+	const handleResetSection = (section: Exclude<Tab, 'code' | 'info'>) => {
+		const defaults = cloneConfig(DEFAULT_CONFIG)
+		setConfig(previous => {
+			if (section === 'main') {
+				return {
+					...previous,
+					color: defaults.color,
+					bgColor: defaults.bgColor,
+					glassEffect: defaults.glassEffect,
+					buttonColor: defaults.buttonColor,
+					openButtonColor: defaults.openButtonColor,
+					textColor: defaults.textColor,
+					buttonSide: defaults.buttonSide,
+					buttonPulse: defaults.buttonPulse,
+					buttonBottom: defaults.buttonBottom,
+					buttonOffset: defaults.buttonOffset,
+					buttonSize: defaults.buttonSize,
+					buttonImageUrl: defaults.buttonImageUrl,
+					bubbleEnabled: defaults.bubbleEnabled,
+					bubbleText: defaults.bubbleText,
+					autoOpenDelay: defaults.autoOpenDelay,
+					title: defaults.title,
+					subtitle: defaults.subtitle,
+					calculateButtonText: defaults.calculateButtonText,
+					contactTitle: defaults.contactTitle,
+					resultTitle: defaults.resultTitle,
+					dataType: defaults.dataType,
+					privacyUrl: defaults.privacyUrl,
+					developInfoActive: defaults.developInfoActive,
+					filterDuplicates: defaults.filterDuplicates
+				}
+			}
+			if (section === 'fields') {
+				return {
+					...previous,
+					fields: cloneConfig(defaults).fields
+				}
+			}
+			if (section === 'calculation') {
+				return {
+					...previous,
+					basePrice: defaults.basePrice,
+					currency: defaults.currency,
+					roundingStep: defaults.roundingStep
+				}
+			}
+			return {
+				...previous,
+				integrations: { ...defaults.integrations }
+			}
+		})
+		setValidationError(null)
+		setConfirmResetSection(null)
+		toast.success('Раздел сброшен в черновике. Сохраните черновик')
+	}
+
+	const renderColorSetting = (setting: CalculatorColorSetting) => {
+		const pickerFallback =
+			setting.pickerFallback === 'primary'
+				? getColorPickerValue(config.color, DEFAULT_CONFIG.color)
+				: setting.pickerFallback
+		const value = config[setting.key]
+		const targetId = validationTargetId(`color-${setting.key}`)
+		const isInvalidColor = isInvalidTarget(targetId)
+		const colorError =
+			(setting.key === 'color' || value !== '') && !isWidgetHexColor(value)
+				? 'Введите цвет в формате #RRGGBB'
+				: undefined
+		const inheritsAccent =
+			setting.key === 'buttonColor' || setting.key === 'openButtonColor'
+
+		return (
+			<div key={setting.key} className={styles.field}>
+				<p className={styles.label}>{setting.label}</p>
+				<div className={styles.colorRow}>
+					<input
+						type="color"
+						className={styles.colorPicker}
+						value={getColorPickerValue(value, pickerFallback)}
+						onChange={event => {
+							clearValidationError(targetId)
+							setField(setting.key, event.target.value)
+						}}
+						aria-label={`${setting.label} выбор цвета`}
+					/>
+					<input
+						id={targetId}
+						className={`${styles.input} ${
+							isInvalidColor ? pageStyles.inputError : ''
+						}`}
+						value={value}
+						placeholder={setting.placeholder}
+						maxLength={7}
+						onChange={event => {
+							clearValidationError(targetId)
+							setField(setting.key, event.target.value)
+						}}
+						onBlur={() => showInlineValidationError(targetId, colorError)}
+						aria-invalid={isInvalidColor}
+						aria-describedby={
+							isInvalidColor ? `${targetId}-error` : undefined
+						}
+					/>
+					{value !== setting.resetValue && (
+						<button
+							type="button"
+							className={styles.clearColorBtn}
+							onClick={() => {
+								clearValidationError(targetId)
+								setField(setting.key, setting.resetValue)
+							}}
+							title={
+								inheritsAccent
+									? 'Вернуть цвет акцентов'
+									: 'Сбросить к стандартному'
+							}
+							aria-label={
+								inheritsAccent
+									? 'Вернуть цвет акцентов'
+									: `Сбросить настройку «${setting.label}»`
+							}
+						>
+							✕
+						</button>
+					)}
+				</div>
+				{renderFieldError(targetId)}
+				<p className={styles.hint}>{setting.hint}</p>
+			</div>
+		)
+	}
+
 	return (
 		<div
 			className={
@@ -1112,6 +1420,8 @@ const CalculatorSettingsModal = ({
 						type="calculator"
 						config={config}
 						isHardPlan={canUseCustomButtonImage}
+						onDeviceChange={onPreviewDeviceChange}
+						onConfigChange={onPreviewConfigChange}
 						autoCollapse={
 							!isPagePresentation &&
 							['integrations', 'code', 'info'].includes(tab)
@@ -1260,6 +1570,7 @@ const CalculatorSettingsModal = ({
 											setName(event.target.value)
 											clearValidationError(validationTargetId('name'))
 										}}
+										onBlur={() => validateMainFieldOnBlur('name')}
 										placeholder="Калькулятор стоимости"
 										maxLength={50}
 										aria-invalid={isInvalidTarget(
@@ -1277,90 +1588,39 @@ const CalculatorSettingsModal = ({
 									</p>
 								</div>
 								<div className={styles.gridTwo}>
-									{CALCULATOR_COLOR_SETTINGS.map(setting => {
-										const pickerFallback =
-											setting.pickerFallback === 'primary'
-												? getColorPickerValue(
-														config.color,
-														DEFAULT_CONFIG.color
-													)
-												: setting.pickerFallback
-										const value = config[setting.key]
-										const isInvalidColor =
-											(setting.key === 'color' || value !== '') &&
-											!isWidgetHexColor(value)
-
-										return (
-											<div key={setting.key} className={styles.field}>
-												<p className={styles.label}>{setting.label}</p>
-												<div className={styles.colorRow}>
-													<input
-														type="color"
-														className={styles.colorPicker}
-														value={getColorPickerValue(
-															value,
-															pickerFallback
-														)}
-														onChange={event =>
-															setField(setting.key, event.target.value)
-														}
-														aria-label={`${setting.label} выбор цвета`}
-													/>
-													<input
-														className={`${styles.input} ${
-															isInvalidColor ? pageStyles.inputError : ''
-														}`}
-														value={value}
-														placeholder={setting.placeholder}
-														maxLength={7}
-														onChange={event =>
-															setField(setting.key, event.target.value)
-														}
-														aria-invalid={isInvalidColor}
-													/>
-													{value !== setting.resetValue && (
-														<button
-															type="button"
-															className={styles.clearColorBtn}
-															onClick={() =>
-																setField(setting.key, setting.resetValue)
-															}
-															title="Сбросить к стандартному"
-															aria-label={`Сбросить настройку «${setting.label}»`}
-														>
-															✕
-														</button>
-													)}
-												</div>
-												{isInvalidColor && (
-													<p className={pageStyles.fieldError}>
-														Введите цвет в формате #RRGGBB
-													</p>
-												)}
-												<p className={styles.hint}>{setting.hint}</p>
-											</div>
-										)
-									})}
+									{renderColorSetting(CALCULATOR_COLOR_SETTINGS[0])}
 								</div>
-								<div className={styles.field}>
-									<label className={styles.checkRow}>
-										<input
-											type="checkbox"
-											checked={config.glassEffect}
-											onChange={event =>
-												setField('glassEffect', event.target.checked)
-											}
-										/>
-										<span className={styles.checkLabel}>
-											Стеклянный эффект фона
-										</span>
-									</label>
-									<p className={styles.hint}>
-										Добавляет полупрозрачность и размытие стандартному
-										фону. При заданном цвете фона используется сплошная
-										заливка.
-									</p>
-								</div>
+								<details className={styles.optionalDetails}>
+									<summary className={styles.optionalSummary}>
+										Тонкая настройка оформления
+									</summary>
+									<div className={styles.optionalContent}>
+										<div className={styles.gridTwo}>
+											{CALCULATOR_COLOR_SETTINGS.slice(1).map(
+												renderColorSetting
+											)}
+										</div>
+										<div className={styles.field}>
+											<label className={styles.checkRow}>
+												<input
+													type="checkbox"
+													checked={config.glassEffect}
+													onChange={event =>
+														setField('glassEffect', event.target.checked)
+													}
+												/>
+												<span className={styles.checkLabel}>
+													Стеклянный эффект фона
+												</span>
+											</label>
+											<p className={styles.hint}>
+												Добавляет полупрозрачность и размытие стандартному
+												фону. При заданном цвете фона используется сплошная
+												заливка.
+											</p>
+										</div>
+									</div>
+								</details>
 							</div>
 
 							<div className={styles.settingsGroup}>
@@ -1369,259 +1629,295 @@ const CalculatorSettingsModal = ({
 										Кнопка открытия
 									</h3>
 								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Картинка кнопки открытия:</p>
-									<div className={styles.buttonImageBox}>
-										<div className={styles.buttonImagePreview}>
-											<Image
-												src={
-													config.buttonImageUrl || DEFAULT_BUTTON_IMAGE_URL
-												}
-												alt="Кнопка калькулятора"
-												width={64}
-												height={64}
-												unoptimized={Boolean(config.buttonImageUrl)}
-											/>
-										</div>
-										<div className={styles.buttonImageContent}>
-											<p className={styles.hint}>
-												PNG с прозрачным фоном, до 200 КБ.
+								<details className={styles.optionalDetails}>
+									<summary className={styles.optionalSummary}>
+										Расширенные настройки
+									</summary>
+									<div className={styles.optionalContent}>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Картинка кнопки открытия:
 											</p>
-											<div className={styles.buttonImageActions}>
-												<label
-													htmlFor={buttonImageInputId}
-													className={`${styles.secondaryBtn} ${
-														!canUseCustomButtonImage || hasUnsavedChanges
-															? styles.disabled
+											<div className={styles.buttonImageBox}>
+												<div className={styles.buttonImagePreview}>
+													<Image
+														src={
+															config.buttonImageUrl ||
+															DEFAULT_BUTTON_IMAGE_URL
+														}
+														alt="Кнопка калькулятора"
+														width={64}
+														height={64}
+														unoptimized={Boolean(config.buttonImageUrl)}
+													/>
+												</div>
+												<div className={styles.buttonImageContent}>
+													<p className={styles.hint}>
+														PNG с прозрачным фоном, до 200 КБ.
+													</p>
+													<div className={styles.buttonImageActions}>
+														<label
+															htmlFor={buttonImageInputId}
+															className={`${styles.secondaryBtn} ${
+																!canUseCustomButtonImage ||
+																hasUnsavedChanges
+																	? styles.disabled
+																	: ''
+															}`}
+														>
+															Загрузить PNG
+														</label>
+														<input
+															id={buttonImageInputId}
+															type="file"
+															accept="image/png"
+															className={styles.fileInput}
+															onChange={handleButtonImageUpload}
+														/>
+														{config.buttonImageUrl && (
+															<button
+																type="button"
+																className={styles.secondaryBtn}
+																onClick={resetButtonImage}
+																disabled={isDangerActionPending}
+															>
+																Вернуть стандартную
+															</button>
+														)}
+													</div>
+													{!canUseCustomButtonImage && (
+														<p className={styles.domainHint}>
+															Своя картинка доступна только на активном
+															тарифе Hard.
+														</p>
+													)}
+													{canUseCustomButtonImage &&
+														hasUnsavedChanges && (
+															<p className={styles.hint}>
+																Перед загрузкой картинки сохраните текущие
+																настройки.
+															</p>
+														)}
+												</div>
+											</div>
+										</div>
+
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Кнопка открытия — пульсация
+											</p>
+											<label className={styles.checkRow}>
+												<input
+													type="checkbox"
+													checked={config.buttonPulse}
+													onChange={event =>
+														setField('buttonPulse', event.target.checked)
+													}
+												/>
+												<span className={styles.checkLabel}>
+													Включить пульсацию кнопки
+												</span>
+											</label>
+											<p className={styles.hint}>
+												Добавляет мягкое свечение, чтобы кнопка была
+												заметнее.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Сторона расположения кнопки для открытия виджета на
+												вашем сайте:
+											</p>
+											<select
+												className={styles.input}
+												value={config.buttonSide}
+												onChange={event =>
+													setField(
+														'buttonSide',
+														event.target.value as 'left' | 'right'
+													)
+												}
+											>
+												<option value="right">Справа</option>
+												<option value="left">Слева</option>
+											</select>
+											<p className={styles.hint}>
+												С какой стороны экрана показывать плавающую кнопку.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<p className={styles.label}>Отображение облачка</p>
+											<label className={styles.checkRow}>
+												<input
+													type="checkbox"
+													checked={config.bubbleEnabled}
+													onChange={event =>
+														setField('bubbleEnabled', event.target.checked)
+													}
+												/>
+												<span className={styles.checkLabel}>
+													Показывать облачко рядом с кнопкой
+												</span>
+											</label>
+											<p className={styles.hint}>
+												Если выключить, на сайте останется только плавающая
+												кнопка.
+											</p>
+										</div>
+
+										{config.bubbleEnabled && (
+											<div className={styles.field}>
+												<p className={styles.label}>Текст облачка:</p>
+												<input
+													id={validationTargetId('bubble-text')}
+													className={`${styles.input} ${
+														isInvalidTarget(
+															validationTargetId('bubble-text')
+														)
+															? pageStyles.inputError
 															: ''
 													}`}
-												>
-													Загрузить PNG
-												</label>
-												<input
-													id={buttonImageInputId}
-													type="file"
-													accept="image/png"
-													className={styles.fileInput}
-													onChange={handleButtonImageUpload}
+													value={config.bubbleText}
+													onChange={event =>
+														setField(
+															'bubbleText',
+															event.target.value,
+															validationTargetId('bubble-text')
+														)
+													}
+													onBlur={() =>
+														validateMainFieldOnBlur('bubbleText')
+													}
+													placeholder="Рассчитать стоимость"
+													maxLength={100}
+													aria-invalid={isInvalidTarget(
+														validationTargetId('bubble-text')
+													)}
+													aria-describedby={
+														isInvalidTarget(
+															validationTargetId('bubble-text')
+														)
+															? `${validationTargetId('bubble-text')}-error`
+															: undefined
+													}
 												/>
-												{config.buttonImageUrl && (
-													<button
-														type="button"
-														className={styles.secondaryBtn}
-														onClick={resetButtonImage}
-														disabled={isDangerActionPending}
-													>
-														Вернуть стандартную
-													</button>
+												{renderFieldError(
+													validationTargetId('bubble-text')
 												)}
-											</div>
-											{!canUseCustomButtonImage && (
-												<p className={styles.domainHint}>
-													Своя картинка доступна только на активном тарифе
-													Hard.
-												</p>
-											)}
-											{canUseCustomButtonImage && hasUnsavedChanges && (
 												<p className={styles.hint}>
-													Перед загрузкой картинки сохраните текущие
-													настройки.
+													Короткий призыв рядом с плавающей кнопкой.
 												</p>
+											</div>
+										)}
+
+										<div className={styles.field}>
+											<div className={pageStyles.rangeHeader}>
+												<p className={styles.label}>Отступ снизу:</p>
+												<span className={pageStyles.rangeValue}>
+													{config.buttonBottom}%
+												</span>
+											</div>
+											<input
+												id={validationTargetId('button-bottom')}
+												type="range"
+												aria-label="Отступ снизу"
+												min={1}
+												max={50}
+												step={1}
+												value={config.buttonBottom}
+												className={`${pageStyles.rangeInput} ${
+													isInvalidTarget(
+														validationTargetId('button-bottom')
+													)
+														? pageStyles.inputError
+														: ''
+												}`}
+												aria-invalid={isInvalidTarget(
+													validationTargetId('button-bottom')
+												)}
+												aria-describedby={
+													isInvalidTarget(
+														validationTargetId('button-bottom')
+													)
+														? `${validationTargetId('button-bottom')}-error`
+														: undefined
+												}
+												onChange={event =>
+													setField(
+														'buttonBottom',
+														Number(event.target.value),
+														validationTargetId('button-bottom')
+													)
+												}
+											/>
+											{renderFieldError(
+												validationTargetId('button-bottom')
 											)}
+											<p className={styles.hint}>
+												1% — почти у нижнего края, 50% — по центру экрана.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<div className={pageStyles.rangeHeader}>
+												<p className={styles.label}>Отступ сбоку:</p>
+												<span className={pageStyles.rangeValue}>
+													{config.buttonOffset}%
+												</span>
+											</div>
+											<input
+												type="range"
+												aria-label="Отступ сбоку"
+												min={1}
+												max={50}
+												step={1}
+												value={config.buttonOffset}
+												className={pageStyles.rangeInput}
+												onChange={event =>
+													setField(
+														'buttonOffset',
+														Number(event.target.value)
+													)
+												}
+											/>
+											<p className={styles.hint}>
+												Отступ от выбранного левого или правого края.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<div className={pageStyles.rangeHeader}>
+												<p className={styles.label}>
+													Размер кнопки открытия:
+												</p>
+												<span className={pageStyles.rangeValue}>
+													{config.buttonSize}px
+												</span>
+											</div>
+											<input
+												type="range"
+												aria-label="Размер кнопки открытия"
+												min={40}
+												max={100}
+												step={1}
+												value={config.buttonSize}
+												className={pageStyles.rangeInput}
+												onChange={event =>
+													setField(
+														'buttonSize',
+														Number(event.target.value)
+													)
+												}
+											/>
+											<p className={styles.hint}>
+												Размер плавающей кнопки на сайте. Стандартное
+												значение — 60 px.
+											</p>
 										</div>
 									</div>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Кнопка открытия — пульсация
-									</p>
-									<label className={styles.checkRow}>
-										<input
-											type="checkbox"
-											checked={config.buttonPulse}
-											onChange={event =>
-												setField('buttonPulse', event.target.checked)
-											}
-										/>
-										<span className={styles.checkLabel}>
-											Включить пульсацию кнопки
-										</span>
-									</label>
-									<p className={styles.hint}>
-										Добавляет мягкое свечение, чтобы кнопка была заметнее.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Сторона расположения кнопки для открытия виджета на
-										вашем сайте:
-									</p>
-									<select
-										className={styles.input}
-										value={config.buttonSide}
-										onChange={event =>
-											setField(
-												'buttonSide',
-												event.target.value as 'left' | 'right'
-											)
-										}
-									>
-										<option value="right">Справа</option>
-										<option value="left">Слева</option>
-									</select>
-									<p className={styles.hint}>
-										С какой стороны экрана показывать плавающую кнопку.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>Отображение облачка</p>
-									<label className={styles.checkRow}>
-										<input
-											type="checkbox"
-											checked={config.bubbleEnabled}
-											onChange={event =>
-												setField('bubbleEnabled', event.target.checked)
-											}
-										/>
-										<span className={styles.checkLabel}>
-											Показывать облачко рядом с кнопкой
-										</span>
-									</label>
-									<p className={styles.hint}>
-										Если выключить, на сайте останется только плавающая
-										кнопка.
-									</p>
-								</div>
-
-								{config.bubbleEnabled && (
-									<div className={styles.field}>
-										<p className={styles.label}>Текст облачка:</p>
-										<input
-											id={validationTargetId('bubble-text')}
-											className={`${styles.input} ${
-												isInvalidTarget(validationTargetId('bubble-text'))
-													? pageStyles.inputError
-													: ''
-											}`}
-											value={config.bubbleText}
-											onChange={event =>
-												setField(
-													'bubbleText',
-													event.target.value,
-													validationTargetId('bubble-text')
-												)
-											}
-											placeholder="Рассчитать стоимость"
-											maxLength={100}
-											aria-invalid={isInvalidTarget(
-												validationTargetId('bubble-text')
-											)}
-											aria-describedby={
-												isInvalidTarget(validationTargetId('bubble-text'))
-													? `${validationTargetId('bubble-text')}-error`
-													: undefined
-											}
-										/>
-										{renderFieldError(validationTargetId('bubble-text'))}
-										<p className={styles.hint}>
-											Короткий призыв рядом с плавающей кнопкой.
-										</p>
-									</div>
-								)}
-
-								<div className={styles.field}>
-									<div className={pageStyles.rangeHeader}>
-										<p className={styles.label}>Отступ снизу:</p>
-										<span className={pageStyles.rangeValue}>
-											{config.buttonBottom}%
-										</span>
-									</div>
-									<input
-										id={validationTargetId('button-bottom')}
-										type="range"
-										aria-label="Отступ снизу"
-										min={1}
-										max={50}
-										step={1}
-										value={config.buttonBottom}
-										className={`${pageStyles.rangeInput} ${
-											isInvalidTarget(validationTargetId('button-bottom'))
-												? pageStyles.inputError
-												: ''
-										}`}
-										aria-invalid={isInvalidTarget(
-											validationTargetId('button-bottom')
-										)}
-										aria-describedby={
-											isInvalidTarget(validationTargetId('button-bottom'))
-												? `${validationTargetId('button-bottom')}-error`
-												: undefined
-										}
-										onChange={event =>
-											setField(
-												'buttonBottom',
-												Number(event.target.value),
-												validationTargetId('button-bottom')
-											)
-										}
-									/>
-									{renderFieldError(validationTargetId('button-bottom'))}
-									<p className={styles.hint}>
-										1% — почти у нижнего края, 50% — по центру экрана.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<div className={pageStyles.rangeHeader}>
-										<p className={styles.label}>Отступ сбоку:</p>
-										<span className={pageStyles.rangeValue}>
-											{config.buttonOffset}%
-										</span>
-									</div>
-									<input
-										type="range"
-										aria-label="Отступ сбоку"
-										min={1}
-										max={50}
-										step={1}
-										value={config.buttonOffset}
-										className={pageStyles.rangeInput}
-										onChange={event =>
-											setField('buttonOffset', Number(event.target.value))
-										}
-									/>
-									<p className={styles.hint}>
-										Отступ от выбранного левого или правого края.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<div className={pageStyles.rangeHeader}>
-										<p className={styles.label}>Размер кнопки открытия:</p>
-										<span className={pageStyles.rangeValue}>
-											{config.buttonSize}px
-										</span>
-									</div>
-									<input
-										type="range"
-										aria-label="Размер кнопки открытия"
-										min={40}
-										max={100}
-										step={1}
-										value={config.buttonSize}
-										className={pageStyles.rangeInput}
-										onChange={event =>
-											setField('buttonSize', Number(event.target.value))
-										}
-									/>
-									<p className={styles.hint}>
-										Размер плавающей кнопки на сайте. Стандартное значение
-										— 60 px.
-									</p>
-								</div>
+								</details>
 
 								<div className={styles.field}>
 									<label className={styles.checkRow}>
@@ -1726,6 +2022,11 @@ const CalculatorSettingsModal = ({
 													validationTargetId(`main-${key}`)
 												)
 											}
+											onBlur={() => {
+												if (key !== 'subtitle') {
+													validateMainFieldOnBlur(key)
+												}
+											}}
 											placeholder={placeholder}
 											maxLength={maxLength}
 											aria-invalid={isInvalidTarget(
@@ -1797,6 +2098,9 @@ const CalculatorSettingsModal = ({
 														validationTargetId('contact-title')
 													)
 												}
+												onBlur={() =>
+													validateMainFieldOnBlur('contactTitle')
+												}
 												placeholder="Оставьте контакт, чтобы получить расчёт"
 												maxLength={150}
 												aria-invalid={isInvalidTarget(
@@ -1838,6 +2142,9 @@ const CalculatorSettingsModal = ({
 														event.target.value,
 														validationTargetId('privacy-url')
 													)
+												}
+												onBlur={() =>
+													validateMainFieldOnBlur('privacyUrl')
 												}
 												placeholder="https://winwidget.ru/legal-documentation/consent-processing"
 												maxLength={500}
@@ -2004,6 +2311,14 @@ const CalculatorSettingsModal = ({
 														validationTargetId(`field-${field.id}-label`)
 													)
 												}
+												onBlur={() =>
+													showInlineValidationError(
+														validationTargetId(`field-${field.id}-label`),
+														field.label.trim()
+															? undefined
+															: `Поле ${fieldIndex + 1}: заполните название`
+													)
+												}
 												placeholder={`Параметр ${fieldIndex + 1}`}
 												maxLength={100}
 											/>
@@ -2076,6 +2391,13 @@ const CalculatorSettingsModal = ({
 																	label: event.target.value
 																})
 															}
+															onBlur={() =>
+																validateOptionOnBlur(
+																	fieldIndex,
+																	optionIndex,
+																	'label'
+																)
+															}
 														/>
 														{renderFieldError(
 															validationTargetId(
@@ -2104,6 +2426,13 @@ const CalculatorSettingsModal = ({
 																updateOption(fieldIndex, optionIndex, {
 																	add: value
 																})
+															}
+															onBlur={() =>
+																validateOptionOnBlur(
+																	fieldIndex,
+																	optionIndex,
+																	'add'
+																)
 															}
 														/>
 														{renderFieldError(
@@ -2135,6 +2464,13 @@ const CalculatorSettingsModal = ({
 																updateOption(fieldIndex, optionIndex, {
 																	multiplier: value
 																})
+															}
+															onBlur={() =>
+																validateOptionOnBlur(
+																	fieldIndex,
+																	optionIndex,
+																	'multiplier'
+																)
 															}
 														/>
 														{renderFieldError(
@@ -2215,6 +2551,9 @@ const CalculatorSettingsModal = ({
 																)
 															)
 														}
+														onBlur={() =>
+															validateNumberFieldOnBlur(fieldIndex, key)
+														}
 													/>
 													{renderFieldError(
 														validationTargetId(`field-${field.id}-${key}`)
@@ -2285,6 +2624,9 @@ const CalculatorSettingsModal = ({
 													validationTargetId('calculation-base-price')
 												)
 											}
+											onBlur={() =>
+												validateCalculationFieldOnBlur('basePrice')
+											}
 										/>
 										{renderFieldError(
 											validationTargetId('calculation-base-price')
@@ -2311,6 +2653,9 @@ const CalculatorSettingsModal = ({
 													event.target.value,
 													validationTargetId('calculation-currency')
 												)
+											}
+											onBlur={() =>
+												validateCalculationFieldOnBlur('currency')
 											}
 											maxLength={3}
 											placeholder="RUB"
@@ -2342,6 +2687,9 @@ const CalculatorSettingsModal = ({
 													value,
 													validationTargetId('calculation-rounding-step')
 												)
+											}
+											onBlur={() =>
+												validateCalculationFieldOnBlur('roundingStep')
 											}
 										/>
 										{renderFieldError(
@@ -2711,6 +3059,51 @@ const CalculatorSettingsModal = ({
 									</li>
 									<li>Откройте прямую ссылку на телефоне.</li>
 								</ul>
+							</div>
+						</div>
+					)}
+
+					{tab !== 'code' && tab !== 'info' && (
+						<div className={styles.fields}>
+							<div className={styles.settingsGroup}>
+								<div className={styles.settingsGroupHeader}>
+									<h3 className={styles.settingsGroupTitle}>
+										Сброс раздела
+									</h3>
+								</div>
+								{confirmResetSection === tab ? (
+									<div className={styles.dangerActions}>
+										<p className={styles.hint}>
+											{tab === 'integrations'
+												? 'Только настройки интеграций вернутся к стандартным значениям. Остальные разделы и домен сохранятся.'
+												: 'Только настройки текущего раздела вернутся к стандартным значениям. Другие разделы, домен и интеграции сохранятся.'}
+										</p>
+										<div className={styles.footerActions}>
+											<button
+												type="button"
+												className={styles.resetSettingsBtn}
+												onClick={() => handleResetSection(tab)}
+											>
+												Да, сбросить раздел
+											</button>
+											<button
+												type="button"
+												className={styles.secondaryBtn}
+												onClick={() => setConfirmResetSection(null)}
+											>
+												Отмена
+											</button>
+										</div>
+									</div>
+								) : (
+									<button
+										type="button"
+										className={styles.resetSettingsBtn}
+										onClick={() => setConfirmResetSection(tab)}
+									>
+										Сбросить раздел
+									</button>
+								)}
 							</div>
 						</div>
 					)}

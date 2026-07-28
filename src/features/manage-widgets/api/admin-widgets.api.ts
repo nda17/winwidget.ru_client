@@ -1,5 +1,6 @@
 import { axiosInterceptorsRequest } from '@/shared/api'
 import type { Plan, SubscriptionStatus } from '@/entities/subscription'
+import type { UserStatus } from '@/entities/user'
 import type {
 	Calculator,
 	Callback,
@@ -8,7 +9,11 @@ import type {
 	Quiz,
 	StopOffer,
 	Widget,
-	WidgetLifecycleState
+	WidgetCloneResponse,
+	WidgetConfigVersionsResponse,
+	WidgetLifecycleState,
+	WidgetRuntimeAnalytics,
+	WidgetRuntimeStatus
 } from '@/entities/site-widget'
 
 export type AdminWidgetType =
@@ -78,6 +83,10 @@ export type AdminWidgetDetails = {
 		type: TType
 		entity: AdminWidgetEntityMap[TType]
 		owner: IAdminWidgetOwner
+		ownerStatus: UserStatus
+		ownerPlan: Plan | null
+		subscriptionStatus: SubscriptionStatus | null
+		lifecycle: WidgetLifecycleState<AdminWidgetEntityMap[TType]['config']>
 	}
 }[AdminWidgetType]
 
@@ -160,6 +169,65 @@ const adminWidgetsService = {
 		const { data } = await axiosInterceptorsRequest.post(
 			`/widgets/admin/${type}/${id}/discard-draft`,
 			{ expectedDraftRevision }
+		)
+		return data
+	},
+
+	async getVersions(
+		type: AdminWidgetType,
+		id: string,
+		page = 1,
+		limit = 10
+	): Promise<WidgetConfigVersionsResponse> {
+		const { data } = await axiosInterceptorsRequest.get(
+			`/widgets/admin/${type}/${id}/versions`,
+			{ params: { page, limit } }
+		)
+		return data
+	},
+
+	async restoreVersion<TType extends AdminWidgetType>(
+		type: TType,
+		id: string,
+		version: number,
+		expectedDraftRevision: number
+	): Promise<WidgetLifecycleState<AdminWidgetEntityMap[TType]['config']>> {
+		const { data } = await axiosInterceptorsRequest.post(
+			`/widgets/admin/${type}/${id}/versions/${version}/restore`,
+			{ expectedDraftRevision }
+		)
+		return data
+	},
+
+	async clone(
+		type: AdminWidgetType,
+		id: string
+	): Promise<WidgetCloneResponse> {
+		const { data } = await axiosInterceptorsRequest.post(
+			`/widgets/admin/${type}/${id}/clone`,
+			{}
+		)
+		return data
+	},
+
+	async getRuntimeStatus(
+		type: AdminWidgetType,
+		id: string
+	): Promise<WidgetRuntimeStatus> {
+		const { data } = await axiosInterceptorsRequest.get(
+			`/widgets/admin/${type}/${id}/runtime-status`
+		)
+		return data
+	},
+
+	async getAnalytics(
+		type: AdminWidgetType,
+		id: string,
+		days = 30
+	): Promise<WidgetRuntimeAnalytics> {
+		const { data } = await axiosInterceptorsRequest.get(
+			`/widgets/admin/${type}/${id}/analytics`,
+			{ params: { days } }
 		)
 		return data
 	},

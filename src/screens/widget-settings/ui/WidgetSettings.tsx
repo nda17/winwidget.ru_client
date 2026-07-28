@@ -1,6 +1,10 @@
 'use client'
 
-import type { Subscription } from '@/entities/subscription'
+import type {
+	Plan,
+	Subscription,
+	SubscriptionStatus
+} from '@/entities/subscription'
 import {
 	calculatorService,
 	callbackService,
@@ -21,7 +25,7 @@ import type {
 	Widget,
 	WidgetLifecycleState
 } from '@/entities/site-widget'
-import { useAuthStore } from '@/entities/user'
+import { useAuthStore, type UserStatus } from '@/entities/user'
 import {
 	CalculatorSettingsModal,
 	CallbackSettingsModal,
@@ -31,6 +35,11 @@ import {
 	StopOfferSettingsModal,
 	WheelSettingsModal
 } from '@/features/edit-widget-settings'
+import {
+	adminWidgetsService,
+	type AdminWidgetDetails,
+	type AdminWidgetType
+} from '@/features/manage-widgets'
 import { errorCatch } from '@/shared/api'
 import SkeletonLoader from '@/shared/ui/skeleton-loader/SkeletonLoader'
 import {
@@ -39,7 +48,7 @@ import {
 	useQueryClient
 } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import WidgetExperiencePanel from './WidgetExperiencePanel'
 import styles from './WidgetSettings.module.scss'
@@ -56,42 +65,50 @@ const WIDGET_SETTINGS_TYPES = [
 
 export type WidgetSettingsType = (typeof WIDGET_SETTINGS_TYPES)[number]
 
-type WidgetSettingsSelection =
-	| {
-			type: 'wheel'
-			entity: Widget
-			subscription: Subscription | null
-	  }
-	| {
-			type: 'quiz'
-			entity: Quiz
-			subscription: Subscription | null
-	  }
-	| {
-			type: 'callback'
-			entity: Callback
-			subscription: Subscription | null
-	  }
-	| {
-			type: 'timer'
-			entity: CountdownTimer
-			subscription: Subscription | null
-	  }
-	| {
-			type: 'stop-offer'
-			entity: StopOffer
-			subscription: Subscription | null
-	  }
-	| {
-			type: 'online-consultant'
-			entity: OnlineConsultant
-			subscription: Subscription | null
-	  }
-	| {
-			type: 'calculator'
-			entity: Calculator
-			subscription: Subscription | null
-	  }
+interface WidgetSettingsAccess {
+	ownerPlan: Plan | null
+	subscriptionStatus: SubscriptionStatus | null
+	ownerStatus?: UserStatus
+}
+
+type WidgetSettingsSelection = WidgetSettingsAccess &
+	(
+		| {
+				type: 'wheel'
+				entity: Widget
+		  }
+		| {
+				type: 'quiz'
+				entity: Quiz
+		  }
+		| {
+				type: 'callback'
+				entity: Callback
+		  }
+		| {
+				type: 'timer'
+				entity: CountdownTimer
+		  }
+		| {
+				type: 'stop-offer'
+				entity: StopOffer
+		  }
+		| {
+				type: 'online-consultant'
+				entity: OnlineConsultant
+		  }
+		| {
+				type: 'calculator'
+				entity: Calculator
+		  }
+	)
+
+const getSubscriptionAccess = (
+	subscription: Subscription | null
+): WidgetSettingsAccess => ({
+	ownerPlan: subscription?.plan ?? null,
+	subscriptionStatus: subscription?.status ?? null
+})
 
 interface WidgetSettingsSource {
 	ownerQueryKey: string
@@ -109,7 +126,11 @@ const WIDGET_SETTINGS_SOURCES: Record<
 			const entity = data.widgets.find(widget => widget.id === id)
 
 			return entity
-				? { type: 'wheel', entity, subscription: data.subscription }
+				? {
+						type: 'wheel',
+						entity,
+						...getSubscriptionAccess(data.subscription)
+					}
 				: null
 		}
 	},
@@ -120,7 +141,11 @@ const WIDGET_SETTINGS_SOURCES: Record<
 			const entity = data.quizzes.find(quiz => quiz.id === id)
 
 			return entity
-				? { type: 'quiz', entity, subscription: data.subscription }
+				? {
+						type: 'quiz',
+						entity,
+						...getSubscriptionAccess(data.subscription)
+					}
 				: null
 		}
 	},
@@ -134,7 +159,7 @@ const WIDGET_SETTINGS_SOURCES: Record<
 				? {
 						type: 'callback',
 						entity,
-						subscription: data.subscription
+						...getSubscriptionAccess(data.subscription)
 					}
 				: null
 		}
@@ -146,7 +171,11 @@ const WIDGET_SETTINGS_SOURCES: Record<
 			const entity = data.countdownTimers.find(timer => timer.id === id)
 
 			return entity
-				? { type: 'timer', entity, subscription: data.subscription }
+				? {
+						type: 'timer',
+						entity,
+						...getSubscriptionAccess(data.subscription)
+					}
 				: null
 		}
 	},
@@ -160,7 +189,7 @@ const WIDGET_SETTINGS_SOURCES: Record<
 				? {
 						type: 'stop-offer',
 						entity,
-						subscription: data.subscription
+						...getSubscriptionAccess(data.subscription)
 					}
 				: null
 		}
@@ -177,7 +206,7 @@ const WIDGET_SETTINGS_SOURCES: Record<
 				? {
 						type: 'online-consultant',
 						entity,
-						subscription: data.subscription
+						...getSubscriptionAccess(data.subscription)
 					}
 				: null
 		}
@@ -194,7 +223,7 @@ const WIDGET_SETTINGS_SOURCES: Record<
 				? {
 						type: 'calculator',
 						entity,
-						subscription: data.subscription
+						...getSubscriptionAccess(data.subscription)
 					}
 				: null
 		}
@@ -211,14 +240,63 @@ const WIDGET_TYPE_LABELS: Record<WidgetSettingsType, string> = {
 	calculator: 'Калькулятор стоимости'
 }
 
+const ADMIN_WIDGET_TYPE_BY_SETTINGS_TYPE: Record<
+	WidgetSettingsType,
+	AdminWidgetType
+> = {
+	wheel: 'WHEEL',
+	quiz: 'QUIZ',
+	callback: 'CALLBACK',
+	timer: 'TIMER',
+	'stop-offer': 'STOP_OFFER',
+	'online-consultant': 'ONLINE_CONSULTANT',
+	calculator: 'CALCULATOR'
+}
+
+const toAdminSelection = (
+	details: AdminWidgetDetails
+): WidgetSettingsSelection => {
+	const access = {
+		ownerPlan: details.ownerPlan,
+		subscriptionStatus: details.subscriptionStatus,
+		ownerStatus: details.ownerStatus
+	}
+
+	switch (details.type) {
+		case 'WHEEL':
+			return { type: 'wheel', entity: details.entity, ...access }
+		case 'QUIZ':
+			return { type: 'quiz', entity: details.entity, ...access }
+		case 'CALLBACK':
+			return { type: 'callback', entity: details.entity, ...access }
+		case 'TIMER':
+			return { type: 'timer', entity: details.entity, ...access }
+		case 'STOP_OFFER':
+			return { type: 'stop-offer', entity: details.entity, ...access }
+		case 'ONLINE_CONSULTANT':
+			return {
+				type: 'online-consultant',
+				entity: details.entity,
+				...access
+			}
+		case 'CALCULATOR':
+			return { type: 'calculator', entity: details.entity, ...access }
+	}
+}
+
 const TWO_COLUMN_SETTINGS_MEDIA_QUERY = '(min-width: 1101px)'
 
 interface WidgetSettingsProps {
 	type: WidgetSettingsType
 	id: string
+	accessMode?: 'owner' | 'admin'
 }
 
-const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
+const WidgetSettings = ({
+	type,
+	id,
+	accessMode = 'owner'
+}: WidgetSettingsProps) => {
 	const router = useRouter()
 	const queryClient = useQueryClient()
 	const auth = useAuthStore(state => state.auth)
@@ -229,18 +307,34 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 	const [editorResetKey, setEditorResetKey] = useState(0)
 	const [hasEditorUnsavedChanges, setHasEditorUnsavedChanges] =
 		useState(false)
+	const [hasReviewedMobilePreview, setHasReviewedMobilePreview] =
+		useState(false)
 	const [isCheckingInstallation, setIsCheckingInstallation] =
 		useState(false)
 	const installationCheckIdRef = useRef(0)
 	const installationToastIdRef = useRef<string | null>(null)
 	const previewColumnRef = useRef<HTMLElement | null>(null)
 	const editorColumnRef = useRef<HTMLElement | null>(null)
+	const isAdminMode = accessMode === 'admin'
+	const adminType = ADMIN_WIDGET_TYPE_BY_SETTINGS_TYPE[type]
 	const source = WIDGET_SETTINGS_SOURCES[type]
-	const settingsQueryKey = [
-		source.ownerQueryKey,
-		'settings-page',
-		id
-	] as const
+	const handlePreviewDeviceChange = useCallback(
+		(device: 'desktop' | 'mobile') => {
+			if (device === 'mobile') setHasReviewedMobilePreview(true)
+		},
+		[]
+	)
+	const handlePreviewConfigChange = useCallback(() => {
+		setHasReviewedMobilePreview(false)
+	}, [])
+
+	useEffect(() => {
+		setHasReviewedMobilePreview(false)
+	}, [id, type])
+
+	const settingsQueryKey = isAdminMode
+		? (['admin-widget-settings-page', adminType, id] as const)
+		: ([source.ownerQueryKey, 'settings-page', id] as const)
 	const {
 		data: selection,
 		error,
@@ -250,50 +344,103 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 		refetch
 	} = useQuery({
 		queryKey: settingsQueryKey,
-		queryFn: () => source.load(id),
+		queryFn: () =>
+			isAdminMode
+				? adminWidgetsService.getById(adminType, id).then(toAdminSelection)
+				: source.load(id),
 		enabled: isAuthResolved && auth
 	})
 	const canUseAnalytics =
-		selection?.subscription?.plan === 'HARD' &&
-		selection.subscription.status === 'ACTIVE'
-	const lifecycleQueryKey = ['widget-settings', type, id] as const
+		selection?.ownerPlan === 'HARD' &&
+		selection.subscriptionStatus === 'ACTIVE' &&
+		selection.ownerStatus !== 'DEACTIVATED'
+	const analyticsUnavailableMessage =
+		selection?.ownerStatus === 'DEACTIVATED'
+			? 'Аналитика недоступна, пока владелец деактивирован.'
+			: 'Воронка доступна на активном тарифе Hard.'
+	const lifecycleQueryKey = [
+		isAdminMode ? 'admin-widget-settings' : 'widget-settings',
+		type,
+		id
+	] as const
+	const runtimeStatusQueryKey = [
+		isAdminMode ? 'admin-widget-runtime-status' : 'widget-runtime-status',
+		type,
+		id
+	] as const
+	const analyticsQueryKey = [
+		isAdminMode
+			? 'admin-widget-runtime-analytics'
+			: 'widget-runtime-analytics',
+		type,
+		id,
+		30
+	] as const
+	const versionsQueryKey = [
+		isAdminMode
+			? 'admin-widget-settings-versions'
+			: 'widget-settings-versions',
+		type,
+		id
+	] as const
 	const lifecycleQuery = useQuery({
 		queryKey: lifecycleQueryKey,
-		queryFn: () => widgetExperienceService.getLifecycle(type, id),
+		queryFn: () =>
+			isAdminMode
+				? adminWidgetsService
+						.getById(adminType, id)
+						.then(details => details.lifecycle)
+				: widgetExperienceService.getLifecycle(type, id),
 		enabled: isAuthResolved && auth
 	})
 	const runtimeStatusQuery = useQuery({
-		queryKey: ['widget-runtime-status', type, id],
-		queryFn: () => widgetExperienceService.getRuntimeStatus(type, id),
+		queryKey: runtimeStatusQueryKey,
+		queryFn: () =>
+			isAdminMode
+				? adminWidgetsService.getRuntimeStatus(adminType, id)
+				: widgetExperienceService.getRuntimeStatus(type, id),
 		enabled: isAuthResolved && auth,
 		retry: 1
 	})
 	const analyticsQuery = useQuery({
-		queryKey: ['widget-runtime-analytics', type, id, 30],
-		queryFn: () => widgetExperienceService.getAnalytics(type, id, 30),
+		queryKey: analyticsQueryKey,
+		queryFn: () =>
+			isAdminMode
+				? adminWidgetsService.getAnalytics(adminType, id, 30)
+				: widgetExperienceService.getAnalytics(type, id, 30),
 		enabled: isAuthResolved && Boolean(auth) && canUseAnalytics,
 		retry: 1
 	})
 	const versionsQuery = useQuery({
-		queryKey: ['widget-settings-versions', type, id, versionsPage],
+		queryKey: [...versionsQueryKey, versionsPage],
 		queryFn: () =>
-			widgetExperienceService.getVersions(type, id, versionsPage, 10),
+			isAdminMode
+				? adminWidgetsService.getVersions(adminType, id, versionsPage, 10)
+				: widgetExperienceService.getVersions(type, id, versionsPage, 10),
 		enabled: isAuthResolved && auth,
 		placeholderData: previous => previous
 	})
 
 	const refreshWidgetQueries = () =>
 		Promise.all([
-			queryClient.invalidateQueries({ queryKey: [source.ownerQueryKey] }),
+			queryClient.invalidateQueries({
+				queryKey: isAdminMode
+					? ['admin-widgets-monitoring']
+					: [source.ownerQueryKey]
+			}),
+			queryClient.invalidateQueries({
+				queryKey: settingsQueryKey,
+				exact: true
+			}),
 			queryClient.invalidateQueries({ queryKey: lifecycleQueryKey }),
 			queryClient.invalidateQueries({
-				queryKey: ['widget-settings-versions', type, id]
+				queryKey: versionsQueryKey
 			}),
 			queryClient.invalidateQueries({
-				queryKey: ['widget-runtime-status', type, id]
+				queryKey: runtimeStatusQueryKey
 			}),
 			queryClient.invalidateQueries({
-				queryKey: ['widget-runtime-analytics', type, id]
+				queryKey: analyticsQueryKey
 			})
 		])
 
@@ -303,17 +450,23 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 				throw new Error('Состояние черновика ещё не загружено')
 			}
 
-			return widgetExperienceService.publish(
-				type,
-				id,
-				lifecycleQuery.data.draftRevision
-			)
+			return isAdminMode
+				? adminWidgetsService.publish(
+						adminType,
+						id,
+						lifecycleQuery.data.draftRevision
+					)
+				: widgetExperienceService.publish(
+						type,
+						id,
+						lifecycleQuery.data.draftRevision
+					)
 		},
 		onMutate: () => toast.loading('Публикуем виджет…'),
 		onSuccess: async (published, _, toastId) => {
 			queryClient.setQueryData(lifecycleQueryKey, published)
 			await refreshWidgetQueries()
-			toast.success('Новая версия опубликована', { id: toastId })
+			toast.success('Настройки виджета опубликованы', { id: toastId })
 		},
 		onError: (mutationError, _, toastId) => {
 			if ((mutationError as any)?.response?.status === 409) {
@@ -333,11 +486,17 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 				throw new Error('Состояние черновика ещё не загружено')
 			}
 
-			return widgetExperienceService.discardDraft(
-				type,
-				id,
-				lifecycleQuery.data.draftRevision
-			)
+			return isAdminMode
+				? adminWidgetsService.discardDraft(
+						adminType,
+						id,
+						lifecycleQuery.data.draftRevision
+					)
+				: widgetExperienceService.discardDraft(
+						type,
+						id,
+						lifecycleQuery.data.draftRevision
+					)
 		},
 		onMutate: () => toast.loading('Возвращаем опубликованные настройки…'),
 		onSuccess: async (discarded, _, toastId) => {
@@ -358,11 +517,16 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 	})
 
 	const cloneMutation = useMutation({
-		mutationFn: () => widgetExperienceService.clone(type, id),
+		mutationFn: () =>
+			isAdminMode
+				? adminWidgetsService.clone(adminType, id)
+				: widgetExperienceService.clone(type, id),
 		onMutate: () => toast.loading('Создаём независимую копию…'),
 		onSuccess: async (cloned, _, toastId) => {
 			await queryClient.invalidateQueries({
-				queryKey: [source.ownerQueryKey]
+				queryKey: isAdminMode
+					? ['admin-widgets-monitoring']
+					: [source.ownerQueryKey]
 			})
 			toast.success(
 				cloned.warning
@@ -370,7 +534,11 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 					: 'Копия виджета создана',
 				{ id: toastId, duration: cloned.warning ? 6500 : 3000 }
 			)
-			router.push(`/cabinet/widgets/${cloned.type}/${cloned.id}`)
+			router.push(
+				isAdminMode
+					? `/admin/widgets/${cloned.type}/${cloned.id}`
+					: `/cabinet/widgets/${cloned.type}/${cloned.id}`
+			)
 		},
 		onError: (mutationError, _, toastId) => {
 			toast.error(
@@ -386,27 +554,36 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 				throw new Error('Состояние черновика ещё не загружено')
 			}
 
-			return widgetExperienceService.restoreVersion(
-				type,
-				id,
-				version,
-				lifecycleQuery.data.draftRevision
-			)
+			return isAdminMode
+				? adminWidgetsService.restoreVersion(
+						adminType,
+						id,
+						version,
+						lifecycleQuery.data.draftRevision
+					)
+				: widgetExperienceService.restoreVersion(
+						type,
+						id,
+						version,
+						lifecycleQuery.data.draftRevision
+					)
 		},
-		onMutate: version =>
-			toast.loading(`Восстанавливаем версию ${version} в черновик…`),
+		onMutate: () =>
+			toast.loading('Восстанавливаем публикацию в черновик…'),
 		onSuccess: async (restored, _, toastId) => {
 			queryClient.setQueryData(lifecycleQueryKey, restored)
 			setEditorResetKey(current => current + 1)
 			await refreshWidgetQueries()
-			toast.success('Версия восстановлена в черновик', { id: toastId })
+			toast.success('Публикация восстановлена в черновик', {
+				id: toastId
+			})
 		},
 		onError: (mutationError, _, toastId) => {
 			if ((mutationError as any)?.response?.status === 409) {
 				void handleRevisionConflict()
 			}
 			toast.error(
-				errorCatch(mutationError) || 'Не удалось восстановить версию',
+				errorCatch(mutationError) || 'Не удалось восстановить публикацию',
 				{ id: toastId }
 			)
 		}
@@ -478,7 +655,7 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 	)
 
 	const closeSettings = () => {
-		router.push('/cabinet?tab=widgets')
+		router.push(isAdminMode ? '/admin/widgets' : '/cabinet?tab=widgets')
 	}
 
 	const handleSaved = (updated: WidgetSettingsSelection['entity']) => {
@@ -501,14 +678,7 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 						}
 					: current
 		)
-		void Promise.all([
-			queryClient.invalidateQueries({
-				queryKey: [source.ownerQueryKey]
-			}),
-			queryClient.invalidateQueries({
-				queryKey: lifecycleQueryKey
-			})
-		])
+		void refreshWidgetQueries()
 	}
 
 	const handleCheckInstallation = async () => {
@@ -627,8 +797,8 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 	}
 
 	const canUseCustomButtonImage =
-		selection?.subscription?.plan === 'HARD' &&
-		selection.subscription.status === 'ACTIVE'
+		selection?.ownerPlan === 'HARD' &&
+		selection.subscriptionStatus === 'ACTIVE'
 	const isLoading = !isAuthResolved || !auth || isPending
 
 	if (isLoading) {
@@ -711,7 +881,10 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 				onClose: closeSettings,
 				onSaved: handleSaved,
 				onDirtyChange: setHasEditorUnsavedChanges,
-				onRevisionConflict: handleRevisionConflict
+				onPreviewDeviceChange: handlePreviewDeviceChange,
+				onPreviewConfigChange: handlePreviewConfigChange,
+				onRevisionConflict: handleRevisionConflict,
+				isAdminMode
 			})
 		: null
 
@@ -750,6 +923,7 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 						runtimeStatus={runtimeStatusQuery.data}
 						analytics={analyticsQuery.data}
 						canUseAnalytics={canUseAnalytics}
+						analyticsUnavailableMessage={analyticsUnavailableMessage}
 						versions={versionsQuery.data}
 						isRuntimeStatusError={runtimeStatusQuery.isError}
 						isAnalyticsError={analyticsQuery.isError}
@@ -762,6 +936,7 @@ const WidgetSettings = ({ type, id }: WidgetSettingsProps) => {
 						isRestoring={restoreMutation.isPending}
 						isCheckingInstallation={isCheckingInstallation}
 						hasLocalChanges={hasEditorUnsavedChanges}
+						hasReviewedMobilePreview={hasReviewedMobilePreview}
 						onPublish={() => publishMutation.mutate()}
 						onDiscard={() => discardMutation.mutate()}
 						onClone={() => cloneMutation.mutate()}
@@ -784,7 +959,10 @@ interface WidgetEditorRendererProps {
 	onClose: () => void
 	onSaved: (updated: WidgetSettingsSelection['entity']) => void
 	onDirtyChange: (hasUnsavedChanges: boolean) => void
+	onPreviewDeviceChange: (device: 'desktop' | 'mobile') => void
+	onPreviewConfigChange: () => void
 	onRevisionConflict: () => Promise<number | null>
+	isAdminMode: boolean
 }
 
 const mergeLifecycleSelection = (
@@ -817,7 +995,10 @@ const renderWidgetEditor = ({
 	onClose,
 	onSaved,
 	onDirtyChange,
-	onRevisionConflict
+	onPreviewDeviceChange,
+	onPreviewConfigChange,
+	onRevisionConflict,
+	isAdminMode
 }: WidgetEditorRendererProps) => {
 	switch (selection.type) {
 		case 'wheel':
@@ -829,7 +1010,27 @@ const renderWidgetEditor = ({
 					onClose={onClose}
 					onSaved={onSaved}
 					onDirtyChange={onDirtyChange}
+					onPreviewDeviceChange={onPreviewDeviceChange}
+					onPreviewConfigChange={onPreviewConfigChange}
 					onRevisionConflict={onRevisionConflict}
+					persistence={
+						isAdminMode
+							? {
+									update: payload =>
+										adminWidgetsService
+											.update('WHEEL', selection.entity.id, payload)
+											.then(response => response.entity),
+									uploadButtonImage: file =>
+										adminWidgetsService
+											.uploadButtonImage(
+												'WHEEL',
+												selection.entity.id,
+												file
+											)
+											.then(response => response.entity)
+								}
+							: undefined
+					}
 					presentation="page"
 					previewPortalTarget={previewPortalTarget}
 				/>
@@ -843,7 +1044,23 @@ const renderWidgetEditor = ({
 					onClose={onClose}
 					onSaved={onSaved}
 					onDirtyChange={onDirtyChange}
+					onPreviewDeviceChange={onPreviewDeviceChange}
+					onPreviewConfigChange={onPreviewConfigChange}
 					onRevisionConflict={onRevisionConflict}
+					persistence={
+						isAdminMode
+							? {
+									update: payload =>
+										adminWidgetsService
+											.update('QUIZ', selection.entity.id, payload)
+											.then(response => response.entity),
+									uploadButtonImage: file =>
+										adminWidgetsService
+											.uploadButtonImage('QUIZ', selection.entity.id, file)
+											.then(response => response.entity)
+								}
+							: undefined
+					}
 					presentation="page"
 					previewPortalTarget={previewPortalTarget}
 				/>
@@ -857,7 +1074,27 @@ const renderWidgetEditor = ({
 					onClose={onClose}
 					onSaved={onSaved}
 					onDirtyChange={onDirtyChange}
+					onPreviewDeviceChange={onPreviewDeviceChange}
+					onPreviewConfigChange={onPreviewConfigChange}
 					onRevisionConflict={onRevisionConflict}
+					persistence={
+						isAdminMode
+							? {
+									update: payload =>
+										adminWidgetsService
+											.update('CALLBACK', selection.entity.id, payload)
+											.then(response => response.entity),
+									uploadButtonImage: file =>
+										adminWidgetsService
+											.uploadButtonImage(
+												'CALLBACK',
+												selection.entity.id,
+												file
+											)
+											.then(response => response.entity)
+								}
+							: undefined
+					}
 					presentation="page"
 					previewPortalTarget={previewPortalTarget}
 				/>
@@ -871,7 +1108,27 @@ const renderWidgetEditor = ({
 					onClose={onClose}
 					onSaved={onSaved}
 					onDirtyChange={onDirtyChange}
+					onPreviewDeviceChange={onPreviewDeviceChange}
+					onPreviewConfigChange={onPreviewConfigChange}
 					onRevisionConflict={onRevisionConflict}
+					persistence={
+						isAdminMode
+							? {
+									update: payload =>
+										adminWidgetsService
+											.update('TIMER', selection.entity.id, payload)
+											.then(response => response.entity),
+									uploadButtonImage: file =>
+										adminWidgetsService
+											.uploadButtonImage(
+												'TIMER',
+												selection.entity.id,
+												file
+											)
+											.then(response => response.entity)
+								}
+							: undefined
+					}
 					presentation="page"
 					previewPortalTarget={previewPortalTarget}
 				/>
@@ -885,7 +1142,19 @@ const renderWidgetEditor = ({
 					onClose={onClose}
 					onSaved={onSaved}
 					onDirtyChange={onDirtyChange}
+					onPreviewDeviceChange={onPreviewDeviceChange}
+					onPreviewConfigChange={onPreviewConfigChange}
 					onRevisionConflict={onRevisionConflict}
+					persistence={
+						isAdminMode
+							? {
+									update: payload =>
+										adminWidgetsService
+											.update('STOP_OFFER', selection.entity.id, payload)
+											.then(response => response.entity)
+								}
+							: undefined
+					}
 					presentation="page"
 					previewPortalTarget={previewPortalTarget}
 				/>
@@ -899,7 +1168,31 @@ const renderWidgetEditor = ({
 					onClose={onClose}
 					onSaved={onSaved}
 					onDirtyChange={onDirtyChange}
+					onPreviewDeviceChange={onPreviewDeviceChange}
+					onPreviewConfigChange={onPreviewConfigChange}
 					onRevisionConflict={onRevisionConflict}
+					persistence={
+						isAdminMode
+							? {
+									update: payload =>
+										adminWidgetsService
+											.update(
+												'ONLINE_CONSULTANT',
+												selection.entity.id,
+												payload
+											)
+											.then(response => response.entity),
+									uploadButtonImage: file =>
+										adminWidgetsService
+											.uploadButtonImage(
+												'ONLINE_CONSULTANT',
+												selection.entity.id,
+												file
+											)
+											.then(response => response.entity)
+								}
+							: undefined
+					}
 					presentation="page"
 					previewPortalTarget={previewPortalTarget}
 				/>
@@ -913,7 +1206,27 @@ const renderWidgetEditor = ({
 					onClose={onClose}
 					onSaved={onSaved}
 					onDirtyChange={onDirtyChange}
+					onPreviewDeviceChange={onPreviewDeviceChange}
+					onPreviewConfigChange={onPreviewConfigChange}
 					onRevisionConflict={onRevisionConflict}
+					persistence={
+						isAdminMode
+							? {
+									update: payload =>
+										adminWidgetsService
+											.update('CALCULATOR', selection.entity.id, payload)
+											.then(response => response.entity),
+									uploadButtonImage: file =>
+										adminWidgetsService
+											.uploadButtonImage(
+												'CALCULATOR',
+												selection.entity.id,
+												file
+											)
+											.then(response => response.entity)
+								}
+							: undefined
+					}
 					presentation="page"
 					previewPortalTarget={previewPortalTarget}
 				/>

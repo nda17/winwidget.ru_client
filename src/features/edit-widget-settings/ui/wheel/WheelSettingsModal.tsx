@@ -2,6 +2,7 @@
 
 import { widgetService } from '@/entities/site-widget'
 import { Widget, WidgetConfig } from '@/entities/site-widget'
+import ConfirmDialog from '@/shared/ui/confirm-dialog/ConfirmDialog'
 import { useMutation } from '@tanstack/react-query'
 import Image from 'next/image'
 import { ChangeEvent, useEffect, useId, useRef, useState } from 'react'
@@ -24,6 +25,7 @@ import WidgetSettingsPreviewPortal from '../shared/WidgetSettingsPreviewPortal'
 import styles from './WheelSettingsModal.module.scss'
 
 type Tab = 'main' | 'bonuses' | 'integrations' | 'code' | 'info'
+type EditableTab = Exclude<Tab, 'code' | 'info'>
 const BUTTON_IMAGE_MAX_SIZE_BYTES = 200 * 1024
 const WHEEL_RADIUS = 150
 const WHEEL_TEXT_RADIUS = WHEEL_RADIUS * 0.59
@@ -114,6 +116,8 @@ const WheelSettingsModal = ({
 	persistence,
 	presentation = 'modal',
 	previewPortalTarget,
+	onPreviewDeviceChange,
+	onPreviewConfigChange,
 	onDirtyChange,
 	onRevisionConflict,
 	lifecycleActions
@@ -131,6 +135,8 @@ const WheelSettingsModal = ({
 		useState<ValidationIssue | null>(null)
 	const [confirmReset, setConfirmReset] = useState(false)
 	const [confirmResetAttempts, setConfirmResetAttempts] = useState(false)
+	const [confirmResetSection, setConfirmResetSection] =
+		useState<EditableTab | null>(null)
 	const [savedSnapshot, setSavedSnapshot] = useState(() =>
 		JSON.stringify({
 			name: widget.name,
@@ -324,10 +330,13 @@ const WheelSettingsModal = ({
 				expectedDraftRevision: draftRevisionRef.current
 			}),
 		onMutate: () =>
-			toast.loading('Сбрасываем попытки, пожалуйста подождите...'),
+			toast.loading('Сохраняем сброс в черновик, пожалуйста подождите...'),
 		onSuccess: (updated, _, toastId) => {
 			draftRevisionRef.current = updated.draftRevision
-			toast.success('Попытки всех посетителей сброшены', { id: toastId })
+			toast.success(
+				'Сброс сохранён в черновик; вступит в силу после публикации',
+				{ id: toastId }
+			)
 			setName(updated.name)
 			setInstallDomain(updated.installDomain ?? '')
 			setConfig(updated.config)
@@ -422,11 +431,22 @@ const WheelSettingsModal = ({
 		window.requestAnimationFrame(() => {
 			window.requestAnimationFrame(() => {
 				const field = document.getElementById(issue.fieldId)
+				field?.closest('details')?.setAttribute('open', '')
 				field?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 				field?.focus({ preventScroll: true })
 			})
 		})
 		toast.error(issue.message)
+	}
+
+	const setBlurValidationIssue = (
+		issue: ValidationIssue | null,
+		fieldId: string
+	) => {
+		setValidationIssue(
+			previous =>
+				issue ?? (previous?.fieldId === fieldId ? null : previous)
+		)
 	}
 
 	const inputClassName = (fieldId: string) =>
@@ -534,13 +554,72 @@ const WheelSettingsModal = ({
 		})
 	}
 
+	const handleResetSection = () => {
+		if (!confirmResetSection) return
+
+		setConfig(previous => {
+			if (confirmResetSection === 'bonuses') {
+				return {
+					...previous,
+					spinDuration: DEFAULT_CONFIG.spinDuration,
+					bonuses: DEFAULT_CONFIG.bonuses.map(bonus => ({ ...bonus }))
+				}
+			}
+
+			if (confirmResetSection === 'integrations') {
+				return {
+					...previous,
+					integrations: { ...DEFAULT_CONFIG.integrations }
+				}
+			}
+
+			return {
+				...DEFAULT_CONFIG,
+				spinDuration: previous.spinDuration,
+				spinResetToken: previous.spinResetToken,
+				bonuses: previous.bonuses,
+				integrations: previous.integrations
+			}
+		})
+		setValidationIssue(null)
+		setConfirmResetSection(null)
+		toast.success('Раздел сброшен в черновике; сохраните черновик')
+	}
+
+	const getColorValidationIssue = (path: string): ValidationIssue => {
+		const bonusMatch = path.match(/^bonuses\[(\d+)\]\.(color|textColor)$/)
+		if (bonusMatch) {
+			const [, bonusIndex, colorField] = bonusMatch
+			return {
+				tab: 'bonuses',
+				fieldId: `${titleId}-bonus-${bonusIndex}-${colorField === 'color' ? 'color' : 'text-color'}`,
+				message: 'Введите цвет в формате #RRGGBB'
+			}
+		}
+
+		const fieldIds: Partial<Record<keyof WidgetConfig, string>> = {
+			color: `${titleId}-color`,
+			wheelBorderColor: `${titleId}-wheel-border-color`,
+			bgColor: `${titleId}-bg-color`,
+			textColor: `${titleId}-text-color`,
+			buttonColor: `${titleId}-button-color`,
+			centerColor: `${titleId}-center-color`,
+			arrowColor: `${titleId}-arrow-color`
+		}
+
+		return {
+			tab: 'main',
+			fieldId: fieldIds[path as keyof WidgetConfig] ?? `${titleId}-color`,
+			message: 'Введите цвет в формате #RRGGBB'
+		}
+	}
+
 	const handleSave = () => {
 		const invalidColor = !isWidgetHexColor(config.color)
 			? 'color'
 			: findInvalidWidgetColor(config)
 		if (invalidColor) {
-			setTab(invalidColor.startsWith('bonuses') ? 'bonuses' : 'main')
-			toast.error('Цвет должен быть указан в формате #RRGGBB')
+			reportValidationIssue(getColorValidationIssue(invalidColor))
 			return
 		}
 
@@ -707,6 +786,33 @@ const WheelSettingsModal = ({
 			})
 			return
 		}
+		const webhookUrl = config.integrations.webhookUrl?.trim() || ''
+		if (
+			config.dataType !== 'NONE' &&
+			webhookUrl &&
+			!isHttpUrl(webhookUrl)
+		) {
+			reportValidationIssue({
+				tab: 'integrations',
+				fieldId: `${titleId}-integration-webhook-url`,
+				message: 'Укажите полный URL webhook с http:// или https://'
+			})
+			return
+		}
+		const bitrix24WebhookUrl =
+			config.integrations.bitrix24WebhookUrl?.trim() || ''
+		if (
+			config.dataType !== 'NONE' &&
+			bitrix24WebhookUrl &&
+			!isHttpUrl(bitrix24WebhookUrl)
+		) {
+			reportValidationIssue({
+				tab: 'integrations',
+				fieldId: `${titleId}-integration-bitrix24-url`,
+				message: 'Укажите полный URL Bitrix24 с http:// или https://'
+			})
+			return
+		}
 		const invalidBonus = config.bonuses.findIndex(b => {
 			const p = b.probability ?? 1
 			return p < 1 || p > 100
@@ -811,6 +917,8 @@ const WheelSettingsModal = ({
 						type="wheel"
 						config={config}
 						isHardPlan={canUseCustomButtonImage}
+						onDeviceChange={onPreviewDeviceChange}
+						onConfigChange={onPreviewConfigChange}
 						autoCollapse={
 							!isPagePresentation &&
 							['integrations', 'code', 'info'].includes(tab)
@@ -910,6 +1018,19 @@ const WheelSettingsModal = ({
 											setValidationIssue(null)
 											setName(e.target.value)
 										}}
+										onBlur={() => {
+											const fieldId = `${titleId}-name`
+											setBlurValidationIssue(
+												name.trim()
+													? null
+													: {
+															tab: 'main',
+															fieldId,
+															message: 'Укажите название виджета'
+														},
+												fieldId
+											)
+										}}
 										placeholder="Виджет"
 										maxLength={50}
 										aria-invalid={
@@ -937,16 +1058,28 @@ const WheelSettingsModal = ({
 											onChange={e => setField('color', e.target.value)}
 										/>
 										<input
-											className={`${styles.input} ${
-												!isWidgetHexColor(config.color)
-													? pageStyles.inputError
-													: ''
-											}`}
+											id={`${titleId}-color`}
+											className={inputClassName(`${titleId}-color`)}
 											value={config.color}
 											onChange={e => setField('color', e.target.value)}
+											onBlur={() => {
+												const fieldId = `${titleId}-color`
+												setBlurValidationIssue(
+													isWidgetHexColor(config.color)
+														? null
+														: {
+																tab: 'main',
+																fieldId,
+																message: 'Введите цвет в формате #RRGGBB'
+															},
+													fieldId
+												)
+											}}
 											placeholder="#4705fb"
 											maxLength={7}
-											aria-invalid={!isWidgetHexColor(config.color)}
+											aria-invalid={
+												validationIssue?.fieldId === `${titleId}-color`
+											}
 										/>
 										{config.color && config.color !== '#4705fb' && (
 											<button
@@ -959,272 +1092,406 @@ const WheelSettingsModal = ({
 											</button>
 										)}
 									</div>
-									{!isWidgetHexColor(config.color) && (
-										<p className={pageStyles.fieldError}>
-											Введите цвет в формате #RRGGBB
-										</p>
-									)}
+									{fieldError(`${titleId}-color`)}
 									<p className={styles.hint}>
 										Цвет фона карточки и секторов по умолчанию (если не
 										задан свой цвет сектора).
 									</p>
 								</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>Цвет обода колеса:</p>
-									<div className={styles.colorRow}>
-										<input
-											type="color"
-											className={styles.colorPicker}
-											value={getWidgetColorPreview(
-												config.wheelBorderColor,
-												getWidgetColorPreview(config.color, '#4705fb')
-											)}
-											onChange={e =>
-												setField('wheelBorderColor', e.target.value)
-											}
-										/>
-										<input
-											className={styles.input}
-											value={config.wheelBorderColor || ''}
-											onChange={e =>
-												setField('wheelBorderColor', e.target.value)
-											}
-											placeholder="Как цвет акцентов"
-											maxLength={7}
-										/>
-										{config.wheelBorderColor && (
-											<button
-												type="button"
-												className={styles.clearColorBtn}
-												onClick={() => setField('wheelBorderColor', '')}
-												title="Вернуть цвет акцентов"
-											>
-												✕
-											</button>
-										)}
-									</div>
-									<p className={styles.hint}>
-										Отдельный цвет внешнего кольца колеса. Оставьте пустым,
-										чтобы использовать цвет акцентов.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>Цвет фона виджета</p>
-									<div className={styles.colorRow}>
-										<input
-											type="color"
-											className={styles.colorPicker}
-											value={getWidgetColorPreview(
-												config.bgColor,
-												'#4705fb'
-											)}
-											onChange={e => setField('bgColor', e.target.value)}
-										/>
-										<input
-											className={styles.input}
-											value={config.bgColor || ''}
-											onChange={e => setField('bgColor', e.target.value)}
-											placeholder="#4705fb"
-											maxLength={7}
-										/>
-										{config.bgColor && (
-											<button
-												type="button"
-												className={styles.clearColorBtn}
-												onClick={() => setField('bgColor', '')}
-												title="Сбросить к стандартному"
-											>
-												✕
-											</button>
-										)}
-									</div>
-									<p className={styles.hint}>
-										Цвет фона карточки (фон под колесом). Оставьте пустым
-										для стандартного градиента.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<label className={styles.checkRow}>
-										<input
-											type="checkbox"
-											checked={config.glassEffect}
-											onChange={e =>
-												setField('glassEffect', e.target.checked)
-											}
-										/>
-										<span className={styles.checkLabel}>
-											Стеклянный эффект фона
-										</span>
-									</label>
-									<p className={styles.hint}>
-										Делает фон карточки полупрозрачным, с мягким бликом и
-										размытием подложки.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>Цвет текста виджета</p>
-									<div className={styles.colorRow}>
-										<input
-											type="color"
-											className={styles.colorPicker}
-											value={getWidgetColorPreview(
-												config.textColor,
-												getReadableTextColor(
-													getWidgetColorPreview(
-														config.bgColor,
+								<details className={styles.advancedBlock}>
+									<summary className={styles.advancedSummary}>
+										Тонкая настройка оформления
+									</summary>
+									<div className={styles.advancedContent}>
+										<div className={styles.field}>
+											<p className={styles.label}>Цвет обода колеса:</p>
+											<div className={styles.colorRow}>
+												<input
+													type="color"
+													className={styles.colorPicker}
+													value={getWidgetColorPreview(
+														config.wheelBorderColor,
 														getWidgetColorPreview(config.color, '#4705fb')
-													)
-												)
-											)}
-											onChange={e => setField('textColor', e.target.value)}
-										/>
-										<input
-											className={styles.input}
-											value={config.textColor || ''}
-											onChange={e => setField('textColor', e.target.value)}
-											placeholder="Авто по фону"
-											maxLength={7}
-										/>
-										{config.textColor && (
-											<button
-												type="button"
-												className={styles.clearColorBtn}
-												onClick={() => setField('textColor', '')}
-												title="Вернуть автоцвет"
-											>
-												✕
-											</button>
-										)}
-									</div>
-									<p className={styles.hint}>
-										По умолчанию подбирается автоматически под цвет фона.
-										Можно задать вручную для брендового оформления.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>Цвет кнопки «Крутить»:</p>
-									<div className={styles.colorRow}>
-										<input
-											type="color"
-											className={styles.colorPicker}
-											value={getWidgetColorPreview(
-												config.buttonColor,
-												'#6a11cb'
-											)}
-											onChange={e =>
-												setField('buttonColor', e.target.value)
-											}
-										/>
-										<input
-											className={styles.input}
-											value={config.buttonColor || ''}
-											onChange={e =>
-												setField('buttonColor', e.target.value)
-											}
-											placeholder="По умолчанию (градиент)"
-											maxLength={7}
-										/>
-										{config.buttonColor && (
-											<button
-												type="button"
-												className={styles.clearColorBtn}
-												onClick={() => setField('buttonColor', '')}
-												title="Сбросить к стандартному"
-											>
-												✕
-											</button>
-										)}
-									</div>
-									<p className={styles.hint}>
-										Оставьте пустым для стандартного градиента
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Цвет волчка (центральный круг колеса):
-									</p>
-									<div className={styles.colorRow}>
-										<input
-											type="color"
-											className={styles.colorPicker}
-											value={getWidgetColorPreview(
-												config.centerColor,
-												'#ffffff'
-											)}
-											onChange={e =>
-												setField('centerColor', e.target.value)
-											}
-										/>
-										<input
-											className={styles.input}
-											value={config.centerColor || ''}
-											onChange={e =>
-												setField('centerColor', e.target.value)
-											}
-											placeholder="#ffffff"
-											maxLength={7}
-										/>
-										{config.centerColor &&
-											config.centerColor !== '#ffffff' && (
-												<button
-													type="button"
-													className={styles.clearColorBtn}
-													onClick={() =>
-														setField('centerColor', '#ffffff')
+													)}
+													onChange={e =>
+														setField('wheelBorderColor', e.target.value)
 													}
-													title="Сбросить к белому"
-												>
-													✕
-												</button>
-											)}
-									</div>
-									<p className={styles.hint}>
-										Цвет круглого элемента в центре колеса фортуны.
-									</p>
-								</div>
+												/>
+												<input
+													id={`${titleId}-wheel-border-color`}
+													className={inputClassName(
+														`${titleId}-wheel-border-color`
+													)}
+													value={config.wheelBorderColor || ''}
+													onChange={e =>
+														setField('wheelBorderColor', e.target.value)
+													}
+													onBlur={() => {
+														const fieldId = `${titleId}-wheel-border-color`
+														setBlurValidationIssue(
+															!config.wheelBorderColor ||
+																isWidgetHexColor(config.wheelBorderColor)
+																? null
+																: {
+																		tab: 'main',
+																		fieldId,
+																		message:
+																			'Введите цвет в формате #RRGGBB'
+																	},
+															fieldId
+														)
+													}}
+													placeholder="Как цвет акцентов"
+													maxLength={7}
+												/>
+												{config.wheelBorderColor && (
+													<button
+														type="button"
+														className={styles.clearColorBtn}
+														onClick={() =>
+															setField('wheelBorderColor', '')
+														}
+														title="Вернуть цвет акцентов"
+													>
+														✕
+													</button>
+												)}
+											</div>
+											{fieldError(`${titleId}-wheel-border-color`)}
+											<p className={styles.hint}>
+												Отдельный цвет внешнего кольца колеса. Оставьте
+												пустым, чтобы использовать цвет акцентов.
+											</p>
+										</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>Цвет стрелки:</p>
-									<div className={styles.colorRow}>
-										<input
-											type="color"
-											className={styles.colorPicker}
-											value={getWidgetColorPreview(
-												config.arrowColor,
-												'#ffcc00'
-											)}
-											onChange={e =>
-												setField('arrowColor', e.target.value)
-											}
-										/>
-										<input
-											className={styles.input}
-											value={config.arrowColor || ''}
-											onChange={e =>
-												setField('arrowColor', e.target.value)
-											}
-											placeholder="#ffcc00"
-											maxLength={7}
-										/>
-										{config.arrowColor &&
-											config.arrowColor !== '#ffcc00' && (
-												<button
-													type="button"
-													className={styles.clearColorBtn}
-													onClick={() => setField('arrowColor', '#ffcc00')}
-													title="Сбросить к стандартному"
-												>
-													✕
-												</button>
-											)}
+										<div className={styles.field}>
+											<p className={styles.label}>Цвет фона виджета</p>
+											<div className={styles.colorRow}>
+												<input
+													type="color"
+													className={styles.colorPicker}
+													value={getWidgetColorPreview(
+														config.bgColor,
+														'#4705fb'
+													)}
+													onChange={e =>
+														setField('bgColor', e.target.value)
+													}
+												/>
+												<input
+													id={`${titleId}-bg-color`}
+													className={inputClassName(`${titleId}-bg-color`)}
+													value={config.bgColor || ''}
+													onChange={e =>
+														setField('bgColor', e.target.value)
+													}
+													onBlur={() => {
+														const fieldId = `${titleId}-bg-color`
+														setBlurValidationIssue(
+															!config.bgColor ||
+																isWidgetHexColor(config.bgColor)
+																? null
+																: {
+																		tab: 'main',
+																		fieldId,
+																		message:
+																			'Введите цвет в формате #RRGGBB'
+																	},
+															fieldId
+														)
+													}}
+													placeholder="#4705fb"
+													maxLength={7}
+												/>
+												{config.bgColor && (
+													<button
+														type="button"
+														className={styles.clearColorBtn}
+														onClick={() => setField('bgColor', '')}
+														title="Сбросить к стандартному"
+													>
+														✕
+													</button>
+												)}
+											</div>
+											{fieldError(`${titleId}-bg-color`)}
+											<p className={styles.hint}>
+												Цвет фона карточки (фон под колесом). Оставьте
+												пустым для стандартного градиента.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<label className={styles.checkRow}>
+												<input
+													type="checkbox"
+													checked={config.glassEffect}
+													onChange={e =>
+														setField('glassEffect', e.target.checked)
+													}
+												/>
+												<span className={styles.checkLabel}>
+													Стеклянный эффект фона
+												</span>
+											</label>
+											<p className={styles.hint}>
+												Делает фон карточки полупрозрачным, с мягким бликом
+												и размытием подложки.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<p className={styles.label}>Цвет текста виджета</p>
+											<div className={styles.colorRow}>
+												<input
+													type="color"
+													className={styles.colorPicker}
+													value={getWidgetColorPreview(
+														config.textColor,
+														getReadableTextColor(
+															getWidgetColorPreview(
+																config.bgColor,
+																getWidgetColorPreview(
+																	config.color,
+																	'#4705fb'
+																)
+															)
+														)
+													)}
+													onChange={e =>
+														setField('textColor', e.target.value)
+													}
+												/>
+												<input
+													id={`${titleId}-text-color`}
+													className={inputClassName(
+														`${titleId}-text-color`
+													)}
+													value={config.textColor || ''}
+													onChange={e =>
+														setField('textColor', e.target.value)
+													}
+													onBlur={() => {
+														const fieldId = `${titleId}-text-color`
+														setBlurValidationIssue(
+															!config.textColor ||
+																isWidgetHexColor(config.textColor)
+																? null
+																: {
+																		tab: 'main',
+																		fieldId,
+																		message:
+																			'Введите цвет в формате #RRGGBB'
+																	},
+															fieldId
+														)
+													}}
+													placeholder="Авто по фону"
+													maxLength={7}
+												/>
+												{config.textColor && (
+													<button
+														type="button"
+														className={styles.clearColorBtn}
+														onClick={() => setField('textColor', '')}
+														title="Вернуть автоцвет"
+													>
+														✕
+													</button>
+												)}
+											</div>
+											{fieldError(`${titleId}-text-color`)}
+											<p className={styles.hint}>
+												По умолчанию подбирается автоматически под цвет
+												фона. Можно задать вручную для брендового
+												оформления.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Цвет кнопки «Крутить»:
+											</p>
+											<div className={styles.colorRow}>
+												<input
+													type="color"
+													className={styles.colorPicker}
+													value={getWidgetColorPreview(
+														config.buttonColor,
+														'#6a11cb'
+													)}
+													onChange={e =>
+														setField('buttonColor', e.target.value)
+													}
+												/>
+												<input
+													id={`${titleId}-button-color`}
+													className={inputClassName(
+														`${titleId}-button-color`
+													)}
+													value={config.buttonColor || ''}
+													onChange={e =>
+														setField('buttonColor', e.target.value)
+													}
+													onBlur={() => {
+														const fieldId = `${titleId}-button-color`
+														setBlurValidationIssue(
+															!config.buttonColor ||
+																isWidgetHexColor(config.buttonColor)
+																? null
+																: {
+																		tab: 'main',
+																		fieldId,
+																		message:
+																			'Введите цвет в формате #RRGGBB'
+																	},
+															fieldId
+														)
+													}}
+													placeholder="По умолчанию — градиент"
+													maxLength={7}
+												/>
+												{config.buttonColor !== config.color && (
+													<button
+														type="button"
+														className={styles.inheritColorBtn}
+														onClick={() =>
+															setField('buttonColor', config.color)
+														}
+													>
+														Вернуть цвет акцентов
+													</button>
+												)}
+											</div>
+											{fieldError(`${titleId}-button-color`)}
+											<p className={styles.hint}>
+												Пустое значение использует стандартный градиент.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Цвет волчка (центральный круг колеса):
+											</p>
+											<div className={styles.colorRow}>
+												<input
+													type="color"
+													className={styles.colorPicker}
+													value={getWidgetColorPreview(
+														config.centerColor,
+														'#ffffff'
+													)}
+													onChange={e =>
+														setField('centerColor', e.target.value)
+													}
+												/>
+												<input
+													id={`${titleId}-center-color`}
+													className={inputClassName(
+														`${titleId}-center-color`
+													)}
+													value={config.centerColor || ''}
+													onChange={e =>
+														setField('centerColor', e.target.value)
+													}
+													onBlur={() => {
+														const fieldId = `${titleId}-center-color`
+														setBlurValidationIssue(
+															!config.centerColor ||
+																isWidgetHexColor(config.centerColor)
+																? null
+																: {
+																		tab: 'main',
+																		fieldId,
+																		message:
+																			'Введите цвет в формате #RRGGBB'
+																	},
+															fieldId
+														)
+													}}
+													placeholder="#ffffff"
+													maxLength={7}
+												/>
+												{config.centerColor &&
+													config.centerColor !== '#ffffff' && (
+														<button
+															type="button"
+															className={styles.clearColorBtn}
+															onClick={() =>
+																setField('centerColor', '#ffffff')
+															}
+															title="Сбросить к белому"
+														>
+															✕
+														</button>
+													)}
+											</div>
+											{fieldError(`${titleId}-center-color`)}
+											<p className={styles.hint}>
+												Цвет круглого элемента в центре колеса фортуны.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<p className={styles.label}>Цвет стрелки:</p>
+											<div className={styles.colorRow}>
+												<input
+													type="color"
+													className={styles.colorPicker}
+													value={getWidgetColorPreview(
+														config.arrowColor,
+														'#ffcc00'
+													)}
+													onChange={e =>
+														setField('arrowColor', e.target.value)
+													}
+												/>
+												<input
+													id={`${titleId}-arrow-color`}
+													className={inputClassName(
+														`${titleId}-arrow-color`
+													)}
+													value={config.arrowColor || ''}
+													onChange={e =>
+														setField('arrowColor', e.target.value)
+													}
+													onBlur={() => {
+														const fieldId = `${titleId}-arrow-color`
+														setBlurValidationIssue(
+															!config.arrowColor ||
+																isWidgetHexColor(config.arrowColor)
+																? null
+																: {
+																		tab: 'main',
+																		fieldId,
+																		message:
+																			'Введите цвет в формате #RRGGBB'
+																	},
+															fieldId
+														)
+													}}
+													placeholder="#ffcc00"
+													maxLength={7}
+												/>
+												{config.arrowColor &&
+													config.arrowColor !== '#ffcc00' && (
+														<button
+															type="button"
+															className={styles.clearColorBtn}
+															onClick={() =>
+																setField('arrowColor', '#ffcc00')
+															}
+															title="Сбросить к стандартному"
+														>
+															✕
+														</button>
+													)}
+											</div>
+											{fieldError(`${titleId}-arrow-color`)}
+										</div>
 									</div>
-								</div>
+								</details>
 							</div>
 
 							<div className={styles.settingsGroup}>
@@ -1301,234 +1568,264 @@ const WheelSettingsModal = ({
 									</div>
 								</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Кнопка открытия — пульсация
-									</p>
-									<div className={styles.checkRow}>
-										<input
-											type="checkbox"
-											id="buttonPulse"
-											checked={config.buttonPulse ?? true}
-											onChange={e =>
-												setField('buttonPulse', e.target.checked)
-											}
-										/>
-										<label
-											htmlFor="buttonPulse"
-											className={styles.checkLabel}
-										>
-											Включить пульсацию кнопки
-										</label>
-									</div>
-									<p className={styles.hint}>
-										Дополнительный эффект со свечением на кнопке открытия
-										виджета.
-									</p>
-								</div>
+								<details className={styles.advancedBlock}>
+									<summary className={styles.advancedSummary}>
+										Расширенные настройки
+									</summary>
+									<div className={styles.advancedContent}>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Кнопка открытия — пульсация
+											</p>
+											<div className={styles.checkRow}>
+												<input
+													type="checkbox"
+													id="buttonPulse"
+													checked={config.buttonPulse ?? true}
+													onChange={e =>
+														setField('buttonPulse', e.target.checked)
+													}
+												/>
+												<label
+													htmlFor="buttonPulse"
+													className={styles.checkLabel}
+												>
+													Включить пульсацию кнопки
+												</label>
+											</div>
+											<p className={styles.hint}>
+												Дополнительный эффект со свечением на кнопке
+												открытия виджета.
+											</p>
+										</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Сторона расположения кнопки для открытия виджета на
-										вашем сайте:
-									</p>
-									<select
-										className={styles.input}
-										value={config.buttonSide ?? 'right'}
-										onChange={e =>
-											setField(
-												'buttonSide',
-												e.target.value as 'left' | 'right'
-											)
-										}
-									>
-										<option value="right">Справа</option>
-										<option value="left">Слева</option>
-									</select>
-									<p className={styles.hint}>
-										Можно настроить с какой стороны экрана будет кнопка
-										открытия виджета.
-									</p>
-								</div>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Сторона расположения кнопки для открытия виджета на
+												вашем сайте:
+											</p>
+											<select
+												className={styles.input}
+												value={config.buttonSide ?? 'right'}
+												onChange={e =>
+													setField(
+														'buttonSide',
+														e.target.value as 'left' | 'right'
+													)
+												}
+											>
+												<option value="right">Справа</option>
+												<option value="left">Слева</option>
+											</select>
+											<p className={styles.hint}>
+												Можно настроить с какой стороны экрана будет кнопка
+												открытия виджета.
+											</p>
+										</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>Отображение облачка</p>
-									<div className={styles.checkRow}>
-										<input
-											type="checkbox"
-											id="wheelBubbleEnabled"
-											checked={config.bubbleEnabled ?? true}
-											onChange={e =>
-												setField('bubbleEnabled', e.target.checked)
-											}
-										/>
-										<label
-											htmlFor="wheelBubbleEnabled"
-											className={styles.checkLabel}
-										>
-											Показывать облачко рядом с кнопкой
-										</label>
-									</div>
-									<p className={styles.hint}>
-										Если выключить, останется только плавающая кнопка.
-									</p>
-								</div>
+										<div className={styles.field}>
+											<p className={styles.label}>Отображение облачка</p>
+											<div className={styles.checkRow}>
+												<input
+													type="checkbox"
+													id="wheelBubbleEnabled"
+													checked={config.bubbleEnabled ?? true}
+													onChange={e =>
+														setField('bubbleEnabled', e.target.checked)
+													}
+												/>
+												<label
+													htmlFor="wheelBubbleEnabled"
+													className={styles.checkLabel}
+												>
+													Показывать облачко рядом с кнопкой
+												</label>
+											</div>
+											<p className={styles.hint}>
+												Если выключить, останется только плавающая кнопка.
+											</p>
+										</div>
 
-								{config.bubbleEnabled && (
-									<div className={styles.field}>
-										<p className={styles.label}>Текст облачка:</p>
-										<input
-											id={`${titleId}-bubble-text`}
-											className={inputClassName(`${titleId}-bubble-text`)}
-											value={config.bubbleText ?? ''}
-											onChange={e =>
-												setField('bubbleText', e.target.value)
-											}
-											placeholder="Испытайте удачу!"
-											maxLength={80}
-											aria-invalid={
-												validationIssue?.fieldId ===
-												`${titleId}-bubble-text`
-											}
-											aria-describedby={
-												validationIssue?.fieldId ===
-												`${titleId}-bubble-text`
-													? `${titleId}-bubble-text-error`
-													: undefined
-											}
-										/>
-										{fieldError(`${titleId}-bubble-text`)}
-										<p className={styles.hint}>
-											Короткая подсказка рядом с плавающей кнопкой.
-										</p>
-									</div>
-								)}
+										{config.bubbleEnabled && (
+											<div className={styles.field}>
+												<p className={styles.label}>Текст облачка:</p>
+												<input
+													id={`${titleId}-bubble-text`}
+													className={inputClassName(
+														`${titleId}-bubble-text`
+													)}
+													value={config.bubbleText ?? ''}
+													onChange={e =>
+														setField('bubbleText', e.target.value)
+													}
+													onBlur={() => {
+														const fieldId = `${titleId}-bubble-text`
+														setBlurValidationIssue(
+															config.bubbleText.trim()
+																? null
+																: {
+																		tab: 'main',
+																		fieldId,
+																		message:
+																			'Укажите текст облачка или отключите его'
+																	},
+															fieldId
+														)
+													}}
+													placeholder="Испытайте удачу!"
+													maxLength={80}
+													aria-invalid={
+														validationIssue?.fieldId ===
+														`${titleId}-bubble-text`
+													}
+													aria-describedby={
+														validationIssue?.fieldId ===
+														`${titleId}-bubble-text`
+															? `${titleId}-bubble-text-error`
+															: undefined
+													}
+												/>
+												{fieldError(`${titleId}-bubble-text`)}
+												<p className={styles.hint}>
+													Короткая подсказка рядом с плавающей кнопкой.
+												</p>
+											</div>
+										)}
 
-								<div className={styles.field}>
-									<div className={pageStyles.rangeHeader}>
-										<p className={styles.label}>Отступ снизу:</p>
-										<span className={pageStyles.rangeValue}>
-											{config.buttonBottom ?? 3}%
-										</span>
-									</div>
-									<input
-										id={`${titleId}-button-bottom`}
-										type="range"
-										aria-label="Отступ снизу"
-										min={1}
-										max={50}
-										value={config.buttonBottom ?? 3}
-										onChange={e =>
-											setField('buttonBottom', Number(e.target.value))
-										}
-										className={pageStyles.rangeInput}
-										aria-invalid={
-											validationIssue?.fieldId ===
-											`${titleId}-button-bottom`
-										}
-									/>
-									{fieldError(`${titleId}-button-bottom`)}
-									<p className={styles.hint}>
-										Отступ от нижнего края экрана в процентах. 3 — почти
-										внизу, 50 — по центру.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<div className={pageStyles.rangeHeader}>
-										<p className={styles.label}>Отступ сбоку:</p>
-										<span className={pageStyles.rangeValue}>
-											{config.buttonOffset ?? 3}%
-										</span>
-									</div>
-									<input
-										type="range"
-										aria-label="Отступ сбоку"
-										min={1}
-										max={50}
-										value={config.buttonOffset ?? 3}
-										onChange={e =>
-											setField('buttonOffset', Number(e.target.value))
-										}
-										className={pageStyles.rangeInput}
-									/>
-									<p className={styles.hint}>
-										Отступ кнопки от левого или правого края экрана в
-										процентах. 3 — почти у края, 50 — по центру.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<div className={pageStyles.rangeHeader}>
-										<p className={styles.label}>Размер кнопки открытия:</p>
-										<span className={pageStyles.rangeValue}>
-											{config.buttonSize ?? 60}px
-										</span>
-									</div>
-									<input
-										type="range"
-										aria-label="Размер кнопки открытия"
-										min={40}
-										max={100}
-										value={config.buttonSize ?? 60}
-										onChange={e =>
-											setField('buttonSize', Number(e.target.value))
-										}
-										className={pageStyles.rangeInput}
-									/>
-									<p className={styles.hint}>
-										Размер иконки плавающей кнопки в пикселях. По умолчанию
-										60px.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>Автооткрытие:</p>
-									<div className={styles.checkRow}>
-										<input
-											type="checkbox"
-											id={`${titleId}-auto-open-enabled`}
-											checked={config.autoOpenDelay != null}
-											onChange={e =>
-												setField(
-													'autoOpenDelay',
-													e.target.checked ? 5 : null
-												)
-											}
-										/>
-										<label
-											htmlFor={`${titleId}-auto-open-enabled`}
-											className={styles.checkLabel}
-										>
-											Автоматически показывать
-										</label>
-									</div>
-									{config.autoOpenDelay != null && (
-										<>
+										<div className={styles.field}>
 											<div className={pageStyles.rangeHeader}>
-												<p className={styles.label}>Автооткрытие через:</p>
+												<p className={styles.label}>Отступ снизу:</p>
 												<span className={pageStyles.rangeValue}>
-													{config.autoOpenDelay} сек.
+													{config.buttonBottom ?? 3}%
+												</span>
+											</div>
+											<input
+												id={`${titleId}-button-bottom`}
+												type="range"
+												aria-label="Отступ снизу"
+												min={1}
+												max={50}
+												value={config.buttonBottom ?? 3}
+												onChange={e =>
+													setField('buttonBottom', Number(e.target.value))
+												}
+												className={pageStyles.rangeInput}
+												aria-invalid={
+													validationIssue?.fieldId ===
+													`${titleId}-button-bottom`
+												}
+											/>
+											{fieldError(`${titleId}-button-bottom`)}
+											<p className={styles.hint}>
+												Отступ от нижнего края экрана в процентах. 3 —
+												почти внизу, 50 — по центру.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<div className={pageStyles.rangeHeader}>
+												<p className={styles.label}>Отступ сбоку:</p>
+												<span className={pageStyles.rangeValue}>
+													{config.buttonOffset ?? 3}%
 												</span>
 											</div>
 											<input
 												type="range"
-												aria-label="Автооткрытие через"
+												aria-label="Отступ сбоку"
 												min={1}
-												max={60}
-												value={config.autoOpenDelay}
+												max={50}
+												value={config.buttonOffset ?? 3}
 												onChange={e =>
-													setField('autoOpenDelay', Number(e.target.value))
+													setField('buttonOffset', Number(e.target.value))
 												}
 												className={pageStyles.rangeInput}
 											/>
-										</>
-									)}
-									<p className={styles.hint}>
-										Если посетитель уже участвовал, автооткрытие не
-										сработает.
-									</p>
-								</div>
+											<p className={styles.hint}>
+												Отступ кнопки от левого или правого края экрана в
+												процентах. 3 — почти у края, 50 — по центру.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<div className={pageStyles.rangeHeader}>
+												<p className={styles.label}>
+													Размер кнопки открытия:
+												</p>
+												<span className={pageStyles.rangeValue}>
+													{config.buttonSize ?? 60}px
+												</span>
+											</div>
+											<input
+												type="range"
+												aria-label="Размер кнопки открытия"
+												min={40}
+												max={100}
+												value={config.buttonSize ?? 60}
+												onChange={e =>
+													setField('buttonSize', Number(e.target.value))
+												}
+												className={pageStyles.rangeInput}
+											/>
+											<p className={styles.hint}>
+												Размер иконки плавающей кнопки в пикселях. По
+												умолчанию 60px.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<p className={styles.label}>Автооткрытие:</p>
+											<div className={styles.checkRow}>
+												<input
+													type="checkbox"
+													id={`${titleId}-auto-open-enabled`}
+													checked={config.autoOpenDelay != null}
+													onChange={e =>
+														setField(
+															'autoOpenDelay',
+															e.target.checked ? 5 : null
+														)
+													}
+												/>
+												<label
+													htmlFor={`${titleId}-auto-open-enabled`}
+													className={styles.checkLabel}
+												>
+													Автоматически показывать
+												</label>
+											</div>
+											{config.autoOpenDelay != null && (
+												<>
+													<div className={pageStyles.rangeHeader}>
+														<p className={styles.label}>
+															Автооткрытие через:
+														</p>
+														<span className={pageStyles.rangeValue}>
+															{config.autoOpenDelay} сек.
+														</span>
+													</div>
+													<input
+														type="range"
+														aria-label="Автооткрытие через"
+														min={1}
+														max={60}
+														value={config.autoOpenDelay}
+														onChange={e =>
+															setField(
+																'autoOpenDelay',
+																Number(e.target.value)
+															)
+														}
+														className={pageStyles.rangeInput}
+													/>
+												</>
+											)}
+											<p className={styles.hint}>
+												Если посетитель уже участвовал, автооткрытие не
+												сработает.
+											</p>
+										</div>
+									</div>
+								</details>
 							</div>
 
 							<div className={styles.settingsGroup}>
@@ -1576,6 +1873,19 @@ const WheelSettingsModal = ({
 										className={inputClassName(`${titleId}-title`)}
 										value={config.title}
 										onChange={e => setField('title', e.target.value)}
+										onBlur={() => {
+											const fieldId = `${titleId}-title`
+											setBlurValidationIssue(
+												config.title.trim()
+													? null
+													: {
+															tab: 'main',
+															fieldId,
+															message: 'Укажите заголовок виджета'
+														},
+												fieldId
+											)
+										}}
 										placeholder="Крутите колесо!"
 										maxLength={80}
 										aria-invalid={
@@ -1618,6 +1928,19 @@ const WheelSettingsModal = ({
 										className={inputClassName(`${titleId}-button-text`)}
 										value={config.buttonText}
 										onChange={e => setField('buttonText', e.target.value)}
+										onBlur={() => {
+											const fieldId = `${titleId}-button-text`
+											setBlurValidationIssue(
+												config.buttonText.trim()
+													? null
+													: {
+															tab: 'main',
+															fieldId,
+															message: 'Укажите текст кнопки запуска'
+														},
+												fieldId
+											)
+										}}
 										placeholder="Крутить!"
 										maxLength={40}
 										aria-invalid={
@@ -1663,6 +1986,21 @@ const WheelSettingsModal = ({
 											onChange={e =>
 												setField('privacyUrl', e.target.value)
 											}
+											onBlur={() => {
+												const fieldId = `${titleId}-privacy-url`
+												setBlurValidationIssue(
+													config.privacyUrl.trim() &&
+														isHttpUrl(config.privacyUrl)
+														? null
+														: {
+																tab: 'main',
+																fieldId,
+																message:
+																	'Укажите полную ссылку на политику с http:// или https://'
+															},
+													fieldId
+												)
+											}}
 											placeholder="https://winwidget.ru/legal-documentation/consent-processing"
 											maxLength={500}
 											aria-invalid={
@@ -1847,8 +2185,9 @@ const WheelSettingsModal = ({
 									) : (
 										<div className={styles.dangerItem}>
 											<p className={styles.hint}>
-												Все посетители смогут крутить колесо заново.
-												Действие необратимо.
+												Сброс сохранится в черновике. Все посетители смогут
+												крутить колесо заново только после публикации
+												виджета.
 											</p>
 											<div className={styles.footerActions}>
 												<button
@@ -1968,6 +2307,21 @@ const WheelSettingsModal = ({
 										onChange={e =>
 											setField('spinDuration', Number(e.target.value))
 										}
+										onBlur={() => {
+											const fieldId = `${titleId}-spin-duration`
+											const value = config.spinDuration ?? 5
+											setBlurValidationIssue(
+												value >= 4 && value <= 10
+													? null
+													: {
+															tab: 'bonuses',
+															fieldId,
+															message:
+																'Длительность анимации должна быть от 4 до 10 секунд'
+														},
+												fieldId
+											)
+										}}
 										className={pageStyles.rangeInput}
 										aria-invalid={
 											validationIssue?.fieldId ===
@@ -2028,6 +2382,20 @@ const WheelSettingsModal = ({
 										)}
 										value={bonus.name}
 										onChange={e => setBonus(i, 'name', e.target.value)}
+										onBlur={() => {
+											const fieldId = `${titleId}-bonus-${i}-name`
+											setBlurValidationIssue(
+												bonus.name.trim().length <=
+													WHEEL_BONUS_NAME_MAX_LENGTH
+													? null
+													: {
+															tab: 'bonuses',
+															fieldId,
+															message: `Бонус #${i + 1}: полное название не должно быть длиннее ${WHEEL_BONUS_NAME_MAX_LENGTH} символов`
+														},
+												fieldId
+											)
+										}}
 										placeholder={`Например: Скидка до 60 000 рублей`}
 										maxLength={WHEEL_BONUS_NAME_MAX_LENGTH}
 										aria-invalid={
@@ -2054,6 +2422,27 @@ const WheelSettingsModal = ({
 										onChange={e =>
 											setBonus(i, 'wheelLabel', e.target.value)
 										}
+										onBlur={() => {
+											const fieldId = `${titleId}-bonus-${i}-label`
+											const label = bonus.wheelLabel?.trim() || ''
+											const message = !label
+												? `Бонус #${i + 1}: заполните текст на колесе`
+												: label.length > wheelLabelMaxLength
+													? `Бонус #${i + 1}: текст на колесе не должен быть длиннее ${wheelLabelMaxLength} символов`
+													: hasTooLongWheelSectorWord(label)
+														? `Бонус #${i + 1}: сократите длинное слово или добавьте пробел`
+														: null
+											setBlurValidationIssue(
+												message
+													? {
+															tab: 'bonuses',
+															fieldId,
+															message
+														}
+													: null,
+												fieldId
+											)
+										}}
 										placeholder="Короткий текст на колесе"
 										maxLength={wheelLabelMaxLength}
 										aria-invalid={
@@ -2082,15 +2471,33 @@ const WheelSettingsModal = ({
 													}
 												/>
 												<input
-													className={styles.input}
+													id={`${titleId}-bonus-${i}-color`}
+													className={inputClassName(
+														`${titleId}-bonus-${i}-color`
+													)}
 													value={bonus.color || ''}
 													onChange={e =>
 														setBonus(i, 'color', e.target.value)
 													}
+													onBlur={() => {
+														const fieldId = `${titleId}-bonus-${i}-color`
+														setBlurValidationIssue(
+															!bonus.color || isWidgetHexColor(bonus.color)
+																? null
+																: {
+																		tab: 'bonuses',
+																		fieldId,
+																		message:
+																			'Введите цвет в формате #RRGGBB'
+																	},
+															fieldId
+														)
+													}}
 													placeholder="#4705fb"
 													maxLength={7}
 												/>
 											</div>
+											{fieldError(`${titleId}-bonus-${i}-color`)}
 										</div>
 										<div className={styles.colorRowField}>
 											<span className={styles.colorRowLabel}>
@@ -2119,11 +2526,29 @@ const WheelSettingsModal = ({
 													}
 												/>
 												<input
-													className={styles.input}
+													id={`${titleId}-bonus-${i}-text-color`}
+													className={inputClassName(
+														`${titleId}-bonus-${i}-text-color`
+													)}
 													value={bonus.textColor || ''}
 													onChange={e =>
 														setBonus(i, 'textColor', e.target.value)
 													}
+													onBlur={() => {
+														const fieldId = `${titleId}-bonus-${i}-text-color`
+														setBlurValidationIssue(
+															!bonus.textColor ||
+																isWidgetHexColor(bonus.textColor)
+																? null
+																: {
+																		tab: 'bonuses',
+																		fieldId,
+																		message:
+																			'Введите цвет в формате #RRGGBB'
+																	},
+															fieldId
+														)
+													}}
 													placeholder="Авто"
 													maxLength={7}
 												/>
@@ -2138,6 +2563,7 @@ const WheelSettingsModal = ({
 													</button>
 												)}
 											</div>
+											{fieldError(`${titleId}-bonus-${i}-text-color`)}
 										</div>
 									</div>
 									<div className={styles.field}>
@@ -2158,6 +2584,20 @@ const WheelSettingsModal = ({
 											onChange={e =>
 												setBonus(i, 'probability', Number(e.target.value))
 											}
+											onBlur={() => {
+												const fieldId = `${titleId}-bonus-${i}-weight`
+												const value = bonus.probability ?? 1
+												setBlurValidationIssue(
+													value >= 1 && value <= 100
+														? null
+														: {
+																tab: 'bonuses',
+																fieldId,
+																message: `Бонус #${i + 1}: вес должен быть от 1 до 100`
+															},
+													fieldId
+												)
+											}}
 											aria-invalid={
 												validationIssue?.fieldId ===
 												`${titleId}-bonus-${i}-weight`
@@ -2286,7 +2726,10 @@ const WheelSettingsModal = ({
 										<div className={styles.field}>
 											<p className={styles.label}>Внешний URL (Webhook)</p>
 											<input
-												className={styles.input}
+												id={`${titleId}-integration-webhook-url`}
+												className={inputClassName(
+													`${titleId}-integration-webhook-url`
+												)}
 												type="url"
 												value={config.integrations.webhookUrl || ''}
 												onChange={e =>
@@ -2295,9 +2738,26 @@ const WheelSettingsModal = ({
 														webhookUrl: e.target.value
 													})
 												}
+												onBlur={() => {
+													const fieldId = `${titleId}-integration-webhook-url`
+													const value =
+														config.integrations.webhookUrl?.trim() || ''
+													setBlurValidationIssue(
+														!value || isHttpUrl(value)
+															? null
+															: {
+																	tab: 'integrations',
+																	fieldId,
+																	message:
+																		'Укажите полный URL webhook с http:// или https://'
+																},
+														fieldId
+													)
+												}}
 												placeholder="https://example.com/webhook"
 												maxLength={500}
 											/>
+											{fieldError(`${titleId}-integration-webhook-url`)}
 											<p className={styles.hint}>
 												На указанный URL придёт POST-запрос с данными:{' '}
 												<b>name</b> — название виджета, <b>lead</b> —
@@ -2311,7 +2771,10 @@ const WheelSettingsModal = ({
 												Отправка заявок в Битрикс24
 											</p>
 											<input
-												className={styles.input}
+												id={`${titleId}-integration-bitrix24-url`}
+												className={inputClassName(
+													`${titleId}-integration-bitrix24-url`
+												)}
 												type="url"
 												value={
 													config.integrations.bitrix24WebhookUrl || ''
@@ -2322,9 +2785,27 @@ const WheelSettingsModal = ({
 														bitrix24WebhookUrl: e.target.value
 													})
 												}
+												onBlur={() => {
+													const fieldId = `${titleId}-integration-bitrix24-url`
+													const value =
+														config.integrations.bitrix24WebhookUrl?.trim() ||
+														''
+													setBlurValidationIssue(
+														!value || isHttpUrl(value)
+															? null
+															: {
+																	tab: 'integrations',
+																	fieldId,
+																	message:
+																		'Укажите полный URL Bitrix24 с http:// или https://'
+																},
+														fieldId
+													)
+												}}
 												placeholder="https://name.bitrix24.ru/rest/1/ключ/"
 												maxLength={500}
 											/>
+											{fieldError(`${titleId}-integration-bitrix24-url`)}
 											<p className={styles.hint}>
 												Укажите URL вашего входящего вебхука из Битрикс24.
 												Перейдите в Битрикс24 → Приложения → Вебхуки →
@@ -2630,6 +3111,21 @@ const WheelSettingsModal = ({
 							</div>
 						</div>
 					)}
+					{tab !== 'code' && tab !== 'info' && (
+						<div className={styles.sectionReset}>
+							<button
+								type="button"
+								className={styles.resetAttemptsBtn}
+								onClick={() => setConfirmResetSection(tab)}
+								disabled={isDangerActionPending}
+							>
+								Сбросить раздел
+							</button>
+							<p className={styles.hint}>
+								Остальные разделы и домен установки не изменятся.
+							</p>
+						</div>
+					)}
 				</div>
 
 				<div className={styles.stickyFooter}>
@@ -2664,6 +3160,17 @@ const WheelSettingsModal = ({
 					</div>
 				</div>
 				{closeGuardDialog}
+				{confirmResetSection && (
+					<ConfirmDialog
+						title="Сбросить текущий раздел?"
+						message="Настройки только этого раздела будут заменены стандартными. Остальные разделы и домен установки сохранятся."
+						confirmLabel="Да, сбросить раздел"
+						cancelLabel="Отмена"
+						confirmDisabled={isDangerActionPending}
+						onConfirm={handleResetSection}
+						onCancel={() => setConfirmResetSection(null)}
+					/>
+				)}
 			</div>
 		</div>
 	)

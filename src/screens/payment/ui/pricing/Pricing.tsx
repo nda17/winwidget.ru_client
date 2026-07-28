@@ -245,11 +245,13 @@ const Pricing = ({
 	const queryClient = useQueryClient()
 	const { user, isLoading: isUserLoading } = useUser()
 	const [period, setPeriod] = useState<BillingPeriod>('YEARLY')
+	const autoRenewalDefaultEnabled =
+		autoRenewalSignupEnabled && Boolean(autoRenewalTerms)
 	const [autoRenewByPlan, setAutoRenewByPlan] = useState<
 		Record<PaidPlan, boolean>
 	>({
-		EASY: false,
-		HARD: false
+		EASY: autoRenewalDefaultEnabled,
+		HARD: autoRenewalDefaultEnabled
 	})
 	const [paymentEmail, setPaymentEmail] = useState('')
 	const [paymentEmailCode, setPaymentEmailCode] = useState('')
@@ -1198,16 +1200,25 @@ const Pricing = ({
 								</label>
 								<p
 									id={autoRenewDescriptionId}
-									className={styles.autoRenewDescription}
+									className={styles.autoRenewSummary}
 								>
-									{autoRenewalTerms?.text ??
-										'Условия автопродления временно недоступны.'}{' '}
-									Условия — в{' '}
-									<Link href="/legal-documentation/oferta">
-										договоре-оферте
-									</Link>
-									. Отключить можно в личном кабинете.
+									{autoRenewalSignupEnabled && autoRenewalTerms
+										? 'Сохраним способ оплаты в ЮKassa. Отключить автопродление можно в личном кабинете.'
+										: 'Разовая оплата по выбранному тарифу доступна.'}
 								</p>
+								{autoRenewalSignupEnabled && autoRenewalTerms && (
+									<details className={styles.autoRenewDetails}>
+										<summary>Все условия автопродления</summary>
+										<div className={styles.autoRenewDetailsContent}>
+											<p className={styles.autoRenewDescription}>
+												{autoRenewalTerms.text}
+											</p>
+											<Link href="/legal-documentation/oferta">
+												Открыть договор-оферту
+											</Link>
+										</div>
+									</details>
+								)}
 							</div>
 
 							<button

@@ -7,7 +7,7 @@ import type {
 	WidgetRuntimeStatus
 } from '@/entities/site-widget'
 import ConfirmDialog from '@/shared/ui/confirm-dialog/ConfirmDialog'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import styles from './WidgetExperiencePanel.module.scss'
 
 type Confirmation =
@@ -20,6 +20,7 @@ interface WidgetExperiencePanelProps {
 	runtimeStatus?: WidgetRuntimeStatus
 	analytics?: WidgetRuntimeAnalytics
 	canUseAnalytics: boolean
+	analyticsUnavailableMessage: string
 	versions?: WidgetConfigVersionsResponse
 	isRuntimeStatusError: boolean
 	isAnalyticsError: boolean
@@ -32,6 +33,7 @@ interface WidgetExperiencePanelProps {
 	isRestoring: boolean
 	isCheckingInstallation: boolean
 	hasLocalChanges: boolean
+	hasReviewedMobilePreview: boolean
 	onPublish: () => void
 	onDiscard: () => void
 	onClone: () => void
@@ -59,6 +61,29 @@ const INSTALLATION_LABELS: Record<
 	SIGNAL_RECEIVED: 'Сигнал получен'
 }
 
+const INSTALLATION_SIGNAL_FRESHNESS_MS = 15 * 60 * 1000
+
+const hasFreshInstallationSignal = (
+	status: WidgetRuntimeStatus | undefined,
+	elapsedSinceResponse: number
+) => {
+	const lastSeenAt = status?.installation.lastSeenAt
+	if (!lastSeenAt || !status) return false
+
+	const serverTimestamp = Date.parse(status.serverTime)
+	const lastSeenTimestamp = Date.parse(lastSeenAt)
+	if (
+		!Number.isFinite(serverTimestamp) ||
+		!Number.isFinite(lastSeenTimestamp)
+	) {
+		return false
+	}
+
+	const signalAge =
+		serverTimestamp + Math.max(0, elapsedSinceResponse) - lastSeenTimestamp
+	return signalAge >= 0 && signalAge <= INSTALLATION_SIGNAL_FRESHNESS_MS
+}
+
 const formatDateTime = (value: string | null) => {
 	if (!value) return '—'
 
@@ -74,11 +99,107 @@ const formatDateTime = (value: string | null) => {
 const formatRate = (value: number | null) =>
 	value === null ? '—' : `${Math.round(value * 10) / 10}%`
 
+interface ReadinessCheck {
+	code: string
+	label: string
+	ready: boolean
+}
+
+const asConfig = (value: unknown): Record<string, unknown> =>
+	value && typeof value === 'object' && !Array.isArray(value)
+		? (value as Record<string, unknown>)
+		: {}
+
+const hasText = (value: unknown) =>
+	typeof value === 'string' && value.trim().length > 0
+
+const isHttpUrl = (value: unknown) => {
+	if (!hasText(value)) return false
+
+	try {
+		const url = new URL(value as string)
+		return url.protocol === 'http:' || url.protocol === 'https:'
+	} catch {
+		return false
+	}
+}
+
+const getReadinessChecks = (
+	lifecycle: WidgetLifecycleState<unknown>,
+	hasReviewedMobilePreview: boolean
+): ReadinessCheck[] => {
+	const config = asConfig(lifecycle.config)
+	const dataType =
+		typeof config.dataType === 'string'
+			? config.dataType.trim().toUpperCase()
+			: lifecycle.type === 'callback'
+				? 'PHONE'
+				: ''
+	const collectsContacts = dataType !== '' && dataType !== 'NONE'
+	const contactMethodReady =
+		lifecycle.type === 'callback' ||
+		['PHONE', 'EMAIL', 'PHONE_AND_EMAIL', 'NONE'].includes(dataType)
+	const successMessageReady =
+		!collectsContacts ||
+		(lifecycle.type === 'wheel'
+			? hasText(config.winMessage)
+			: lifecycle.type === 'quiz'
+				? Array.isArray(config.results) && config.results.length > 0
+				: lifecycle.type === 'calculator'
+					? hasText(config.resultTitle)
+					: hasText(config.successTitle))
+	const consentReady = !collectsContacts || isHttpUrl(config.privacyUrl)
+	const displayScenarioReady =
+		lifecycle.type === 'stop-offer'
+			? config.desktopExitIntent === true ||
+				Number(config.mobileAutoOpenDelay) > 0 ||
+				Number(config.scrollPercent) > 0
+			: config.buttonSide === 'left' ||
+				config.buttonSide === 'right' ||
+				Number(config.autoOpenDelay) > 0
+
+	return [
+		{
+			code: 'CONTACT_METHOD',
+			label:
+				dataType === 'NONE'
+					? 'Сбор контактов осознанно отключён'
+					: 'Способ связи с клиентом выбран',
+			ready: contactMethodReady
+		},
+		{
+			code: 'SUCCESS_MESSAGE',
+			label: collectsContacts
+				? 'Сообщение после отправки заполнено'
+				: 'Сообщение после отправки не требуется',
+			ready: successMessageReady
+		},
+		{
+			code: 'CONSENT',
+			label: collectsContacts
+				? 'Согласие на обработку данных настроено'
+				: 'Согласие не требуется без сбора контактов',
+			ready: consentReady
+		},
+		{
+			code: 'DISPLAY_SCENARIO',
+			label: 'Сценарий показа настроен',
+			ready: displayScenarioReady
+		},
+		{
+			code: 'MOBILE_PREVIEW',
+			label: 'Мобильная версия просмотрена',
+			ready: hasReviewedMobilePreview
+		}
+	]
+}
+
 const WidgetExperiencePanel = ({
 	lifecycle,
 	runtimeStatus,
 	analytics,
 	canUseAnalytics,
+	analyticsUnavailableMessage,
 	versions,
 	isRuntimeStatusError,
 	isAnalyticsError,
@@ -91,6 +212,7 @@ const WidgetExperiencePanel = ({
 	isRestoring,
 	isCheckingInstallation,
 	hasLocalChanges,
+	hasReviewedMobilePreview,
 	onPublish,
 	onDiscard,
 	onClone,
@@ -99,6 +221,19 @@ const WidgetExperiencePanel = ({
 	onVersionsPageChange
 }: WidgetExperiencePanelProps) => {
 	const [confirmation, setConfirmation] = useState<Confirmation>(null)
+	const [runtimeStatusElapsedMs, setRuntimeStatusElapsedMs] = useState(0)
+
+	useEffect(() => {
+		setRuntimeStatusElapsedMs(0)
+		if (!runtimeStatus?.serverTime) return
+
+		const receivedAt = Date.now()
+		const intervalId = window.setInterval(() => {
+			setRuntimeStatusElapsedMs(Date.now() - receivedAt)
+		}, 30_000)
+
+		return () => window.clearInterval(intervalId)
+	}, [runtimeStatus?.serverTime])
 
 	if (isLoading && !lifecycle) {
 		return (
@@ -130,6 +265,20 @@ const WidgetExperiencePanel = ({
 	const blockers = lifecycle.readiness.blockers
 	const warnings = lifecycle.readiness.warnings
 	const installation = runtimeStatus?.installation
+	const installationSignalIsFresh = hasFreshInstallationSignal(
+		runtimeStatus,
+		runtimeStatusElapsedMs
+	)
+	const installationLabel =
+		installation?.state === 'SIGNAL_RECEIVED' && !installationSignalIsFresh
+			? 'Последний сигнал устарел'
+			: installation
+				? INSTALLATION_LABELS[installation.state]
+				: null
+	const readinessChecks = getReadinessChecks(
+		lifecycle,
+		hasReviewedMobilePreview
+	)
 
 	return (
 		<>
@@ -147,11 +296,6 @@ const WidgetExperiencePanel = ({
 								}`}
 							>
 								{STATUS_LABELS[lifecycle.status]}
-							</span>
-							<span className={styles.version}>
-								{lifecycle.publishedVersion > 0
-									? `Версия ${lifecycle.publishedVersion}`
-									: 'Без публикаций'}
 							</span>
 						</div>
 						<p className={styles.summaryText}>
@@ -194,9 +338,21 @@ const WidgetExperiencePanel = ({
 					</div>
 				</div>
 
-				{(blockers.length > 0 || warnings.length > 0) && (
-					<div className={styles.readiness}>
-						<p className={styles.sectionTitle}>Перед публикацией</p>
+				<div className={styles.readiness}>
+					<p className={styles.sectionTitle}>Перед публикацией</p>
+					<ul className={styles.checkList}>
+						{readinessChecks.map(check => (
+							<li
+								key={check.code}
+								className={
+									check.ready ? styles.checkReady : styles.checkPending
+								}
+							>
+								{check.label}
+							</li>
+						))}
+					</ul>
+					{(blockers.length > 0 || warnings.length > 0) && (
 						<ul className={styles.issueList}>
 							{blockers.map(issue => (
 								<li
@@ -215,8 +371,8 @@ const WidgetExperiencePanel = ({
 								</li>
 							))}
 						</ul>
-					</div>
-				)}
+					)}
+				</div>
 
 				{lifecycle.hasUnpublishedChanges &&
 					lifecycle.publishedVersion > 0 && (
@@ -237,12 +393,12 @@ const WidgetExperiencePanel = ({
 							{installation && (
 								<span
 									className={
-										installation.state === 'SIGNAL_RECEIVED'
+										installationSignalIsFresh
 											? styles.inlineReady
 											: styles.inlineMuted
 									}
 								>
-									{INSTALLATION_LABELS[installation.state]}
+									{installationLabel}
 								</span>
 							)}
 						</summary>
@@ -254,6 +410,28 @@ const WidgetExperiencePanel = ({
 								</p>
 							) : installation ? (
 								<>
+									<ul className={styles.diagnosticList}>
+										<DiagnosticStatus
+											label="Код установлен"
+											ready={installationSignalIsFresh}
+										/>
+										<DiagnosticStatus
+											label="Виджет активен"
+											ready={lifecycle.isActive}
+										/>
+										<DiagnosticStatus
+											label="Свежий сигнал получен"
+											ready={installationSignalIsFresh}
+										/>
+										<DiagnosticStatus
+											label={
+												lifecycle.hasUnpublishedChanges
+													? 'Настройки опубликованы, есть новый черновик'
+													: 'Настройки опубликованы'
+											}
+											ready={lifecycle.publishedVersion > 0}
+										/>
+									</ul>
 									<dl className={styles.definitionList}>
 										<div>
 											<dt>Домен</dt>
@@ -303,7 +481,7 @@ const WidgetExperiencePanel = ({
 						<div className={styles.detailsContent}>
 							{!canUseAnalytics ? (
 								<p className={styles.helpText}>
-									Воронка доступна на активном тарифе Hard.
+									{analyticsUnavailableMessage}
 								</p>
 							) : isAnalyticsError ? (
 								<p className={styles.error}>
@@ -328,11 +506,39 @@ const WidgetExperiencePanel = ({
 											rate={analytics.conversion.startRate}
 										/>
 										<FunnelMetric
-											label="Заявки"
+											label={analytics.completionLabel}
 											value={analytics.totals.submits}
 											rate={analytics.conversion.submitRate}
 										/>
 									</div>
+									{analytics.steps.length > 0 && (
+										<div className={styles.stepFunnel}>
+											<p className={styles.stepFunnelTitle}>
+												{analytics.stepRateBasis === 'START'
+													? 'Вовлечение в поля'
+													: 'Прохождение по шагам'}
+											</p>
+											<ol className={styles.stepList}>
+												{analytics.steps.map((step, index) => (
+													<li key={step.key} className={styles.stepItem}>
+														<div className={styles.stepName}>
+															<span>{index + 1}</span>
+															<strong>{step.label}</strong>
+														</div>
+														<div className={styles.stepValue}>
+															<strong>{step.count}</strong>
+															<small>
+																{formatRate(step.conversionRate)} от
+																{analytics.stepRateBasis === 'START'
+																	? ' начавших расчёт'
+																	: ' предыдущего этапа'}
+															</small>
+														</div>
+													</li>
+												))}
+											</ol>
+										</div>
+									)}
 									<p className={styles.helpText}>
 										Воронка ориентировочная: считаются загрузки и действия,
 										а не уникальные посетители. Персональные данные в
@@ -343,15 +549,14 @@ const WidgetExperiencePanel = ({
 											{analytics.trackingStartedAt
 												? `Наблюдение началось ${formatDateTime(
 														analytics.trackingStartedAt
-													)}. Более ранние заявки в эту воронку не включены.`
+													)}. Более ранние ${analytics.completionLabel.toLowerCase()} в эту воронку не включены.`
 												: 'Сбор данных ещё не начался. Воронка заполнится после первого сигнала с сайта.'}
 										</p>
 									)}
 									{!analytics.submitAvailable && (
 										<p className={styles.notice}>
-											Сейчас сбор контактов отключён. Воронка сохраняет
-											фактические заявки за период, в том числе из прежних
-											настроек.
+											Сейчас сбор контактов отключён. Последний этап
+											воронки показывает завершения сценария, а не заявки.
 										</p>
 									)}
 								</>
@@ -379,8 +584,10 @@ const WidgetExperiencePanel = ({
 										{versions.items.map(version => (
 											<li key={version.version}>
 												<div>
-													<strong>Версия {version.version}</strong>
-													<span>{formatDateTime(version.createdAt)}</span>
+													<strong>
+														Публикация от{' '}
+														{formatDateTime(version.createdAt)}
+													</strong>
 												</div>
 												<button
 													type="button"
@@ -452,7 +659,7 @@ const WidgetExperiencePanel = ({
 
 			{confirmation?.action === 'restore' && (
 				<ConfirmDialog
-					title={`Восстановить версию ${confirmation.version}?`}
+					title="Восстановить выбранную публикацию?"
 					message="Настройки выбранной версии попадут в черновик. Рабочий виджет не изменится до новой публикации."
 					confirmLabel="Восстановить в черновик"
 					onCancel={() => setConfirmation(null)}
@@ -483,6 +690,18 @@ const FunnelMetric = ({
 			<small>{rate === null ? 'недоступно' : formatRate(rate)}</small>
 		)}
 	</div>
+)
+
+const DiagnosticStatus = ({
+	label,
+	ready
+}: {
+	label: string
+	ready: boolean
+}) => (
+	<li className={ready ? styles.checkReady : styles.checkPending}>
+		{label}
+	</li>
 )
 
 export default WidgetExperiencePanel

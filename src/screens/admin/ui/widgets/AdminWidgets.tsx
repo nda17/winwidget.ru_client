@@ -10,7 +10,6 @@ import { errorCatch } from '@/shared/api'
 import {
 	adminWidgetsService,
 	AdminWidgetActiveFilter,
-	AdminWidgetDetails,
 	AdminWidgetPlanFilter,
 	AdminWidgetType,
 	IAdminWidgetMonitoringFilters,
@@ -25,9 +24,9 @@ import {
 } from '@tanstack/react-query'
 import clsx from 'clsx'
 import { NextPage } from 'next'
+import { useRouter } from 'next/navigation'
 import { FormEvent, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import AdminWidgetEditor from './AdminWidgetEditor'
 import styles from './AdminWidgets.module.scss'
 
 const TYPE_LABELS: Record<AdminWidgetType, string> = {
@@ -38,6 +37,16 @@ const TYPE_LABELS: Record<AdminWidgetType, string> = {
 	STOP_OFFER: 'Стоп-оффер',
 	ONLINE_CONSULTANT: 'Онлайн-консультант',
 	CALCULATOR: 'Калькулятор'
+}
+
+const SETTINGS_SLUG_BY_TYPE: Record<AdminWidgetType, string> = {
+	WHEEL: 'wheel',
+	QUIZ: 'quiz',
+	CALLBACK: 'callback',
+	TIMER: 'timer',
+	STOP_OFFER: 'stop-offer',
+	ONLINE_CONSULTANT: 'online-consultant',
+	CALCULATOR: 'calculator'
 }
 
 const PLAN_LABELS: Record<Plan, string> = {
@@ -61,12 +70,6 @@ interface WidgetFilterDraft {
 	isActive: WidgetActiveFilter
 	plan: WidgetPlanFilter
 	search: string
-}
-
-interface AdminWidgetEditorState {
-	details: AdminWidgetDetails
-	ownerPlan: Plan | null
-	subscriptionStatus: SubscriptionStatus | null
 }
 
 const DEFAULT_FILTERS: WidgetFilterDraft = {
@@ -154,14 +157,11 @@ const getDetailsQueryKey = (type: AdminWidgetType, id: string) =>
 const AdminWidgets: NextPage = () => {
 	const auth = useAuthStore(state => state.auth)
 	const { user } = useUser()
+	const router = useRouter()
 	const queryClient = useQueryClient()
 	const [currentPage, setCurrentPage] = useState(1)
 	const [filterDraft, setFilterDraft] = useState(DEFAULT_FILTERS)
 	const [filters, setFilters] = useState<IAdminWidgetMonitoringFilters>({})
-	const [editor, setEditor] = useState<AdminWidgetEditorState | null>(null)
-	const [loadingEditorKey, setLoadingEditorKey] = useState<string | null>(
-		null
-	)
 	const [deleteTarget, setDeleteTarget] =
 		useState<IAdminWidgetMonitoringItem | null>(null)
 	const [deletingWidgetKeys, setDeletingWidgetKeys] = useState<
@@ -244,16 +244,6 @@ const AdminWidgets: NextPage = () => {
 			}
 		},
 		onSuccess: (response, _, context) => {
-			setEditor(current => {
-				if (
-					current?.details.type === response.type &&
-					current.details.entity.id === response.id
-				) {
-					return null
-				}
-
-				return current
-			})
 			queryClient.removeQueries({
 				queryKey: getDetailsQueryKey(response.type, response.id),
 				exact: true
@@ -316,78 +306,10 @@ const AdminWidgets: NextPage = () => {
 		setCurrentPage(page => Math.min(totalPages, page + 1))
 	const changeActivePage = (page: number) => setCurrentPage(page)
 
-	const openEditor = async (item: IAdminWidgetMonitoringItem) => {
-		if (loadingEditorKey) return
-
-		const widgetKey = getWidgetKey(item)
-		const toastId = toast.loading('Загружаем настройки виджета...')
-		setLoadingEditorKey(widgetKey)
-
-		try {
-			const details = await queryClient.fetchQuery({
-				queryKey: getDetailsQueryKey(item.type, item.id),
-				queryFn: () => adminWidgetsService.getById(item.type, item.id)
-			})
-			setEditor({
-				details,
-				ownerPlan: item.ownerPlan,
-				subscriptionStatus: item.subscriptionStatus
-			})
-			toast.dismiss(toastId)
-		} catch (error) {
-			toast.error(errorCatch(error) || 'Не удалось загрузить настройки', {
-				id: toastId
-			})
-		} finally {
-			setLoadingEditorKey(current =>
-				current === widgetKey ? null : current
-			)
-		}
-	}
-
-	const handleEditorSaved = (details: AdminWidgetDetails) => {
-		setEditor(current => {
-			if (
-				!current ||
-				current.details.type !== details.type ||
-				current.details.entity.id !== details.entity.id
-			) {
-				return current
-			}
-
-			return { ...current, details }
-		})
-		queryClient.setQueryData(
-			getDetailsQueryKey(details.type, details.entity.id),
-			details
+	const openEditor = (item: IAdminWidgetMonitoringItem) => {
+		router.push(
+			`/admin/widgets/${SETTINGS_SLUG_BY_TYPE[item.type]}/${item.id}`
 		)
-		queryClient.invalidateQueries({
-			queryKey: ['admin-widgets-monitoring']
-		})
-	}
-
-	const refreshEditor = async () => {
-		const currentEditor = editor
-		if (!currentEditor) return null
-
-		const details = await adminWidgetsService.getById(
-			currentEditor.details.type,
-			currentEditor.details.entity.id
-		)
-		queryClient.setQueryData(
-			getDetailsQueryKey(details.type, details.entity.id),
-			details
-		)
-		setEditor(current =>
-			current
-				? {
-						...current,
-						details
-					}
-				: current
-		)
-
-		return details
 	}
 
 	const confirmDelete = () => {
@@ -577,8 +499,6 @@ const AdminWidgets: NextPage = () => {
 						<>
 							<div className={styles['mobile-list']}>
 								{data.items.map(item => {
-									const isEditorLoading =
-										loadingEditorKey === getWidgetKey(item)
 									const isStatusUpdating = isActivityPending(item)
 									const isDeleting = isDeletePending(item)
 
@@ -662,24 +582,16 @@ const AdminWidgets: NextPage = () => {
 													type="button"
 													className={styles.actionButtonPrimary}
 													onClick={() => openEditor(item)}
-													disabled={
-														loadingEditorKey !== null || isDeleting
-													}
+													disabled={isDeleting}
 												>
-													{isEditorLoading
-														? 'Загружаем...'
-														: 'Редактировать'}
+													Редактировать
 												</button>
 												{canDeleteWidgets && (
 													<button
 														type="button"
 														className={styles.actionButtonDanger}
 														onClick={() => setDeleteTarget(item)}
-														disabled={
-															isDeleting ||
-															isStatusUpdating ||
-															isEditorLoading
-														}
+														disabled={isDeleting || isStatusUpdating}
 													>
 														{isDeleting ? 'Удаляем...' : 'Удалить'}
 													</button>
@@ -710,8 +622,6 @@ const AdminWidgets: NextPage = () => {
 									</thead>
 									<tbody>
 										{data.items.map(item => {
-											const isEditorLoading =
-												loadingEditorKey === getWidgetKey(item)
 											const isStatusUpdating = isActivityPending(item)
 											const isDeleting = isDeletePending(item)
 
@@ -783,24 +693,16 @@ const AdminWidgets: NextPage = () => {
 																type="button"
 																className={styles.actionButtonPrimary}
 																onClick={() => openEditor(item)}
-																disabled={
-																	loadingEditorKey !== null || isDeleting
-																}
+																disabled={isDeleting}
 															>
-																{isEditorLoading
-																	? 'Загружаем...'
-																	: 'Редактировать'}
+																Редактировать
 															</button>
 															{canDeleteWidgets && (
 																<button
 																	type="button"
 																	className={styles.actionButtonDanger}
 																	onClick={() => setDeleteTarget(item)}
-																	disabled={
-																		isDeleting ||
-																		isStatusUpdating ||
-																		isEditorLoading
-																	}
+																	disabled={isDeleting || isStatusUpdating}
 																>
 																	{isDeleting ? 'Удаляем...' : 'Удалить'}
 																</button>
@@ -834,17 +736,6 @@ const AdminWidgets: NextPage = () => {
 				<div className={styles.card}>
 					<p className={styles['meta-subtitle']}>Виджетов пока нет</p>
 				</div>
-			)}
-
-			{editor && (
-				<AdminWidgetEditor
-					details={editor.details}
-					ownerPlan={editor.ownerPlan}
-					subscriptionStatus={editor.subscriptionStatus}
-					onClose={() => setEditor(null)}
-					onSaved={handleEditorSaved}
-					onRefresh={refreshEditor}
-				/>
 			)}
 		</section>
 	)

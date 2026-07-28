@@ -183,7 +183,9 @@ const CountdownTimerSettingsModal = ({
 	previewPortalTarget,
 	onDirtyChange,
 	onRevisionConflict,
-	lifecycleActions
+	lifecycleActions,
+	onPreviewDeviceChange,
+	onPreviewConfigChange
 }: Props) => {
 	const titleId = useId()
 	const buttonImageInputId = useId()
@@ -198,6 +200,10 @@ const CountdownTimerSettingsModal = ({
 	const draftRevisionRef = useRef(timer.draftRevision)
 	const [confirmResetDefaults, setConfirmResetDefaults] = useState(false)
 	const [confirmResetTimers, setConfirmResetTimers] = useState(false)
+	const [confirmResetSection, setConfirmResetSection] = useState<Exclude<
+		Tab,
+		'code' | 'info'
+	> | null>(null)
 	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>(
 		{}
 	)
@@ -338,6 +344,7 @@ const CountdownTimerSettingsModal = ({
 		const frameId = window.requestAnimationFrame(() => {
 			const element = fieldRefs.current[field]
 			if (!element) return
+			element.closest('details')?.setAttribute('open', '')
 			element.scrollIntoView({ behavior: 'smooth', block: 'center' })
 			element.focus({ preventScroll: true })
 			pendingFocusFieldRef.current = null
@@ -362,8 +369,131 @@ const CountdownTimerSettingsModal = ({
 		})
 	}
 
+	const getFieldError = (field: string): string | undefined => {
+		if (field === 'color' && !isWidgetHexColor(cfg.color)) {
+			return 'Введите цвет в формате #RRGGBB'
+		}
+		if (
+			field === 'bgColor' &&
+			cfg.bgColor &&
+			!isWidgetHexColor(cfg.bgColor)
+		) {
+			return 'Введите цвет в формате #RRGGBB'
+		}
+		if (
+			field === 'openButtonColor' &&
+			cfg.openButtonColor &&
+			!isWidgetHexColor(cfg.openButtonColor)
+		) {
+			return 'Введите цвет в формате #RRGGBB'
+		}
+		if (
+			field === 'buttonColor' &&
+			cfg.buttonColor &&
+			!isWidgetHexColor(cfg.buttonColor)
+		) {
+			return 'Введите цвет в формате #RRGGBB'
+		}
+		if (field === 'name' && !name.trim()) {
+			return 'Укажите название виджета'
+		}
+		if (field === 'bubbleText' && !cfg.bubbleText.trim()) {
+			return 'Укажите текст облачка'
+		}
+		if (field === 'title' && !cfg.title.trim()) {
+			return 'Укажите заголовок предложения'
+		}
+		if (field === 'deadlineAt' && cfg.timerMode === 'FIXED_DATE') {
+			if (!cfg.deadlineAt) return 'Укажите дату окончания таймера'
+			if (
+				!Number.isFinite(new Date(cfg.deadlineAt).getTime()) ||
+				new Date(cfg.deadlineAt).getTime() <= Date.now()
+			) {
+				return 'Дата окончания должна быть в будущем'
+			}
+		}
+		if (
+			field === 'evergreenDurationMinutes' &&
+			cfg.timerMode === 'EVERGREEN' &&
+			(cfg.evergreenDurationMinutes < 1 ||
+				cfg.evergreenDurationMinutes > 10080)
+		) {
+			return 'Длительность таймера: от 1 минуты до 7 дней'
+		}
+		if (
+			field === 'expiredTitle' &&
+			cfg.expiredBehavior !== 'hide' &&
+			!cfg.expiredTitle.trim()
+		) {
+			return 'Укажите заголовок после окончания таймера'
+		}
+		if (field === 'actionButtonUrl') {
+			const actionButtonUrl = cfg.actionButtonUrl.trim()
+			if (cfg.expiredBehavior === 'disableForm' && !actionButtonUrl) {
+				return 'Для этого сценария укажите ссылку, которая останется после окончания'
+			}
+			if (actionButtonUrl && !isValidActionUrl(actionButtonUrl)) {
+				return 'Укажите корректную ссылку для перехода'
+			}
+		}
+		if (
+			field === 'actionButtonText' &&
+			cfg.actionButtonUrl.trim() &&
+			!cfg.actionButtonText.trim()
+		) {
+			return 'Укажите текст кнопки перехода'
+		}
+		if (
+			field === 'submissionCooldownDays' &&
+			cfg.dataType !== 'NONE' &&
+			cfg.filterDuplicates &&
+			(cfg.submissionCooldownDays < 0 || cfg.submissionCooldownDays > 365)
+		) {
+			return 'Период повторной заявки: от 0 до 365 дней'
+		}
+		if (cfg.dataType !== 'NONE') {
+			if (field === 'contactTitle' && !cfg.contactTitle.trim()) {
+				return 'Укажите заголовок формы контактов'
+			}
+			if (field === 'submitButtonText' && !cfg.submitButtonText.trim()) {
+				return 'Укажите текст кнопки отправки'
+			}
+			if (field === 'successTitle' && !cfg.successTitle.trim()) {
+				return 'Укажите заголовок после отправки'
+			}
+			if (field === 'privacyUrl') {
+				const privacyUrl = cfg.privacyUrl.trim()
+				if (!privacyUrl) {
+					return 'Укажите ссылку на политику конфиденциальности'
+				}
+				if (!isValidHttpUrl(privacyUrl)) {
+					return 'Укажите полную ссылку с протоколом http:// или https://'
+				}
+			}
+		}
+		return undefined
+	}
+
+	const validateFieldOnBlur = (field: string) => {
+		const message = getFieldError(field)
+		setFieldErrors(previous => {
+			const next = { ...previous }
+			if (message) next[field] = message
+			else delete next[field]
+			return next
+		})
+	}
+
 	const getFieldTab = (field: string): Tab => {
-		if (field === 'name' || field === 'bubbleText') return 'main'
+		if (
+			field === 'name' ||
+			field === 'bubbleText' ||
+			field === 'color' ||
+			field === 'bgColor' ||
+			field === 'openButtonColor'
+		) {
+			return 'main'
+		}
 		if (
 			field === 'deadlineAt' ||
 			field === 'evergreenDurationMinutes' ||
@@ -492,8 +622,11 @@ const CountdownTimerSettingsModal = ({
 			? 'color'
 			: findInvalidWidgetColor(cfg)
 		if (invalidColor) {
-			setTab('main')
-			toast.error('Цвет должен быть указан в формате #RRGGBB')
+			const colorField = invalidColor.split('.').pop() || 'color'
+			showValidationErrors(
+				{ [colorField]: 'Введите цвет в формате #RRGGBB' },
+				[colorField]
+			)
 			return
 		}
 
@@ -628,11 +761,6 @@ const CountdownTimerSettingsModal = ({
 	}
 
 	const handleResetTimers = () => {
-		if (hasUnsavedChanges) {
-			toast.error('Сначала сохраните текущие настройки виджета')
-			return
-		}
-
 		const token =
 			typeof crypto !== 'undefined' && 'randomUUID' in crypto
 				? crypto.randomUUID()
@@ -640,7 +768,68 @@ const CountdownTimerSettingsModal = ({
 		const nextConfig = { ...cfg, timerResetToken: token }
 		setCfg(nextConfig)
 		setConfirmResetTimers(false)
-		mutation.mutate({ name, config: nextConfig })
+		toast.success(
+			'Сброс добавлен в черновик. Сохраните черновик и опубликуйте; затем сброс вступит в силу'
+		)
+	}
+
+	const handleResetSection = (section: Exclude<Tab, 'code' | 'info'>) => {
+		const defaults = getDefaultConfig()
+		setCfg(previous => {
+			if (section === 'main') {
+				return {
+					...previous,
+					color: defaults.color,
+					bgColor: defaults.bgColor,
+					openButtonColor: defaults.openButtonColor,
+					buttonSide: defaults.buttonSide,
+					buttonPulse: defaults.buttonPulse,
+					buttonBottom: defaults.buttonBottom,
+					buttonOffset: defaults.buttonOffset,
+					buttonSize: defaults.buttonSize,
+					buttonImageUrl: defaults.buttonImageUrl,
+					autoOpenDelay: defaults.autoOpenDelay,
+					bubbleText: defaults.bubbleText
+				}
+			}
+			if (section === 'timer') {
+				return {
+					...previous,
+					timerMode: defaults.timerMode,
+					deadlineAt: defaults.deadlineAt,
+					evergreenDurationMinutes: defaults.evergreenDurationMinutes,
+					expiredBehavior: defaults.expiredBehavior,
+					expiredTitle: defaults.expiredTitle,
+					expiredSubtitle: defaults.expiredSubtitle
+				}
+			}
+			if (section === 'form') {
+				return {
+					...previous,
+					title: defaults.title,
+					subtitle: defaults.subtitle,
+					buttonColor: defaults.buttonColor,
+					dataType: defaults.dataType,
+					contactTitle: defaults.contactTitle,
+					submitButtonText: defaults.submitButtonText,
+					successTitle: defaults.successTitle,
+					successSubtitle: defaults.successSubtitle,
+					actionButtonText: defaults.actionButtonText,
+					actionButtonUrl: defaults.actionButtonUrl,
+					privacyUrl: defaults.privacyUrl,
+					developInfoActive: defaults.developInfoActive,
+					filterDuplicates: defaults.filterDuplicates,
+					submissionCooldownDays: defaults.submissionCooldownDays
+				}
+			}
+			return {
+				...previous,
+				integrations: { ...defaults.integrations }
+			}
+		})
+		setFieldErrors({})
+		setConfirmResetSection(null)
+		toast.success('Раздел сброшен в черновике. Сохраните черновик')
 	}
 
 	return (
@@ -705,6 +894,8 @@ const CountdownTimerSettingsModal = ({
 						type="timer"
 						config={cfg}
 						isHardPlan={canUseCustomButtonImage}
+						onDeviceChange={onPreviewDeviceChange}
+						onConfigChange={onPreviewConfigChange}
 						autoCollapse={
 							!isPagePresentation &&
 							['integrations', 'code', 'info'].includes(tab)
@@ -793,6 +984,7 @@ const CountdownTimerSettingsModal = ({
 											clearFieldError('name')
 											setName(e.target.value)
 										}}
+										onBlur={() => validateFieldOnBlur('name')}
 										maxLength={50}
 										aria-invalid={Boolean(fieldErrors.name)}
 									/>
@@ -811,298 +1003,392 @@ const CountdownTimerSettingsModal = ({
 											type="color"
 											className={styles.colorPicker}
 											value={getWidgetColorPreview(cfg.color, '#4705fb')}
-											onChange={e => set({ color: e.target.value })}
+											onChange={e => {
+												clearFieldError('color')
+												set({ color: e.target.value })
+											}}
 										/>
 										<input
+											ref={setFieldRef('color')}
 											className={`${styles.input} ${
-												!isWidgetHexColor(cfg.color)
-													? styles.inputError
-													: ''
+												fieldErrors.color ? styles.inputError : ''
 											}`}
 											value={cfg.color}
-											onChange={e => set({ color: e.target.value })}
+											onChange={e => {
+												clearFieldError('color')
+												set({ color: e.target.value })
+											}}
+											onBlur={() => validateFieldOnBlur('color')}
 											maxLength={7}
-											aria-invalid={!isWidgetHexColor(cfg.color)}
+											aria-invalid={Boolean(fieldErrors.color)}
 										/>
 									</div>
-									{!isWidgetHexColor(cfg.color) && (
+									{fieldErrors.color && (
 										<p className={styles.fieldError}>
-											Введите цвет в формате #RRGGBB
+											{fieldErrors.color}
 										</p>
 									)}
 									<p className={styles.hint}>
 										Цвет акцентов, таймера и элементов формы.
 									</p>
 								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Цвет фона окна</p>
-									<div className={styles.colorRow}>
-										<input
-											type="color"
-											className={styles.colorPicker}
-											value={getWidgetColorPreview(cfg.bgColor, '#ffffff')}
-											onChange={e => set({ bgColor: e.target.value })}
-										/>
-										<input
-											className={styles.input}
-											value={cfg.bgColor || ''}
-											onChange={e => set({ bgColor: e.target.value })}
-											placeholder="По умолчанию — белый"
-											maxLength={7}
-										/>
-										{cfg.bgColor && (
-											<button
-												type="button"
-												className={styles.clearColorBtn}
-												onClick={() => set({ bgColor: '' })}
-												title="Использовать белый фон"
-											>
-												✕
-											</button>
-										)}
+								<details className={styles.optionalDetails}>
+									<summary className={styles.optionalSummary}>
+										Тонкая настройка оформления
+									</summary>
+									<div className={styles.optionalContent}>
+										<div className={styles.field}>
+											<p className={styles.label}>Цвет фона окна</p>
+											<div className={styles.colorRow}>
+												<input
+													type="color"
+													className={styles.colorPicker}
+													value={getWidgetColorPreview(
+														cfg.bgColor,
+														'#ffffff'
+													)}
+													onChange={e => {
+														clearFieldError('bgColor')
+														set({ bgColor: e.target.value })
+													}}
+												/>
+												<input
+													ref={setFieldRef('bgColor')}
+													className={`${styles.input} ${
+														fieldErrors.bgColor ? styles.inputError : ''
+													}`}
+													value={cfg.bgColor || ''}
+													onChange={e => {
+														clearFieldError('bgColor')
+														set({ bgColor: e.target.value })
+													}}
+													onBlur={() => validateFieldOnBlur('bgColor')}
+													placeholder="По умолчанию — белый"
+													maxLength={7}
+													aria-invalid={Boolean(fieldErrors.bgColor)}
+												/>
+												{cfg.bgColor && (
+													<button
+														type="button"
+														className={styles.clearColorBtn}
+														onClick={() => {
+															clearFieldError('bgColor')
+															set({ bgColor: '' })
+														}}
+														title="Использовать белый фон"
+													>
+														✕
+													</button>
+												)}
+											</div>
+											{fieldErrors.bgColor && (
+												<p className={styles.fieldError}>
+													{fieldErrors.bgColor}
+												</p>
+											)}
+											<p className={styles.hint}>
+												Оставьте пустым, чтобы использовать стандартный
+												белый фон.
+											</p>
+										</div>
 									</div>
-									<p className={styles.hint}>
-										Оставьте пустым, чтобы использовать стандартный белый
-										фон.
-									</p>
-								</div>
+								</details>
 							</div>
 
 							<div className={styles.settingsGroup}>
 								<h3 className={styles.settingsGroupTitle}>
 									Кнопка открытия
 								</h3>
-								<div className={styles.field}>
-									<p className={styles.label}>Цвет кнопки открытия</p>
-									<div className={styles.colorRow}>
-										<input
-											type="color"
-											className={styles.colorPicker}
-											value={getWidgetColorPreview(
-												cfg.openButtonColor,
-												getWidgetColorPreview(cfg.color, '#4705fb')
-											)}
-											onChange={e =>
-												set({ openButtonColor: e.target.value })
-											}
-										/>
-										<input
-											className={styles.input}
-											value={cfg.openButtonColor || ''}
-											onChange={e =>
-												set({ openButtonColor: e.target.value })
-											}
-											placeholder="Как основной цвет"
-										/>
-									</div>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Картинка кнопки открытия:</p>
-									<div className={styles.buttonImageBox}>
-										<div className={styles.buttonImagePreview}>
-											<Image
-												src={buttonImagePreviewUrl}
-												alt="Картинка кнопки открытия"
-												width={80}
-												height={80}
-												unoptimized
-											/>
-										</div>
-										<div className={styles.buttonImageContent}>
-											<p className={styles.hint}>
-												PNG с прозрачным фоном, до 320x320 px и до 200 КБ.
-											</p>
-											<p className={styles.hint}>
-												После загрузки обновите страницу с установленным
-												виджетом. Если кнопка осталась старой, выполните
-												жёсткое обновление: Ctrl+F5 или Cmd+Shift+R.
-											</p>
-											<div className={styles.buttonImageActions}>
-												<label
-													htmlFor={buttonImageInputId}
-													className={`${styles.copyBtn} ${
-														buttonImageUploadDisabled
-															? styles.buttonImageUploadDisabled
+								<details className={styles.optionalDetails}>
+									<summary className={styles.optionalSummary}>
+										Тонкая настройка оформления
+									</summary>
+									<div className={styles.optionalContent}>
+										<div className={styles.field}>
+											<p className={styles.label}>Цвет кнопки открытия</p>
+											<div className={styles.colorRow}>
+												<input
+													type="color"
+													className={styles.colorPicker}
+													value={getWidgetColorPreview(
+														cfg.openButtonColor,
+														getWidgetColorPreview(cfg.color, '#4705fb')
+													)}
+													onChange={e => {
+														clearFieldError('openButtonColor')
+														set({ openButtonColor: e.target.value })
+													}}
+												/>
+												<input
+													ref={setFieldRef('openButtonColor')}
+													className={`${styles.input} ${
+														fieldErrors.openButtonColor
+															? styles.inputError
 															: ''
 													}`}
-												>
-													Загрузить PNG
-												</label>
-												<input
-													id={buttonImageInputId}
-													type="file"
-													accept="image/png"
-													className={styles.fileInput}
-													disabled={buttonImageUploadDisabled}
-													onChange={handleButtonImageUpload}
+													value={cfg.openButtonColor || ''}
+													onChange={e => {
+														clearFieldError('openButtonColor')
+														set({ openButtonColor: e.target.value })
+													}}
+													onBlur={() =>
+														validateFieldOnBlur('openButtonColor')
+													}
+													placeholder="Как цвет акцентов"
+													maxLength={7}
+													aria-invalid={Boolean(
+														fieldErrors.openButtonColor
+													)}
 												/>
-												{cfg.buttonImageUrl && (
+												{cfg.openButtonColor && (
 													<button
 														type="button"
-														className={styles.resetAttemptsBtn}
-														disabled={isDangerActionPending}
-														onClick={handleResetButtonImage}
+														className={styles.clearColorBtn}
+														onClick={() => {
+															clearFieldError('openButtonColor')
+															set({ openButtonColor: '' })
+														}}
+														title="Вернуть цвет акцентов"
+														aria-label="Вернуть цвет акцентов"
 													>
-														Вернуть стандартную
+														✕
 													</button>
 												)}
 											</div>
-											{!canUseCustomButtonImage && (
-												<p className={styles.domainHint}>
-													Своя картинка кнопки доступна только на активном
-													тарифе Hard.
-												</p>
-											)}
-											{canUseCustomButtonImage && hasUnsavedChanges && (
-												<p className={styles.hint}>
-													Перед загрузкой картинки сохраните текущие
-													настройки.
+											{fieldErrors.openButtonColor && (
+												<p className={styles.fieldError}>
+													{fieldErrors.openButtonColor}
 												</p>
 											)}
 										</div>
 									</div>
-								</div>
+								</details>
+								<details className={styles.optionalDetails}>
+									<summary className={styles.optionalSummary}>
+										Расширенные настройки
+									</summary>
+									<div className={styles.optionalContent}>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Картинка кнопки открытия:
+											</p>
+											<div className={styles.buttonImageBox}>
+												<div className={styles.buttonImagePreview}>
+													<Image
+														src={buttonImagePreviewUrl}
+														alt="Картинка кнопки открытия"
+														width={80}
+														height={80}
+														unoptimized
+													/>
+												</div>
+												<div className={styles.buttonImageContent}>
+													<p className={styles.hint}>
+														PNG с прозрачным фоном, до 320x320 px и до 200
+														КБ.
+													</p>
+													<p className={styles.hint}>
+														После загрузки обновите страницу с
+														установленным виджетом. Если кнопка осталась
+														старой, выполните жёсткое обновление: Ctrl+F5
+														или Cmd+Shift+R.
+													</p>
+													<div className={styles.buttonImageActions}>
+														<label
+															htmlFor={buttonImageInputId}
+															className={`${styles.copyBtn} ${
+																buttonImageUploadDisabled
+																	? styles.buttonImageUploadDisabled
+																	: ''
+															}`}
+														>
+															Загрузить PNG
+														</label>
+														<input
+															id={buttonImageInputId}
+															type="file"
+															accept="image/png"
+															className={styles.fileInput}
+															disabled={buttonImageUploadDisabled}
+															onChange={handleButtonImageUpload}
+														/>
+														{cfg.buttonImageUrl && (
+															<button
+																type="button"
+																className={styles.resetAttemptsBtn}
+																disabled={isDangerActionPending}
+																onClick={handleResetButtonImage}
+															>
+																Вернуть стандартную
+															</button>
+														)}
+													</div>
+													{!canUseCustomButtonImage && (
+														<p className={styles.domainHint}>
+															Своя картинка кнопки доступна только на
+															активном тарифе Hard.
+														</p>
+													)}
+													{canUseCustomButtonImage &&
+														hasUnsavedChanges && (
+															<p className={styles.hint}>
+																Перед загрузкой картинки сохраните текущие
+																настройки.
+															</p>
+														)}
+												</div>
+											</div>
+										</div>
 
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Кнопка открытия — пульсация
-									</p>
-									<div className={styles.checkRow}>
-										<input
-											id="timer-button-pulse"
-											type="checkbox"
-											checked={cfg.buttonPulse !== false}
-											onChange={e =>
-												set({ buttonPulse: e.target.checked })
-											}
-										/>
-										<label
-											htmlFor="timer-button-pulse"
-											className={styles.checkLabel}
-										>
-											Включить пульсацию кнопки
-										</label>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Кнопка открытия — пульсация
+											</p>
+											<div className={styles.checkRow}>
+												<input
+													id="timer-button-pulse"
+													type="checkbox"
+													checked={cfg.buttonPulse !== false}
+													onChange={e =>
+														set({ buttonPulse: e.target.checked })
+													}
+												/>
+												<label
+													htmlFor="timer-button-pulse"
+													className={styles.checkLabel}
+												>
+													Включить пульсацию кнопки
+												</label>
+											</div>
+											<p className={styles.hint}>
+												Дополнительный эффект свечения на плавающей кнопке.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Сторона расположения кнопки для открытия виджета на
+												вашем сайте:
+											</p>
+											<select
+												className={styles.input}
+												value={cfg.buttonSide}
+												onChange={e =>
+													set({
+														buttonSide: e.target.value as 'left' | 'right'
+													})
+												}
+											>
+												<option value="right">Справа</option>
+												<option value="left">Слева</option>
+											</select>
+										</div>
+										<div className={styles.field}>
+											<p className={styles.label}>Текст облачка:</p>
+											<input
+												ref={setFieldRef('bubbleText')}
+												className={`${styles.input} ${
+													fieldErrors.bubbleText ? styles.inputError : ''
+												}`}
+												value={cfg.bubbleText}
+												onChange={e => {
+													clearFieldError('bubbleText')
+													set({ bubbleText: e.target.value })
+												}}
+												onBlur={() => validateFieldOnBlur('bubbleText')}
+												placeholder="Акция"
+												maxLength={60}
+												aria-invalid={Boolean(fieldErrors.bubbleText)}
+											/>
+											{fieldErrors.bubbleText ? (
+												<p className={styles.fieldError}>
+													{fieldErrors.bubbleText}
+												</p>
+											) : (
+												<p className={styles.hint}>
+													Короткая подсказка объясняет, что откроется по
+													клику.
+												</p>
+											)}
+										</div>
+
+										<div className={styles.field}>
+											<div className={styles.rangeHeader}>
+												<p className={styles.label}>Отступ снизу:</p>
+												<span className={styles.rangeValue}>
+													{cfg.buttonBottom ?? 3}%
+												</span>
+											</div>
+											<input
+												type="range"
+												aria-label="Отступ снизу"
+												min={1}
+												max={50}
+												value={cfg.buttonBottom ?? 3}
+												onChange={e =>
+													set({ buttonBottom: Number(e.target.value) })
+												}
+												className={styles.rangeInput}
+											/>
+											<p className={styles.hint}>
+												Отступ от нижнего края экрана в процентах. 3 —
+												почти внизу, 50 — по центру.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<div className={styles.rangeHeader}>
+												<p className={styles.label}>Отступ сбоку:</p>
+												<span className={styles.rangeValue}>
+													{cfg.buttonOffset ?? 3}%
+												</span>
+											</div>
+											<input
+												type="range"
+												aria-label="Отступ сбоку"
+												min={1}
+												max={50}
+												value={cfg.buttonOffset ?? 3}
+												onChange={e =>
+													set({ buttonOffset: Number(e.target.value) })
+												}
+												className={styles.rangeInput}
+											/>
+											<p className={styles.hint}>
+												Отступ кнопки от левого или правого края экрана в
+												процентах. 3 — почти у края, 50 — по центру.
+											</p>
+										</div>
+
+										<div className={styles.field}>
+											<div className={styles.rangeHeader}>
+												<p className={styles.label}>
+													Размер кнопки открытия:
+												</p>
+												<span className={styles.rangeValue}>
+													{cfg.buttonSize}px
+												</span>
+											</div>
+											<input
+												type="range"
+												aria-label="Размер кнопки открытия"
+												min={40}
+												max={100}
+												value={cfg.buttonSize}
+												onChange={e =>
+													set({
+														buttonSize: parseInt(e.target.value) || 60
+													})
+												}
+												className={styles.rangeInput}
+											/>
+											<p className={styles.hint}>
+												Размер плавающей кнопки в пикселях. По умолчанию
+												60px.
+											</p>
+										</div>
 									</div>
-									<p className={styles.hint}>
-										Дополнительный эффект свечения на плавающей кнопке.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<p className={styles.label}>
-										Сторона расположения кнопки для открытия виджета на
-										вашем сайте:
-									</p>
-									<select
-										className={styles.input}
-										value={cfg.buttonSide}
-										onChange={e =>
-											set({
-												buttonSide: e.target.value as 'left' | 'right'
-											})
-										}
-									>
-										<option value="right">Справа</option>
-										<option value="left">Слева</option>
-									</select>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Текст облачка:</p>
-									<input
-										ref={setFieldRef('bubbleText')}
-										className={`${styles.input} ${
-											fieldErrors.bubbleText ? styles.inputError : ''
-										}`}
-										value={cfg.bubbleText}
-										onChange={e => {
-											clearFieldError('bubbleText')
-											set({ bubbleText: e.target.value })
-										}}
-										placeholder="Акция"
-										maxLength={60}
-										aria-invalid={Boolean(fieldErrors.bubbleText)}
-									/>
-									{fieldErrors.bubbleText ? (
-										<p className={styles.fieldError}>
-											{fieldErrors.bubbleText}
-										</p>
-									) : (
-										<p className={styles.hint}>
-											Короткая подсказка объясняет, что откроется по клику.
-										</p>
-									)}
-								</div>
-
-								<div className={styles.field}>
-									<div className={styles.rangeHeader}>
-										<p className={styles.label}>Отступ снизу:</p>
-										<span className={styles.rangeValue}>
-											{cfg.buttonBottom ?? 3}%
-										</span>
-									</div>
-									<input
-										type="range"
-										aria-label="Отступ снизу"
-										min={1}
-										max={50}
-										value={cfg.buttonBottom ?? 3}
-										onChange={e =>
-											set({ buttonBottom: Number(e.target.value) })
-										}
-										className={styles.rangeInput}
-									/>
-									<p className={styles.hint}>
-										Отступ от нижнего края экрана в процентах. 3 — почти
-										внизу, 50 — по центру.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<div className={styles.rangeHeader}>
-										<p className={styles.label}>Отступ сбоку:</p>
-										<span className={styles.rangeValue}>
-											{cfg.buttonOffset ?? 3}%
-										</span>
-									</div>
-									<input
-										type="range"
-										aria-label="Отступ сбоку"
-										min={1}
-										max={50}
-										value={cfg.buttonOffset ?? 3}
-										onChange={e =>
-											set({ buttonOffset: Number(e.target.value) })
-										}
-										className={styles.rangeInput}
-									/>
-									<p className={styles.hint}>
-										Отступ кнопки от левого или правого края экрана в
-										процентах. 3 — почти у края, 50 — по центру.
-									</p>
-								</div>
-
-								<div className={styles.field}>
-									<div className={styles.rangeHeader}>
-										<p className={styles.label}>Размер кнопки открытия:</p>
-										<span className={styles.rangeValue}>
-											{cfg.buttonSize}px
-										</span>
-									</div>
-									<input
-										type="range"
-										aria-label="Размер кнопки открытия"
-										min={40}
-										max={100}
-										value={cfg.buttonSize}
-										onChange={e =>
-											set({ buttonSize: parseInt(e.target.value) || 60 })
-										}
-										className={styles.rangeInput}
-									/>
-									<p className={styles.hint}>
-										Размер плавающей кнопки в пикселях. По умолчанию 60px.
-									</p>
-								</div>
+								</details>
 
 								<div className={styles.field}>
 									<div className={styles.checkRow}>
@@ -1202,8 +1488,9 @@ const CountdownTimerSettingsModal = ({
 									{confirmResetTimers ? (
 										<div className={styles.dangerItem}>
 											<p className={styles.hint}>
-												Персональный отсчёт начнётся заново у всех
-												посетителей.
+												Сброс будет добавлен в черновик. Сохраните черновик
+												и опубликуйте его; затем персональный отсчёт
+												начнётся заново у всех посетителей.
 											</p>
 											<div className={styles.footerActions}>
 												<button
@@ -1228,15 +1515,7 @@ const CountdownTimerSettingsModal = ({
 										<button
 											type="button"
 											className={styles.resetAttemptsBtn}
-											onClick={() => {
-												if (hasUnsavedChanges) {
-													toast.error(
-														'Сначала сохраните текущие настройки виджета'
-													)
-													return
-												}
-												setConfirmResetTimers(true)
-											}}
+											onClick={() => setConfirmResetTimers(true)}
 											disabled={isDangerActionPending}
 										>
 											Сбросить персональные таймеры для всех посетителей
@@ -1294,6 +1573,7 @@ const CountdownTimerSettingsModal = ({
 													deadlineAt: fromDateTimeLocal(e.target.value)
 												})
 											}}
+											onBlur={() => validateFieldOnBlur('deadlineAt')}
 											aria-invalid={Boolean(fieldErrors.deadlineAt)}
 										/>
 										{fieldErrors.deadlineAt ? (
@@ -1336,6 +1616,9 @@ const CountdownTimerSettingsModal = ({
 													)
 												})
 											}}
+											onBlur={() =>
+												validateFieldOnBlur('evergreenDurationMinutes')
+											}
 											aria-invalid={Boolean(
 												fieldErrors.evergreenDurationMinutes
 											)}
@@ -1430,6 +1713,7 @@ const CountdownTimerSettingsModal = ({
 													clearFieldError('expiredTitle')
 													set({ expiredTitle: e.target.value })
 												}}
+												onBlur={() => validateFieldOnBlur('expiredTitle')}
 												aria-invalid={Boolean(fieldErrors.expiredTitle)}
 											/>
 											{fieldErrors.expiredTitle && (
@@ -1478,6 +1762,7 @@ const CountdownTimerSettingsModal = ({
 											clearFieldError('title')
 											set({ title: e.target.value })
 										}}
+										onBlur={() => validateFieldOnBlur('title')}
 										aria-invalid={Boolean(fieldErrors.title)}
 									/>
 									{fieldErrors.title && (
@@ -1506,6 +1791,7 @@ const CountdownTimerSettingsModal = ({
 											clearFieldError('actionButtonUrl')
 											set({ actionButtonUrl: e.target.value })
 										}}
+										onBlur={() => validateFieldOnBlur('actionButtonUrl')}
 										placeholder="https://example.ru/product"
 										aria-invalid={Boolean(fieldErrors.actionButtonUrl)}
 									/>
@@ -1532,6 +1818,7 @@ const CountdownTimerSettingsModal = ({
 											clearFieldError('actionButtonText')
 											set({ actionButtonText: e.target.value })
 										}}
+										onBlur={() => validateFieldOnBlur('actionButtonText')}
 										aria-invalid={Boolean(fieldErrors.actionButtonText)}
 									/>
 									{fieldErrors.actionButtonText && (
@@ -1540,40 +1827,71 @@ const CountdownTimerSettingsModal = ({
 										</p>
 									)}
 								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Цвет кнопок внутри окна</p>
-									<div className={styles.colorRow}>
-										<input
-											type="color"
-											className={styles.colorPicker}
-											value={getWidgetColorPreview(
-												cfg.buttonColor,
-												getWidgetColorPreview(cfg.color, '#4705fb')
+								<details className={styles.optionalDetails}>
+									<summary className={styles.optionalSummary}>
+										Тонкая настройка оформления
+									</summary>
+									<div className={styles.optionalContent}>
+										<div className={styles.field}>
+											<p className={styles.label}>
+												Цвет кнопок внутри окна
+											</p>
+											<div className={styles.colorRow}>
+												<input
+													type="color"
+													className={styles.colorPicker}
+													value={getWidgetColorPreview(
+														cfg.buttonColor,
+														getWidgetColorPreview(cfg.color, '#4705fb')
+													)}
+													onChange={e => {
+														clearFieldError('buttonColor')
+														set({ buttonColor: e.target.value })
+													}}
+												/>
+												<input
+													ref={setFieldRef('buttonColor')}
+													className={`${styles.input} ${
+														fieldErrors.buttonColor
+															? styles.inputError
+															: ''
+													}`}
+													value={cfg.buttonColor || ''}
+													onChange={e => {
+														clearFieldError('buttonColor')
+														set({ buttonColor: e.target.value })
+													}}
+													onBlur={() => validateFieldOnBlur('buttonColor')}
+													placeholder="Как цвет акцентов"
+													maxLength={7}
+													aria-invalid={Boolean(fieldErrors.buttonColor)}
+												/>
+												{cfg.buttonColor && (
+													<button
+														type="button"
+														className={styles.clearColorBtn}
+														onClick={() => {
+															clearFieldError('buttonColor')
+															set({ buttonColor: '' })
+														}}
+														title="Вернуть цвет акцентов"
+														aria-label="Вернуть цвет акцентов"
+													>
+														✕
+													</button>
+												)}
+											</div>
+											{fieldErrors.buttonColor && (
+												<p className={styles.fieldError}>
+													{fieldErrors.buttonColor}
+												</p>
 											)}
-											onChange={e => set({ buttonColor: e.target.value })}
-										/>
-										<input
-											className={styles.input}
-											value={cfg.buttonColor || ''}
-											onChange={e => set({ buttonColor: e.target.value })}
-											placeholder="Как основной цвет"
-											maxLength={7}
-										/>
-										{cfg.buttonColor && (
-											<button
-												type="button"
-												className={styles.clearColorBtn}
-												onClick={() => set({ buttonColor: '' })}
-												title="Использовать основной цвет"
-											>
-												✕
-											</button>
-										)}
+											<p className={styles.hint}>
+												Применяется к отправке формы и кнопке перехода.
+											</p>
+										</div>
 									</div>
-									<p className={styles.hint}>
-										Применяется к отправке формы и кнопке перехода.
-									</p>
-								</div>
+								</details>
 							</div>
 
 							<div className={styles.settingsGroup}>
@@ -1624,6 +1942,7 @@ const CountdownTimerSettingsModal = ({
 													clearFieldError('contactTitle')
 													set({ contactTitle: e.target.value })
 												}}
+												onBlur={() => validateFieldOnBlur('contactTitle')}
 												aria-invalid={Boolean(fieldErrors.contactTitle)}
 											/>
 											{fieldErrors.contactTitle && (
@@ -1646,6 +1965,9 @@ const CountdownTimerSettingsModal = ({
 													clearFieldError('submitButtonText')
 													set({ submitButtonText: e.target.value })
 												}}
+												onBlur={() =>
+													validateFieldOnBlur('submitButtonText')
+												}
 												aria-invalid={Boolean(
 													fieldErrors.submitButtonText
 												)}
@@ -1740,6 +2062,7 @@ const CountdownTimerSettingsModal = ({
 													clearFieldError('privacyUrl')
 													set({ privacyUrl: e.target.value })
 												}}
+												onBlur={() => validateFieldOnBlur('privacyUrl')}
 												placeholder="https://example.ru/privacy"
 												aria-invalid={Boolean(fieldErrors.privacyUrl)}
 											/>
@@ -1774,6 +2097,7 @@ const CountdownTimerSettingsModal = ({
 												clearFieldError('successTitle')
 												set({ successTitle: e.target.value })
 											}}
+											onBlur={() => validateFieldOnBlur('successTitle')}
 											aria-invalid={Boolean(fieldErrors.successTitle)}
 										/>
 										{fieldErrors.successTitle && (
@@ -2140,6 +2464,49 @@ const CountdownTimerSettingsModal = ({
 										перекрывает важные элементы сайта.
 									</li>
 								</ul>
+							</div>
+						</div>
+					)}
+
+					{tab !== 'code' && tab !== 'info' && (
+						<div className={styles.fields}>
+							<div className={styles.settingsGroup}>
+								<h3 className={styles.settingsGroupTitle}>
+									Сброс раздела
+								</h3>
+								{confirmResetSection === tab ? (
+									<div className={styles.dangerItem}>
+										<p className={styles.hint}>
+											{tab === 'integrations'
+												? 'Только настройки интеграций вернутся к стандартным значениям. Остальные разделы и домен сохранятся.'
+												: 'Только настройки текущего раздела вернутся к стандартным значениям. Другие разделы, домен и интеграции сохранятся.'}
+										</p>
+										<div className={styles.footerActions}>
+											<button
+												type="button"
+												className={styles.resetAttemptsBtn}
+												onClick={() => handleResetSection(tab)}
+											>
+												Да, сбросить раздел
+											</button>
+											<button
+												type="button"
+												className={styles.cancelBtn}
+												onClick={() => setConfirmResetSection(null)}
+											>
+												Отмена
+											</button>
+										</div>
+									</div>
+								) : (
+									<button
+										type="button"
+										className={styles.resetAttemptsBtn}
+										onClick={() => setConfirmResetSection(tab)}
+									>
+										Сбросить раздел
+									</button>
+								)}
 							</div>
 						</div>
 					)}

@@ -661,11 +661,7 @@ const CabinetWidgets = () => {
 													'Сохранённые изменения ещё не опубликованы.',
 												className: styles.widgetStatusWarning
 											}
-										: {
-												label: `Версия ${lifecycle.publishedVersion ?? 1}`,
-												description: 'Опубликованная версия виджета.',
-												className: styles.widgetStatusPublished
-											}
+										: null
 
 							const pageUrl =
 								kind === 'wheel'

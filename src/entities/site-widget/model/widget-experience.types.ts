@@ -88,6 +88,13 @@ export interface WidgetAnalyticsDay {
 	submits: number
 }
 
+export interface WidgetAnalyticsStep {
+	key: string
+	label: string
+	count: number
+	conversionRate: number | null
+}
+
 export interface WidgetRuntimeAnalytics {
 	from: string
 	to: string
@@ -95,6 +102,8 @@ export interface WidgetRuntimeAnalytics {
 	trackingStartedAt: string | null
 	isPartialPeriod: boolean
 	submitAvailable: boolean
+	completionLabel: 'Заявки' | 'Завершения'
+	stepRateBasis: 'START' | 'PREVIOUS_STEP' | null
 	totals: {
 		impressions: number
 		opens: number
@@ -107,4 +116,5 @@ export interface WidgetRuntimeAnalytics {
 		submitRate: number | null
 	}
 	daily: WidgetAnalyticsDay[]
+	steps: WidgetAnalyticsStep[]
 }

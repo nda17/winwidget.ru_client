@@ -17,6 +17,8 @@ export interface WidgetSettingsPresentationProps {
 	presentation?: WidgetSettingsPresentation
 	previewPortalTarget?: HTMLElement | null
 	onDirtyChange?: (hasUnsavedChanges: boolean) => void
+	onPreviewDeviceChange?: (device: 'desktop' | 'mobile') => void
+	onPreviewConfigChange?: () => void
 	onRevisionConflict?: () => Promise<number | null>
 	lifecycleActions?: ReactNode
 }

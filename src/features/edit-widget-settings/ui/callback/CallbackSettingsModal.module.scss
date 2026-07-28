@@ -139,6 +139,14 @@ select.input {
 	@apply border-[#e05a5a] text-[#e05a5a];
 }
 
+.inheritColorBtn {
+	@apply shrink-0 rounded-[6px] border border-[#e0d6f0] bg-white px-3 py-2 text-xs font-medium text-[#7b3fa0] cursor-pointer transition-colors duration-150;
+}
+
+.inheritColorBtn:hover {
+	@apply bg-[#f3eeff];
+}
+
 .checkRow {
 	@apply flex items-center gap-2;
 }
@@ -210,6 +218,10 @@ select.input {
 	@apply flex flex-col gap-2;
 }
 
+.slotItem {
+	@apply flex flex-col gap-1;
+}
+
 .slotRow {
 	@apply flex items-center gap-2;
 }
@@ -244,6 +256,10 @@ select.input {
 
 .dangerActions {
 	@apply flex flex-col gap-3;
+}
+
+.sectionReset {
+	@apply mt-5 flex flex-col items-start gap-2 rounded-xl border border-dashed border-[#e0d6f0] bg-[#faf8ff] p-4;
 }
 
 .dangerItem {
@@ -327,7 +343,7 @@ select.input {
 	}
 
 	.tab {
-		@apply min-h-10 w-full whitespace-normal rounded-md px-1 py-2 text-center text-xs leading-4;
+		@apply min-h-10 w-full whitespace-normal rounded-md px-1 py-2 text-center text-xs leading-[1rem];
 	}
 
 	.stickyFooter {

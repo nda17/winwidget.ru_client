@@ -134,26 +134,6 @@
 	@apply flex min-w-[9rem] flex-col gap-2;
 }
 
-.editorLifecycle {
-	@apply mb-5 flex flex-col gap-3 rounded-lg border border-primary border-opacity-20 bg-primary bg-opacity-5 p-4 sm:flex-row sm:items-center sm:justify-between;
-}
-
-.editorLifecycleStatus {
-	@apply flex min-w-0 flex-col gap-1;
-
-	strong {
-		@apply text-sm text-gray-700;
-	}
-
-	span {
-		@apply text-xs leading-5 text-gray-600;
-	}
-}
-
-.editorLifecycleActions {
-	@apply flex shrink-0 flex-wrap gap-2;
-}
-
 .actionButton,
 .actionButtonPrimary,
 .actionButtonDanger {

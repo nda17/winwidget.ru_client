@@ -149,7 +149,9 @@ const StopOfferSettingsModal = ({
 	previewPortalTarget,
 	onDirtyChange,
 	onRevisionConflict,
-	lifecycleActions
+	lifecycleActions,
+	onPreviewDeviceChange,
+	onPreviewConfigChange
 }: Props) => {
 	const titleId = useId()
 	const [tab, setTab] = useState<Tab>('main')
@@ -165,6 +167,10 @@ const StopOfferSettingsModal = ({
 	const [confirmResetSubmissions, setConfirmResetSubmissions] =
 		useState(false)
 	const [confirmResetDefaults, setConfirmResetDefaults] = useState(false)
+	const [confirmResetSection, setConfirmResetSection] = useState<Exclude<
+		Tab,
+		'code' | 'info'
+	> | null>(null)
 	const [validationIssue, setValidationIssue] =
 		useState<ValidationIssue | null>(null)
 	const [savedSnapshot, setSavedSnapshot] = useState(
@@ -284,6 +290,7 @@ const StopOfferSettingsModal = ({
 		setTab(issue.tab)
 		window.requestAnimationFrame(() => {
 			const field = document.getElementById(issue.fieldId)
+			field?.closest('details')?.setAttribute('open', '')
 			field?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 			field?.focus({ preventScroll: true })
 		})
@@ -301,6 +308,124 @@ const StopOfferSettingsModal = ({
 				{validationIssue.message}
 			</p>
 		) : null
+
+	const setInlineValidationIssue = (
+		tabId: Tab,
+		fieldId: string,
+		message?: string
+	) => {
+		setValidationIssue(current => {
+			if (message) return { tab: tabId, fieldId, message }
+			return current?.fieldId === fieldId ? null : current
+		})
+	}
+
+	const validateFieldOnBlur = (field: string) => {
+		if (field === 'color') {
+			setInlineValidationIssue(
+				'main',
+				`${titleId}-color`,
+				isWidgetHexColor(cfg.color)
+					? undefined
+					: 'Введите цвет в формате #RRGGBB'
+			)
+			return
+		}
+		if (field === 'bgColor') {
+			setInlineValidationIssue(
+				'main',
+				`${titleId}-bg-color`,
+				!cfg.bgColor || isWidgetHexColor(cfg.bgColor)
+					? undefined
+					: 'Введите цвет в формате #RRGGBB'
+			)
+			return
+		}
+		if (field === 'buttonColor') {
+			setInlineValidationIssue(
+				'main',
+				`${titleId}-button-color`,
+				!cfg.buttonColor || isWidgetHexColor(cfg.buttonColor)
+					? undefined
+					: 'Введите цвет в формате #RRGGBB'
+			)
+			return
+		}
+		if (field === 'name') {
+			setInlineValidationIssue(
+				'main',
+				`${titleId}-name`,
+				name.trim() ? undefined : 'Укажите название виджета'
+			)
+			return
+		}
+		if (field === 'offerText') {
+			setInlineValidationIssue(
+				'main',
+				`${titleId}-offer`,
+				cfg.offerText.trim() ? undefined : 'Укажите текст предложения'
+			)
+			return
+		}
+		if (field === 'title') {
+			setInlineValidationIssue(
+				'main',
+				`${titleId}-title`,
+				cfg.title.trim() ? undefined : 'Укажите заголовок виджета'
+			)
+			return
+		}
+		if (field === 'contactTitle') {
+			setInlineValidationIssue(
+				'form',
+				`${titleId}-contact-title`,
+				cfg.dataType === 'NONE' || cfg.contactTitle.trim()
+					? undefined
+					: 'Укажите заголовок формы'
+			)
+			return
+		}
+		if (field === 'submitButtonText') {
+			setInlineValidationIssue(
+				'form',
+				`${titleId}-submit-text`,
+				cfg.dataType === 'NONE' || cfg.submitButtonText.trim()
+					? undefined
+					: 'Укажите текст кнопки отправки'
+			)
+			return
+		}
+		if (field === 'privacyUrl') {
+			setInlineValidationIssue(
+				'form',
+				`${titleId}-privacy-url`,
+				cfg.dataType === 'NONE' ||
+					(cfg.privacyUrl.trim() && isHttpUrl(cfg.privacyUrl))
+					? undefined
+					: 'Укажите полную ссылку на политику с http:// или https://'
+			)
+			return
+		}
+		if (field === 'actionButtonText') {
+			setInlineValidationIssue(
+				'form',
+				`${titleId}-action-text`,
+				!cfg.actionButtonEnabled || cfg.actionButtonText.trim()
+					? undefined
+					: 'Укажите текст кнопки перехода'
+			)
+			return
+		}
+		if (field === 'actionButtonUrl') {
+			setInlineValidationIssue(
+				'form',
+				`${titleId}-action-url`,
+				!cfg.actionButtonEnabled || isHttpUrl(cfg.actionButtonUrl)
+					? undefined
+					: 'Укажите полную ссылку кнопки с http:// или https://'
+			)
+		}
+	}
 
 	const publicSiteUrl = (
 		process.env.NEXT_PUBLIC_SITE_URL ||
@@ -345,8 +470,18 @@ const StopOfferSettingsModal = ({
 			? 'color'
 			: findInvalidWidgetColor(cfg)
 		if (invalidColor) {
-			setTab('main')
-			toast.error('Цвет должен быть указан в формате #RRGGBB')
+			const colorField = invalidColor.split('.').pop() || 'color'
+			const fieldId =
+				colorField === 'bgColor'
+					? `${titleId}-bg-color`
+					: colorField === 'buttonColor'
+						? `${titleId}-button-color`
+						: `${titleId}-color`
+			reportValidationIssue({
+				tab: 'main',
+				fieldId,
+				message: 'Введите цвет в формате #RRGGBB'
+			})
 			return
 		}
 
@@ -452,33 +587,27 @@ const StopOfferSettingsModal = ({
 	}
 
 	const handleResetShows = () => {
-		if (hasUnsavedChanges) {
-			toast.error('Сначала сохраните текущие настройки виджета')
-			return
-		}
-
 		const nextConfig = {
 			...cfg,
 			displayResetToken: createResetToken()
 		}
 		setCfg(nextConfig)
 		setConfirmResetShows(false)
-		mutation.mutate({ name, installDomain, config: nextConfig })
+		toast.success(
+			'Сброс добавлен в черновик. Сохраните черновик и опубликуйте; затем сброс вступит в силу'
+		)
 	}
 
 	const handleResetSubmissions = () => {
-		if (hasUnsavedChanges) {
-			toast.error('Сначала сохраните текущие настройки виджета')
-			return
-		}
-
 		const nextConfig = {
 			...cfg,
 			submissionResetToken: createResetToken()
 		}
 		setCfg(nextConfig)
 		setConfirmResetSubmissions(false)
-		mutation.mutate({ name, installDomain, config: nextConfig })
+		toast.success(
+			'Сброс добавлен в черновик. Сохраните черновик и опубликуйте; затем сброс вступит в силу'
+		)
 	}
 
 	const handleResetDefaults = () => {
@@ -491,6 +620,60 @@ const StopOfferSettingsModal = ({
 		setCfg(nextConfig)
 		setConfirmResetDefaults(false)
 		toast.success('Стандартные настройки применены. Сохраните черновик')
+	}
+
+	const handleResetSection = (section: Exclude<Tab, 'code' | 'info'>) => {
+		const defaults = getDefaultConfig()
+		setCfg(previous => {
+			if (section === 'main') {
+				return {
+					...previous,
+					color: defaults.color,
+					bgColor: defaults.bgColor,
+					buttonColor: defaults.buttonColor,
+					badgeText: defaults.badgeText,
+					title: defaults.title,
+					subtitle: defaults.subtitle,
+					offerText: defaults.offerText
+				}
+			}
+			if (section === 'trigger') {
+				return {
+					...previous,
+					autoOpenDelay: defaults.autoOpenDelay,
+					desktopExitIntent: defaults.desktopExitIntent,
+					mobileAutoOpenDelay: defaults.mobileAutoOpenDelay,
+					scrollPercent: defaults.scrollPercent,
+					showOnce: defaults.showOnce,
+					displayCooldownDays: defaults.displayCooldownDays
+				}
+			}
+			if (section === 'form') {
+				return {
+					...previous,
+					dataType: defaults.dataType,
+					contactTitle: defaults.contactTitle,
+					submitButtonText: defaults.submitButtonText,
+					successTitle: defaults.successTitle,
+					successSubtitle: defaults.successSubtitle,
+					actionButtonEnabled: defaults.actionButtonEnabled,
+					actionButtonText: defaults.actionButtonText,
+					actionButtonUrl: defaults.actionButtonUrl,
+					privacyUrl: defaults.privacyUrl,
+					developInfoActive: defaults.developInfoActive,
+					filterDuplicates: defaults.filterDuplicates,
+					hideIfSubmitted: defaults.hideIfSubmitted,
+					submissionCooldownDays: defaults.submissionCooldownDays
+				}
+			}
+			return {
+				...previous,
+				integrations: { ...defaults.integrations }
+			}
+		})
+		setValidationIssue(null)
+		setConfirmResetSection(null)
+		toast.success('Раздел сброшен в черновике. Сохраните черновик')
 	}
 
 	return (
@@ -557,6 +740,8 @@ const StopOfferSettingsModal = ({
 						type="stopOffer"
 						config={cfg}
 						isHardPlan={canUseCustomButtonImage}
+						onDeviceChange={onPreviewDeviceChange}
+						onConfigChange={onPreviewConfigChange}
 						autoCollapse={
 							!isPagePresentation &&
 							['integrations', 'code', 'info'].includes(tab)
@@ -651,6 +836,7 @@ const StopOfferSettingsModal = ({
 											setValidationIssue(null)
 											setName(e.target.value)
 										}}
+										onBlur={() => validateFieldOnBlur('name')}
 										maxLength={50}
 										aria-invalid={
 											validationIssue?.fieldId === `${titleId}-name`
@@ -668,15 +854,15 @@ const StopOfferSettingsModal = ({
 											onChange={e => set({ color: e.target.value })}
 										/>
 										<input
-											className={`${styles.input} ${
-												!isWidgetHexColor(cfg.color)
-													? styles.inputError
-													: ''
-											}`}
+											id={`${titleId}-color`}
+											className={inputClassName(`${titleId}-color`)}
 											value={cfg.color}
 											onChange={e => set({ color: e.target.value })}
+											onBlur={() => validateFieldOnBlur('color')}
 											maxLength={7}
-											aria-invalid={!isWidgetHexColor(cfg.color)}
+											aria-invalid={
+												validationIssue?.fieldId === `${titleId}-color`
+											}
 										/>
 										{cfg.color !== '#4705fb' && (
 											<button
@@ -689,74 +875,101 @@ const StopOfferSettingsModal = ({
 											</button>
 										)}
 									</div>
-									{!isWidgetHexColor(cfg.color) && (
-										<p className={styles.fieldError}>
-											Введите цвет в формате #RRGGBB
-										</p>
-									)}
+									{fieldError(`${titleId}-color`)}
 									<p className={styles.hint}>
 										Используется для акцентов и элементов предложения.
 									</p>
 								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Цвет фона виджета</p>
-									<div className={styles.colorRow}>
-										<input
-											className={styles.colorPicker}
-											type="color"
-											value={getColorPickerValue(cfg.bgColor, '#ffffff')}
-											onChange={e => set({ bgColor: e.target.value })}
-										/>
-										<input
-											className={styles.input}
-											value={cfg.bgColor}
-											placeholder="#ffffff"
-											onChange={e => set({ bgColor: e.target.value })}
-											maxLength={7}
-										/>
-										{cfg.bgColor && (
-											<button
-												type="button"
-												className={styles.clearColorBtn}
-												onClick={() => set({ bgColor: '' })}
-												title="Вернуть белый фон"
-											>
-												✕
-											</button>
-										)}
+								<details className={styles.optionalDetails}>
+									<summary className={styles.optionalSummary}>
+										Тонкая настройка оформления
+									</summary>
+									<div className={styles.optionalContent}>
+										<div className={styles.field}>
+											<p className={styles.label}>Цвет фона виджета</p>
+											<div className={styles.colorRow}>
+												<input
+													className={styles.colorPicker}
+													type="color"
+													value={getColorPickerValue(
+														cfg.bgColor,
+														'#ffffff'
+													)}
+													onChange={e => set({ bgColor: e.target.value })}
+												/>
+												<input
+													id={`${titleId}-bg-color`}
+													className={inputClassName(`${titleId}-bg-color`)}
+													value={cfg.bgColor}
+													placeholder="#ffffff"
+													onChange={e => set({ bgColor: e.target.value })}
+													onBlur={() => validateFieldOnBlur('bgColor')}
+													maxLength={7}
+													aria-invalid={
+														validationIssue?.fieldId ===
+														`${titleId}-bg-color`
+													}
+												/>
+												{cfg.bgColor && (
+													<button
+														type="button"
+														className={styles.clearColorBtn}
+														onClick={() => set({ bgColor: '' })}
+														title="Вернуть белый фон"
+													>
+														✕
+													</button>
+												)}
+											</div>
+											{fieldError(`${titleId}-bg-color`)}
+										</div>
+										<div className={styles.field}>
+											<p className={styles.label}>Цвет кнопки действия:</p>
+											<div className={styles.colorRow}>
+												<input
+													className={styles.colorPicker}
+													type="color"
+													value={getColorPickerValue(
+														cfg.buttonColor,
+														getColorPickerValue(cfg.color, '#4705fb')
+													)}
+													onChange={e =>
+														set({ buttonColor: e.target.value })
+													}
+												/>
+												<input
+													id={`${titleId}-button-color`}
+													className={inputClassName(
+														`${titleId}-button-color`
+													)}
+													value={cfg.buttonColor}
+													placeholder="Как цвет акцентов"
+													onChange={e =>
+														set({ buttonColor: e.target.value })
+													}
+													onBlur={() => validateFieldOnBlur('buttonColor')}
+													maxLength={7}
+													aria-invalid={
+														validationIssue?.fieldId ===
+														`${titleId}-button-color`
+													}
+												/>
+												{cfg.buttonColor && (
+													<button
+														type="button"
+														className={styles.clearColorBtn}
+														onClick={() => set({ buttonColor: '' })}
+														title="Вернуть цвет акцентов"
+														aria-label="Вернуть цвет акцентов"
+													>
+														✕
+													</button>
+												)}
+											</div>
+											{fieldError(`${titleId}-button-color`)}
+										</div>
 									</div>
-								</div>
-								<div className={styles.field}>
-									<p className={styles.label}>Цвет кнопки действия:</p>
-									<div className={styles.colorRow}>
-										<input
-											className={styles.colorPicker}
-											type="color"
-											value={getColorPickerValue(
-												cfg.buttonColor,
-												getColorPickerValue(cfg.color, '#4705fb')
-											)}
-											onChange={e => set({ buttonColor: e.target.value })}
-										/>
-										<input
-											className={styles.input}
-											value={cfg.buttonColor}
-											placeholder="Как основной цвет"
-											onChange={e => set({ buttonColor: e.target.value })}
-											maxLength={7}
-										/>
-										{cfg.buttonColor && (
-											<button
-												type="button"
-												className={styles.clearColorBtn}
-												onClick={() => set({ buttonColor: '' })}
-												title="Использовать основной цвет"
-											>
-												✕
-											</button>
-										)}
-									</div>
-								</div>
+								</details>
 							</div>
 							<div className={styles.settingsGroup}>
 								<h3 className={styles.settingsGroupTitle}>
@@ -777,6 +990,7 @@ const StopOfferSettingsModal = ({
 										className={inputClassName(`${titleId}-offer`)}
 										value={cfg.offerText}
 										onChange={e => set({ offerText: e.target.value })}
+										onBlur={() => validateFieldOnBlur('offerText')}
 										aria-invalid={
 											validationIssue?.fieldId === `${titleId}-offer`
 										}
@@ -790,6 +1004,7 @@ const StopOfferSettingsModal = ({
 										className={inputClassName(`${titleId}-title`)}
 										value={cfg.title}
 										onChange={e => set({ title: e.target.value })}
+										onBlur={() => validateFieldOnBlur('title')}
 										aria-invalid={
 											validationIssue?.fieldId === `${titleId}-title`
 										}
@@ -1035,7 +1250,8 @@ const StopOfferSettingsModal = ({
 								{confirmResetShows ? (
 									<div className={styles.dangerItem}>
 										<p className={styles.hint}>
-											После подтверждения оффер снова сможет показаться
+											Сброс будет добавлен в черновик. Сохраните черновик и
+											опубликуйте его; затем оффер снова сможет показаться
 											посетителям, которые уже видели его раньше.
 										</p>
 										<div className={styles.footerActions}>
@@ -1061,15 +1277,7 @@ const StopOfferSettingsModal = ({
 									<button
 										type="button"
 										className={styles.resetAttemptsBtn}
-										onClick={() => {
-											if (hasUnsavedChanges) {
-												toast.error(
-													'Сначала сохраните текущие настройки виджета'
-												)
-												return
-											}
-											setConfirmResetShows(true)
-										}}
+										onClick={() => setConfirmResetShows(true)}
 										disabled={isDangerActionPending}
 									>
 										Сбросить историю показов
@@ -1118,6 +1326,7 @@ const StopOfferSettingsModal = ({
 												onChange={e =>
 													set({ contactTitle: e.target.value })
 												}
+												onBlur={() => validateFieldOnBlur('contactTitle')}
 												aria-invalid={
 													validationIssue?.fieldId ===
 													`${titleId}-contact-title`
@@ -1140,6 +1349,9 @@ const StopOfferSettingsModal = ({
 														submitButtonText: e.target.value
 													})
 												}
+												onBlur={() =>
+													validateFieldOnBlur('submitButtonText')
+												}
 												aria-invalid={
 													validationIssue?.fieldId ===
 													`${titleId}-submit-text`
@@ -1158,6 +1370,7 @@ const StopOfferSettingsModal = ({
 												)}
 												value={cfg.privacyUrl}
 												onChange={e => set({ privacyUrl: e.target.value })}
+												onBlur={() => validateFieldOnBlur('privacyUrl')}
 												aria-invalid={
 													validationIssue?.fieldId ===
 													`${titleId}-privacy-url`
@@ -1243,6 +1456,9 @@ const StopOfferSettingsModal = ({
 														actionButtonText: e.target.value
 													})
 												}
+												onBlur={() =>
+													validateFieldOnBlur('actionButtonText')
+												}
 												aria-invalid={
 													validationIssue?.fieldId ===
 													`${titleId}-action-text`
@@ -1264,6 +1480,9 @@ const StopOfferSettingsModal = ({
 													set({
 														actionButtonUrl: e.target.value
 													})
+												}
+												onBlur={() =>
+													validateFieldOnBlur('actionButtonUrl')
 												}
 												aria-invalid={
 													validationIssue?.fieldId ===
@@ -1347,7 +1566,8 @@ const StopOfferSettingsModal = ({
 									{confirmResetSubmissions ? (
 										<div className={styles.dangerItem}>
 											<p className={styles.hint}>
-												После подтверждения посетители снова смогут
+												Сброс будет добавлен в черновик. Сохраните черновик
+												и опубликуйте его; затем посетители снова смогут
 												оставить заявку по этому стоп-офферу.
 											</p>
 											<div className={styles.footerActions}>
@@ -1373,15 +1593,7 @@ const StopOfferSettingsModal = ({
 										<button
 											type="button"
 											className={styles.resetAttemptsBtn}
-											onClick={() => {
-												if (hasUnsavedChanges) {
-													toast.error(
-														'Сначала сохраните текущие настройки виджета'
-													)
-													return
-												}
-												setConfirmResetSubmissions(true)
-											}}
+											onClick={() => setConfirmResetSubmissions(true)}
 											disabled={isDangerActionPending}
 										>
 											Сбросить историю заявок
@@ -1694,6 +1906,49 @@ const StopOfferSettingsModal = ({
 										заявку.
 									</li>
 								</ul>
+							</div>
+						</div>
+					)}
+
+					{tab !== 'code' && tab !== 'info' && (
+						<div className={styles.fields}>
+							<div className={styles.settingsGroup}>
+								<h3 className={styles.settingsGroupTitle}>
+									Сброс раздела
+								</h3>
+								{confirmResetSection === tab ? (
+									<div className={styles.dangerItem}>
+										<p className={styles.hint}>
+											{tab === 'integrations'
+												? 'Только настройки интеграций вернутся к стандартным значениям. Остальные разделы и домен сохранятся.'
+												: 'Только настройки текущего раздела вернутся к стандартным значениям. Другие разделы, домен и интеграции сохранятся.'}
+										</p>
+										<div className={styles.footerActions}>
+											<button
+												type="button"
+												className={styles.resetAttemptsBtn}
+												onClick={() => handleResetSection(tab)}
+											>
+												Да, сбросить раздел
+											</button>
+											<button
+												type="button"
+												className={styles.cancelBtn}
+												onClick={() => setConfirmResetSection(null)}
+											>
+												Отмена
+											</button>
+										</div>
+									</div>
+								) : (
+									<button
+										type="button"
+										className={styles.resetAttemptsBtn}
+										onClick={() => setConfirmResetSection(tab)}
+									>
+										Сбросить раздел
+									</button>
+								)}
 							</div>
 						</div>
 					)}

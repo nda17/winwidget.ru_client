@@ -61,6 +61,8 @@ type WidgetLivePreviewEntityProps =
 
 type WidgetLivePreviewProps = WidgetLivePreviewEntityProps & {
 	autoCollapse?: boolean
+	onDeviceChange?: (device: PreviewDevice) => void
+	onConfigChange?: () => void
 }
 
 type PreviewDevice = 'desktop' | 'mobile'
@@ -109,6 +111,8 @@ const PREVIEW_DEVICE_VERTICAL_INSET: Record<PreviewDevice, number> = {
 	mobile: 56
 }
 const MOBILE_PREVIEW_BREAKPOINT = 600
+const PREVIEW_VIEWPORT_WINDOW_INSET = 272
+const MIN_PREVIEW_VIEWPORT_HEIGHT = 240
 const DEFAULT_PREVIEW_SCALE = 0.62
 const DEFAULT_PREVIEW_LAYOUT = {
 	frameWidth: DESKTOP_PREVIEW_FRAME.width,
@@ -1042,7 +1046,7 @@ const buildPreviewSandboxDocument = (
 				function (event) {
 					sendParentScroll(event.deltaY);
 				},
-				{ passive: true }
+				{ passive: true, capture: true }
 			);
 
 			window.addEventListener(
@@ -1409,6 +1413,7 @@ const getTypeLabel = (type: PreviewType) => {
 }
 
 const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
+	const { onConfigChange } = props
 	const lastStableConfigRef = useRef(props.config)
 	const stableConfig = stabilizeWidgetPreviewColors(
 		props.config,
@@ -1416,6 +1421,7 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 	)
 	lastStableConfigRef.current = stableConfig
 	const serializedConfig = JSON.stringify(stableConfig)
+	const previousSerializedConfigRef = useRef(serializedConfig)
 	const debouncedSerializedConfig = useDebounce(serializedConfig, 300)
 	const [previewRunId, setPreviewRunId] = useState(0)
 	const [canRestartPreview, setCanRestartPreview] = useState(false)
@@ -1462,6 +1468,13 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 	}, [props.autoCollapse])
 
 	useEffect(() => {
+		if (previousSerializedConfigRef.current === serializedConfig) return
+
+		previousSerializedConfigRef.current = serializedConfig
+		onConfigChange?.()
+	}, [onConfigChange, serializedConfig])
+
+	useEffect(() => {
 		if (isCollapsed) return
 
 		const updateLayout = () => {
@@ -1470,13 +1483,18 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 			const shouldConstrainHeight = Boolean(
 				previewViewport?.closest('[data-constrain-preview-height="true"]')
 			)
+			const windowConstrainedHeight = Math.max(
+				MIN_PREVIEW_VIEWPORT_HEIGHT,
+				window.innerHeight - PREVIEW_VIEWPORT_WINDOW_INSET
+			)
 			const containerHeight = shouldConstrainHeight
-				? previewViewport?.clientHeight
-				: undefined
+				? Math.min(
+						previewViewport?.clientHeight || windowConstrainedHeight,
+						windowConstrainedHeight
+					)
+				: windowConstrainedHeight
 
-			if (!containerWidth || (shouldConstrainHeight && !containerHeight)) {
-				return
-			}
+			if (!containerWidth || !containerHeight) return
 
 			const nextLayout = getPreviewLayout(
 				containerWidth,
@@ -1559,6 +1577,11 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 		setPreviewRunId(current => current + 1)
 	}
 
+	const selectDevice = (nextDevice: PreviewDevice) => {
+		setDevice(nextDevice)
+		props.onDeviceChange?.(nextDevice)
+	}
+
 	return (
 		<section className={styles.preview} aria-label="Live preview виджета">
 			<div className={styles.previewHeader}>
@@ -1611,7 +1634,7 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 											? styles.previewControlBtnActive
 											: ''
 									}`}
-									onClick={() => setDevice('desktop')}
+									onClick={() => selectDevice('desktop')}
 									aria-pressed={device === 'desktop'}
 								>
 									Desktop
@@ -1623,7 +1646,7 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 											? styles.previewControlBtnActive
 											: ''
 									}`}
-									onClick={() => setDevice('mobile')}
+									onClick={() => selectDevice('mobile')}
 									aria-pressed={device === 'mobile'}
 								>
 									Mobile
