@@ -21,4 +21,24 @@
 		@apply flex-auto relative w-full min-h-[40rem] lg:min-h-[60rem] m-0;
 		margin-inline: auto;
 	}
+
+	.mainWidgetSettings {
+		@apply relative flex flex-auto justify-center p-3;
+	}
+}
+
+@media (min-width: 1101px) {
+	.widgetSettingsLayout {
+		@apply h-[100dvh] min-h-0 overflow-hidden;
+	}
+
+	.widgetSettingsLayout > header,
+	.widgetSettingsLayout > footer,
+	.widgetSettingsLayout > .banner {
+		@apply hidden;
+	}
+
+	.layout .mainWidgetSettings {
+		@apply h-full min-h-0 flex-1 overflow-hidden p-0;
+	}
 }

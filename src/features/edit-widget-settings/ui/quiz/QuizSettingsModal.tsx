@@ -471,6 +471,8 @@ const QuizSettingsModal = ({
 	previewPortalTarget,
 	onPreviewDeviceChange,
 	onPreviewConfigChange,
+	previewCollapsed,
+	onPreviewCollapsedChange,
 	onDirtyChange,
 	onRevisionConflict,
 	lifecycleActions
@@ -1395,6 +1397,8 @@ const QuizSettingsModal = ({
 						isHardPlan={canUseCustomButtonImage}
 						onDeviceChange={onPreviewDeviceChange}
 						onConfigChange={onPreviewConfigChange}
+						collapsed={previewCollapsed}
+						onCollapsedChange={onPreviewCollapsedChange}
 						autoCollapse={
 							!isPagePresentation &&
 							['integrations', 'code', 'info'].includes(tab)

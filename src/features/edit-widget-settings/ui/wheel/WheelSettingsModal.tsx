@@ -119,6 +119,8 @@ const WheelSettingsModal = ({
 	previewPortalTarget,
 	onPreviewDeviceChange,
 	onPreviewConfigChange,
+	previewCollapsed,
+	onPreviewCollapsedChange,
 	onDirtyChange,
 	onRevisionConflict,
 	lifecycleActions
@@ -920,6 +922,8 @@ const WheelSettingsModal = ({
 						isHardPlan={canUseCustomButtonImage}
 						onDeviceChange={onPreviewDeviceChange}
 						onConfigChange={onPreviewConfigChange}
+						collapsed={previewCollapsed}
+						onCollapsedChange={onPreviewCollapsedChange}
 						autoCollapse={
 							!isPagePresentation &&
 							['integrations', 'code', 'info'].includes(tab)

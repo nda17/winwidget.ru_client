@@ -406,6 +406,16 @@ select.input {
 	@apply flex items-center gap-2;
 }
 
+@media (min-width: 1101px) {
+	.pageEditor {
+		@apply h-auto;
+	}
+
+	.pagePanel {
+		@apply h-auto max-h-none overflow-visible;
+	}
+}
+
 @media (max-width: 600px) {
 	.overlay {
 		@apply items-stretch;

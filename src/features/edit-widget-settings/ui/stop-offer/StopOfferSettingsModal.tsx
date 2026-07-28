@@ -152,7 +152,9 @@ const StopOfferSettingsModal = ({
 	onRevisionConflict,
 	lifecycleActions,
 	onPreviewDeviceChange,
-	onPreviewConfigChange
+	onPreviewConfigChange,
+	previewCollapsed,
+	onPreviewCollapsedChange
 }: Props) => {
 	const titleId = useId()
 	const [tab, setTab] = useState<Tab>('main')
@@ -743,6 +745,8 @@ const StopOfferSettingsModal = ({
 						isHardPlan={canUseCustomButtonImage}
 						onDeviceChange={onPreviewDeviceChange}
 						onConfigChange={onPreviewConfigChange}
+						collapsed={previewCollapsed}
+						onCollapsedChange={onPreviewCollapsedChange}
 						autoCollapse={
 							!isPagePresentation &&
 							['integrations', 'code', 'info'].includes(tab)

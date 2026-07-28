@@ -62,6 +62,7 @@ const WIDGET_SETTINGS_TYPES = [
 	'online-consultant',
 	'calculator'
 ] as const
+const DESKTOP_SETTINGS_MEDIA_QUERY = '(min-width: 1101px)'
 
 export type WidgetSettingsType = (typeof WIDGET_SETTINGS_TYPES)[number]
 
@@ -307,10 +308,13 @@ const WidgetSettings = ({
 		useState(false)
 	const [hasReviewedMobilePreview, setHasReviewedMobilePreview] =
 		useState(false)
+	const [isPreviewCollapsed, setIsPreviewCollapsed] = useState(false)
 	const [isCheckingInstallation, setIsCheckingInstallation] =
 		useState(false)
 	const installationCheckIdRef = useRef(0)
 	const installationToastIdRef = useRef<string | null>(null)
+	const previewColumnRef = useRef<HTMLElement | null>(null)
+	const previewRestoreButtonRef = useRef<HTMLButtonElement | null>(null)
 	const isAdminMode = accessMode === 'admin'
 	const adminType = ADMIN_WIDGET_TYPE_BY_SETTINGS_TYPE[type]
 	const source = WIDGET_SETTINGS_SOURCES[type]
@@ -326,7 +330,23 @@ const WidgetSettings = ({
 
 	useEffect(() => {
 		setHasReviewedMobilePreview(false)
+		setIsPreviewCollapsed(false)
 	}, [id, type])
+
+	useEffect(() => {
+		if (
+			!isPreviewCollapsed ||
+			!window.matchMedia(DESKTOP_SETTINGS_MEDIA_QUERY).matches
+		) {
+			return
+		}
+
+		const animationFrameId = window.requestAnimationFrame(() => {
+			previewRestoreButtonRef.current?.focus()
+		})
+
+		return () => window.cancelAnimationFrame(animationFrameId)
+	}, [isPreviewCollapsed])
 
 	const settingsQueryKey = isAdminMode
 		? (['admin-widget-settings-page', adminType, id] as const)
@@ -609,6 +629,17 @@ const WidgetSettings = ({
 		router.push(isAdminMode ? '/admin/widgets' : '/cabinet?tab=widgets')
 	}
 
+	const expandPreview = () => {
+		setIsPreviewCollapsed(false)
+		window.requestAnimationFrame(() => {
+			previewColumnRef.current
+				?.querySelector<HTMLButtonElement>(
+					'[data-preview-collapse-toggle]'
+				)
+				?.focus()
+		})
+	}
+
 	const handleSaved = (updated: WidgetSettingsSelection['entity']) => {
 		queryClient.setQueryData<WidgetLifecycleState<unknown>>(
 			lifecycleQueryKey,
@@ -834,13 +865,19 @@ const WidgetSettings = ({
 				onDirtyChange: setHasEditorUnsavedChanges,
 				onPreviewDeviceChange: handlePreviewDeviceChange,
 				onPreviewConfigChange: handlePreviewConfigChange,
+				previewCollapsed: isPreviewCollapsed,
+				onPreviewCollapsedChange: setIsPreviewCollapsed,
 				onRevisionConflict: handleRevisionConflict,
 				isAdminMode
 			})
 		: null
 
 	return (
-		<div className={styles.page}>
+		<div
+			className={`${styles.page} ${
+				isPreviewCollapsed ? styles.pagePreviewCollapsed : ''
+			}`}
+		>
 			<header className={styles.pageHeader}>
 				<p className={styles.eyebrow}>Настройки виджета</p>
 				<h1 className={styles.pageTitle}>
@@ -854,7 +891,11 @@ const WidgetSettings = ({
 
 			<div className={styles.workspace}>
 				<aside
-					className={styles.previewColumn}
+					ref={previewColumnRef}
+					id="widget-settings-preview"
+					className={`${styles.previewColumn} ${
+						isPreviewCollapsed ? styles.previewColumnCollapsed : ''
+					}`}
 					aria-label="Предпросмотр виджета"
 				>
 					<div
@@ -867,6 +908,21 @@ const WidgetSettings = ({
 					className={styles.editorColumn}
 					aria-label="Параметры виджета"
 				>
+					{isPreviewCollapsed && (
+						<div className={styles.previewRestoreBar}>
+							<button
+								ref={previewRestoreButtonRef}
+								type="button"
+								className={styles.previewRestoreButton}
+								onClick={expandPreview}
+								aria-controls="widget-settings-preview"
+								aria-expanded="false"
+							>
+								Развернуть предпросмотр
+							</button>
+						</div>
+					)}
+
 					<WidgetExperiencePanel
 						lifecycle={lifecycleQuery.data}
 						runtimeStatus={runtimeStatusQuery.data}
@@ -910,6 +966,8 @@ interface WidgetEditorRendererProps {
 	onDirtyChange: (hasUnsavedChanges: boolean) => void
 	onPreviewDeviceChange: (device: 'desktop' | 'mobile') => void
 	onPreviewConfigChange: () => void
+	previewCollapsed: boolean
+	onPreviewCollapsedChange: (isCollapsed: boolean) => void
 	onRevisionConflict: () => Promise<number | null>
 	isAdminMode: boolean
 }
@@ -946,6 +1004,8 @@ const renderWidgetEditor = ({
 	onDirtyChange,
 	onPreviewDeviceChange,
 	onPreviewConfigChange,
+	previewCollapsed,
+	onPreviewCollapsedChange,
 	onRevisionConflict,
 	isAdminMode
 }: WidgetEditorRendererProps) => {
@@ -961,6 +1021,8 @@ const renderWidgetEditor = ({
 					onDirtyChange={onDirtyChange}
 					onPreviewDeviceChange={onPreviewDeviceChange}
 					onPreviewConfigChange={onPreviewConfigChange}
+					previewCollapsed={previewCollapsed}
+					onPreviewCollapsedChange={onPreviewCollapsedChange}
 					onRevisionConflict={onRevisionConflict}
 					persistence={
 						isAdminMode
@@ -995,6 +1057,8 @@ const renderWidgetEditor = ({
 					onDirtyChange={onDirtyChange}
 					onPreviewDeviceChange={onPreviewDeviceChange}
 					onPreviewConfigChange={onPreviewConfigChange}
+					previewCollapsed={previewCollapsed}
+					onPreviewCollapsedChange={onPreviewCollapsedChange}
 					onRevisionConflict={onRevisionConflict}
 					persistence={
 						isAdminMode
@@ -1025,6 +1089,8 @@ const renderWidgetEditor = ({
 					onDirtyChange={onDirtyChange}
 					onPreviewDeviceChange={onPreviewDeviceChange}
 					onPreviewConfigChange={onPreviewConfigChange}
+					previewCollapsed={previewCollapsed}
+					onPreviewCollapsedChange={onPreviewCollapsedChange}
 					onRevisionConflict={onRevisionConflict}
 					persistence={
 						isAdminMode
@@ -1059,6 +1125,8 @@ const renderWidgetEditor = ({
 					onDirtyChange={onDirtyChange}
 					onPreviewDeviceChange={onPreviewDeviceChange}
 					onPreviewConfigChange={onPreviewConfigChange}
+					previewCollapsed={previewCollapsed}
+					onPreviewCollapsedChange={onPreviewCollapsedChange}
 					onRevisionConflict={onRevisionConflict}
 					persistence={
 						isAdminMode
@@ -1093,6 +1161,8 @@ const renderWidgetEditor = ({
 					onDirtyChange={onDirtyChange}
 					onPreviewDeviceChange={onPreviewDeviceChange}
 					onPreviewConfigChange={onPreviewConfigChange}
+					previewCollapsed={previewCollapsed}
+					onPreviewCollapsedChange={onPreviewCollapsedChange}
 					onRevisionConflict={onRevisionConflict}
 					persistence={
 						isAdminMode
@@ -1119,6 +1189,8 @@ const renderWidgetEditor = ({
 					onDirtyChange={onDirtyChange}
 					onPreviewDeviceChange={onPreviewDeviceChange}
 					onPreviewConfigChange={onPreviewConfigChange}
+					previewCollapsed={previewCollapsed}
+					onPreviewCollapsedChange={onPreviewCollapsedChange}
 					onRevisionConflict={onRevisionConflict}
 					persistence={
 						isAdminMode
@@ -1157,6 +1229,8 @@ const renderWidgetEditor = ({
 					onDirtyChange={onDirtyChange}
 					onPreviewDeviceChange={onPreviewDeviceChange}
 					onPreviewConfigChange={onPreviewConfigChange}
+					previewCollapsed={previewCollapsed}
+					onPreviewCollapsedChange={onPreviewCollapsedChange}
 					onRevisionConflict={onRevisionConflict}
 					persistence={
 						isAdminMode

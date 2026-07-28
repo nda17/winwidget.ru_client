@@ -224,7 +224,9 @@ const OnlineConsultantSettingsModal = ({
 	onRevisionConflict,
 	lifecycleActions,
 	onPreviewDeviceChange,
-	onPreviewConfigChange
+	onPreviewConfigChange,
+	previewCollapsed,
+	onPreviewCollapsedChange
 }: Props) => {
 	const titleId = useId()
 	const buttonImageInputId = useId()
@@ -957,6 +959,8 @@ const OnlineConsultantSettingsModal = ({
 						isHardPlan={canUseCustomButtonImage}
 						onDeviceChange={onPreviewDeviceChange}
 						onConfigChange={onPreviewConfigChange}
+						collapsed={previewCollapsed}
+						onCollapsedChange={onPreviewCollapsedChange}
 						autoCollapse={
 							!isPagePresentation &&
 							['integrations', 'code', 'info'].includes(tab)

@@ -9,7 +9,7 @@ import { StopOfferConfig } from '@/entities/site-widget'
 import { WidgetConfig } from '@/entities/site-widget'
 import { useDebounce } from '@/shared/lib/hooks/useDebounce'
 import type { CSSProperties } from 'react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import ActionTooltip from './ActionTooltip'
 import styles from './WidgetLivePreview.module.scss'
 import { stabilizeWidgetPreviewColors } from './widgetColor'
@@ -62,6 +62,8 @@ type WidgetLivePreviewEntityProps =
 
 type WidgetLivePreviewProps = WidgetLivePreviewEntityProps & {
 	autoCollapse?: boolean
+	collapsed?: boolean
+	onCollapsedChange?: (isCollapsed: boolean) => void
 	onDeviceChange?: (device: PreviewDevice) => void
 	onConfigChange?: () => void
 }
@@ -1346,7 +1348,7 @@ const getTypeLabel = (type: PreviewType) => {
 }
 
 const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
-	const { onConfigChange } = props
+	const { collapsed, onCollapsedChange, onConfigChange } = props
 	const lastStableConfigRef = useRef(props.config)
 	const stableConfig = stabilizeWidgetPreviewColors(
 		props.config,
@@ -1358,9 +1360,18 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 	const debouncedSerializedConfig = useDebounce(serializedConfig, 300)
 	const [previewRunId, setPreviewRunId] = useState(0)
 	const [canRestartPreview, setCanRestartPreview] = useState(false)
-	const [isCollapsed, setIsCollapsed] = useState(false)
+	const [localIsCollapsed, setLocalIsCollapsed] = useState(false)
+	const isCollapsed = collapsed ?? localIsCollapsed
+	const setCollapsed = useCallback(
+		(nextIsCollapsed: boolean) => {
+			setLocalIsCollapsed(nextIsCollapsed)
+			onCollapsedChange?.(nextIsCollapsed)
+		},
+		[onCollapsedChange]
+	)
 	const [device, setDevice] = useState<PreviewDevice>('desktop')
 	const [surface, setSurface] = useState<PreviewSurface>('dialog')
+	const previewContentId = useId()
 	const previewViewportRef = useRef<HTMLDivElement | null>(null)
 	const previewFrameRef = useRef<HTMLIFrameElement | null>(null)
 	const previewKey = `live-preview-${props.type}-${hashString(debouncedSerializedConfig)}-${props.isHardPlan ? 'hard' : 'base'}-${surface}-${previewRunId}`
@@ -1393,13 +1404,13 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 				.matches
 		) {
 			setDevice('mobile')
-			setIsCollapsed(true)
+			setCollapsed(true)
 		}
-	}, [])
+	}, [setCollapsed])
 
 	useEffect(() => {
-		if (props.autoCollapse) setIsCollapsed(true)
-	}, [props.autoCollapse])
+		if (props.autoCollapse) setCollapsed(true)
+	}, [props.autoCollapse, setCollapsed])
 
 	useEffect(() => {
 		if (previousSerializedConfigRef.current === serializedConfig) return
@@ -1604,16 +1615,22 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 					<button
 						type="button"
 						className={styles.previewToggle}
-						onClick={() => setIsCollapsed(current => !current)}
+						onClick={() => setCollapsed(!isCollapsed)}
 						aria-expanded={!isCollapsed}
+						aria-controls={previewContentId}
+						data-preview-collapse-toggle
 					>
-						{isCollapsed ? 'Показать' : 'Свернуть'}
+						{isCollapsed ? 'Развернуть' : 'Свернуть'}
 					</button>
 				</div>
 			</div>
 			{!isCollapsed && (
 				<>
-					<div className={styles.previewViewport} ref={previewViewportRef}>
+					<div
+						id={previewContentId}
+						className={styles.previewViewport}
+						ref={previewViewportRef}
+					>
 						<div
 							className={`${styles.previewDevice} ${
 								device === 'mobile' ? styles.previewDeviceMobile : ''

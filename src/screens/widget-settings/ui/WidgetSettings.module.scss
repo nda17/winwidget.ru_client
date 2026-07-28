@@ -44,6 +44,14 @@
 	@apply min-w-0;
 }
 
+.previewRestoreBar {
+	@apply hidden;
+}
+
+.previewRestoreButton {
+	@apply cursor-pointer rounded-lg border border-[#c4a8e8] bg-white px-4 py-2 text-sm font-semibold text-[#7b3fa0] transition-colors duration-200 hover:bg-[#f3eeff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c4a8e8];
+}
+
 .statePage {
 	@apply flex items-center justify-center;
 }
@@ -97,6 +105,46 @@
 
 .secondaryButton {
 	@apply cursor-pointer border border-[#c4a8e8] bg-white text-[#7b3fa0] hover:bg-[#f3eeff];
+}
+
+@media (min-width: 1101px) {
+	.page {
+		@apply grid h-full min-h-0 max-w-[1532px] grid-cols-[minmax(0,1.05fr)_minmax(32rem,0.95fr)] grid-rows-[auto_minmax(0,1fr)] gap-x-6 overflow-hidden pb-4 pt-[6.5rem];
+	}
+
+	.workspace {
+		@apply contents;
+	}
+
+	.pagePreviewCollapsed {
+		@apply grid-cols-1;
+	}
+
+	.pagePreviewCollapsed .pageHeader,
+	.pagePreviewCollapsed .editorColumn {
+		@apply col-start-1;
+	}
+
+	.pageHeader {
+		@apply col-start-2 row-start-1 min-w-0;
+	}
+
+	.previewColumn {
+		@apply static col-start-1 row-start-1 row-span-2 h-full;
+	}
+
+	.previewColumnCollapsed {
+		@apply hidden;
+	}
+
+	.editorColumn {
+		@apply col-start-2 row-start-2 h-full min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain;
+		scrollbar-gutter: stable;
+	}
+
+	.previewRestoreBar {
+		@apply sticky top-0 z-20 flex justify-end bg-[#f8f5ff]/95 pb-2 backdrop-blur;
+	}
 }
 
 @media (max-width: 1100px) {

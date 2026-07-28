@@ -19,6 +19,8 @@ export interface WidgetSettingsPresentationProps {
 	onDirtyChange?: (hasUnsavedChanges: boolean) => void
 	onPreviewDeviceChange?: (device: 'desktop' | 'mobile') => void
 	onPreviewConfigChange?: () => void
+	previewCollapsed?: boolean
+	onPreviewCollapsedChange?: (isCollapsed: boolean) => void
 	onRevisionConflict?: () => Promise<number | null>
 	lifecycleActions?: ReactNode
 }
