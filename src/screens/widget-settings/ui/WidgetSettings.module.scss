@@ -29,19 +29,15 @@
 }
 
 .previewColumn {
-	@apply sticky top-[6.5rem] flex min-h-0 min-w-0 items-center justify-center;
+	@apply sticky top-[6.5rem] flex h-[calc(100dvh-7.5rem)] min-h-0 min-w-0 items-center justify-center;
 }
 
 .previewPortalTarget {
-	@apply h-full min-h-0 w-full max-w-[48rem];
+	@apply max-h-full min-h-0 w-full max-w-[48rem];
 }
 
 .previewPortalTarget > * {
-	@apply mb-0 min-h-0;
-}
-
-.previewPortalTarget[data-constrain-preview-height='true'] > * {
-	@apply h-full;
+	@apply mb-0 max-h-full min-h-0;
 }
 
 .editorColumn {
@@ -117,8 +113,7 @@
 		@apply h-auto max-w-[56rem];
 	}
 
-	.previewPortalTarget > *,
-	.previewPortalTarget[data-constrain-preview-height='true'] > * {
+	.previewPortalTarget > * {
 		@apply h-auto;
 	}
 

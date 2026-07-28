@@ -6,6 +6,7 @@ import type {
 	WidgetRuntimeAnalytics,
 	WidgetRuntimeStatus
 } from '@/entities/site-widget'
+import ActionTooltip from '@/features/edit-widget-settings/ui/shared/ActionTooltip'
 import ConfirmDialog from '@/shared/ui/confirm-dialog/ConfirmDialog'
 import { useEffect, useState } from 'react'
 import styles from './WidgetExperiencePanel.module.scss'
@@ -279,6 +280,32 @@ const WidgetExperiencePanel = ({
 		lifecycle,
 		hasReviewedMobilePreview
 	)
+	const busyReason = hasLocalChanges
+		? 'Сначала сохраните изменения формы в черновик.'
+		: isPublishing
+			? 'Публикация уже выполняется.'
+			: isDiscarding
+				? 'Изменения черновика уже отменяются.'
+				: isCloning
+					? 'Копия уже создаётся.'
+					: isRestoring
+						? 'Публикация уже переносится в черновик.'
+						: 'Дождитесь завершения текущей операции.'
+	const publishDisabled =
+		isBusy ||
+		!lifecycle.hasUnpublishedChanges ||
+		!lifecycle.readiness.ready
+	const publishDisabledReason = isBusy
+		? busyReason
+		: !lifecycle.hasUnpublishedChanges
+			? 'В черновике нет новых изменений для публикации.'
+			: blockers[0]?.message ||
+				'Сначала завершите обязательные настройки виджета.'
+	const installationCheckDisabled =
+		isCheckingInstallation || installation?.state === 'DOMAIN_REQUIRED'
+	const installationCheckDisabledReason = isCheckingInstallation
+		? 'Проверка уже запущена — откройте или обновите страницу с виджетом.'
+		: 'Сначала укажите домен установки виджета.'
 
 	return (
 		<>
@@ -315,26 +342,40 @@ const WidgetExperiencePanel = ({
 					</div>
 
 					<div className={styles.primaryActions}>
-						<button
-							type="button"
-							className={styles.publishButton}
-							onClick={onPublish}
-							disabled={
-								isBusy ||
-								!lifecycle.hasUnpublishedChanges ||
-								!lifecycle.readiness.ready
-							}
+						<ActionTooltip
+							content="Публикует сохранённый черновик — после этого новые настройки появятся на сайте."
+							disabled={publishDisabled}
+							disabledContent={publishDisabledReason}
+							placement="bottom"
+							align="end"
+							responsiveFill
 						>
-							{isPublishing ? 'Публикуем…' : 'Опубликовать'}
-						</button>
-						<button
-							type="button"
-							className={styles.secondaryButton}
-							onClick={onClone}
+							<button
+								type="button"
+								className={styles.publishButton}
+								onClick={onPublish}
+								disabled={publishDisabled}
+							>
+								{isPublishing ? 'Публикуем…' : 'Опубликовать'}
+							</button>
+						</ActionTooltip>
+						<ActionTooltip
+							content="Создаёт независимую копию виджета с собственными настройками и публикацией."
 							disabled={isBusy}
+							disabledContent={busyReason}
+							placement="bottom"
+							align="end"
+							responsiveFill
 						>
-							{isCloning ? 'Создаём копию…' : 'Создать копию'}
-						</button>
+							<button
+								type="button"
+								className={styles.secondaryButton}
+								onClick={onClone}
+								disabled={isBusy}
+							>
+								{isCloning ? 'Создаём копию…' : 'Создать копию'}
+							</button>
+						</ActionTooltip>
 					</div>
 				</div>
 
@@ -376,14 +417,21 @@ const WidgetExperiencePanel = ({
 
 				{lifecycle.hasUnpublishedChanges &&
 					lifecycle.publishedVersion > 0 && (
-						<button
-							type="button"
-							className={styles.textButton}
-							onClick={() => setConfirmation({ action: 'discard' })}
+						<ActionTooltip
+							content="Заменяет черновик последней опубликованной конфигурацией. Виджет на сайте не изменится."
 							disabled={isBusy}
+							disabledContent={busyReason}
+							align="start"
 						>
-							Отменить изменения черновика
-						</button>
+							<button
+								type="button"
+								className={styles.textButton}
+								onClick={() => setConfirmation({ action: 'discard' })}
+								disabled={isBusy}
+							>
+								Отменить изменения черновика
+							</button>
+						</ActionTooltip>
 					)}
 
 				<div className={styles.detailsGrid}>
@@ -452,19 +500,24 @@ const WidgetExperiencePanel = ({
 										не означает, что код удалён: на странице могло не быть
 										посетителей.
 									</p>
-									<button
-										type="button"
-										className={styles.secondaryButton}
-										onClick={onCheckInstallation}
-										disabled={
-											isCheckingInstallation ||
-											installation.state === 'DOMAIN_REQUIRED'
-										}
+									<ActionTooltip
+										content="Запускает ожидание нового сигнала со страницы, на которой установлен виджет."
+										disabled={installationCheckDisabled}
+										disabledContent={installationCheckDisabledReason}
+										align="start"
+										className={styles.detailsActionTooltip}
 									>
-										{isCheckingInstallation
-											? 'Ждём сигнал…'
-											: 'Проверить установку'}
-									</button>
+										<button
+											type="button"
+											className={styles.secondaryButton}
+											onClick={onCheckInstallation}
+											disabled={installationCheckDisabled}
+										>
+											{isCheckingInstallation
+												? 'Ждём сигнал…'
+												: 'Проверить установку'}
+										</button>
+									</ActionTooltip>
 								</>
 							) : (
 								<p className={styles.helpText}>
@@ -589,22 +642,37 @@ const WidgetExperiencePanel = ({
 														{formatDateTime(version.createdAt)}
 													</strong>
 												</div>
-												<button
-													type="button"
-													className={styles.textButton}
-													onClick={() =>
-														setConfirmation({
-															action: 'restore',
-															version: version.version
-														})
-													}
+												<ActionTooltip
+													content="Копирует эту публикацию в черновик. На сайте ничего не изменится до новой публикации."
 													disabled={
 														isBusy ||
 														version.version === lifecycle.publishedVersion
 													}
+													disabledContent={
+														version.version === lifecycle.publishedVersion
+															? 'Эта версия уже опубликована.'
+															: busyReason
+													}
+													align="end"
 												>
-													В черновик
-												</button>
+													<button
+														type="button"
+														className={styles.textButton}
+														onClick={() =>
+															setConfirmation({
+																action: 'restore',
+																version: version.version
+															})
+														}
+														disabled={
+															isBusy ||
+															version.version ===
+																lifecycle.publishedVersion
+														}
+													>
+														В черновик
+													</button>
+												</ActionTooltip>
 											</li>
 										))}
 									</ul>

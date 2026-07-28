@@ -10,6 +10,7 @@ import { useMutation } from '@tanstack/react-query'
 import Image from 'next/image'
 import { ChangeEvent, useEffect, useId, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
+import ActionTooltip from '../shared/ActionTooltip'
 import DirectLinkQr from '../shared/DirectLinkQr'
 import {
 	findInvalidWidgetColor,
@@ -225,6 +226,7 @@ const OnlineConsultantSettingsModal = ({
 	onPreviewDeviceChange,
 	onPreviewConfigChange
 }: Props) => {
+	const settingsPanelRef = useRef<HTMLDivElement | null>(null)
 	const titleId = useId()
 	const buttonImageInputId = useId()
 	const [tab, setTab] = useState<Tab>('main')
@@ -903,6 +905,7 @@ const OnlineConsultantSettingsModal = ({
 				/>
 			)}
 			<div
+				ref={settingsPanelRef}
 				className={isPagePresentation ? styles.pagePanel : styles.modal}
 				role={isPagePresentation ? 'region' : 'dialog'}
 				aria-modal={isPagePresentation ? undefined : true}
@@ -956,6 +959,7 @@ const OnlineConsultantSettingsModal = ({
 						isHardPlan={canUseCustomButtonImage}
 						onDeviceChange={onPreviewDeviceChange}
 						onConfigChange={onPreviewConfigChange}
+						scrollTargetRef={settingsPanelRef}
 						autoCollapse={
 							!isPagePresentation &&
 							['integrations', 'code', 'info'].includes(tab)
@@ -2282,14 +2286,28 @@ const OnlineConsultantSettingsModal = ({
 						>
 							{isPagePresentation ? 'К виджетам' : 'Отмена'}
 						</button>
-						<button
-							type="button"
-							className={styles.saveBtn}
-							onClick={save}
+						<ActionTooltip
+							content="Сохраняет настройки в черновик. На сайте они появятся только после публикации."
 							disabled={isDangerActionPending || !hasUnsavedChanges}
+							disabledContent={
+								isDangerActionPending
+									? 'Дождитесь завершения текущей операции.'
+									: 'Нет изменений для сохранения.'
+							}
+							align="end"
+							responsiveFill
 						>
-							{mutation.isPending ? 'Сохраняем...' : 'Сохранить черновик'}
-						</button>
+							<button
+								type="button"
+								className={styles.saveBtn}
+								onClick={save}
+								disabled={isDangerActionPending || !hasUnsavedChanges}
+							>
+								{mutation.isPending
+									? 'Сохраняем...'
+									: 'Сохранить черновик'}
+							</button>
+						</ActionTooltip>
 					</div>
 				</div>
 				{closeGuardDialog}

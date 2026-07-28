@@ -263,7 +263,11 @@
 }
 
 .autoRenewDetails[open] summary {
-	@apply mb-2;
+	@apply mb-2 ml-[30px];
+}
+
+.autoRenewDetails[open] {
+	@apply pl-0;
 }
 
 .autoRenewDetailsContent {

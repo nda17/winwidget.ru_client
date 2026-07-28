@@ -7,6 +7,7 @@ import { useMutation } from '@tanstack/react-query'
 import Image from 'next/image'
 import { ChangeEvent, useEffect, useId, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
+import ActionTooltip from '../shared/ActionTooltip'
 import styles from './CallbackSettingsModal.module.scss'
 import DirectLinkQr from '../shared/DirectLinkQr'
 import {
@@ -117,6 +118,7 @@ const CallbackSettingsModal = ({
 	onRevisionConflict,
 	lifecycleActions
 }: Props) => {
+	const settingsPanelRef = useRef<HTMLDivElement | null>(null)
 	const titleId = useId()
 	const buttonImageInputId = useId()
 	const [tab, setTab] = useState<Tab>('main')
@@ -626,6 +628,7 @@ const CallbackSettingsModal = ({
 				/>
 			)}
 			<div
+				ref={settingsPanelRef}
 				className={
 					isPagePresentation ? pageStyles.pagePanel : styles.modal
 				}
@@ -681,6 +684,7 @@ const CallbackSettingsModal = ({
 						isHardPlan={canUseCustomButtonImage}
 						onDeviceChange={onPreviewDeviceChange}
 						onConfigChange={onPreviewConfigChange}
+						scrollTargetRef={settingsPanelRef}
 						autoCollapse={
 							!isPagePresentation &&
 							['integrations', 'code', 'info'].includes(tab)
@@ -2199,14 +2203,28 @@ const CallbackSettingsModal = ({
 						>
 							{isPagePresentation ? 'К виджетам' : 'Отмена'}
 						</button>
-						<button
-							type="button"
-							className={styles.saveBtn}
+						<ActionTooltip
+							content="Сохраняет настройки в черновик. На сайте они появятся только после публикации."
 							disabled={mutation.isPending || !hasUnsavedChanges}
-							onClick={handleSave}
+							disabledContent={
+								mutation.isPending
+									? 'Черновик уже сохраняется.'
+									: 'Нет изменений для сохранения.'
+							}
+							align="end"
+							responsiveFill
 						>
-							{mutation.isPending ? 'Сохранение...' : 'Сохранить черновик'}
-						</button>
+							<button
+								type="button"
+								className={styles.saveBtn}
+								disabled={mutation.isPending || !hasUnsavedChanges}
+								onClick={handleSave}
+							>
+								{mutation.isPending
+									? 'Сохранение...'
+									: 'Сохранить черновик'}
+							</button>
+						</ActionTooltip>
 					</div>
 				</div>
 				{closeGuardDialog}

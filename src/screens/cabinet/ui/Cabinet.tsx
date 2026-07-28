@@ -222,7 +222,7 @@ const Cabinet: FC = () => {
 						className={`${styles.tab} ${tab === 'affiliate' ? styles.tabActive : ''}`}
 						onClick={() => changeTab('affiliate')}
 					>
-						Партнёрская программа
+						Рефералы
 					</button>
 				)}
 			</div>

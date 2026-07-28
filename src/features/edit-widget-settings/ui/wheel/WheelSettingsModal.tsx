@@ -7,6 +7,7 @@ import { useMutation } from '@tanstack/react-query'
 import Image from 'next/image'
 import { ChangeEvent, useEffect, useId, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
+import ActionTooltip from '../shared/ActionTooltip'
 import DirectLinkQr from '../shared/DirectLinkQr'
 import {
 	findInvalidWidgetColor,
@@ -129,6 +130,7 @@ const WheelSettingsModal = ({
 		widget.installDomain ?? ''
 	)
 	const draftRevisionRef = useRef(widget.draftRevision)
+	const settingsPanelRef = useRef<HTMLDivElement | null>(null)
 	const titleId = useId()
 	const buttonImageInputId = useId()
 	const [validationIssue, setValidationIssue] =
@@ -859,6 +861,7 @@ const WheelSettingsModal = ({
 				/>
 			)}
 			<div
+				ref={settingsPanelRef}
 				className={
 					isPagePresentation ? pageStyles.pagePanel : styles.modal
 				}
@@ -919,6 +922,7 @@ const WheelSettingsModal = ({
 						isHardPlan={canUseCustomButtonImage}
 						onDeviceChange={onPreviewDeviceChange}
 						onConfigChange={onPreviewConfigChange}
+						scrollTargetRef={settingsPanelRef}
 						autoCollapse={
 							!isPagePresentation &&
 							['integrations', 'code', 'info'].includes(tab)
@@ -3147,16 +3151,28 @@ const WheelSettingsModal = ({
 						>
 							{isPagePresentation ? 'К виджетам' : 'Отмена'}
 						</button>
-						<button
-							type="button"
-							className={styles.saveBtn}
-							onClick={handleSave}
+						<ActionTooltip
+							content="Сохраняет настройки в черновик. На сайте они появятся только после публикации."
 							disabled={saveMutation.isPending || !hasUnsavedChanges}
+							disabledContent={
+								saveMutation.isPending
+									? 'Черновик уже сохраняется.'
+									: 'Нет изменений для сохранения.'
+							}
+							align="end"
+							responsiveFill
 						>
-							{saveMutation.isPending
-								? 'Сохранение...'
-								: 'Сохранить черновик'}
-						</button>
+							<button
+								type="button"
+								className={styles.saveBtn}
+								onClick={handleSave}
+								disabled={saveMutation.isPending || !hasUnsavedChanges}
+							>
+								{saveMutation.isPending
+									? 'Сохранение...'
+									: 'Сохранить черновик'}
+							</button>
+						</ActionTooltip>
 					</div>
 				</div>
 				{closeGuardDialog}

@@ -284,8 +284,6 @@ const toAdminSelection = (
 	}
 }
 
-const TWO_COLUMN_SETTINGS_MEDIA_QUERY = '(min-width: 1101px)'
-
 interface WidgetSettingsProps {
 	type: WidgetSettingsType
 	id: string
@@ -313,8 +311,6 @@ const WidgetSettings = ({
 		useState(false)
 	const installationCheckIdRef = useRef(0)
 	const installationToastIdRef = useRef<string | null>(null)
-	const previewColumnRef = useRef<HTMLElement | null>(null)
-	const editorColumnRef = useRef<HTMLElement | null>(null)
 	const isAdminMode = accessMode === 'admin'
 	const adminType = ADMIN_WIDGET_TYPE_BY_SETTINGS_TYPE[type]
 	const source = WIDGET_SETTINGS_SOURCES[type]
@@ -598,51 +594,6 @@ const WidgetSettings = ({
 		)
 	}, [error, id, isError, type])
 
-	useEffect(() => {
-		const previewColumn = previewColumnRef.current
-		const editorColumn = editorColumnRef.current
-
-		if (!previewPortalTarget || !previewColumn || !editorColumn) return
-
-		const twoColumnSettings = window.matchMedia(
-			TWO_COLUMN_SETTINGS_MEDIA_QUERY
-		)
-
-		const syncPreviewHeight = () => {
-			if (!twoColumnSettings.matches) {
-				previewColumn.style.removeProperty('height')
-				previewPortalTarget.dataset.constrainPreviewHeight = 'false'
-				return
-			}
-
-			const editorHeight = editorColumn.getBoundingClientRect().height
-
-			if (editorHeight > 0) {
-				previewColumn.style.height = `${editorHeight}px`
-				previewPortalTarget.dataset.constrainPreviewHeight = 'true'
-			}
-		}
-
-		syncPreviewHeight()
-		window.addEventListener('resize', syncPreviewHeight)
-		twoColumnSettings.addEventListener('change', syncPreviewHeight)
-
-		const resizeObserver =
-			typeof ResizeObserver === 'undefined'
-				? null
-				: new ResizeObserver(syncPreviewHeight)
-
-		resizeObserver?.observe(editorColumn)
-
-		return () => {
-			window.removeEventListener('resize', syncPreviewHeight)
-			twoColumnSettings.removeEventListener('change', syncPreviewHeight)
-			resizeObserver?.disconnect()
-			previewColumn.style.removeProperty('height')
-			delete previewPortalTarget.dataset.constrainPreviewHeight
-		}
-	}, [previewPortalTarget])
-
 	useEffect(
 		() => () => {
 			installationCheckIdRef.current += 1
@@ -903,7 +854,6 @@ const WidgetSettings = ({
 
 			<div className={styles.workspace}>
 				<aside
-					ref={previewColumnRef}
 					className={styles.previewColumn}
 					aria-label="Предпросмотр виджета"
 				>
@@ -914,7 +864,6 @@ const WidgetSettings = ({
 				</aside>
 
 				<section
-					ref={editorColumnRef}
 					className={styles.editorColumn}
 					aria-label="Параметры виджета"
 				>

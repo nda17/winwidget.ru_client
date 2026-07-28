@@ -1,0 +1,41 @@
+.trigger {
+	@apply inline-flex min-w-0;
+}
+
+.triggerDisabled {
+	@apply cursor-help;
+}
+
+.triggerDisabled > :first-child {
+	@apply pointer-events-none opacity-60;
+}
+
+.description {
+	@apply sr-only;
+}
+
+.responsiveFill {
+	@apply min-w-0;
+}
+
+.tooltip {
+	@apply pointer-events-none fixed z-[100] w-max max-w-[18rem] rounded-lg bg-[#3f2b4d] px-3 py-2 text-left text-xs font-medium leading-[1.125rem] text-white opacity-0 shadow-lg invisible transition-opacity duration-150;
+}
+
+.tooltipOpen {
+	@apply visible opacity-100;
+}
+
+@media (max-width: 720px) {
+	.responsiveFill {
+		@apply flex-1;
+	}
+
+	.responsiveFill > :first-child {
+		@apply w-full;
+	}
+
+	.tooltip {
+		@apply max-w-[calc(100vw-2rem)];
+	}
+}

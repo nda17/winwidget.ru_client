@@ -8,8 +8,9 @@ import { QuizConfig } from '@/entities/site-widget'
 import { StopOfferConfig } from '@/entities/site-widget'
 import { WidgetConfig } from '@/entities/site-widget'
 import { useDebounce } from '@/shared/lib/hooks/useDebounce'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, RefObject } from 'react'
 import { useEffect, useRef, useState } from 'react'
+import ActionTooltip from './ActionTooltip'
 import styles from './WidgetLivePreview.module.scss'
 import { stabilizeWidgetPreviewColors } from './widgetColor'
 
@@ -63,6 +64,7 @@ type WidgetLivePreviewProps = WidgetLivePreviewEntityProps & {
 	autoCollapse?: boolean
 	onDeviceChange?: (device: PreviewDevice) => void
 	onConfigChange?: () => void
+	scrollTargetRef?: RefObject<HTMLElement | null>
 }
 
 type PreviewDevice = 'desktop' | 'mobile'
@@ -168,27 +170,81 @@ const getPreviewLayout = (
 
 const scrollNearestScrollableParent = (
 	element: HTMLElement | null,
-	deltaY: number
+	deltaY: number,
+	explicitTarget?: HTMLElement | null
 ) => {
-	if (!element || !Number.isFinite(deltaY) || Math.abs(deltaY) < 1) return
+	if (!element || !Number.isFinite(deltaY) || deltaY === 0) return
 
+	const scrollableParents: HTMLElement[] = []
 	let parent = element.parentElement
 
 	while (parent) {
 		const style = window.getComputedStyle(parent)
-		const canScroll =
+		const isScrollable =
 			/(auto|scroll)/.test(style.overflowY) &&
 			parent.scrollHeight > parent.clientHeight
 
-		if (canScroll) {
-			parent.scrollBy({ top: deltaY, behavior: 'auto' })
-			return
-		}
+		if (isScrollable) scrollableParents.push(parent)
 
 		parent = parent.parentElement
 	}
 
-	window.scrollBy({ top: deltaY, behavior: 'auto' })
+	const canScrollElement = (target: HTMLElement) => {
+		const maxScrollTop = target.scrollHeight - target.clientHeight
+
+		return deltaY < 0
+			? target.scrollTop > 0
+			: target.scrollTop < maxScrollTop
+	}
+	const scrollElement = (target: HTMLElement) => {
+		if (!canScrollElement(target)) return false
+
+		target.scrollBy({ top: deltaY, behavior: 'auto' })
+		return true
+	}
+	const scrollWindow = () => {
+		const scrollingElement =
+			document.scrollingElement || document.documentElement
+		const maxScrollTop = Math.max(
+			0,
+			scrollingElement.scrollHeight - window.innerHeight
+		)
+		const scrollTop = window.scrollY || scrollingElement.scrollTop
+		const canScroll = deltaY < 0 ? scrollTop > 0 : scrollTop < maxScrollTop
+
+		if (!canScroll) return false
+
+		window.scrollBy({ top: deltaY, behavior: 'auto' })
+		return true
+	}
+	const triedTargets = new Set<HTMLElement>()
+	const scrollExplicitTarget = () => {
+		if (!explicitTarget || triedTargets.has(explicitTarget)) return false
+
+		triedTargets.add(explicitTarget)
+		return scrollElement(explicitTarget)
+	}
+	const scrollAncestors = () => {
+		for (const target of scrollableParents) {
+			if (triedTargets.has(target)) continue
+
+			triedTargets.add(target)
+			if (scrollElement(target)) return true
+		}
+
+		return false
+	}
+
+	if (deltaY < 0) {
+		if (scrollExplicitTarget() || scrollAncestors() || scrollWindow())
+			return
+	} else if (
+		scrollAncestors() ||
+		scrollWindow() ||
+		scrollExplicitTarget()
+	) {
+		return
+	}
 }
 
 const getDataType = (dataType: string | undefined, fallback = 'PHONE') =>
@@ -1027,15 +1083,16 @@ const buildPreviewSandboxDocument = (
 				}
 			};
 
-			function sendParentScroll(deltaY) {
-				if (!deltaY || Math.abs(deltaY) < 1) return;
+			function sendParentScroll(deltaY, inputType) {
+				if (!Number.isFinite(deltaY) || deltaY === 0) return;
 
 				window.parent.postMessage(
 					{
 						source: 'winwidget-live-preview',
 						previewKey: previewKey,
 						event: 'scroll-parent',
-						deltaY: deltaY
+						deltaY: deltaY,
+						inputType: inputType
 					},
 					'*'
 				);
@@ -1044,7 +1101,16 @@ const buildPreviewSandboxDocument = (
 			window.addEventListener(
 				'wheel',
 				function (event) {
-					sendParentScroll(event.deltaY);
+					if (event.ctrlKey) return;
+
+					var deltaMultiplier =
+						event.deltaMode === 1
+							? 16
+							: event.deltaMode === 2
+								? window.innerHeight
+								: 1;
+
+					sendParentScroll(event.deltaY * deltaMultiplier, 'wheel');
 				},
 				{ passive: true, capture: true }
 			);
@@ -1052,11 +1118,14 @@ const buildPreviewSandboxDocument = (
 			window.addEventListener(
 				'touchstart',
 				function (event) {
-					if (!event.touches || !event.touches.length) return;
+					if (!event.touches || event.touches.length !== 1) {
+						previewTouchLastY = null;
+						return;
+					}
 
 					previewTouchLastY = event.touches[0].clientY;
 				},
-				{ passive: true }
+				{ passive: true, capture: true }
 			);
 
 			window.addEventListener(
@@ -1064,17 +1133,18 @@ const buildPreviewSandboxDocument = (
 				function (event) {
 					if (
 						!event.touches ||
-						!event.touches.length ||
+						event.touches.length !== 1 ||
 						previewTouchLastY === null
 					) {
+						previewTouchLastY = null;
 						return;
 					}
 
 					var nextY = event.touches[0].clientY;
-					sendParentScroll(previewTouchLastY - nextY);
+					sendParentScroll(previewTouchLastY - nextY, 'touch');
 					previewTouchLastY = nextY;
 				},
-				{ passive: true }
+				{ passive: true, capture: true }
 			);
 
 			window.addEventListener(
@@ -1082,7 +1152,7 @@ const buildPreviewSandboxDocument = (
 				function () {
 					previewTouchLastY = null;
 				},
-				{ passive: true }
+				{ passive: true, capture: true }
 			);
 
 			window.addEventListener(
@@ -1090,7 +1160,7 @@ const buildPreviewSandboxDocument = (
 				function () {
 					previewTouchLastY = null;
 				},
-				{ passive: true }
+				{ passive: true, capture: true }
 			);
 
 			function isPreviewStorageKey(key) {
@@ -1429,6 +1499,7 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 	const [device, setDevice] = useState<PreviewDevice>('desktop')
 	const [surface, setSurface] = useState<PreviewSurface>('dialog')
 	const previewViewportRef = useRef<HTMLDivElement | null>(null)
+	const previewFrameRef = useRef<HTMLIFrameElement | null>(null)
 	const previewKey = `live-preview-${props.type}-${hashString(debouncedSerializedConfig)}-${props.isHardPlan ? 'hard' : 'base'}-${surface}-${previewRunId}`
 	const [previewLayout, setPreviewLayout] = useState(
 		DEFAULT_PREVIEW_LAYOUT
@@ -1480,19 +1551,10 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 		const updateLayout = () => {
 			const previewViewport = previewViewportRef.current
 			const containerWidth = previewViewport?.clientWidth
-			const shouldConstrainHeight = Boolean(
-				previewViewport?.closest('[data-constrain-preview-height="true"]')
-			)
-			const windowConstrainedHeight = Math.max(
+			const containerHeight = Math.max(
 				MIN_PREVIEW_VIEWPORT_HEIGHT,
 				window.innerHeight - PREVIEW_VIEWPORT_WINDOW_INSET
 			)
-			const containerHeight = shouldConstrainHeight
-				? Math.min(
-						previewViewport?.clientHeight || windowConstrainedHeight,
-						windowConstrainedHeight
-					)
-				: windowConstrainedHeight
 
 			if (!containerWidth || !containerHeight) return
 
@@ -1543,11 +1605,13 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 						previewKey?: string
 						event?: string
 						deltaY?: number
+						inputType?: 'wheel' | 'touch'
 				  }
 				| undefined
 
 			if (
 				!data ||
+				event.source !== previewFrameRef.current?.contentWindow ||
 				data.source !== 'winwidget-live-preview' ||
 				data.previewKey !== previewKey
 			) {
@@ -1555,9 +1619,14 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 			}
 
 			if (data.event === 'scroll-parent') {
+				const deltaY =
+					(data.deltaY || 0) *
+					(data.inputType === 'touch' ? previewLayout.scale : 1)
+
 				scrollNearestScrollableParent(
 					previewViewportRef.current,
-					data.deltaY || 0
+					deltaY,
+					props.scrollTargetRef?.current
 				)
 				return
 			}
@@ -1570,7 +1639,7 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 		window.addEventListener('message', handleMessage)
 
 		return () => window.removeEventListener('message', handleMessage)
-	}, [previewKey, surface])
+	}, [previewKey, previewLayout.scale, props.scrollTargetRef, surface])
 
 	const restartPreview = () => {
 		setCanRestartPreview(false)
@@ -1596,61 +1665,91 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 						<>
 							<div
 								className={styles.previewSegmented}
+								role="group"
 								aria-label="Состояние виджета"
 							>
-								<button
-									type="button"
-									className={`${styles.previewControlBtn} ${
-										surface === 'dialog'
-											? styles.previewControlBtnActive
-											: ''
-									}`}
-									onClick={() => setSurface('dialog')}
-									aria-pressed={surface === 'dialog'}
+								<ActionTooltip
+									content="Показывает раскрытое окно виджета, которое увидит посетитель."
+									placement="bottom"
+									align="start"
+									className={styles.previewControlTooltip}
 								>
-									Окно
-								</button>
-								<button
-									type="button"
-									className={`${styles.previewControlBtn} ${
-										surface === 'launcher'
-											? styles.previewControlBtnActive
-											: ''
-									}`}
-									onClick={() => setSurface('launcher')}
-									aria-pressed={surface === 'launcher'}
+									<button
+										type="button"
+										className={`${styles.previewControlBtn} ${
+											surface === 'dialog'
+												? styles.previewControlBtnActive
+												: ''
+										}`}
+										onClick={() => setSurface('dialog')}
+										aria-pressed={surface === 'dialog'}
+									>
+										Окно
+									</button>
+								</ActionTooltip>
+								<ActionTooltip
+									content="Показывает кнопку запуска до открытия основного окна виджета."
+									placement="bottom"
+									align="end"
+									className={styles.previewControlTooltip}
 								>
-									Кнопка
-								</button>
+									<button
+										type="button"
+										className={`${styles.previewControlBtn} ${
+											surface === 'launcher'
+												? styles.previewControlBtnActive
+												: ''
+										}`}
+										onClick={() => setSurface('launcher')}
+										aria-pressed={surface === 'launcher'}
+									>
+										Кнопка
+									</button>
+								</ActionTooltip>
 							</div>
 							<div
 								className={styles.previewSegmented}
+								role="group"
 								aria-label="Размер экрана"
 							>
-								<button
-									type="button"
-									className={`${styles.previewControlBtn} ${
-										device === 'desktop'
-											? styles.previewControlBtnActive
-											: ''
-									}`}
-									onClick={() => selectDevice('desktop')}
-									aria-pressed={device === 'desktop'}
+								<ActionTooltip
+									content="Показывает виджет на моковом сайте внутри настольного монитора."
+									placement="bottom"
+									align="start"
+									className={styles.previewControlTooltip}
 								>
-									Desktop
-								</button>
-								<button
-									type="button"
-									className={`${styles.previewControlBtn} ${
-										device === 'mobile'
-											? styles.previewControlBtnActive
-											: ''
-									}`}
-									onClick={() => selectDevice('mobile')}
-									aria-pressed={device === 'mobile'}
+									<button
+										type="button"
+										className={`${styles.previewControlBtn} ${
+											device === 'desktop'
+												? styles.previewControlBtnActive
+												: ''
+										}`}
+										onClick={() => selectDevice('desktop')}
+										aria-pressed={device === 'desktop'}
+									>
+										Desktop
+									</button>
+								</ActionTooltip>
+								<ActionTooltip
+									content="Показывает виджет внутри телефона и отмечает проверку мобильной версии."
+									placement="bottom"
+									align="end"
+									className={styles.previewControlTooltip}
 								>
-									Mobile
-								</button>
+									<button
+										type="button"
+										className={`${styles.previewControlBtn} ${
+											device === 'mobile'
+												? styles.previewControlBtnActive
+												: ''
+										}`}
+										onClick={() => selectDevice('mobile')}
+										aria-pressed={device === 'mobile'}
+									>
+										Mobile
+									</button>
+								</ActionTooltip>
 							</div>
 						</>
 					)}
@@ -1698,16 +1797,22 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 								}`}
 							>
 								{canRestartPreview && surface === 'dialog' && (
-									<button
-										type="button"
-										className={styles.previewRestart}
-										onClick={restartPreview}
+									<ActionTooltip
+										content="Перезапускает тестовый сценарий, чтобы пройти его ещё раз."
+										className={styles.previewRestartTooltip}
 									>
-										Попробовать снова
-									</button>
+										<button
+											type="button"
+											className={styles.previewRestart}
+											onClick={restartPreview}
+										>
+											Попробовать снова
+										</button>
+									</ActionTooltip>
 								)}
 								<div className={styles.previewCrop} style={cropStyle}>
 									<iframe
+										ref={previewFrameRef}
 										key={previewKey}
 										className={styles.previewFrame}
 										title={`Предпросмотр: ${getTypeLabel(props.type)}`}

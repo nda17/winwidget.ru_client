@@ -21,6 +21,7 @@ import {
 	useState
 } from 'react'
 import toast from 'react-hot-toast'
+import ActionTooltip from '../shared/ActionTooltip'
 import styles from './CalculatorSettingsModal.module.scss'
 import DirectLinkQr from '../shared/DirectLinkQr'
 import {
@@ -405,6 +406,7 @@ const CalculatorSettingsModal = ({
 	onPreviewDeviceChange,
 	onPreviewConfigChange
 }: Props) => {
+	const settingsPanelRef = useRef<HTMLDivElement | null>(null)
 	const titleId = useId()
 	const buttonImageInputId = useId()
 	const [tab, setTab] = useState<Tab>('main')
@@ -1368,6 +1370,7 @@ const CalculatorSettingsModal = ({
 				/>
 			)}
 			<div
+				ref={settingsPanelRef}
 				className={
 					isPagePresentation ? pageStyles.pagePanel : styles.modal
 				}
@@ -1422,6 +1425,7 @@ const CalculatorSettingsModal = ({
 						isHardPlan={canUseCustomButtonImage}
 						onDeviceChange={onPreviewDeviceChange}
 						onConfigChange={onPreviewConfigChange}
+						scrollTargetRef={settingsPanelRef}
 						autoCollapse={
 							!isPagePresentation &&
 							['integrations', 'code', 'info'].includes(tab)
@@ -3126,16 +3130,28 @@ const CalculatorSettingsModal = ({
 						>
 							{isPagePresentation ? 'К виджетам' : 'Отмена'}
 						</button>
-						<button
-							type="button"
-							className={styles.saveBtn}
-							onClick={handleSave}
+						<ActionTooltip
+							content="Сохраняет настройки в черновик. На сайте они появятся только после публикации."
 							disabled={saveMutation.isPending || !hasUnsavedChanges}
+							disabledContent={
+								saveMutation.isPending
+									? 'Черновик уже сохраняется.'
+									: 'Нет изменений для сохранения.'
+							}
+							align="end"
+							responsiveFill
 						>
-							{saveMutation.isPending
-								? 'Сохранение...'
-								: 'Сохранить черновик'}
-						</button>
+							<button
+								type="button"
+								className={styles.saveBtn}
+								onClick={handleSave}
+								disabled={saveMutation.isPending || !hasUnsavedChanges}
+							>
+								{saveMutation.isPending
+									? 'Сохранение...'
+									: 'Сохранить черновик'}
+							</button>
+						</ActionTooltip>
 					</div>
 				</div>
 				{closeGuardDialog}
