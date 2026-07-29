@@ -11,16 +11,8 @@
 	@apply mx-auto mb-6 w-full max-w-[1500px] rounded-2xl border border-[#e0d6f0] bg-gradient-to-r from-white via-[#fbf9ff] to-[#f3eeff] px-6 py-5 shadow-sm;
 }
 
-.eyebrow {
-	@apply mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-[#9a78b8];
-}
-
 .pageTitle {
 	@apply break-words text-2xl font-bold leading-tight text-[#1a1a1a];
-}
-
-.pageDescription {
-	@apply mt-2 text-sm leading-6 text-[#777];
 }
 
 .workspace,
@@ -125,19 +117,11 @@
 	}
 
 	.pageHeader {
-		@apply col-start-1 row-start-1 mb-3 flex min-w-0 flex-nowrap items-center gap-x-3 rounded-xl px-4 py-2;
-	}
-
-	.eyebrow {
-		@apply mb-0 shrink-0 text-[10px];
+		@apply col-start-1 row-start-1 mb-3 flex min-w-0 items-center rounded-xl px-4 py-2;
 	}
 
 	.pageTitle {
-		@apply min-w-0 max-w-[45%] truncate text-lg leading-6;
-	}
-
-	.pageDescription {
-		@apply mt-0 min-w-0 flex-1 truncate text-xs leading-4;
+		@apply text-lg leading-6;
 	}
 
 	.previewColumn {

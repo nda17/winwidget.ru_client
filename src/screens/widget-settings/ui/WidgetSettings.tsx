@@ -231,16 +231,6 @@ const WIDGET_SETTINGS_SOURCES: Record<
 	}
 }
 
-const WIDGET_TYPE_LABELS: Record<WidgetSettingsType, string> = {
-	wheel: 'Колесо фортуны',
-	quiz: 'Квиз',
-	callback: 'Обратный звонок',
-	timer: 'Таймер',
-	'stop-offer': 'Стоп-оффер',
-	'online-consultant': 'Онлайн-консультант',
-	calculator: 'Калькулятор стоимости'
-}
-
 const ADMIN_WIDGET_TYPE_BY_SETTINGS_TYPE: Record<
 	WidgetSettingsType,
 	AdminWidgetType
@@ -879,14 +869,7 @@ const WidgetSettings = ({
 			}`}
 		>
 			<header className={styles.pageHeader}>
-				<p className={styles.eyebrow}>Настройки виджета</p>
-				<h1 className={styles.pageTitle}>
-					{selection.entity.name || WIDGET_TYPE_LABELS[type]}
-				</h1>
-				<p className={styles.pageDescription}>
-					Изменения сразу видны в предпросмотре и не попадут на сайт до
-					публикации.
-				</p>
+				<h1 className={styles.pageTitle}>Настройки виджета</h1>
 			</header>
 
 			<div className={styles.workspace}>
