@@ -133,7 +133,7 @@
 	}
 
 	.pageTitle {
-		@apply shrink-0 text-lg leading-6;
+		@apply min-w-0 max-w-[45%] truncate text-lg leading-6;
 	}
 
 	.pageDescription {
