@@ -460,7 +460,7 @@ const buildPreviewSandboxDocument = (
 		html,
 		body,
 		body * {
-			cursor: not-allowed !important;
+			cursor: pointer !important;
 		}
 
 		.winwidget-preview-site {
@@ -1211,8 +1211,7 @@ const buildPreviewSandboxDocument = (
 					root.appendChild(style);
 				}
 
-				style.textContent =
-					target.css + '*{cursor:not-allowed!important}';
+				style.textContent = target.css + '*{cursor:pointer!important}';
 
 				return true;
 			}

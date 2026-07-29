@@ -8,7 +8,7 @@
 }
 
 .pageHeader {
-	@apply mx-auto mb-6 w-full max-w-[1500px];
+	@apply mx-auto mb-6 w-full max-w-[1500px] rounded-2xl border border-[#e0d6f0] bg-gradient-to-r from-white via-[#fbf9ff] to-[#f3eeff] px-6 py-5 shadow-sm;
 }
 
 .eyebrow {
@@ -122,15 +122,15 @@
 
 	.pagePreviewCollapsed .pageHeader,
 	.pagePreviewCollapsed .editorColumn {
-		@apply col-start-1;
+		@apply col-span-1 col-start-1;
 	}
 
 	.pageHeader {
-		@apply col-start-2 row-start-1 min-w-0;
+		@apply col-span-2 col-start-1 row-start-1 min-w-0;
 	}
 
 	.previewColumn {
-		@apply static col-start-1 row-start-1 row-span-2 h-full;
+		@apply static col-start-1 row-start-2 h-full;
 	}
 
 	.previewColumnCollapsed {
@@ -177,7 +177,7 @@
 	}
 
 	.pageHeader {
-		@apply mb-4 px-2;
+		@apply mb-4 rounded-xl px-4 py-4;
 	}
 
 	.pageTitle {
