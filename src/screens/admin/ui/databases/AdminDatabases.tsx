@@ -2,7 +2,11 @@
 
 import { UserRole, useUser } from '@/entities/user'
 import { adminTelegramBotService } from '@/features/manage-telegram-bot'
-import type { TelegramDatabaseBackupJobStatus } from '@/features/manage-telegram-bot'
+import type {
+	AdminTelegramBotSettings,
+	TelegramDatabaseBackupJobStatus,
+	TelegramDatabaseBackupTarget
+} from '@/features/manage-telegram-bot'
 import { devToolsService } from '@/features/run-admin-task'
 import AdminNavigation from '@/screens/admin/ui/common/admin-navigation/AdminNavigation'
 import AdminSectionHeading from '@/screens/admin/ui/common/admin-section-heading/AdminSectionHeading'
@@ -104,12 +108,6 @@ const clearDatabaseBackupMarker = (
 	}
 }
 
-const formatDate = (value: string) =>
-	new Intl.DateTimeFormat('ru-RU', {
-		dateStyle: 'short',
-		timeStyle: 'medium'
-	}).format(new Date(value))
-
 const formatFileSize = (value: number) => {
 	if (value < 1024 * 1024) return `${Math.round(value / 1024)} КБ`
 	return `${(value / 1024 / 1024).toFixed(1)} МБ`
@@ -125,43 +123,40 @@ const getDatabaseBackupJobBadgeClass = (
 	return styles.badgeProgress
 }
 
-const AdminDatabases: NextPage = () => {
+const getDatabaseBackupTargetLabel = (
+	target: TelegramDatabaseBackupTarget
+) => (target === 'core' ? 'основной БД' : 'БД Notification Delivery')
+
+const useDatabaseBackup = (
+	target: TelegramDatabaseBackupTarget,
+	userId: string | null | undefined
+) => {
 	const queryClient = useQueryClient()
-	const { user, isLoading: isUserLoading } = useUser()
-	const isDev = Boolean(user?.rights?.includes(UserRole.DEV))
 	const [databaseBackupJobId, setDatabaseBackupJobId] = useState<
 		string | null
 	>(null)
-	const [restoreFile, setRestoreFile] = useState<File | null>(null)
-	const [restoreConfirmation, setRestoreConfirmation] = useState('')
 	const notifiedDatabaseBackupJob = useRef<string | null>(null)
 	const checkedStaleDatabaseBackupJob = useRef<string | null>(null)
-	const restoreFileInput = useRef<HTMLInputElement | null>(null)
-	const databaseBackupStorageKey = user.id
-		? `${DATABASE_BACKUP_STORAGE_KEY_PREFIX}:${user.id}`
+	const databaseBackupStorageKey = userId
+		? `${DATABASE_BACKUP_STORAGE_KEY_PREFIX}:${target}:${userId}`
 		: null
 
-	const { data: settings, isLoading } = useQuery({
-		queryKey: SETTINGS_QUERY_KEY,
-		queryFn: adminTelegramBotService.get
-	})
-
-	const databaseRestoreSettings = useQuery({
-		queryKey: RESTORE_SETTINGS_QUERY_KEY,
-		queryFn: devToolsService.getDatabaseRestoreSettings,
-		enabled: isDev
-	})
-
 	const latestActiveDatabaseBackupJob = useQuery({
-		queryKey: ['admin-telegram-database-backup-active', user.id ?? null],
-		queryFn: adminTelegramBotService.getLatestActiveDatabaseBackupJob,
-		enabled: Boolean(user.id)
+		queryKey: [
+			'admin-telegram-database-backup-active',
+			target,
+			userId ?? null
+		],
+		queryFn: () =>
+			adminTelegramBotService.getLatestActiveDatabaseBackupJob(target),
+		enabled: Boolean(userId)
 	})
 	const refetchLatestActiveDatabaseBackupJob =
 		latestActiveDatabaseBackupJob.refetch
 
 	const databaseBackupMutation = useMutation({
-		mutationFn: adminTelegramBotService.sendDatabaseBackup,
+		mutationFn: (idempotencyKey: string) =>
+			adminTelegramBotService.sendDatabaseBackup(target, idempotencyKey),
 		onSuccess: (result, idempotencyKey) => {
 			notifiedDatabaseBackupJob.current = null
 			checkedStaleDatabaseBackupJob.current = null
@@ -176,32 +171,22 @@ const AdminDatabases: NextPage = () => {
 	})
 
 	const databaseBackupJob = useQuery({
-		queryKey: ['admin-telegram-database-backup-job', databaseBackupJobId],
+		queryKey: [
+			'admin-telegram-database-backup-job',
+			target,
+			databaseBackupJobId
+		],
 		queryFn: () =>
-			adminTelegramBotService.getDatabaseBackupJob(databaseBackupJobId!),
+			adminTelegramBotService.getDatabaseBackupJob(
+				target,
+				databaseBackupJobId!
+			),
 		enabled: Boolean(databaseBackupJobId),
 		refetchInterval: query => {
 			const job = query.state.data
 			return job && TERMINAL_DATABASE_BACKUP_JOB_STATUSES.has(job.status)
 				? false
 				: DATABASE_BACKUP_JOB_POLL_INTERVAL_MS
-		}
-	})
-
-	const databaseRestoreMutation = useMutation({
-		mutationFn: ({
-			file,
-			confirmation
-		}: {
-			file: File
-			confirmation: string
-		}) => devToolsService.restoreDatabaseBackup(file, confirmation),
-		onSuccess: () => {
-			setRestoreFile(null)
-			setRestoreConfirmation('')
-			if (restoreFileInput.current) {
-				restoreFileInput.current.value = ''
-			}
 		}
 	})
 
@@ -221,7 +206,7 @@ const AdminDatabases: NextPage = () => {
 		notifiedDatabaseBackupJob.current = null
 		setDatabaseBackupJobId(activeJob.jobId)
 		queryClient.setQueryData(
-			['admin-telegram-database-backup-job', activeJob.jobId],
+			['admin-telegram-database-backup-job', target, activeJob.jobId],
 			activeJob
 		)
 		const marker = getDatabaseBackupMarker(databaseBackupStorageKey)
@@ -232,7 +217,8 @@ const AdminDatabases: NextPage = () => {
 	}, [
 		databaseBackupStorageKey,
 		latestActiveDatabaseBackupJob.data,
-		queryClient
+		queryClient,
+		target
 	])
 
 	useEffect(() => {
@@ -286,7 +272,7 @@ const AdminDatabases: NextPage = () => {
 				currentJobId === jobId ? null : currentJobId
 			)
 			toast.error(
-				'Задание backup больше не доступно. Активных запусков нет.'
+				`Задание backup ${getDatabaseBackupTargetLabel(target)} больше не доступно. Активных запусков нет.`
 			)
 		})
 	}, [
@@ -294,7 +280,8 @@ const AdminDatabases: NextPage = () => {
 		databaseBackupJob.isError,
 		databaseBackupJobId,
 		databaseBackupStorageKey,
-		refetchLatestActiveDatabaseBackupJob
+		refetchLatestActiveDatabaseBackupJob,
+		target
 	])
 
 	useEffect(() => {
@@ -310,7 +297,7 @@ const AdminDatabases: NextPage = () => {
 		notifiedDatabaseBackupJob.current = job.jobId
 		clearDatabaseBackupMarker(databaseBackupStorageKey, job.jobId)
 		queryClient.setQueryData(
-			['admin-telegram-database-backup-active', user.id ?? null],
+			['admin-telegram-database-backup-active', target, userId ?? null],
 			null
 		)
 
@@ -318,8 +305,8 @@ const AdminDatabases: NextPage = () => {
 			const fileSize = job.result?.fileSize
 			toast.success(
 				fileSize === undefined
-					? 'Backup создан и отправлен в Telegram'
-					: `Backup отправлен в Telegram: ${formatFileSize(fileSize)}`
+					? `Backup ${getDatabaseBackupTargetLabel(target)} создан и отправлен в Telegram`
+					: `Backup ${getDatabaseBackupTargetLabel(target)} отправлен в Telegram: ${formatFileSize(fileSize)}`
 			)
 			void queryClient.invalidateQueries({
 				queryKey: SETTINGS_QUERY_KEY
@@ -328,16 +315,21 @@ const AdminDatabases: NextPage = () => {
 		}
 
 		if (job.status === 'CANCELLED') {
-			toast.error('Создание backup отменено')
+			toast.error(
+				`Создание backup ${getDatabaseBackupTargetLabel(target)} отменено`
+			)
 			return
 		}
 
-		toast.error(`Ошибка backup: ${job.lastError || 'неизвестная ошибка'}`)
+		toast.error(
+			`Ошибка backup ${getDatabaseBackupTargetLabel(target)}: ${job.lastError || 'неизвестная ошибка'}`
+		)
 	}, [
 		databaseBackupJob.data,
 		databaseBackupStorageKey,
 		queryClient,
-		user.id
+		target,
+		userId
 	])
 
 	const handleSendDatabaseBackup = () => {
@@ -349,7 +341,9 @@ const AdminDatabases: NextPage = () => {
 		const activeJob = latestActiveDatabaseBackupJob.data
 		if (activeJob) {
 			setDatabaseBackupJobId(activeJob.jobId)
-			toast.success('Активный backup уже выполняется')
+			toast.success(
+				`Активный backup ${getDatabaseBackupTargetLabel(target)} уже выполняется`
+			)
 			return
 		}
 
@@ -363,16 +357,166 @@ const AdminDatabases: NextPage = () => {
 		const promise = databaseBackupMutation.mutateAsync(idempotencyKey)
 
 		toast.promise(promise, {
-			loading: 'Ставим backup в очередь...',
+			loading: `Ставим backup ${getDatabaseBackupTargetLabel(target)} в очередь...`,
 			success: result =>
 				result.created
-					? 'Backup поставлен в очередь'
+					? `Backup ${getDatabaseBackupTargetLabel(target)} поставлен в очередь`
 					: result.status === 'SUCCEEDED'
-						? 'Этот backup уже был успешно завершён'
-						: 'Активный backup уже поставлен в очередь',
-			error: error => `Ошибка backup: ${errorCatch(error)}`
+						? `Этот backup ${getDatabaseBackupTargetLabel(target)} уже был успешно завершён`
+						: `Активный backup ${getDatabaseBackupTargetLabel(target)} уже поставлен в очередь`,
+			error: error =>
+				`Ошибка backup ${getDatabaseBackupTargetLabel(target)}: ${errorCatch(error)}`
 		})
 	}
+
+	return {
+		databaseBackupJob,
+		databaseBackupJobId,
+		databaseBackupMutation,
+		handleSendDatabaseBackup,
+		isDatabaseBackupAvailabilityUnknown:
+			latestActiveDatabaseBackupJob.isLoading ||
+			latestActiveDatabaseBackupJob.isError,
+		isDatabaseBackupJobActive: Boolean(
+			databaseBackupJobId &&
+			(!databaseBackupJob.data ||
+				!TERMINAL_DATABASE_BACKUP_JOB_STATUSES.has(
+					databaseBackupJob.data.status
+				))
+		),
+		latestActiveDatabaseBackupJob
+	}
+}
+
+interface DatabaseBackupPanelProps {
+	description: string
+	scheduleTimeLabel: string
+	settings: AdminTelegramBotSettings
+	target: TelegramDatabaseBackupTarget
+	title: string
+	userId: string | null | undefined
+}
+
+const DatabaseBackupPanel = ({
+	description,
+	scheduleTimeLabel,
+	settings,
+	target,
+	title,
+	userId
+}: DatabaseBackupPanelProps) => {
+	const backup = useDatabaseBackup(target, userId)
+
+	return (
+		<div className={styles.card}>
+			<div className={styles.backupPanel}>
+				<div className={styles.backupHeader}>
+					<div>
+						<p className={styles.label}>{title}</p>
+						<p className={styles.hint}>{description}</p>
+					</div>
+					<button
+						type="button"
+						className={styles.actionBtn}
+						onClick={backup.handleSendDatabaseBackup}
+						disabled={
+							backup.databaseBackupMutation.isPending ||
+							backup.isDatabaseBackupJobActive ||
+							backup.isDatabaseBackupAvailabilityUnknown ||
+							!userId ||
+							!settings.telegramBotTokenConfigured ||
+							!settings.dailySummaryChatId.trim() ||
+							!settings.databaseBackupThreadId
+						}
+					>
+						Отправить backup
+					</button>
+				</div>
+				<div className={styles.backupMetaGrid}>
+					<div className={styles.statusItem}>
+						<p className={styles.statusLabel}>Плановое время</p>
+						<p className={styles.statusValue}>{scheduleTimeLabel}</p>
+					</div>
+					<div className={styles.statusItem}>
+						<p className={styles.statusLabel}>Формат</p>
+						<p className={styles.statusValue}>PostgreSQL .dump</p>
+					</div>
+					<div className={styles.statusItem} aria-live="polite">
+						<p className={styles.statusLabel}>Ручной backup</p>
+						{backup.databaseBackupJob.data ? (
+							<>
+								<span
+									className={`${styles.badge} ${getDatabaseBackupJobBadgeClass(backup.databaseBackupJob.data.status)}`}
+								>
+									{
+										DATABASE_BACKUP_JOB_STATUS_LABELS[
+											backup.databaseBackupJob.data.status
+										]
+									}
+								</span>
+								{backup.databaseBackupJob.data.status === 'FAILED' &&
+									backup.databaseBackupJob.data.lastError && (
+										<p className={styles.hint}>
+											{backup.databaseBackupJob.data.lastError}
+										</p>
+									)}
+							</>
+						) : backup.databaseBackupJob.isError ? (
+							<p className={styles.hint}>
+								Не удалось получить статус:{' '}
+								{errorCatch(backup.databaseBackupJob.error)}
+							</p>
+						) : backup.databaseBackupJobId ? (
+							<p className={styles.statusValue}>Проверяем статус...</p>
+						) : backup.latestActiveDatabaseBackupJob.isError ? (
+							<p className={styles.hint}>
+								Не удалось проверить активный backup:{' '}
+								{errorCatch(backup.latestActiveDatabaseBackupJob.error)}
+							</p>
+						) : (
+							<p className={styles.statusValue}>Не запускался</p>
+						)}
+					</div>
+				</div>
+			</div>
+		</div>
+	)
+}
+
+const AdminDatabases: NextPage = () => {
+	const { user, isLoading: isUserLoading } = useUser()
+	const isDev = Boolean(user?.rights?.includes(UserRole.DEV))
+	const [restoreFile, setRestoreFile] = useState<File | null>(null)
+	const [restoreConfirmation, setRestoreConfirmation] = useState('')
+	const restoreFileInput = useRef<HTMLInputElement | null>(null)
+
+	const { data: settings, isLoading } = useQuery({
+		queryKey: SETTINGS_QUERY_KEY,
+		queryFn: adminTelegramBotService.get
+	})
+
+	const databaseRestoreSettings = useQuery({
+		queryKey: RESTORE_SETTINGS_QUERY_KEY,
+		queryFn: devToolsService.getDatabaseRestoreSettings,
+		enabled: isDev
+	})
+
+	const databaseRestoreMutation = useMutation({
+		mutationFn: ({
+			file,
+			confirmation
+		}: {
+			file: File
+			confirmation: string
+		}) => devToolsService.restoreDatabaseBackup(file, confirmation),
+		onSuccess: () => {
+			setRestoreFile(null)
+			setRestoreConfirmation('')
+			if (restoreFileInput.current) {
+				restoreFileInput.current.value = ''
+			}
+		}
+	})
 
 	const handleRestoreDatabaseBackup = () => {
 		if (!restoreFile) {
@@ -392,20 +536,6 @@ const AdminDatabases: NextPage = () => {
 		})
 	}
 
-	const lastBackupText = settings?.databaseBackupLastSentAt
-		? formatDate(settings.databaseBackupLastSentAt)
-		: 'Ещё не отправлялся'
-	const isDatabaseBackupJobActive = Boolean(
-		databaseBackupJobId &&
-		(!databaseBackupJob.data ||
-			!TERMINAL_DATABASE_BACKUP_JOB_STATUSES.has(
-				databaseBackupJob.data.status
-			))
-	)
-	const isDatabaseBackupAvailabilityUnknown =
-		latestActiveDatabaseBackupJob.isLoading ||
-		latestActiveDatabaseBackupJob.isError
-
 	return (
 		<section className={styles.wrapper}>
 			<Heading text="Панель администратора" />
@@ -416,20 +546,20 @@ const AdminDatabases: NextPage = () => {
 				title="Backup и восстановление PostgreSQL"
 				description={
 					isDev
-						? 'Здесь можно поставить ручной backup в очередь и восстановить базу из PostgreSQL .dump.'
-						: 'Здесь можно поставить ручной backup PostgreSQL в очередь и следить за его выполнением.'
+						? 'Здесь можно отдельно поставить backup каждой БД в очередь и восстановить основную БД из PostgreSQL .dump.'
+						: 'Здесь можно отдельно поставить backup каждой базы PostgreSQL в очередь и следить за их выполнением.'
 				}
 				risk={isDev ? 'high' : 'medium'}
 				riskText={
 					isDev
-						? 'Восстановление заменяет текущие данные содержимым backup-файла. Перед запуском проверь окружение, файл и подтверждение.'
-						: 'Перед ручным запуском проверь настройки Telegram и убедись, что другой backup уже не выполняется.'
+						? 'DEV restore ниже относится только к основной БД и заменяет её текущие данные содержимым backup-файла.'
+						: 'Перед ручным запуском проверь настройки Telegram и статус выбранной БД.'
 				}
 			/>
 
-			<div className={styles.card}>
-				{isLoading ? (
-					<>
+			{isLoading ? (
+				Array.from({ length: 2 }, (_, cardIndex) => (
+					<div key={cardIndex} className={styles.card}>
 						<SkeletonLoader count={1} className="h-[64px]" />
 						<div className={styles.backupMetaGrid}>
 							{Array.from({ length: 3 }, (_, index) => (
@@ -440,85 +570,34 @@ const AdminDatabases: NextPage = () => {
 								/>
 							))}
 						</div>
-					</>
-				) : settings ? (
-					<div className={styles.backupPanel}>
-						<div className={styles.backupHeader}>
-							<div>
-								<p className={styles.label}>Backup базы данных</p>
-								<p className={styles.hint}>
-									Можно отправить вне расписания. Файл приходит в топик
-									Backups.
-								</p>
-							</div>
-							<button
-								type="button"
-								className={styles.actionBtn}
-								onClick={handleSendDatabaseBackup}
-								disabled={
-									databaseBackupMutation.isPending ||
-									isDatabaseBackupJobActive ||
-									isDatabaseBackupAvailabilityUnknown ||
-									!databaseBackupStorageKey ||
-									!settings.telegramBotTokenConfigured ||
-									!settings.dailySummaryChatId.trim() ||
-									!settings.databaseBackupThreadId
-								}
-							>
-								Отправить backup
-							</button>
-						</div>
-						<div className={styles.backupMetaGrid}>
-							<div className={styles.statusItem}>
-								<p className={styles.statusLabel}>Последний backup</p>
-								<p className={styles.statusValue}>{lastBackupText}</p>
-							</div>
-							<div className={styles.statusItem}>
-								<p className={styles.statusLabel}>Формат</p>
-								<p className={styles.statusValue}>PostgreSQL .dump</p>
-							</div>
-							<div className={styles.statusItem} aria-live="polite">
-								<p className={styles.statusLabel}>Ручной backup</p>
-								{databaseBackupJob.data ? (
-									<>
-										<span
-											className={`${styles.badge} ${getDatabaseBackupJobBadgeClass(databaseBackupJob.data.status)}`}
-										>
-											{
-												DATABASE_BACKUP_JOB_STATUS_LABELS[
-													databaseBackupJob.data.status
-												]
-											}
-										</span>
-										{databaseBackupJob.data.status === 'FAILED' &&
-											databaseBackupJob.data.lastError && (
-												<p className={styles.hint}>
-													{databaseBackupJob.data.lastError}
-												</p>
-											)}
-									</>
-								) : databaseBackupJob.isError ? (
-									<p className={styles.hint}>
-										Не удалось получить статус:{' '}
-										{errorCatch(databaseBackupJob.error)}
-									</p>
-								) : databaseBackupJobId ? (
-									<p className={styles.statusValue}>Проверяем статус...</p>
-								) : latestActiveDatabaseBackupJob.isError ? (
-									<p className={styles.hint}>
-										Не удалось проверить активный backup:{' '}
-										{errorCatch(latestActiveDatabaseBackupJob.error)}
-									</p>
-								) : (
-									<p className={styles.statusValue}>Не запускался</p>
-								)}
-							</div>
-						</div>
 					</div>
-				) : (
+				))
+			) : settings ? (
+				<>
+					<DatabaseBackupPanel
+						target="core"
+						title="Backup основной базы данных"
+						description="Managed PostgreSQL с данными монолита. Ручной dump создаётся отдельно и отправляется вне VPS в Telegram-топик Backups."
+						scheduleTimeLabel={settings.databaseBackupTimeLabel}
+						settings={settings}
+						userId={user.id}
+					/>
+					<DatabaseBackupPanel
+						target="notification-delivery"
+						title="Backup базы Notification Delivery"
+						description="Локальная БД микросервиса. У неё отдельные job, retry и статус; сбой не перезапускает backup основной БД."
+						scheduleTimeLabel={
+							settings.notificationDeliveryDatabaseBackupTimeLabel
+						}
+						settings={settings}
+						userId={user.id}
+					/>
+				</>
+			) : (
+				<div className={styles.card}>
 					<p className={styles.empty}>Не удалось загрузить настройки</p>
-				)}
-			</div>
+				</div>
+			)}
 
 			{isUserLoading ? (
 				<div className={styles.card}>
@@ -535,11 +614,17 @@ const AdminDatabases: NextPage = () => {
 					) : databaseRestoreSettings.data ? (
 						<>
 							<div>
-								<p className={styles.label}>Восстановление из backup</p>
+								<p className={styles.label}>
+									Восстановление основной БД из backup
+								</p>
 								<p className={styles.hint}>
-									Операция принимает PostgreSQL `.dump` и запускает restore
-									через серверный инструмент. Действие логируется в журнале
-									событий.
+									Этот endpoint предназначен только для основной БД. Перед
+									запуском убедитесь, что выбран core dump WinWidget:
+									сервер проверит схему public и отклонит dump Notification
+									Delivery, но источник файла должен подтвердить оператор.
+									Восстановление Notification Delivery выполняется только
+									по защищённому production runbook. Действие логируется в
+									журнале событий.
 								</p>
 							</div>
 							<div className={styles.restoreGrid}>
@@ -593,11 +678,13 @@ const AdminDatabases: NextPage = () => {
 				>
 					<div className={styles.lockedContent} aria-hidden="true">
 						<div>
-							<p className={styles.label}>Восстановление из backup</p>
+							<p className={styles.label}>
+								Восстановление основной БД из backup
+							</p>
 							<p className={styles.hint}>
-								Операция принимает PostgreSQL `.dump` и запускает restore
-								через серверный инструмент. Действие логируется в журнале
-								событий.
+								DEV restore предназначен только для основной БД. Оператор
+								должен выбрать core dump WinWidget; БД Notification
+								Delivery восстанавливается по production runbook.
 							</p>
 						</div>
 						<div className={styles.restoreGrid}>

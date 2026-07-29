@@ -114,6 +114,16 @@ const getTaskTimeGapMinutes = (first: string, second: string) => {
 	return Math.min(directGap, 24 * 60 - directGap)
 }
 
+const addMinutesToTime = (value: string, minutesToAdd: number) => {
+	const minutes = getTimeMinutes(value)
+	if (minutes === null) return null
+
+	const nextMinutes = (minutes + minutesToAdd) % (24 * 60)
+	return `${String(Math.floor(nextMinutes / 60)).padStart(2, '0')}:${String(
+		nextMinutes % 60
+	).padStart(2, '0')}`
+}
+
 const AdminTelegramBot: NextPage = () => {
 	const queryClient = useQueryClient()
 	const [chatId, setChatId] = useState('')
@@ -349,10 +359,26 @@ const AdminTelegramBot: NextPage = () => {
 		}
 
 		const taskTimeGap = getTaskTimeGapMinutes(summaryTime, backupTime)
+		const notificationDeliveryBackupTime = addMinutesToTime(
+			backupTime,
+			settings.notificationDeliveryDatabaseBackupDelayMinutes
+		)
+		const notificationDeliveryTaskTimeGap =
+			notificationDeliveryBackupTime === null
+				? null
+				: getTaskTimeGapMinutes(
+						summaryTime,
+						notificationDeliveryBackupTime
+					)
 
-		if (taskTimeGap === null || taskTimeGap < MIN_TASK_TIME_GAP_MINUTES) {
+		if (
+			taskTimeGap === null ||
+			taskTimeGap < MIN_TASK_TIME_GAP_MINUTES ||
+			notificationDeliveryTaskTimeGap === null ||
+			notificationDeliveryTaskTimeGap < MIN_TASK_TIME_GAP_MINUTES
+		) {
 			toast.error(
-				`Разнесите сводку и backup минимум на ${MIN_TASK_TIME_GAP_MINUTES} минут`
+				`Разнесите сводку и оба backup минимум на ${MIN_TASK_TIME_GAP_MINUTES} минут`
 			)
 			return
 		}
@@ -371,6 +397,12 @@ const AdminTelegramBot: NextPage = () => {
 		: 'Ещё не отправлялась'
 	const isWebhookActionPending =
 		webhookMutation.isPending || allWebhooksMutation.isPending
+	const notificationDeliveryBackupTime = settings
+		? (addMinutesToTime(
+				backupTime,
+				settings.notificationDeliveryDatabaseBackupDelayMinutes
+			) ?? settings.notificationDeliveryDatabaseBackupTime)
+		: null
 	const isTelegramRoutingChanged = Boolean(
 		settings &&
 		(chatId.trim() !== settings.dailySummaryChatId ||
@@ -735,9 +767,11 @@ const AdminTelegramBot: NextPage = () => {
 							<div>
 								<p className={styles.label}>Отправка backup</p>
 								<p className={styles.hint}>
-									@winwidget_info_bot отправляет backup базы каждый день в{' '}
-									{settings.databaseBackupTimeLabel}. Файл приходит в топик
-									Backups.
+									@winwidget_info_bot отправляет backup основной БД в{' '}
+									{settings.databaseBackupTimeLabel}, а Notification
+									Delivery — в{' '}
+									{settings.notificationDeliveryDatabaseBackupTimeLabel}.
+									Оба файла приходят отдельно в топик Backups.
 								</p>
 							</div>
 							<button
@@ -771,7 +805,7 @@ const AdminTelegramBot: NextPage = () => {
 									/>
 								</label>
 								<label className={styles.field}>
-									<span className={styles.label}>Время backup</span>
+									<span className={styles.label}>Backup основной БД</span>
 									<input
 										type="time"
 										className={styles.input}
@@ -783,6 +817,16 @@ const AdminTelegramBot: NextPage = () => {
 										}}
 									/>
 								</label>
+								<div className={styles.field}>
+									<span className={styles.label}>
+										Backup Notification Delivery
+									</span>
+									<p className={styles.derivedTime}>
+										{notificationDeliveryBackupTime
+											? `${notificationDeliveryBackupTime} МСК`
+											: '—'}
+									</p>
+								</div>
 								<button
 									type="button"
 									className={styles.saveBtn}
@@ -797,8 +841,11 @@ const AdminTelegramBot: NextPage = () => {
 								</button>
 							</div>
 							<p className={styles.hint}>
-								Время указывается по Москве. Разница между задачами должна
-								быть минимум {MIN_TASK_TIME_GAP_MINUTES} минут.
+								Время указывается по Москве. Notification Delivery
+								запускается через{' '}
+								{settings.notificationDeliveryDatabaseBackupDelayMinutes}{' '}
+								минут после основной БД. Сводка должна быть разнесена с
+								каждым backup минимум на {MIN_TASK_TIME_GAP_MINUTES} минут.
 							</p>
 						</div>
 

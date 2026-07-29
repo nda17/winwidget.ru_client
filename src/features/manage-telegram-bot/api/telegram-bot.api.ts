@@ -14,6 +14,9 @@ export interface AdminTelegramBotSettings {
 	databaseBackupEnabled: boolean
 	databaseBackupTime: string
 	databaseBackupTimeLabel: string
+	notificationDeliveryDatabaseBackupDelayMinutes: number
+	notificationDeliveryDatabaseBackupTime: string
+	notificationDeliveryDatabaseBackupTimeLabel: string
 	databaseBackupLastSentPeriodStart: string | null
 	databaseBackupLastSentAt: string | null
 	telegramBotTokenConfigured: boolean
@@ -85,14 +88,20 @@ export type TelegramDatabaseBackupJobStatus =
 	| 'FAILED'
 	| 'CANCELLED'
 
+export type TelegramDatabaseBackupTarget = 'core' | 'notification-delivery'
+
 export interface TelegramDatabaseBackupJobResult {
+	target: TelegramDatabaseBackupTarget
+	databaseName: string
+	schema: string
 	fileName: string
 	fileSize: number
 	createdAt: string
-	telegramSent: boolean
+	telegramSent: true
 }
 
 export interface TelegramDatabaseBackupAcceptedJob {
+	target: TelegramDatabaseBackupTarget
 	jobId: string
 	status: TelegramDatabaseBackupJobStatus
 	queuedAt: string
@@ -100,6 +109,7 @@ export interface TelegramDatabaseBackupAcceptedJob {
 }
 
 export interface TelegramDatabaseBackupJob {
+	target: TelegramDatabaseBackupTarget
 	jobId: string
 	status: TelegramDatabaseBackupJobStatus
 	queuedAt: string
@@ -151,10 +161,11 @@ const adminTelegramBotService = {
 	},
 
 	async sendDatabaseBackup(
+		target: TelegramDatabaseBackupTarget,
 		idempotencyKey: string
 	): Promise<TelegramDatabaseBackupAcceptedJob> {
 		const { data } = await axiosInterceptorsRequest.post(
-			'/telegram-bot/admin/database-backup/send',
+			`/telegram-bot/admin/database-backups/${target}/send`,
 			undefined,
 			{
 				headers: {
@@ -165,20 +176,23 @@ const adminTelegramBotService = {
 		return data
 	},
 
-	async getLatestActiveDatabaseBackupJob(): Promise<TelegramDatabaseBackupJob | null> {
+	async getLatestActiveDatabaseBackupJob(
+		target: TelegramDatabaseBackupTarget
+	): Promise<TelegramDatabaseBackupJob | null> {
 		const { data } =
 			await axiosInterceptorsRequest.get<TelegramDatabaseBackupJob | null>(
-				'/telegram-bot/admin/database-backup/jobs/active'
+				`/telegram-bot/admin/database-backups/${target}/jobs/active`
 			)
 		return data
 	},
 
 	async getDatabaseBackupJob(
+		target: TelegramDatabaseBackupTarget,
 		jobId: string
 	): Promise<TelegramDatabaseBackupJob> {
 		const { data } =
 			await axiosInterceptorsRequest.get<TelegramDatabaseBackupJob>(
-				`/telegram-bot/admin/database-backup/jobs/${jobId}`
+				`/telegram-bot/admin/database-backups/${target}/jobs/${jobId}`
 			)
 		return data
 	}
