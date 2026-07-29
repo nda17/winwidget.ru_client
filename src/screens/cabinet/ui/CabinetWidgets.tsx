@@ -811,9 +811,9 @@ const CabinetWidgets = () => {
 											target="_blank"
 											rel="noopener noreferrer"
 											className={styles.actionBtn}
-											title="Открыть прямой предпросмотр виджета"
+											title="Открыть виджет по прямой ссылке"
 										>
-											<ExternalLinkIcon size={17} /> предпросмотр
+											<ExternalLinkIcon size={17} /> прямая ссылка
 										</a>
 
 										<a href={leadsUrl} className={styles.actionBtn}>

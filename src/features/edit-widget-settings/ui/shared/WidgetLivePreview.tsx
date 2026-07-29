@@ -114,8 +114,6 @@ const PREVIEW_DEVICE_VERTICAL_INSET: Record<PreviewDevice, number> = {
 	mobile: 56
 }
 const MOBILE_PREVIEW_BREAKPOINT = 600
-const PREVIEW_VIEWPORT_WINDOW_INSET = 272
-const MIN_PREVIEW_VIEWPORT_HEIGHT = 240
 const DEFAULT_PREVIEW_SCALE = 0.62
 const DEFAULT_PREVIEW_LAYOUT = {
 	frameWidth: DESKTOP_PREVIEW_FRAME.width,
@@ -1424,10 +1422,7 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 		const updateLayout = () => {
 			const previewViewport = previewViewportRef.current
 			const containerWidth = previewViewport?.clientWidth
-			const containerHeight = Math.max(
-				MIN_PREVIEW_VIEWPORT_HEIGHT,
-				window.innerHeight - PREVIEW_VIEWPORT_WINDOW_INSET
-			)
+			const containerHeight = previewViewport?.clientHeight
 
 			if (!containerWidth || !containerHeight) return
 
