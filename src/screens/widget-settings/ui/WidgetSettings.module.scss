@@ -125,11 +125,28 @@
 	}
 
 	.pageHeader {
-		@apply col-start-1 row-start-1 min-w-0;
+		@apply col-start-1 row-start-1 mb-3 flex min-w-0 flex-nowrap items-center gap-x-3 rounded-xl px-4 py-2;
+	}
+
+	.eyebrow {
+		@apply mb-0 shrink-0 text-[10px];
+	}
+
+	.pageTitle {
+		@apply shrink-0 text-lg leading-6;
+	}
+
+	.pageDescription {
+		@apply mt-0 min-w-0 flex-1 truncate text-xs leading-4;
 	}
 
 	.previewColumn {
 		@apply static col-start-1 row-start-2 h-full;
+	}
+
+	.previewPortalTarget,
+	.previewColumn .previewPortalTarget > * {
+		@apply h-full max-h-full;
 	}
 
 	.previewColumnCollapsed {
