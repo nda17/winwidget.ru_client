@@ -248,7 +248,7 @@ const WidgetLeads = (props: Props) => {
 			})
 			.join('')
 		const extraHead = isCalculator
-			? '<th scope="col">Параметры</th><th scope="col">Расчёт</th>'
+			? '<th scope="col">Параметры</th><th scope="col">Стоимость</th>'
 			: '<th scope="col">Бонус</th>'
 
 		return `<!DOCTYPE html>
@@ -515,12 +515,12 @@ const WidgetLeads = (props: Props) => {
 											Параметры
 										</th>
 										<th className={styles.th} scope="col">
-											Расчёт
+											Стоимость
 										</th>
 									</>
 								) : (
 									<th className={styles.th} scope="col">
-										Бонус
+										Клиент выиграл
 									</th>
 								)}
 								<th className={styles.th} scope="col">
@@ -557,13 +557,16 @@ const WidgetLeads = (props: Props) => {
 														calculatorLead.answers
 													) || '—'}
 												</td>
-												<td className={styles.td} data-label="Расчёт">
+												<td className={styles.td} data-label="Стоимость">
 													{calculatorLead.calculatedPrice}{' '}
 													{calculatorLead.currency}
 												</td>
 											</>
 										) : (
-											<td className={styles.td} data-label="Бонус">
+											<td
+												className={styles.td}
+												data-label="Клиент выиграл"
+											>
 												{wheelLead.bonus || '—'}
 											</td>
 										)}
