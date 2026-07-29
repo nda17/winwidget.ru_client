@@ -12,9 +12,6 @@ import { NextPage } from 'next'
 import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
 
-const WIDGET_SETTINGS_PATH_PATTERN =
-	/^\/(?:cabinet|admin)\/widgets\/(?:wheel|quiz|callback|timer|stop-offer|online-consultant|calculator)\/[^/]+\/?$/
-
 const Layout: NextPage<ILayout> = ({
 	children,
 	siteSettings,
@@ -53,18 +50,13 @@ const Layout: NextPage<ILayout> = ({
 		pathname.startsWith('/page-stop-offer/') ||
 		pathname.startsWith('/page-online-consultant/') ||
 		pathname.startsWith('/page-calculator/')
-	const isWidgetSettings = WIDGET_SETTINGS_PATH_PATTERN.test(pathname)
 
 	if (isWidgetPreview) {
 		return <>{children}</>
 	}
 
 	return (
-		<div
-			className={`${styles.layout} ${
-				isWidgetSettings ? styles.widgetSettingsLayout : ''
-			}`}
-		>
+		<div className={styles.layout}>
 			{siteSettings?.snowflakeEnabled && <Snowflakes />}
 			{siteSettings?.bannerEnabled && siteSettings.bannerText && (
 				<div className={styles.banner}>
@@ -73,15 +65,7 @@ const Layout: NextPage<ILayout> = ({
 			)}
 			<Header isAbsolute={isLandingPage} />
 			{visibleVeilBackground && <VeilBackground />}
-			<main
-				className={
-					isWidgetSettings
-						? styles.mainWidgetSettings
-						: isLandingPage
-							? styles.mainLanding
-							: styles.main
-				}
-			>
+			<main className={isLandingPage ? styles.mainLanding : styles.main}>
 				{children}
 			</main>
 			<Footer content={footerContent} />

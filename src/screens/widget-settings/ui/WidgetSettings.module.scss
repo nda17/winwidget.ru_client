@@ -109,7 +109,7 @@
 
 @media (min-width: 1101px) {
 	.page {
-		@apply grid h-full min-h-0 max-w-[1532px] grid-cols-[minmax(0,1.05fr)_minmax(32rem,0.95fr)] grid-rows-[auto_minmax(0,1fr)] gap-x-6 overflow-hidden pb-4 pt-[6.5rem];
+		@apply grid h-[calc(100dvh-9.5rem)] min-h-[42rem] max-w-[1532px] grid-cols-[minmax(0,1.05fr)_minmax(32rem,0.95fr)] grid-rows-[auto_minmax(0,1fr)] gap-x-6 overflow-visible p-4;
 	}
 
 	.workspace {
@@ -120,13 +120,12 @@
 		@apply grid-cols-1;
 	}
 
-	.pagePreviewCollapsed .pageHeader,
 	.pagePreviewCollapsed .editorColumn {
-		@apply col-span-1 col-start-1;
+		@apply col-span-1 col-start-1 row-span-1 row-start-2;
 	}
 
 	.pageHeader {
-		@apply col-span-2 col-start-1 row-start-1 min-w-0;
+		@apply col-start-1 row-start-1 min-w-0;
 	}
 
 	.previewColumn {
@@ -138,7 +137,7 @@
 	}
 
 	.editorColumn {
-		@apply col-start-2 row-start-2 h-full min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain;
+		@apply col-start-2 row-span-2 row-start-1 h-full min-h-0 overflow-x-hidden overflow-y-auto;
 		scrollbar-gutter: stable;
 	}
 
