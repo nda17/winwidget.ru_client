@@ -635,15 +635,15 @@ const CabinetWidgets = () => {
 												? {
 														label: 'Лимит заявок',
 														description:
-															'Виджет может отображаться, но новые заявки временно не принимаются.',
+															'Виджет и приём новых заявок временно недоступны.',
 														className: styles.widgetStatusBlocked
 													}
 												: !item.installDomain.trim()
 													? {
-															label: 'Требует настройки',
+															label: 'Только по ссылке',
 															description:
-																'Добавьте домен в настройках, чтобы подключить виджет к сайту.',
-															className: styles.widgetStatusWarning
+																'Виджет доступен по прямой ссылке. Для установки на сайт добавьте домен.',
+															className: styles.widgetStatusActive
 														}
 													: {
 															label: 'Включён',

@@ -3023,7 +3023,9 @@ const WheelSettingsModal = ({
 								<div className={styles.field}>
 									<p className={styles.label}>Прямая ссылка:</p>
 									<p className={styles.hint}>
-										Если не требуется подключение виджета к сайту
+										После публикации работает без установки кода и
+										сохранённого домена. Доступ зависит от активности
+										виджета, подписки и лимита заявок.
 									</p>
 									<div className={styles.directLink}>
 										<input

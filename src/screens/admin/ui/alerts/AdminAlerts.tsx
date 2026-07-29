@@ -31,7 +31,6 @@ const TYPE_LABELS: Record<AdminAlertType, string> = {
 	SUCCEEDED_PAYMENT_WITHOUT_ACCESS: 'Оплата без доступа',
 	MULTIPLE_PENDING_PAYMENTS: 'Несколько pending-платежей',
 	ACTIVE_WIDGET_WITHOUT_ACCESS: 'Виджет без доступа',
-	ACTIVE_WIDGET_WITHOUT_DOMAIN: 'Виджет без домена',
 	WIDGET_DOMAIN_CONFLICT: 'Конфликт домена',
 	WIDGET_INVALID_DOMAIN: 'Некорректный домен',
 	INTEGRATION_PROBLEM: 'Проблема интеграции',
@@ -147,7 +146,6 @@ const getAlertActions = (item: IAdminAlert) => {
 	if (
 		[
 			'ACTIVE_WIDGET_WITHOUT_ACCESS',
-			'ACTIVE_WIDGET_WITHOUT_DOMAIN',
 			'WIDGET_DOMAIN_CONFLICT',
 			'WIDGET_INVALID_DOMAIN'
 		].includes(item.type)

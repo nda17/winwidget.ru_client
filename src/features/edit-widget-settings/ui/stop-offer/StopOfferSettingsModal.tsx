@@ -1822,7 +1822,9 @@ const StopOfferSettingsModal = ({
 								<div className={styles.field}>
 									<p className={styles.label}>Прямая ссылка:</p>
 									<p className={styles.hint}>
-										Работает без установки кода и сохранённого домена.
+										После публикации работает без установки кода и
+										сохранённого домена. Доступ зависит от активности
+										виджета, подписки и лимита заявок.
 									</p>
 									<input
 										className={styles.input}
