@@ -434,7 +434,7 @@ const DatabaseBackupPanel = ({
 							!settings.databaseBackupThreadId
 						}
 					>
-						Отправить backup
+						Отправить
 					</button>
 				</div>
 				<div className={styles.backupMetaGrid}>
@@ -581,8 +581,8 @@ const AdminDatabases: NextPage = () => {
 				<>
 					<DatabaseBackupPanel
 						target="core"
-						title="Backup основной базы данных"
-						description="Managed PostgreSQL с данными монолита. Ручной dump создаётся отдельно и отправляется вне VPS в Telegram-топик Backups."
+						title="Backup БАЗЫ СТАРОГО МОНОЛИТА"
+						description="БД ЛЕГАСИ МОНОЛИТА"
 						scheduleTimeLabel={settings.databaseBackupTimeLabel}
 						settings={settings}
 						userId={user.id}
@@ -590,7 +590,7 @@ const AdminDatabases: NextPage = () => {
 					<DatabaseBackupPanel
 						target="notification-delivery"
 						title="Backup базы Notification Delivery"
-						description="Локальная БД микросервиса. У неё отдельные job, retry и статус; сбой не перезапускает backup основной БД."
+						description="Локальная БД микросервиса Notification Delivery Service"
 						scheduleTimeLabel={
 							settings.notificationDeliveryDatabaseBackupTimeLabel
 						}
@@ -600,7 +600,7 @@ const AdminDatabases: NextPage = () => {
 					<DatabaseBackupPanel
 						target="campaigns"
 						title="Backup базы Campaigns"
-						description="Отдельная БД кампаний. Dump выполняется своей backup-only ролью и отправляется отдельным Telegram-документом."
+						description="Локальная БД микросервиса Campaigns Service"
 						scheduleTimeLabel={settings.campaignsDatabaseBackupTimeLabel}
 						settings={settings}
 						userId={user.id}
