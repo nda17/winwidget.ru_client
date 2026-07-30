@@ -150,7 +150,7 @@ const AUTO_RENEWAL_DIALOGS: Record<
 
 const EVENT_SECTION_LABELS: Record<string, string> = {
 	PAYMENTS: 'Платежи',
-	MAILINGS: 'Рассылки',
+	CAMPAIGNS: 'Кампании',
 	TASKS: 'Задачи',
 	SUBSCRIPTIONS: 'Подписки',
 	USERS: 'Пользователи',
@@ -167,7 +167,9 @@ const EVENT_ACTION_LABELS: Record<string, string> = {
 	AUTO_RENEWAL_REVOKE: 'Отзыв согласия на автопродление',
 	AUTO_RENEWAL_RECONCILE: 'Сверка автопродления',
 	AUTO_RENEWAL_TECHNICAL_RESUME: 'Снятие технической паузы',
-	MAILING_BROADCAST_SEND: 'Рассылка',
+	CAMPAIGN_CREATE: 'Создание кампании',
+	CAMPAIGN_CANCEL: 'Остановка кампании',
+	CAMPAIGN_DELIVERY_RETRY: 'Повтор доставки кампании',
 	SUBSCRIPTION_ACTIVATE: 'Активация подписки',
 	SUBSCRIPTION_EXTEND_DAYS: 'Бонусные дни',
 	SUBSCRIPTION_CANCEL: 'Отмена подписки',

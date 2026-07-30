@@ -24,7 +24,7 @@ import styles from './AdminEventLog.module.scss'
 
 const SECTION_LABELS: Record<AdminEventLogSection, string> = {
 	PAYMENTS: 'Платежи',
-	MAILINGS: 'Рассылки',
+	CAMPAIGNS: 'Кампании',
 	TASKS: 'Ручные задачи',
 	SUBSCRIPTIONS: 'Подписки',
 	USERS: 'Пользователи',
@@ -47,8 +47,9 @@ const ACTION_LABELS: Record<AdminEventLogAction, string> = {
 	AUTO_RENEWAL_TECHNICAL_RESUME: 'Снятие технической паузы',
 	TARIFF_PRICES_UPDATE: 'Изменение тарифных цен',
 	LEGAL_PAGE_UPDATE: 'Изменение юридической страницы',
-	MAILING_BROADCAST_SEND: 'Ручная рассылка',
-	MAILING_BROADCAST_CANCEL: 'Отмена рассылки',
+	CAMPAIGN_CREATE: 'Создание кампании',
+	CAMPAIGN_CANCEL: 'Остановка кампании',
+	CAMPAIGN_DELIVERY_RETRY: 'Повтор доставки кампании',
 	SUBSCRIPTION_ACTIVATE: 'Активация подписки',
 	SUBSCRIPTION_EXTEND_DAYS: 'Бонусные дни',
 	SUBSCRIPTION_CANCEL: 'Отмена подписки',

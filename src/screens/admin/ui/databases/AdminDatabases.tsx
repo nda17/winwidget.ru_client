@@ -125,7 +125,12 @@ const getDatabaseBackupJobBadgeClass = (
 
 const getDatabaseBackupTargetLabel = (
 	target: TelegramDatabaseBackupTarget
-) => (target === 'core' ? 'основной БД' : 'БД Notification Delivery')
+) =>
+	({
+		core: 'основной БД',
+		'notification-delivery': 'БД Notification Delivery',
+		campaigns: 'БД Campaigns'
+	})[target]
 
 const useDatabaseBackup = (
 	target: TelegramDatabaseBackupTarget,
@@ -558,7 +563,7 @@ const AdminDatabases: NextPage = () => {
 			/>
 
 			{isLoading ? (
-				Array.from({ length: 2 }, (_, cardIndex) => (
+				Array.from({ length: 3 }, (_, cardIndex) => (
 					<div key={cardIndex} className={styles.card}>
 						<SkeletonLoader count={1} className="h-[64px]" />
 						<div className={styles.backupMetaGrid}>
@@ -592,6 +597,14 @@ const AdminDatabases: NextPage = () => {
 						settings={settings}
 						userId={user.id}
 					/>
+					<DatabaseBackupPanel
+						target="campaigns"
+						title="Backup базы Campaigns"
+						description="Отдельная БД кампаний. Dump выполняется своей backup-only ролью и отправляется отдельным Telegram-документом."
+						scheduleTimeLabel={settings.campaignsDatabaseBackupTimeLabel}
+						settings={settings}
+						userId={user.id}
+					/>
 				</>
 			) : (
 				<div className={styles.card}>
@@ -621,10 +634,10 @@ const AdminDatabases: NextPage = () => {
 									Этот endpoint предназначен только для основной БД. Перед
 									запуском убедитесь, что выбран core dump WinWidget:
 									сервер проверит схему public и отклонит dump Notification
-									Delivery, но источник файла должен подтвердить оператор.
-									Восстановление Notification Delivery выполняется только
-									по защищённому production runbook. Действие логируется в
-									журнале событий.
+									Delivery или Campaigns, но источник файла должен
+									подтвердить оператор. Восстановление баз микросервисов
+									выполняется только по защищённому production runbook.
+									Действие логируется в журнале событий.
 								</p>
 							</div>
 							<div className={styles.restoreGrid}>

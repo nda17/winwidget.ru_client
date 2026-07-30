@@ -17,6 +17,9 @@ export interface AdminTelegramBotSettings {
 	notificationDeliveryDatabaseBackupDelayMinutes: number
 	notificationDeliveryDatabaseBackupTime: string
 	notificationDeliveryDatabaseBackupTimeLabel: string
+	campaignsDatabaseBackupDelayMinutes: number
+	campaignsDatabaseBackupTime: string
+	campaignsDatabaseBackupTimeLabel: string
 	databaseBackupLastSentPeriodStart: string | null
 	databaseBackupLastSentAt: string | null
 	telegramBotTokenConfigured: boolean
@@ -88,7 +91,10 @@ export type TelegramDatabaseBackupJobStatus =
 	| 'FAILED'
 	| 'CANCELLED'
 
-export type TelegramDatabaseBackupTarget = 'core' | 'notification-delivery'
+export type TelegramDatabaseBackupTarget =
+	| 'core'
+	| 'notification-delivery'
+	| 'campaigns'
 
 export interface TelegramDatabaseBackupJobResult {
 	target: TelegramDatabaseBackupTarget

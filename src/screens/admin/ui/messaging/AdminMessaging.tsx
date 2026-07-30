@@ -34,8 +34,9 @@ const integrationLabels: Record<MessagingIntegration, string> = {
 	'amo-crm': 'amoCRM',
 	'payment-email': 'Email после оплаты',
 	'payment-telegram': 'Telegram после оплаты',
-	'mailing-email': 'Email-рассылка',
-	'mailing-telegram': 'Telegram-рассылка',
+	'campaign-email': 'Email-кампания',
+	'campaign-telegram': 'Telegram-кампания',
+	'campaign-admin-audit': 'Аудит кампаний',
 	'limit-email': 'Email о лимите',
 	'limit-telegram': 'Telegram о лимите',
 	'daily-summary-telegram': 'Ежедневная Telegram-сводка',
@@ -517,6 +518,9 @@ export default function AdminMessaging() {
 											const hasActiveRetryLease = isRetryLeaseActive(
 												item.retryingAt
 											)
+											const isCampaignDelivery =
+												item.integration === 'campaign-email' ||
+												item.integration === 'campaign-telegram'
 
 											return (
 												<tr key={item.id}>
@@ -561,13 +565,21 @@ export default function AdminMessaging() {
 													<td>{item.attempts}</td>
 													<td>{formatDate(item.failedAt)}</td>
 													<td>
-														<div className={styles.failureActions}>
+														<div
+															className={styles.failureActions}
+															title={
+																isCampaignDelivery
+																	? 'Повтор доставки выполняется на странице кампании'
+																	: undefined
+															}
+														>
 															<button
 																className={styles.retry}
 																onClick={() => setRetryTarget(item)}
 																disabled={
 																	!isUnresolved ||
 																	hasActiveRetryLease ||
+																	isCampaignDelivery ||
 																	retryMutation.isPending ||
 																	closeMutation.isPending
 																}

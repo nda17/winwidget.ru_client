@@ -120,6 +120,7 @@ FSD-слой `widgets` намеренно не используется. В эт
 - `admin-monitoring`;
 - `auth`;
 - `bind-profile-identity`;
+- `campaigns`;
 - `cookie-consent`;
 - `create-widget`;
 - `edit-profile`;
@@ -132,7 +133,6 @@ FSD-слой `widgets` намеренно не используется. В эт
 - `mobile-navigation`;
 - `network-status`;
 - `run-admin-task`;
-- `send-mailing`;
 - `upload-file`;
 - `view-event-log`.
 
