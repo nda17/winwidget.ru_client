@@ -40,4 +40,12 @@
 	.chart-wrapper {
 		@apply relative w-full h-[240px] sm:h-[300px] xl:h-[320px];
 	}
+
+	.error-state {
+		@apply flex flex-col items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-5;
+	}
+
+	.retry-button {
+		@apply rounded-lg bg-[#131b22] px-4 py-2 text-sm font-medium text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50;
+	}
 }

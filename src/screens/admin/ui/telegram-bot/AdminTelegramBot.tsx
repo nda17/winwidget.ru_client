@@ -1,6 +1,10 @@
 'use client'
 
 import { errorCatch } from '@/shared/api'
+import {
+	reportingDailySummaryService,
+	type UpdateReportingDailySummarySettings
+} from '@/features/admin-monitoring'
 import AdminNavigation from '@/screens/admin/ui/common/admin-navigation/AdminNavigation'
 import AdminSectionHeading from '@/screens/admin/ui/common/admin-section-heading/AdminSectionHeading'
 import Heading from '@/shared/ui/heading/Heading'
@@ -21,6 +25,9 @@ import toast from 'react-hot-toast'
 import styles from './AdminTelegramBot.module.scss'
 
 const SETTINGS_QUERY_KEY = ['admin-telegram-bot-settings']
+const DAILY_SUMMARY_SETTINGS_QUERY_KEY = [
+	'admin-reporting-daily-summary-settings'
+]
 const WEBHOOKS_QUERY_KEY = ['admin-telegram-bot-webhooks']
 const WEBHOOK_BOTS: TelegramWebhookBot[] = ['info', 'auth', 'support']
 const MIN_TASK_TIME_GAP_MINUTES = 5
@@ -42,9 +49,9 @@ const TELEGRAM_TOPIC_FIELDS = [
 		description: 'Уведомления о новых успешных платежах'
 	},
 	{
-		key: 'reportsThreadId',
-		label: 'Reports',
-		description: 'Ежедневные сводки и отчёты'
+		key: 'operationalAlertsThreadId',
+		label: 'Системные уведомления',
+		description: 'Ошибки RabbitMQ, workers, Outbox и фоновых задач Core'
 	}
 ] as const
 
@@ -55,7 +62,7 @@ const EMPTY_TELEGRAM_TOPIC_INPUTS: TelegramTopicInputs = {
 	supportThreadId: '',
 	databaseBackupThreadId: '',
 	paymentsThreadId: '',
-	reportsThreadId: ''
+	operationalAlertsThreadId: ''
 }
 
 const getTelegramTopicInputs = (
@@ -65,7 +72,8 @@ const getTelegramTopicInputs = (
 	databaseBackupThreadId:
 		settings.databaseBackupThreadId?.toString() ?? '',
 	paymentsThreadId: settings.paymentsThreadId?.toString() ?? '',
-	reportsThreadId: settings.reportsThreadId?.toString() ?? ''
+	operationalAlertsThreadId:
+		settings.operationalAlertsThreadId?.toString() ?? ''
 })
 
 const parseTelegramTopicId = (value: string) => {
@@ -124,20 +132,51 @@ const addMinutesToTime = (value: string, minutesToAdd: number) => {
 	).padStart(2, '0')}`
 }
 
+const hasMinimumTaskTimeGap = (
+	summaryTime: string,
+	backupTime: string,
+	backupDelayMinutes: number[]
+) =>
+	[0, ...backupDelayMinutes].every(delayMinutes => {
+		const delayedBackupTime = addMinutesToTime(backupTime, delayMinutes)
+		if (delayedBackupTime === null) return false
+
+		const taskTimeGap = getTaskTimeGapMinutes(
+			summaryTime,
+			delayedBackupTime
+		)
+		return taskTimeGap !== null && taskTimeGap >= MIN_TASK_TIME_GAP_MINUTES
+	})
+
 const AdminTelegramBot: NextPage = () => {
 	const queryClient = useQueryClient()
 	const [chatId, setChatId] = useState('')
 	const [topicIds, setTopicIds] = useState<TelegramTopicInputs>(
 		EMPTY_TELEGRAM_TOPIC_INPUTS
 	)
+	const [dailySummaryThreadId, setDailySummaryThreadId] = useState('')
+	const [dailySummaryDestinationChatId, setDailySummaryDestinationChatId] =
+		useState('')
 	const [summaryTime, setSummaryTime] = useState('')
 	const [backupTime, setBackupTime] = useState('')
 	const isTelegramRoutingDraftDirty = useRef(false)
-	const isScheduleDraftDirty = useRef(false)
+	const isDailySummaryDraftDirty = useRef(false)
+	const isBackupScheduleDraftDirty = useRef(false)
 
-	const { data: settings, isLoading } = useQuery({
-		queryKey: SETTINGS_QUERY_KEY,
-		queryFn: adminTelegramBotService.get
+	const { data: settings, isLoading: isTelegramSettingsLoading } =
+		useQuery({
+			queryKey: SETTINGS_QUERY_KEY,
+			queryFn: adminTelegramBotService.get
+		})
+	const {
+		data: dailySummarySettings,
+		isLoading: isDailySummarySettingsLoading,
+		isError: isDailySummarySettingsError,
+		error: dailySummarySettingsError,
+		refetch: refetchDailySummarySettings
+	} = useQuery({
+		queryKey: DAILY_SUMMARY_SETTINGS_QUERY_KEY,
+		queryFn: reportingDailySummaryService.get
 	})
 
 	const {
@@ -157,11 +196,22 @@ const AdminTelegramBot: NextPage = () => {
 			setTopicIds(getTelegramTopicInputs(settings))
 		}
 
-		if (!isScheduleDraftDirty.current) {
-			setSummaryTime(settings.dailySummaryTime)
+		if (!isBackupScheduleDraftDirty.current) {
 			setBackupTime(settings.databaseBackupTime)
 		}
 	}, [settings])
+
+	useEffect(() => {
+		if (!dailySummarySettings || isDailySummaryDraftDirty.current) return
+
+		setDailySummaryThreadId(
+			dailySummarySettings.messageThreadId?.toString() ?? ''
+		)
+		setDailySummaryDestinationChatId(
+			dailySummarySettings.destinationChatId ?? ''
+		)
+		setSummaryTime(dailySummarySettings.scheduleTime)
+	}, [dailySummarySettings])
 
 	const mutation = useMutation({
 		mutationFn: adminTelegramBotService.update,
@@ -175,14 +225,32 @@ const AdminTelegramBot: NextPage = () => {
 				setTopicIds(getTelegramTopicInputs(result))
 			}
 
-			if ('dailySummaryTime' in patch || 'databaseBackupTime' in patch) {
-				isScheduleDraftDirty.current = false
-				setSummaryTime(result.dailySummaryTime)
+			if ('databaseBackupTime' in patch) {
+				isBackupScheduleDraftDirty.current = false
 				setBackupTime(result.databaseBackupTime)
 			}
 
 			await queryClient.invalidateQueries({
 				queryKey: SETTINGS_QUERY_KEY
+			})
+		}
+	})
+
+	const dailySummaryMutation = useMutation({
+		mutationFn: reportingDailySummaryService.update,
+		onSuccess: async result => {
+			isDailySummaryDraftDirty.current = false
+			setDailySummaryDestinationChatId(result.destinationChatId ?? '')
+			setDailySummaryThreadId(result.messageThreadId?.toString() ?? '')
+			setSummaryTime(result.scheduleTime)
+
+			await queryClient.invalidateQueries({
+				queryKey: DAILY_SUMMARY_SETTINGS_QUERY_KEY
+			})
+		},
+		onError: async () => {
+			await queryClient.invalidateQueries({
+				queryKey: DAILY_SUMMARY_SETTINGS_QUERY_KEY
 			})
 		}
 	})
@@ -204,6 +272,19 @@ const AdminTelegramBot: NextPage = () => {
 		toast.promise(promise, {
 			loading,
 			success: 'Настройки сохранены',
+			error: error => `Ошибка сохранения: ${errorCatch(error)}`
+		})
+	}
+
+	const saveDailySummaryWithToast = (
+		patch: UpdateReportingDailySummarySettings,
+		loading: string
+	) => {
+		const promise = dailySummaryMutation.mutateAsync(patch)
+
+		toast.promise(promise, {
+			loading,
+			success: 'Настройки Daily Summary сохранены',
 			error: error => `Ошибка сохранения: ${errorCatch(error)}`
 		})
 	}
@@ -246,22 +327,41 @@ const AdminTelegramBot: NextPage = () => {
 	}
 
 	const handleToggleSummary = () => {
-		if (!settings) return
+		if (
+			!dailySummarySettings ||
+			dailySummarySettings.owner !== 'REPORTING'
+		)
+			return
 
-		if (!settings.dailySummaryEnabled) {
-			if (!settings.dailySummaryChatId.trim()) {
-				toast.error('Сначала сохраните ID группы Telegram')
+		if (!dailySummarySettings.enabled) {
+			if (!dailySummarySettings.destinationChatId?.trim()) {
+				toast.error('Сначала сохраните ID группы для Daily Summary')
 				return
 			}
 
-			if (!settings.reportsThreadId) {
+			if (!dailySummarySettings.messageThreadId) {
 				toast.error('Сначала сохраните ID топика Reports')
+				return
+			}
+
+			if (!dailySummarySettings.coreOperationalAlertsThreadId) {
+				toast.error('Сначала сохраните ID топика системных уведомлений')
+				return
+			}
+
+			if (
+				dailySummarySettings.messageThreadId ===
+				dailySummarySettings.coreOperationalAlertsThreadId
+			) {
+				toast.error(
+					'Daily Summary и системные уведомления должны использовать разные топики'
+				)
 				return
 			}
 		}
 
-		saveWithToast(
-			{ dailySummaryEnabled: !settings.dailySummaryEnabled },
+		saveDailySummaryWithToast(
+			{ enabled: !dailySummarySettings.enabled },
 			'Применяем настройку...'
 		)
 	}
@@ -309,10 +409,7 @@ const AdminTelegramBot: NextPage = () => {
 			normalizedTopicIds[field.key] = topicId
 		}
 
-		if (
-			(settings.dailySummaryEnabled || settings.databaseBackupEnabled) &&
-			!normalizedChatId
-		) {
+		if (settings.databaseBackupEnabled && !normalizedChatId) {
 			toast.error('Укажите ID группы Telegram')
 			return
 		}
@@ -326,18 +423,22 @@ const AdminTelegramBot: NextPage = () => {
 		}
 
 		if (
-			settings.dailySummaryEnabled &&
-			normalizedTopicIds.reportsThreadId === null
-		) {
-			toast.error('Для включённой сводки укажите ID топика Reports')
-			return
-		}
-
-		if (
 			settings.databaseBackupEnabled &&
 			normalizedTopicIds.databaseBackupThreadId === null
 		) {
 			toast.error('Для включённого backup укажите ID топика Backups')
+			return
+		}
+
+		if (
+			normalizedChatId === dailySummarySettings?.destinationChatId &&
+			normalizedTopicIds.operationalAlertsThreadId !== null &&
+			normalizedTopicIds.operationalAlertsThreadId ===
+				dailySummarySettings?.messageThreadId
+		) {
+			toast.error(
+				'Daily Summary и системные уведомления должны использовать разные топики'
+			)
 			return
 		}
 
@@ -350,51 +451,138 @@ const AdminTelegramBot: NextPage = () => {
 		)
 	}
 
-	const handleSaveSchedule = () => {
-		if (!settings) return
+	const handleSaveDailySummary = () => {
+		if (
+			!settings ||
+			!dailySummarySettings ||
+			dailySummarySettings.owner !== 'REPORTING'
+		)
+			return
 
-		if (!summaryTime || !backupTime) {
-			toast.error('Укажите время сводки и backup')
+		if (!summaryTime) {
+			toast.error('Укажите время сводки')
 			return
 		}
 
-		const taskTimeGap = getTaskTimeGapMinutes(summaryTime, backupTime)
-		const notificationDeliveryBackupTime = addMinutesToTime(
-			backupTime,
-			settings.notificationDeliveryDatabaseBackupDelayMinutes
-		)
-		const notificationDeliveryTaskTimeGap =
-			notificationDeliveryBackupTime === null
-				? null
-				: getTaskTimeGapMinutes(
-						summaryTime,
-						notificationDeliveryBackupTime
-					)
-
 		if (
-			taskTimeGap === null ||
-			taskTimeGap < MIN_TASK_TIME_GAP_MINUTES ||
-			notificationDeliveryTaskTimeGap === null ||
-			notificationDeliveryTaskTimeGap < MIN_TASK_TIME_GAP_MINUTES
+			!hasMinimumTaskTimeGap(summaryTime, settings.databaseBackupTime, [
+				settings.notificationDeliveryDatabaseBackupDelayMinutes,
+				settings.campaignsDatabaseBackupDelayMinutes,
+				settings.reportingDatabaseBackupDelayMinutes
+			])
 		) {
 			toast.error(
-				`Разнесите сводку и оба backup минимум на ${MIN_TASK_TIME_GAP_MINUTES} минут`
+				`Разнесите сводку и все backup минимум на ${MIN_TASK_TIME_GAP_MINUTES} минут`
 			)
 			return
 		}
 
+		const messageThreadId = parseTelegramTopicId(dailySummaryThreadId)
+		const destinationChatId = dailySummaryDestinationChatId.trim()
+
+		if (messageThreadId === undefined) {
+			toast.error(
+				`ID топика Reports должен быть целым числом от 1 до ${MAX_TELEGRAM_TOPIC_ID}`
+			)
+			return
+		}
+
+		if (
+			dailySummarySettings.enabled &&
+			(!destinationChatId || messageThreadId === null)
+		) {
+			toast.error(
+				'Для включённой сводки укажите ID группы и топика Reports'
+			)
+			return
+		}
+
+		if (
+			destinationChatId ===
+				dailySummarySettings.coreOperationalAlertsDestinationChatId &&
+			messageThreadId !== null &&
+			messageThreadId ===
+				dailySummarySettings.coreOperationalAlertsThreadId
+		) {
+			toast.error(
+				'Daily Summary и системные уведомления должны использовать разные топики'
+			)
+			return
+		}
+
+		const patch: UpdateReportingDailySummarySettings = {}
+		if (
+			destinationChatId !== (dailySummarySettings.destinationChatId ?? '')
+		) {
+			patch.destinationChatId = destinationChatId || null
+		}
+		if (messageThreadId !== dailySummarySettings.messageThreadId) {
+			patch.messageThreadId = messageThreadId
+		}
+		if (
+			summaryTime !== dailySummarySettings.scheduleTime ||
+			dailySummarySettings.schedulePolicyConfirmationPending
+		) {
+			patch.scheduleTime = summaryTime
+			patch.expectedScheduleGeneration =
+				dailySummarySettings.scheduleGeneration
+		}
+
+		if (Object.keys(patch).length === 0) return
+		saveDailySummaryWithToast(patch, 'Сохраняем Daily Summary...')
+	}
+
+	const handleSaveBackupSchedule = () => {
+		if (!settings) return
+
+		if (!backupTime) {
+			toast.error('Укажите время backup')
+			return
+		}
+
+		if (
+			dailySummarySettings &&
+			!hasMinimumTaskTimeGap(
+				dailySummarySettings.scheduleTime,
+				backupTime,
+				[
+					settings.notificationDeliveryDatabaseBackupDelayMinutes,
+					settings.campaignsDatabaseBackupDelayMinutes,
+					settings.reportingDatabaseBackupDelayMinutes
+				]
+			)
+		) {
+			toast.error(
+				`Разнесите сводку и все backup минимум на ${MIN_TASK_TIME_GAP_MINUTES} минут`
+			)
+			return
+		}
+		if (!dailySummarySettings) {
+			toast('Reporting недоступен: интервал с Daily Summary не проверен', {
+				icon: '⚠️'
+			})
+		}
+
 		saveWithToast(
-			{
-				dailySummaryTime: summaryTime,
-				databaseBackupTime: backupTime
-			},
-			'Сохраняем расписание...'
+			{ databaseBackupTime: backupTime },
+			'Сохраняем расписание backup...'
 		)
 	}
 
-	const lastSentText = settings?.dailySummaryLastSentAt
-		? formatDate(settings.dailySummaryLastSentAt)
+	const lastSentText = dailySummarySettings?.lastSuccessfulDelivery
+		? formatDate(dailySummarySettings.lastSuccessfulDelivery.completedAt)
 		: 'Ещё не отправлялась'
+	const latestDailySummaryFailure =
+		dailySummarySettings?.lastFailedDelivery &&
+		(!dailySummarySettings.lastSuccessfulDelivery ||
+			new Date(
+				dailySummarySettings.lastFailedDelivery.failedAt
+			).getTime() >
+				new Date(
+					dailySummarySettings.lastSuccessfulDelivery.completedAt
+				).getTime())
+			? dailySummarySettings.lastFailedDelivery
+			: null
 	const isWebhookActionPending =
 		webhookMutation.isPending || allWebhooksMutation.isPending
 	const notificationDeliveryBackupTime = settings
@@ -403,6 +591,30 @@ const AdminTelegramBot: NextPage = () => {
 				settings.notificationDeliveryDatabaseBackupDelayMinutes
 			) ?? settings.notificationDeliveryDatabaseBackupTime)
 		: null
+	const campaignsBackupTime = settings
+		? (addMinutesToTime(
+				backupTime,
+				settings.campaignsDatabaseBackupDelayMinutes
+			) ?? settings.campaignsDatabaseBackupTime)
+		: null
+	const reportingBackupTime = settings
+		? (addMinutesToTime(
+				backupTime,
+				settings.reportingDatabaseBackupDelayMinutes
+			) ?? settings.reportingDatabaseBackupTime)
+		: null
+	const isLoading = isTelegramSettingsLoading
+	const isDailySummaryReadOnly =
+		dailySummarySettings?.owner !== 'REPORTING'
+	const isDailySummarySettingsChanged = Boolean(
+		dailySummarySettings &&
+		(dailySummaryDestinationChatId.trim() !==
+			(dailySummarySettings.destinationChatId ?? '') ||
+			dailySummaryThreadId.trim() !==
+				(dailySummarySettings.messageThreadId?.toString() ?? '') ||
+			summaryTime !== dailySummarySettings.scheduleTime ||
+			dailySummarySettings.schedulePolicyConfirmationPending)
+	)
 	const isTelegramRoutingChanged = Boolean(
 		settings &&
 		(chatId.trim() !== settings.dailySummaryChatId ||
@@ -545,8 +757,30 @@ const AdminTelegramBot: NextPage = () => {
 							</div>
 							<div className={styles.statusItem}>
 								<p className={styles.statusLabel}>Последняя сводка</p>
-								<p className={styles.statusValue}>{lastSentText}</p>
+								<p className={styles.statusValue}>
+									{isDailySummarySettingsLoading
+										? 'Загрузка...'
+										: isDailySummarySettingsError
+											? 'Reporting недоступен'
+											: lastSentText}
+								</p>
 							</div>
+							{latestDailySummaryFailure && (
+								<div className={styles.statusItem}>
+									<p className={styles.statusLabel}>
+										Последняя ошибка Daily Summary
+									</p>
+									<p className={styles.webhookStatusError}>
+										{formatDate(latestDailySummaryFailure.failedAt)}
+										{latestDailySummaryFailure.code
+											? ` · ${latestDailySummaryFailure.code}`
+											: ''}
+										{latestDailySummaryFailure.safeReason
+											? ` · ${latestDailySummaryFailure.safeReason}`
+											: ''}
+									</p>
+								</div>
+							)}
 						</div>
 
 						<div className={styles.webhookRow}>
@@ -739,29 +973,159 @@ const AdminTelegramBot: NextPage = () => {
 							</div>
 						</div>
 
-						<div className={styles.toggleRow}>
-							<div>
-								<p className={styles.label}>Отправка сводки</p>
-								<p className={styles.hint}>
-									@winwidget_info_bot отправляет сводку каждый день в{' '}
-									{settings.dailySummaryTimeLabel} и явно показывает период
-									отчёта. Сообщение приходит в топик Reports.
-								</p>
+						{isDailySummarySettingsLoading ? (
+							<div className={styles.schedulePanel}>
+								<SkeletonLoader count={1} className="h-[82px]" />
 							</div>
-							<button
-								type="button"
-								className={`${styles.toggle} ${settings.dailySummaryEnabled ? styles.toggleOn : ''}`}
-								onClick={handleToggleSummary}
-								disabled={mutation.isPending}
-								aria-label={
-									settings.dailySummaryEnabled
-										? 'Выключить отправку сводки'
-										: 'Включить отправку сводки'
-								}
-							>
-								<span className={styles.toggleThumb} />
-							</button>
-						</div>
+						) : dailySummarySettings ? (
+							<>
+								<div className={styles.toggleRow}>
+									<div>
+										<p className={styles.label}>Отправка сводки</p>
+										<p className={styles.hint}>
+											@winwidget_info_bot отправляет сводку каждый день в{' '}
+											{dailySummarySettings.scheduleTime} (
+											{dailySummarySettings.timezone}) и явно показывает
+											период отчёта. Настройками владеет Reporting Service.
+										</p>
+										{isDailySummaryReadOnly && (
+											<p className={styles.hint}>
+												Изменение станет доступно после переключения
+												владельца Daily Summary на Reporting.
+											</p>
+										)}
+									</div>
+									<button
+										type="button"
+										className={`${styles.toggle} ${dailySummarySettings.enabled ? styles.toggleOn : ''}`}
+										onClick={handleToggleSummary}
+										disabled={
+											dailySummaryMutation.isPending ||
+											isDailySummaryReadOnly
+										}
+										aria-label={
+											dailySummarySettings.enabled
+												? 'Выключить отправку сводки'
+												: 'Включить отправку сводки'
+										}
+									>
+										<span className={styles.toggleThumb} />
+									</button>
+								</div>
+
+								<div className={styles.schedulePanel}>
+									<div className={styles.scheduleGrid}>
+										<label className={styles.field}>
+											<span className={styles.label}>Время сводки</span>
+											<input
+												type="time"
+												className={styles.input}
+												value={summaryTime}
+												disabled={
+													dailySummaryMutation.isPending ||
+													isDailySummaryReadOnly
+												}
+												onChange={event => {
+													isDailySummaryDraftDirty.current = true
+													setSummaryTime(event.target.value)
+												}}
+											/>
+										</label>
+										<label className={styles.field}>
+											<span className={styles.label}>
+												ID группы Daily Summary
+											</span>
+											<input
+												className={styles.input}
+												value={dailySummaryDestinationChatId}
+												disabled={
+													dailySummaryMutation.isPending ||
+													isDailySummaryReadOnly
+												}
+												onChange={event => {
+													isDailySummaryDraftDirty.current = true
+													setDailySummaryDestinationChatId(
+														event.target.value
+													)
+												}}
+												placeholder="-1001234567890"
+												maxLength={255}
+											/>
+										</label>
+										<label className={styles.field}>
+											<span className={styles.label}>Топик Reports</span>
+											<input
+												type="number"
+												className={styles.input}
+												value={dailySummaryThreadId}
+												disabled={
+													dailySummaryMutation.isPending ||
+													isDailySummaryReadOnly
+												}
+												onChange={event => {
+													isDailySummaryDraftDirty.current = true
+													setDailySummaryThreadId(event.target.value)
+												}}
+												placeholder="123"
+												min={1}
+												max={MAX_TELEGRAM_TOPIC_ID}
+												step={1}
+												inputMode="numeric"
+											/>
+										</label>
+										<div className={styles.field}>
+											<span className={styles.label}>Часовой пояс</span>
+											<p className={styles.derivedTime}>
+												{dailySummarySettings.timezone}
+											</p>
+										</div>
+										<button
+											type="button"
+											className={`${styles.saveBtn} ${styles.scheduleSaveBtn}`}
+											onClick={handleSaveDailySummary}
+											disabled={
+												dailySummaryMutation.isPending ||
+												isDailySummaryReadOnly ||
+												!isDailySummarySettingsChanged
+											}
+										>
+											Сохранить Daily Summary
+										</button>
+									</div>
+									<p className={styles.hint}>
+										Reporting Service хранит назначение, топик и расписание
+										сводки как единственный источник истины. Время сводки
+										должно быть разнесено с каждым backup минимум на{' '}
+										{MIN_TASK_TIME_GAP_MINUTES} минут.
+									</p>
+									{dailySummarySettings.schedulePolicyConfirmationPending && (
+										<p className={styles.webhookStatusError}>
+											Настройки сохранены в Reporting, но подтверждение
+											policy в Core ещё не завершено. Нажмите сохранить
+											повторно.
+										</p>
+									)}
+								</div>
+							</>
+						) : (
+							<div className={styles.schedulePanel}>
+								<p className={styles.empty}>
+									Настройки Daily Summary временно недоступны
+								</p>
+								<p className={styles.hint}>
+									{dailySummarySettingsError
+										? errorCatch(dailySummarySettingsError)
+										: 'Reporting Service не вернул настройки'}
+								</p>
+								<button
+									type="button"
+									className={styles.actionBtn}
+									onClick={() => void refetchDailySummarySettings()}
+								>
+									Повторить
+								</button>
+							</div>
+						)}
 
 						<div className={styles.toggleRow}>
 							<div>
@@ -770,8 +1134,11 @@ const AdminTelegramBot: NextPage = () => {
 									@winwidget_info_bot отправляет backup основной БД в{' '}
 									{settings.databaseBackupTimeLabel}, а Notification
 									Delivery — в{' '}
-									{settings.notificationDeliveryDatabaseBackupTimeLabel}.
-									Оба файла приходят отдельно в топик Backups.
+									{settings.notificationDeliveryDatabaseBackupTimeLabel},
+									Campaigns — в {settings.campaignsDatabaseBackupTimeLabel}
+									, Reporting — в{' '}
+									{settings.reportingDatabaseBackupTimeLabel}. Все файлы
+									приходят отдельно в топик Backups.
 								</p>
 							</div>
 							<button
@@ -792,19 +1159,6 @@ const AdminTelegramBot: NextPage = () => {
 						<div className={styles.schedulePanel}>
 							<div className={styles.scheduleGrid}>
 								<label className={styles.field}>
-									<span className={styles.label}>Время сводки</span>
-									<input
-										type="time"
-										className={styles.input}
-										value={summaryTime}
-										disabled={mutation.isPending}
-										onChange={event => {
-											isScheduleDraftDirty.current = true
-											setSummaryTime(event.target.value)
-										}}
-									/>
-								</label>
-								<label className={styles.field}>
 									<span className={styles.label}>Backup основной БД</span>
 									<input
 										type="time"
@@ -812,7 +1166,7 @@ const AdminTelegramBot: NextPage = () => {
 										value={backupTime}
 										disabled={mutation.isPending}
 										onChange={event => {
-											isScheduleDraftDirty.current = true
+											isBackupScheduleDraftDirty.current = true
 											setBackupTime(event.target.value)
 										}}
 									/>
@@ -827,24 +1181,42 @@ const AdminTelegramBot: NextPage = () => {
 											: '—'}
 									</p>
 								</div>
+								<div className={styles.field}>
+									<span className={styles.label}>Backup Campaigns</span>
+									<p className={styles.derivedTime}>
+										{campaignsBackupTime
+											? `${campaignsBackupTime} МСК`
+											: '—'}
+									</p>
+								</div>
+								<div className={styles.field}>
+									<span className={styles.label}>Backup Reporting</span>
+									<p className={styles.derivedTime}>
+										{reportingBackupTime
+											? `${reportingBackupTime} МСК`
+											: '—'}
+									</p>
+								</div>
 								<button
 									type="button"
-									className={styles.saveBtn}
-									onClick={handleSaveSchedule}
+									className={`${styles.saveBtn} ${styles.scheduleSaveBtn}`}
+									onClick={handleSaveBackupSchedule}
 									disabled={
 										mutation.isPending ||
-										(summaryTime === settings.dailySummaryTime &&
-											backupTime === settings.databaseBackupTime)
+										backupTime === settings.databaseBackupTime
 									}
 								>
-									Сохранить расписание
+									Сохранить расписание backup
 								</button>
 							</div>
 							<p className={styles.hint}>
-								Время указывается по Москве. Notification Delivery
-								запускается через{' '}
-								{settings.notificationDeliveryDatabaseBackupDelayMinutes}{' '}
-								минут после основной БД. Сводка должна быть разнесена с
+								Время указывается по Москве. Notification Delivery,
+								Campaigns и Reporting запускаются через{' '}
+								{settings.notificationDeliveryDatabaseBackupDelayMinutes}
+								{', '}
+								{settings.campaignsDatabaseBackupDelayMinutes} и{' '}
+								{settings.reportingDatabaseBackupDelayMinutes} минут после
+								основной БД соответственно. Сводка должна быть разнесена с
 								каждым backup минимум на {MIN_TASK_TIME_GAP_MINUTES} минут.
 							</p>
 						</div>
@@ -855,7 +1227,7 @@ const AdminTelegramBot: NextPage = () => {
 									htmlFor="telegram-group-id"
 									className={styles.label}
 								>
-									ID группы Telegram
+									ID группы Core
 								</label>
 								<input
 									id="telegram-group-id"
@@ -904,7 +1276,10 @@ const AdminTelegramBot: NextPage = () => {
 								Группа должна быть супергруппой с включёнными Topics. Для
 								каждого назначения укажите его message_thread_id. Если ID
 								топика не заполнен, сообщения этого типа не отправляются;
-								fallback в General не используется.
+								fallback в General не используется. Маршрут Daily Summary
+								настраивается отдельно в Reporting Service выше. После
+								переключения владельца Core и Reporting хранят свои ID
+								групп независимо.
 							</p>
 
 							<button

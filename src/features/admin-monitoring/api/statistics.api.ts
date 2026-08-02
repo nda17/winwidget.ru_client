@@ -133,7 +133,7 @@ export interface IStatisticsDashboard {
 }
 
 class StatisticsService {
-	private _BASE_URL = '/statistics'
+	private _BASE_URL = '/admin/reporting'
 
 	async getRegistrationsByMonth() {
 		return axiosInterceptorsRequest.get<IUserRegistrationsByMonth[]>(

@@ -1,16 +1,11 @@
 import { axiosInterceptorsRequest } from '@/shared/api'
 
 export interface AdminTelegramBotSettings {
-	dailySummaryEnabled: boolean
 	dailySummaryChatId: string
 	supportThreadId: number | null
 	databaseBackupThreadId: number | null
 	paymentsThreadId: number | null
-	reportsThreadId: number | null
-	dailySummaryTime: string
-	dailySummaryTimeLabel: string
-	dailySummaryLastSentPeriodStart: string | null
-	dailySummaryLastSentAt: string | null
+	operationalAlertsThreadId: number | null
 	databaseBackupEnabled: boolean
 	databaseBackupTime: string
 	databaseBackupTimeLabel: string
@@ -20,6 +15,9 @@ export interface AdminTelegramBotSettings {
 	campaignsDatabaseBackupDelayMinutes: number
 	campaignsDatabaseBackupTime: string
 	campaignsDatabaseBackupTimeLabel: string
+	reportingDatabaseBackupDelayMinutes: number
+	reportingDatabaseBackupTime: string
+	reportingDatabaseBackupTimeLabel: string
 	databaseBackupLastSentPeriodStart: string | null
 	databaseBackupLastSentAt: string | null
 	telegramBotTokenConfigured: boolean
@@ -34,13 +32,11 @@ export interface AdminTelegramBotSettings {
 }
 
 export interface UpdateAdminTelegramBotSettings {
-	dailySummaryEnabled?: boolean
 	dailySummaryChatId?: string
 	supportThreadId?: number | null
 	databaseBackupThreadId?: number | null
 	paymentsThreadId?: number | null
-	reportsThreadId?: number | null
-	dailySummaryTime?: string
+	operationalAlertsThreadId?: number | null
 	databaseBackupEnabled?: boolean
 	databaseBackupTime?: string
 }
@@ -95,6 +91,7 @@ export type TelegramDatabaseBackupTarget =
 	| 'core'
 	| 'notification-delivery'
 	| 'campaigns'
+	| 'reporting'
 
 export interface TelegramDatabaseBackupJobResult {
 	target: TelegramDatabaseBackupTarget

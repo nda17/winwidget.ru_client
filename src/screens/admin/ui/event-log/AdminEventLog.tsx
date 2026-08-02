@@ -34,7 +34,8 @@ const SECTION_LABELS: Record<AdminEventLogSection, string> = {
 	TELEGRAM_BOT: 'Telegram-бот',
 	AFFILIATE: 'Партнёрка',
 	DEV_TOOLS: 'Базы данных',
-	MESSAGING: 'Очереди'
+	MESSAGING: 'Очереди',
+	REPORTING: 'Reporting'
 }
 
 const ACTION_LABELS: Record<AdminEventLogAction, string> = {
@@ -73,11 +74,19 @@ const ACTION_LABELS: Record<AdminEventLogAction, string> = {
 	SITE_SETTINGS_UPDATE: 'Настройки сайта',
 	AFFILIATE_SETTINGS_UPDATE: 'Настройки партнёрки',
 	TELEGRAM_BOT_SETTINGS_UPDATE: 'Настройки Telegram-бота',
+	TELEGRAM_SCHEDULE_SETTINGS_REJECTED:
+		'Отклонение расписания Telegram-бота',
 	TELEGRAM_BOT_WEBHOOK_REINSTALL: 'Webhook Telegram-бота',
 	TELEGRAM_DATABASE_BACKUP_CREATE: 'Backup базы данных',
 	TELEGRAM_DATABASE_RESTORE: 'Восстановление базы',
 	DEV_DATABASE_RESTORE: 'DEV-восстановление базы',
-	MESSAGING_FAILURE_RETRY: 'Повтор интеграции'
+	MESSAGING_FAILURE_RETRY: 'Повтор интеграции',
+	MESSAGING_FAILURE_CLOSE_WITHOUT_RETRY: 'Закрытие интеграции без повтора',
+	REPORTING_DAILY_SUMMARY_SETTINGS_UPDATE: 'Настройки Daily Summary',
+	REPORTING_DAILY_SUMMARY_SCHEDULE_UPDATE: 'Расписание Daily Summary',
+	REPORTING_DAILY_SUMMARY_SCHEDULE_REJECTED:
+		'Отклонение расписания Daily Summary',
+	REPORTING_DELIVERY_RETRY: 'Повтор обработки Reporting'
 }
 
 type EventLogSectionFilter = AdminEventLogSection | 'ALL'
@@ -193,6 +202,7 @@ const formatMetadata = (item: IAdminEventLogItem) => {
 	const localStatus = getPrimitiveMetadata(item, 'localStatus')
 	const status = getPrimitiveMetadata(item, 'status')
 	const reason = getPrimitiveMetadata(item, 'reason')
+	const reasonCode = getPrimitiveMetadata(item, 'reasonCode')
 	const previousStatus = getPrimitiveMetadata(item, 'previousStatus')
 	const newStatus = getPrimitiveMetadata(item, 'newStatus')
 	const amount = getPrimitiveMetadata(item, 'amount')
@@ -221,6 +231,7 @@ const formatMetadata = (item: IAdminEventLogItem) => {
 	if (localStatus) parts.push(`Локально: ${localStatus}`)
 	if (status) parts.push(`Статус: ${status}`)
 	if (reason) parts.push(`Причина: ${reason}`)
+	if (reasonCode) parts.push(`Код причины: ${reasonCode}`)
 	if (previousStatus) parts.push(`Было: ${previousStatus}`)
 	if (newStatus) parts.push(`Стало: ${newStatus}`)
 	if (amount) {

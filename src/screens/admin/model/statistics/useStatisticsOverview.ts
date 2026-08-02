@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 export const useStatisticsOverview = () => {
 	const auth = useAuthStore(state => state.auth)
 
-	const { data, isPending } = useQuery({
+	const query = useQuery({
 		queryKey: ['get-statistics-dashboard'],
 		queryFn: () => StatisticsService.getDashboard(),
 		select: ({ data }) => data,
@@ -13,7 +13,11 @@ export const useStatisticsOverview = () => {
 	})
 
 	return {
-		data,
-		isPending
+		data: query.data,
+		isPending: query.isPending,
+		isError: query.isError,
+		error: query.error,
+		isFetching: query.isFetching,
+		refetch: query.refetch
 	}
 }

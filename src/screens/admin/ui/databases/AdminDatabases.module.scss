@@ -58,6 +58,10 @@
 	@apply bg-[#fdebec] text-[#a92d46];
 }
 
+.badgeNeutral {
+	@apply bg-[#eceff3] text-[#505a67];
+}
+
 .label {
 	@apply text-[0.9rem] font-semibold text-[#1a1a1a];
 }
@@ -79,13 +83,18 @@
 }
 
 .restoreGrid {
-	@apply grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-3;
+	@apply grid grid-cols-[minmax(150px,0.8fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_auto] items-end gap-3;
 
-	@media (max-width: 760px) {
+	@media (max-width: 900px) {
+		@apply grid-cols-2;
+	}
+
+	@media (max-width: 640px) {
 		@apply grid-cols-1;
 	}
 }
 
+.fieldLabel,
 .fileInputLabel {
 	@apply flex min-w-0 flex-col gap-[6px] text-[0.9rem] font-semibold text-[#1a1a1a];
 }
@@ -98,12 +107,23 @@
 	@apply w-full rounded-lg border border-[#e0d6f0] bg-[#f8f5ff] px-[14px] py-[10px] text-[0.9rem] text-[#1a1a1a] outline-none transition-[border-color] duration-200;
 }
 
-.input:focus {
+.select {
+	@apply w-full rounded-lg border border-[#e0d6f0] bg-[#f8f5ff] px-[14px] py-[10px] pr-10 text-[0.9rem] text-[#1a1a1a] outline-none transition-[border-color] duration-200;
+}
+
+.input:focus,
+.select:focus {
 	@apply border-[#c4a8e8];
 }
 
 .input::placeholder {
 	@apply text-[#bbb];
+}
+
+.input:disabled,
+.select:disabled,
+.fileInputLabel input:disabled {
+	@apply cursor-not-allowed opacity-60;
 }
 
 .dangerBtn {
@@ -115,6 +135,50 @@
 }
 
 .dangerBtn:disabled {
+	@apply cursor-not-allowed opacity-50;
+}
+
+.restoreStatus {
+	@apply flex flex-col gap-4 rounded-xl border border-[#e0d6f0] bg-[#faf8ff] p-4;
+}
+
+.restoreStatusHeader {
+	@apply flex items-start justify-between gap-4;
+}
+
+.restoreStatusGrid {
+	@apply grid grid-cols-3 gap-3;
+
+	@media (max-width: 760px) {
+		@apply grid-cols-1;
+	}
+}
+
+.restoreStatusGrid > div {
+	@apply min-w-0 rounded-lg border border-[#efe8fb] bg-white p-3;
+}
+
+.restoreStatusGrid .statusValue {
+	@apply break-words;
+}
+
+.restoreError {
+	@apply rounded-lg border border-[#f1b9bd] bg-[#fff1f2] px-4 py-3 text-sm leading-relaxed text-[#a92d46];
+}
+
+.fencedWarning {
+	@apply rounded-lg border-2 border-[#b42318] bg-[#fff1f0] px-4 py-3 text-sm leading-relaxed text-[#8f1d14];
+}
+
+.secondaryBtn {
+	@apply self-start cursor-pointer rounded-lg border border-[#d7c4ee] bg-white px-4 py-[9px] text-sm font-semibold text-[#6b2d8f] transition-colors duration-200;
+}
+
+.secondaryBtn:hover {
+	@apply bg-[#f3eeff];
+}
+
+.secondaryBtn:disabled {
 	@apply cursor-not-allowed opacity-50;
 }
 

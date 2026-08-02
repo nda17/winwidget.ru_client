@@ -171,6 +171,10 @@
 	@apply self-start rounded-lg border-none bg-[#6b2d8f] text-white text-sm font-semibold cursor-pointer transition-opacity duration-200 py-[10px] px-[24px];
 }
 
+.scheduleSaveBtn {
+	@apply col-span-full justify-self-start;
+}
+
 .actionBtn {
 	@apply rounded-lg border border-[#e0d6f0] bg-[#f3eeff] text-[#7b3fa0] text-sm font-semibold cursor-pointer transition-colors duration-200 py-[10px] px-4;
 }

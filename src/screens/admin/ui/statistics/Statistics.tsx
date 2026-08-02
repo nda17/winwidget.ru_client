@@ -1,14 +1,41 @@
 'use client'
 
 import styles from '@/screens/admin/ui/statistics/Statistics.module.scss'
+import { useStatisticsOverview } from '@/screens/admin/model/statistics/useStatisticsOverview'
 import LeadsByDayChart from '@/screens/admin/ui/statistics/charts/LeadsByDayChart/LeadsByDayChart'
 import LeadsByTypeChart from '@/screens/admin/ui/statistics/charts/LeadsByTypeChart/LeadsByTypeChart'
 import RevenueByMonthChart from '@/screens/admin/ui/statistics/charts/RevenueByMonthChart/RevenueByMonthChart'
 import StatisticsInsights from '@/screens/admin/ui/statistics/insights/StatisticsInsights'
 import AdminTooltip from '@/screens/admin/ui/common/admin-tooltip/AdminTooltip'
+import { errorCatch } from '@/shared/api'
 import { FC } from 'react'
 
 const Statistics: FC = () => {
+	const statistics = useStatisticsOverview()
+
+	if (statistics.isError) {
+		return (
+			<section className={styles.wrapper}>
+				<div className={styles['error-state']}>
+					<h3 className={styles['section-title']}>
+						Reporting Service временно недоступен
+					</h3>
+					<p className={styles['section-subtitle']}>
+						Не удалось загрузить статистику: {errorCatch(statistics.error)}
+					</p>
+					<button
+						type="button"
+						className={styles['retry-button']}
+						disabled={statistics.isFetching}
+						onClick={() => void statistics.refetch()}
+					>
+						{statistics.isFetching ? 'Повторяем...' : 'Повторить'}
+					</button>
+				</div>
+			</section>
+		)
+	}
+
 	return (
 		<section className={styles.wrapper}>
 			<section className={styles.section}>
