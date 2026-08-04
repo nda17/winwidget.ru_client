@@ -13,6 +13,7 @@ export type MessagingIntegration =
 	| 'campaign-admin-audit'
 	| 'limit-email'
 	| 'limit-telegram'
+	| 'notification-delivery-outcome'
 	| 'database-backup'
 
 export type MessagingFailureCategory =

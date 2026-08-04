@@ -39,6 +39,7 @@ const integrationLabels: Record<MessagingIntegration, string> = {
 	'campaign-admin-audit': 'Аудит кампаний',
 	'limit-email': 'Email о лимите',
 	'limit-telegram': 'Telegram о лимите',
+	'notification-delivery-outcome': 'Результат доставки уведомления',
 	'database-backup': 'Backup PostgreSQL'
 }
 
