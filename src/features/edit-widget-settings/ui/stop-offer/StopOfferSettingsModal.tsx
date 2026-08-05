@@ -2,6 +2,7 @@
 
 import { stopOfferService } from '@/entities/site-widget'
 import { StopOffer, StopOfferConfig } from '@/entities/site-widget'
+import { WIDGETS_HOST } from '@/shared/config/api.config'
 import { useMutation } from '@tanstack/react-query'
 import { useEffect, useId, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
@@ -436,11 +437,7 @@ const StopOfferSettingsModal = ({
 			? 'https://winwidget.ru'
 			: 'http://localhost:3000')
 	).replace(/\/$/, '')
-	const apiUrl = (
-		(process.env.NEXT_PUBLIC_MODE === 'production'
-			? process.env.NEXT_PUBLIC_PRODUCTION_HOST
-			: process.env.NEXT_PUBLIC_DEVELOPMENT_HOST) || 'https://winwidget.ru'
-	).replace(/\/$/, '')
+	const apiUrl = WIDGETS_HOST
 	const embedCode = `<script src="${apiUrl}/widgets/stop-offer.js" data-key="${stopOffer.publicKey}" async></script>`
 	const previewUrl = `${publicSiteUrl}/page-stop-offer/${stopOffer.publicKey}`
 	const savedInstallDomain = (

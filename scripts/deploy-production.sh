@@ -262,6 +262,7 @@ compose config --format json |
 			NEXT_PUBLIC_MODE: "production",
 			NEXT_PUBLIC_SITE_URL: "https://winwidget.ru",
 			NEXT_PUBLIC_PRODUCTION_HOST: "https://api.winwidget.ru",
+			NEXT_PUBLIC_WIDGETS_HOST: "",
 			NEXT_PUBLIC_API_URL: "https://api.winwidget.ru/api/v1",
 			NEXT_PUBLIC_RECAPTCHA_HOST: "https://www.recaptcha.net",
 		};

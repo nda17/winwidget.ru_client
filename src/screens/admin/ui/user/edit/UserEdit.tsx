@@ -187,6 +187,8 @@ const EVENT_ACTION_LABELS: Record<string, string> = {
 	WIDGET_CLONE: 'Копирование виджета',
 	WIDGET_DELETE: 'Удаление виджета',
 	WIDGET_BUTTON_IMAGE_UPDATE: 'Изображение кнопки виджета',
+	WIDGET_DELIVERY_RETRY: 'Повтор доставки виджета',
+	WIDGET_DELIVERY_CLOSE: 'Закрытие доставки виджета без повтора',
 	BACKLOG_TASK_CREATE: 'Создание задачи',
 	BACKLOG_TASK_UPDATE: 'Обновление задачи',
 	BACKLOG_TASK_DELETE: 'Удаление задачи',

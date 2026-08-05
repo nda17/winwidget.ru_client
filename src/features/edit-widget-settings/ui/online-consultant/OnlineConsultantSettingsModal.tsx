@@ -6,6 +6,7 @@ import {
 	OnlineConsultantConfig,
 	OnlineConsultantQuickAction
 } from '@/entities/site-widget'
+import { WIDGETS_HOST } from '@/shared/config/api.config'
 import { useMutation } from '@tanstack/react-query'
 import Image from 'next/image'
 import { ChangeEvent, useEffect, useId, useRef, useState } from 'react'
@@ -381,11 +382,7 @@ const OnlineConsultantSettingsModal = ({
 		onClose
 	})
 	const isPagePresentation = presentation === 'page'
-	const defaultButtonImageUrl = `${(
-		(process.env.NEXT_PUBLIC_MODE === 'production'
-			? process.env.NEXT_PUBLIC_PRODUCTION_HOST
-			: process.env.NEXT_PUBLIC_DEVELOPMENT_HOST) || 'https://winwidget.ru'
-	).replace(/\/$/, '')}/widgets/online-consultant-button.png`
+	const defaultButtonImageUrl = `${WIDGETS_HOST}/widgets/online-consultant-button.png`
 	const buttonImagePreviewUrl = cfg.buttonImageUrl || defaultButtonImageUrl
 	const buttonImageUploadDisabled =
 		!canUseCustomButtonImage ||
@@ -616,11 +613,7 @@ const OnlineConsultantSettingsModal = ({
 		})
 	}
 
-	const apiUrl = (
-		(process.env.NEXT_PUBLIC_MODE === 'production'
-			? process.env.NEXT_PUBLIC_PRODUCTION_HOST
-			: process.env.NEXT_PUBLIC_DEVELOPMENT_HOST) || 'https://winwidget.ru'
-	).replace(/\/$/, '')
+	const apiUrl = WIDGETS_HOST
 	const publicSiteUrl = (
 		process.env.NEXT_PUBLIC_SITE_URL ||
 		(process.env.NEXT_PUBLIC_MODE === 'production'

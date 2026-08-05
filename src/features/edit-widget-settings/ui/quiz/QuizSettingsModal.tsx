@@ -8,6 +8,7 @@ import {
 	QuizQuestion,
 	QuizResult
 } from '@/entities/site-widget'
+import { WIDGETS_HOST } from '@/shared/config/api.config'
 import ConfirmDialog from '@/shared/ui/confirm-dialog/ConfirmDialog'
 import { useMutation } from '@tanstack/react-query'
 import Image from 'next/image'
@@ -1227,10 +1228,7 @@ const QuizSettingsModal = ({
 		setConfirmResetAttempts(false)
 	}
 
-	const apiUrl =
-		process.env.NEXT_PUBLIC_MODE === 'production'
-			? process.env.NEXT_PUBLIC_PRODUCTION_HOST || 'https://winwidget.ru'
-			: process.env.NEXT_PUBLIC_DEVELOPMENT_HOST || 'http://localhost:4200'
+	const apiUrl = WIDGETS_HOST
 	const publicSiteUrl = (
 		process.env.NEXT_PUBLIC_SITE_URL ||
 		(process.env.NEXT_PUBLIC_MODE === 'production'

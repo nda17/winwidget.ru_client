@@ -11,6 +11,7 @@ export type MessagingIntegration =
 	| 'campaign-email'
 	| 'campaign-telegram'
 	| 'campaign-admin-audit'
+	| 'widgets-admin-audit'
 	| 'limit-email'
 	| 'limit-telegram'
 	| 'notification-delivery-outcome'
@@ -35,6 +36,8 @@ export interface MessagingOverview {
 	retryingFailures: number
 	deliveredLast24Hours: number
 	rabbitMqError: string | null
+	notificationDeliveryError: string | null
+	widgetsError: string | null
 	heartbeats: Array<{
 		service: string
 		status: 'ok' | 'down'

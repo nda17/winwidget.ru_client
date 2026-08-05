@@ -37,6 +37,7 @@ const integrationLabels: Record<MessagingIntegration, string> = {
 	'campaign-email': 'Email-кампания',
 	'campaign-telegram': 'Telegram-кампания',
 	'campaign-admin-audit': 'Аудит кампаний',
+	'widgets-admin-audit': 'Аудит виджетов',
 	'limit-email': 'Email о лимите',
 	'limit-telegram': 'Telegram о лимите',
 	'notification-delivery-outcome': 'Результат доставки уведомления',
@@ -331,7 +332,7 @@ export default function AdminMessaging() {
 							<Metric
 								title="DLQ не решено"
 								value={overview.data.unresolvedFailures}
-								description="Доставки, исчерпавшие автоматические попытки. Ошибки уже сохранены в PostgreSQL; подробности и действия с ними доступны DEV в блоке ниже."
+								description="Consumers, исчерпавшие автоматические попытки. Ошибки доставки доступны DEV в блоке ниже; внутренние ошибки проекций также входят в итог и требуют проверки health сервиса-владельца."
 							/>
 							<Metric
 								title="Повторяется"
@@ -357,12 +358,23 @@ export default function AdminMessaging() {
 							))}
 							<AdminTooltip
 								title="Состояние процессов"
-								description="Зелёный индикатор означает, что процесс присылал heartbeat в последние 30 секунд. Число показывает количество активных экземпляров. Heartbeat подтверждает, что publisher, integration-worker или maintenance-worker жив, но не проверяет доступность SMTP, Telegram, CRM или PostgreSQL."
+								description="Зелёный индикатор означает, что процесс присылал heartbeat в последние 30 секунд. Число показывает количество активных экземпляров. Heartbeat подтверждает, что Core, Notification Delivery или Widgets процесс жив, но не проверяет доступность SMTP, Telegram, CRM или PostgreSQL."
 							/>
 						</div>
 						{overview.data.rabbitMqError && (
 							<p className={styles.error}>
 								RabbitMQ: {overview.data.rabbitMqError}
+							</p>
+						)}
+						{overview.data.notificationDeliveryError && (
+							<p className={styles.error}>
+								Notification Delivery:{' '}
+								{overview.data.notificationDeliveryError}
+							</p>
+						)}
+						{overview.data.widgetsError && (
+							<p className={styles.error}>
+								Widgets: {overview.data.widgetsError}
 							</p>
 						)}
 						<div className={styles.queueHeading}>

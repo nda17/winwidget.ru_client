@@ -215,7 +215,8 @@ JWT_MAX_TOKEN_LIFETIME_SECONDS=900
 Gateway разрешает credentialed CORS только для точных development-origin
 `http://localhost:3000` и `http://127.0.0.1:3000`. Поэтому локальный frontend
 обращается к API через `:4100`; `NEXT_PUBLIC_DEVELOPMENT_HOST=:4200` остаётся
-только для unversioned runtime-виджетов, uploads и preview.
+для uploads из Core, а unversioned runtime-виджеты и preview используют
+`NEXT_PUBLIC_WIDGETS_HOST=:4700`.
 
 ## Запуск development-сервера
 
@@ -235,20 +236,21 @@ pnpm start
 
 ## Переменные окружения
 
-| Переменная                       | Назначение                                                                  |
-| -------------------------------- | --------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_MODE`               | Режим выбора адресов: `development` или `production`                        |
-| `NEXT_PUBLIC_SITE_URL`           | Публичный адрес frontend                                                    |
-| `NEXT_PUBLIC_PRODUCTION_HOST`    | Публичный адрес production backend                                          |
-| `NEXT_PUBLIC_DEVELOPMENT_HOST`   | Адрес локального backend                                                    |
-| `NEXT_PUBLIC_API_URL`            | Полный базовый URL API с `/api/v1`                                          |
-| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | Публичный ключ reCAPTCHA v3                                                 |
-| `NEXT_PUBLIC_RECAPTCHA_HOST`     | Хост загрузки reCAPTCHA                                                     |
-| `JWT_JWKS_URL`                   | Server-only URL набора публичных RS256-ключей backend                       |
-| `JWT_ISSUER`                     | Server-only ожидаемый issuer access token; должен совпадать с backend       |
-| `JWT_AUDIENCE`                   | Server-only ожидаемый audience access token; должен совпадать с backend     |
-| `JWT_CLOCK_TOLERANCE_SECONDS`    | Server-only допустимое расхождение часов, целое число секунд от `0` до `60` |
-| `JWT_MAX_TOKEN_LIFETIME_SECONDS` | Server-only максимальное время жизни access token, от `60` до `1800` секунд |
+| Переменная                       | Назначение                                                                             |
+| -------------------------------- | -------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_MODE`               | Режим выбора адресов: `development` или `production`                                   |
+| `NEXT_PUBLIC_SITE_URL`           | Публичный адрес frontend                                                               |
+| `NEXT_PUBLIC_PRODUCTION_HOST`    | Публичный адрес production backend                                                     |
+| `NEXT_PUBLIC_DEVELOPMENT_HOST`   | Адрес локального backend                                                               |
+| `NEXT_PUBLIC_WIDGETS_HOST`       | Адрес Widgets Service; по умолчанию `:4700` локально и production backend в production |
+| `NEXT_PUBLIC_API_URL`            | Полный базовый URL API с `/api/v1`                                                     |
+| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | Публичный ключ reCAPTCHA v3                                                            |
+| `NEXT_PUBLIC_RECAPTCHA_HOST`     | Хост загрузки reCAPTCHA                                                                |
+| `JWT_JWKS_URL`                   | Server-only URL набора публичных RS256-ключей backend                                  |
+| `JWT_ISSUER`                     | Server-only ожидаемый issuer access token; должен совпадать с backend                  |
+| `JWT_AUDIENCE`                   | Server-only ожидаемый audience access token; должен совпадать с backend                |
+| `JWT_CLOCK_TOLERANCE_SECONDS`    | Server-only допустимое расхождение часов, целое число секунд от `0` до `60`            |
+| `JWT_MAX_TOKEN_LIFETIME_SECONDS` | Server-only максимальное время жизни access token, от `60` до `1800` секунд            |
 
 Не коммитьте реальные секреты. Переменные `NEXT_PUBLIC_*` встраиваются во
 frontend во время сборки, поэтому после их изменения production image нужно

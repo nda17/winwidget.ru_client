@@ -2,6 +2,7 @@
 
 import { callbackService } from '@/entities/site-widget'
 import { Callback, CallbackConfig } from '@/entities/site-widget'
+import { WIDGETS_HOST } from '@/shared/config/api.config'
 import ConfirmDialog from '@/shared/ui/confirm-dialog/ConfirmDialog'
 import { useMutation } from '@tanstack/react-query'
 import Image from 'next/image'
@@ -331,11 +332,7 @@ const CallbackSettingsModal = ({
 			integrations: { ...(prev.integrations || {}), [key]: value }
 		}))
 
-	const apiUrl =
-		process.env.NEXT_PUBLIC_MODE === 'production'
-			? process.env.NEXT_PUBLIC_PRODUCTION_HOST ||
-				'https://api.winwidget.ru'
-			: process.env.NEXT_PUBLIC_DEVELOPMENT_HOST || 'http://localhost:4200'
+	const apiUrl = WIDGETS_HOST
 	const publicSiteUrl = (
 		process.env.NEXT_PUBLIC_SITE_URL ||
 		(process.env.NEXT_PUBLIC_MODE === 'production'

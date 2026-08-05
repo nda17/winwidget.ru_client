@@ -7,6 +7,7 @@ import { OnlineConsultantConfig } from '@/entities/site-widget'
 import { QuizConfig } from '@/entities/site-widget'
 import { StopOfferConfig } from '@/entities/site-widget'
 import { WidgetConfig } from '@/entities/site-widget'
+import { WIDGETS_HOST } from '@/shared/config/api.config'
 import { useDebounce } from '@/shared/lib/hooks/useDebounce'
 import type { CSSProperties } from 'react'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
@@ -71,10 +72,7 @@ type WidgetLivePreviewProps = WidgetLivePreviewEntityProps & {
 type PreviewDevice = 'desktop' | 'mobile'
 type PreviewSurface = 'dialog' | 'launcher'
 
-const API_URL =
-	process.env.NEXT_PUBLIC_MODE === 'production'
-		? process.env.NEXT_PUBLIC_PRODUCTION_HOST || 'https://winwidget.ru'
-		: process.env.NEXT_PUBLIC_DEVELOPMENT_HOST || 'http://localhost:4200'
+const API_URL = WIDGETS_HOST
 
 const SCRIPT_BY_TYPE: Record<PreviewType, string> = {
 	wheel: 'wheel.js',

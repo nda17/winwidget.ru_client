@@ -68,6 +68,8 @@ const ACTION_LABELS: Record<AdminEventLogAction, string> = {
 	WIDGET_CLONE: 'Копирование виджета',
 	WIDGET_DELETE: 'Удаление виджета',
 	WIDGET_BUTTON_IMAGE_UPDATE: 'Изображение кнопки виджета',
+	WIDGET_DELIVERY_RETRY: 'Повтор доставки виджета',
+	WIDGET_DELIVERY_CLOSE: 'Закрытие доставки виджета без повтора',
 	BACKLOG_TASK_CREATE: 'Создание задачи',
 	BACKLOG_TASK_UPDATE: 'Обновление задачи',
 	BACKLOG_TASK_DELETE: 'Удаление задачи',

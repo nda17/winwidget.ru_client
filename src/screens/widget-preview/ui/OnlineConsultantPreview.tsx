@@ -1,13 +1,9 @@
 'use client'
 
 import { useEffect } from 'react'
+import { WIDGETS_HOST } from '@/shared/config/api.config'
 import styles from './WidgetPreview.module.scss'
 import { IWidgetPreview } from './widget-preview.interface'
-
-const BACKEND =
-	process.env.NEXT_PUBLIC_MODE === 'production'
-		? process.env.NEXT_PUBLIC_PRODUCTION_HOST || 'https://winwidget.ru'
-		: process.env.NEXT_PUBLIC_DEVELOPMENT_HOST || 'http://localhost:4200'
 
 const OnlineConsultantPreview = ({ widgetKey }: IWidgetPreview) => {
 	useEffect(() => {
@@ -16,7 +12,7 @@ const OnlineConsultantPreview = ({ widgetKey }: IWidgetPreview) => {
 		;(window as any).winonlineconsultant = widgetKey
 
 		const script = document.createElement('script')
-		script.src = `${BACKEND}/widgets/online-consultant.js?v=${Date.now()}`
+		script.src = `${WIDGETS_HOST}/widgets/online-consultant.js?v=${Date.now()}`
 		script.async = true
 		script.dataset.key = widgetKey
 		document.body.appendChild(script)
