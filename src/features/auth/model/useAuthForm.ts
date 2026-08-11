@@ -1,5 +1,4 @@
 import { PUBLIC_PAGES } from '@/shared/config/pages/public.config'
-import { usePhoneMask } from '@/shared/lib/hooks/usePhoneMask'
 import { useRecaptchaV3 } from '@/features/auth/model/useRecaptchaV3'
 import { useNavigationContext } from '@/shared/lib/navigation/NavigationProvider'
 import authService, {
@@ -8,6 +7,7 @@ import authService, {
 } from '@/features/auth/api/auth.api'
 import { IFormData } from '@/features/auth/model/form.types'
 import { validPhoneCode } from '@/shared/regex'
+import { parsePhoneInput } from '@/shared/lib/phone'
 import { useAuthStore } from '@/entities/user'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
@@ -108,19 +108,24 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 	const [isTelegramAuthPolling, setIsTelegramAuthPolling] = useState(false)
 	const [authMessage, setAuthMessage] = useState(initialAuthMessage)
 
-	const { register, handleSubmit, reset, formState, watch, setValue } =
-		useForm<IFormData>({
-			mode: 'onChange'
-		})
-	const phoneInputRef = useRef<HTMLInputElement>(null)
+	const {
+		register,
+		handleSubmit,
+		reset,
+		formState,
+		watch,
+		setValue,
+		resetField,
+		control
+	} = useForm<IFormData>({
+		mode: 'onChange'
+	})
 	const router = useRouter()
 	const [isPending, startTransition] = useTransition()
 	const queryClient = useQueryClient()
 	const { executeRecaptcha, isRecaptchaEnabled } = useRecaptchaV3()
 	const emailValue = watch('email')
 	const phoneValue = watch('phone')
-	const phoneMask = usePhoneMask(setValue, phoneInputRef)
-	const resetPhoneMask = phoneMask.reset
 	const telegramAuthPollRef = useRef<ReturnType<
 		typeof setInterval
 	> | null>(null)
@@ -502,7 +507,7 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 			clearEmailCodeStep()
 			setIsPhoneCodeRequested(false)
 			setValue('code', '')
-			resetPhoneMask()
+			resetField('phone')
 			return
 		}
 
@@ -522,7 +527,7 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 		setValue('email', pendingEmailRegistration.email)
 		setValue('code', '')
 		setIsEmailCodeRequested(true)
-	}, [clearEmailCodeStep, isLogin, resetPhoneMask, setValue])
+	}, [clearEmailCodeStep, isLogin, resetField, setValue])
 
 	useEffect(() => {
 		if (authMethod === 'phone') {
@@ -533,8 +538,8 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 
 		setIsPhoneCodeRequested(false)
 		setValue('code', '')
-		resetPhoneMask()
-	}, [authMethod, clearEmailCodeStep, resetPhoneMask, setValue])
+		resetField('phone')
+	}, [authMethod, clearEmailCodeStep, resetField, setValue])
 
 	const onSubmit: SubmitHandler<IFormData> = async data => {
 		setAuthMessage('')
@@ -565,14 +570,22 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 		}
 
 		if (authMethod === 'phone') {
+			const phone = parsePhoneInput(data.phone || '')
+			if (!phone) {
+				toast.error('Введите корректный номер телефона')
+				return
+			}
+
+			const phoneData = { ...data, phone }
+
 			if (isLogin) {
-				mutatePhoneLogin({ data, token })
+				mutatePhoneLogin({ data: phoneData, token })
 				return
 			}
 
 			if (!isPhoneCodeRequested) {
 				mutatePhoneSendCode({
-					phone: data.phone || '',
+					phone,
 					token
 				})
 				return
@@ -583,7 +596,7 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 				return
 			}
 
-			mutatePhoneRegister({ data, token })
+			mutatePhoneRegister({ data: phoneData, token })
 			return
 		}
 
@@ -701,6 +714,7 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 
 	return {
 		register,
+		control,
 		handleSubmit,
 		onSubmit,
 		isLoading,
@@ -711,8 +725,6 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 		isEmailCodeRequested,
 		emailValue,
 		phoneValue,
-		phoneInputRef,
-		phoneMask,
 		resendEmailCode,
 		startTelegramAuth,
 		isTelegramAuthLoading: isTelegramStartPending || isTelegramAuthPolling,

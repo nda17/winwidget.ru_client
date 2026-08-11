@@ -9,13 +9,15 @@ import FieldPassword from '@/shared/ui/form-elements/auth-page/field-password/Fi
 import FieldPhone from '@/shared/ui/form-elements/auth-page/field-phone/FieldPhone'
 import FieldSmsCode from '@/shared/ui/form-elements/auth-page/field-sms-code/FieldSmsCode'
 import {
-	validEmail,
-	validPassword,
-	validPhone,
-	validPhoneCode
-} from '@/shared/regex'
+	PHONE_INPUT_MAX_LENGTH,
+	PHONE_INPUT_PLACEHOLDER,
+	formatPhoneInput,
+	isPhoneInputValid
+} from '@/shared/lib/phone'
+import { validEmail, validPassword, validPhoneCode } from '@/shared/regex'
 import clsx from 'clsx'
 import { NextPage } from 'next'
+import { Controller } from 'react-hook-form'
 
 const AuthForm: NextPage<IAuthFormProps> = ({ isLogin, authMessage }) => {
 	const {
@@ -23,6 +25,7 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin, authMessage }) => {
 		isLoading,
 		onSubmit,
 		register,
+		control,
 		formState: { errors, touchedFields, isSubmitted },
 		authMethod,
 		setAuthMethod,
@@ -30,8 +33,6 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin, authMessage }) => {
 		isEmailCodeRequested,
 		emailValue,
 		phoneValue,
-		phoneInputRef,
-		phoneMask,
 		resendEmailCode,
 		startTelegramAuth,
 		isTelegramAuthLoading,
@@ -136,42 +137,35 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin, authMessage }) => {
 				</>
 			) : (
 				<>
-					{(() => {
-						const phoneRegister = register('phone', {
+					<Controller
+						name="phone"
+						control={control}
+						rules={{
 							required: 'Введите номер телефона',
-							pattern: {
-								value: validPhone,
-								message: 'Проверьте правильность ввода номера телефона'
-							}
-						})
-
-						return (
+							validate: value =>
+								isPhoneInputValid(value || '') ||
+								'Проверьте правильность ввода номера телефона'
+						}}
+						render={({ field }) => (
 							<FieldPhone
-								{...phoneRegister}
-								placeholder="Телефон:"
+								{...field}
+								value={field.value || ''}
+								placeholder={PHONE_INPUT_PLACEHOLDER}
 								type="tel"
+								maxLength={PHONE_INPUT_MAX_LENGTH}
 								error={errors.phone}
 								data-validated={
 									touchedFields.phone || isSubmitted ? 'true' : undefined
 								}
-								data-mask-empty={
-									phoneMask.isMaskEmpty ? 'true' : undefined
-								}
 								disabled={!isLogin && isPhoneCodeRequested}
-								onFocus={phoneMask.onFocus}
-								onClick={phoneMask.onClick}
-								onKeyDown={phoneMask.onKeyDown}
-								onBeforeInput={phoneMask.onBeforeInput}
-								onInput={phoneMask.onInput}
-								onPaste={phoneMask.onPaste}
-								onBlur={phoneMask.onBlur}
-								ref={element => {
-									phoneRegister.ref(element)
-									phoneInputRef.current = element
-								}}
+								onChange={event =>
+									field.onChange(
+										formatPhoneInput(event.currentTarget.value)
+									)
+								}
 							/>
-						)
-					})()}
+						)}
+					/>
 					{!isLogin && isPhoneCodeRequested && (
 						<>
 							<FieldSmsCode
