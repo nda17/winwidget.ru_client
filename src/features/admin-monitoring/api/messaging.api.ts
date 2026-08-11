@@ -12,6 +12,22 @@ export type MessagingIntegration =
 	| 'campaign-telegram'
 	| 'campaign-admin-audit'
 	| 'widgets-admin-audit'
+	| 'reporting-admin-audit'
+	| 'billing-admin-audit'
+	| 'billing-payment-projection'
+	| 'billing-subscription-projection'
+	| 'billing-affiliate-projection'
+	| 'billing-settings-projection'
+	| 'billing-identity-source'
+	| 'billing-offer-source'
+	| 'billing-notification-routing-source'
+	| 'billing-settings-source'
+	| 'billing-trial-source'
+	| 'billing-referral-source'
+	| 'billing-lifecycle-repair-source'
+	| 'auto-renewal'
+	| 'subscription-expiry-email'
+	| 'subscription-expiry-telegram'
 	| 'limit-email'
 	| 'limit-telegram'
 	| 'notification-delivery-outcome'
@@ -38,6 +54,7 @@ export interface MessagingOverview {
 	rabbitMqError: string | null
 	notificationDeliveryError: string | null
 	widgetsError: string | null
+	billingError: string | null
 	heartbeats: Array<{
 		service: string
 		status: 'ok' | 'down'

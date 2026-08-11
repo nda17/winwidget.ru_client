@@ -21,6 +21,9 @@ export interface AdminTelegramBotSettings {
 	widgetsDatabaseBackupDelayMinutes: number
 	widgetsDatabaseBackupTime: string
 	widgetsDatabaseBackupTimeLabel: string
+	billingDatabaseBackupDelayMinutes: number
+	billingDatabaseBackupTime: string
+	billingDatabaseBackupTimeLabel: string
 	databaseBackupLastSentPeriodStart: string | null
 	databaseBackupLastSentAt: string | null
 	telegramBotTokenConfigured: boolean
@@ -96,6 +99,7 @@ export type TelegramDatabaseBackupTarget =
 	| 'campaigns'
 	| 'reporting'
 	| 'widgets'
+	| 'billing'
 
 export interface TelegramDatabaseBackupJobResult {
 	target: TelegramDatabaseBackupTarget

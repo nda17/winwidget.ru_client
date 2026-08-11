@@ -17,6 +17,7 @@ export type DatabaseRestoreTarget =
 	| 'campaigns'
 	| 'reporting'
 	| 'widgets'
+	| 'billing'
 
 export type DatabaseRestoreJobStatus =
 	| 'QUEUED'

@@ -98,7 +98,8 @@ const DATABASE_RESTORE_TARGETS: readonly DatabaseRestoreTarget[] = [
 	'notification-delivery',
 	'campaigns',
 	'reporting',
-	'widgets'
+	'widgets',
+	'billing'
 ]
 
 interface DatabaseBackupActiveMarker {
@@ -258,7 +259,8 @@ const getDatabaseBackupTargetLabel = (
 		'notification-delivery': 'БД Notification Delivery',
 		campaigns: 'БД Campaigns',
 		reporting: 'БД Reporting',
-		widgets: 'БД Widgets'
+		widgets: 'БД Widgets',
+		billing: 'БД Billing'
 	})[target]
 
 const getDatabaseRestoreTargetLabel = (
@@ -271,7 +273,8 @@ const getDatabaseRestoreTargetLabel = (
 		'notification-delivery': 'Notification Delivery',
 		campaigns: 'Campaigns',
 		reporting: 'Reporting',
-		widgets: 'Widgets'
+		widgets: 'Widgets',
+		billing: 'Billing'
 	}[target]
 
 const useDatabaseBackup = (
@@ -1538,7 +1541,7 @@ const AdminDatabases: NextPage = () => {
 			/>
 
 			{isLoading ? (
-				Array.from({ length: 5 }, (_, cardIndex) => (
+				Array.from({ length: 6 }, (_, cardIndex) => (
 					<div key={cardIndex} className={styles.card}>
 						<SkeletonLoader count={1} className="h-[64px]" />
 						<div className={styles.backupMetaGrid}>
@@ -1593,6 +1596,14 @@ const AdminDatabases: NextPage = () => {
 						title="Backup базы Widgets"
 						description="Локальная БД микросервиса Widgets Service"
 						scheduleTimeLabel={settings.widgetsDatabaseBackupTimeLabel}
+						settings={settings}
+						userId={user.id}
+					/>
+					<DatabaseBackupPanel
+						target="billing"
+						title="Backup базы Billing"
+						description="Локальная БД микросервиса Billing Service"
+						scheduleTimeLabel={settings.billingDatabaseBackupTimeLabel}
 						settings={settings}
 						userId={user.id}
 					/>

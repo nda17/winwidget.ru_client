@@ -469,7 +469,8 @@ const AdminTelegramBot: NextPage = () => {
 				settings.notificationDeliveryDatabaseBackupDelayMinutes,
 				settings.campaignsDatabaseBackupDelayMinutes,
 				settings.reportingDatabaseBackupDelayMinutes,
-				settings.widgetsDatabaseBackupDelayMinutes
+				settings.widgetsDatabaseBackupDelayMinutes,
+				settings.billingDatabaseBackupDelayMinutes
 			])
 		) {
 			toast.error(
@@ -550,7 +551,8 @@ const AdminTelegramBot: NextPage = () => {
 					settings.notificationDeliveryDatabaseBackupDelayMinutes,
 					settings.campaignsDatabaseBackupDelayMinutes,
 					settings.reportingDatabaseBackupDelayMinutes,
-					settings.widgetsDatabaseBackupDelayMinutes
+					settings.widgetsDatabaseBackupDelayMinutes,
+					settings.billingDatabaseBackupDelayMinutes
 				]
 			)
 		) {
@@ -610,6 +612,12 @@ const AdminTelegramBot: NextPage = () => {
 				backupTime,
 				settings.widgetsDatabaseBackupDelayMinutes
 			) ?? settings.widgetsDatabaseBackupTime)
+		: null
+	const billingBackupTime = settings
+		? (addMinutesToTime(
+				backupTime,
+				settings.billingDatabaseBackupDelayMinutes
+			) ?? settings.billingDatabaseBackupTime)
 		: null
 	const isLoading = isTelegramSettingsLoading
 	const isDailySummaryReadOnly =
@@ -1145,8 +1153,9 @@ const AdminTelegramBot: NextPage = () => {
 									{settings.notificationDeliveryDatabaseBackupTimeLabel},
 									Campaigns — в {settings.campaignsDatabaseBackupTimeLabel}
 									, Reporting — в{' '}
-									{settings.reportingDatabaseBackupTimeLabel}, а Widgets —
-									в {settings.widgetsDatabaseBackupTimeLabel}. Все файлы
+									{settings.reportingDatabaseBackupTimeLabel}, Widgets — в{' '}
+									{settings.widgetsDatabaseBackupTimeLabel}, а Billing — в{' '}
+									{settings.billingDatabaseBackupTimeLabel}. Все файлы
 									приходят отдельно в топик Backups.
 								</p>
 							</div>
@@ -1212,6 +1221,12 @@ const AdminTelegramBot: NextPage = () => {
 										{widgetsBackupTime ? `${widgetsBackupTime} МСК` : '—'}
 									</p>
 								</div>
+								<div className={styles.field}>
+									<span className={styles.label}>Backup Billing</span>
+									<p className={styles.derivedTime}>
+										{billingBackupTime ? `${billingBackupTime} МСК` : '—'}
+									</p>
+								</div>
 								<button
 									type="button"
 									className={`${styles.saveBtn} ${styles.scheduleSaveBtn}`}
@@ -1226,14 +1241,16 @@ const AdminTelegramBot: NextPage = () => {
 							</div>
 							<p className={styles.hint}>
 								Время указывается по Москве. Notification Delivery,
-								Campaigns, Reporting и Widgets запускаются через{' '}
+								Campaigns, Reporting, Widgets и Billing запускаются через{' '}
 								{settings.notificationDeliveryDatabaseBackupDelayMinutes}
 								{', '}
 								{settings.campaignsDatabaseBackupDelayMinutes}
 								{', '}
 								{settings.reportingDatabaseBackupDelayMinutes}
+								{', '}
+								{settings.widgetsDatabaseBackupDelayMinutes}
 								{' и '}
-								{settings.widgetsDatabaseBackupDelayMinutes} минут после
+								{settings.billingDatabaseBackupDelayMinutes} минут после
 								основной БД соответственно. Сводка должна быть разнесена с
 								каждым backup минимум на {MIN_TASK_TIME_GAP_MINUTES} минут.
 							</p>

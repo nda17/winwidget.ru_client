@@ -38,6 +38,22 @@ const integrationLabels: Record<MessagingIntegration, string> = {
 	'campaign-telegram': 'Telegram-кампания',
 	'campaign-admin-audit': 'Аудит кампаний',
 	'widgets-admin-audit': 'Аудит виджетов',
+	'reporting-admin-audit': 'Аудит Reporting',
+	'billing-admin-audit': 'Аудит Billing',
+	'billing-payment-projection': 'Проекция платежей Billing',
+	'billing-subscription-projection': 'Проекция подписок Billing',
+	'billing-affiliate-projection': 'Проекция партнёрки Billing',
+	'billing-settings-projection': 'Проекция настроек Billing',
+	'billing-identity-source': 'Идентичность для Billing',
+	'billing-offer-source': 'Тарифы для Billing',
+	'billing-notification-routing-source': 'Маршруты уведомлений Billing',
+	'billing-settings-source': 'Настройки для Billing',
+	'billing-trial-source': 'Trial-подписка Billing',
+	'billing-referral-source': 'Реферал Billing',
+	'billing-lifecycle-repair-source': 'Восстановление lifecycle Billing',
+	'auto-renewal': 'Автопродление Billing',
+	'subscription-expiry-email': 'Истечение подписки — Email',
+	'subscription-expiry-telegram': 'Истечение подписки — Telegram',
 	'limit-email': 'Email о лимите',
 	'limit-telegram': 'Telegram о лимите',
 	'notification-delivery-outcome': 'Результат доставки уведомления',
@@ -358,7 +374,7 @@ export default function AdminMessaging() {
 							))}
 							<AdminTooltip
 								title="Состояние процессов"
-								description="Зелёный индикатор означает, что процесс присылал heartbeat в последние 30 секунд. Число показывает количество активных экземпляров. Heartbeat подтверждает, что Core, Notification Delivery или Widgets процесс жив, но не проверяет доступность SMTP, Telegram, CRM или PostgreSQL."
+								description="Зелёный индикатор означает, что процесс присылал heartbeat в последние 30 секунд. Число показывает количество активных экземпляров. Heartbeat подтверждает, что Core, Notification Delivery, Widgets или Billing процесс жив, но не проверяет доступность SMTP, Telegram, CRM или PostgreSQL."
 							/>
 						</div>
 						{overview.data.rabbitMqError && (
@@ -377,11 +393,16 @@ export default function AdminMessaging() {
 								Widgets: {overview.data.widgetsError}
 							</p>
 						)}
+						{overview.data.billingError && (
+							<p className={styles.error}>
+								Billing: {overview.data.billingError}
+							</p>
+						)}
 						<div className={styles.queueHeading}>
 							<span>Очереди RabbitMQ</span>
 							<AdminTooltip
 								title="Как читать таблицу очередей"
-								description="«Готово» — сообщения ожидают обработки. «В работе» — уже переданы consumer, но ещё не подтверждены через ack. «Consumers» — подключённые обработчики. Для retry-v2 значение Consumers = 0 нормально: RabbitMQ сам вернёт сообщение после задержки. Dead-letter хранит окончательные ошибки до переноса в PostgreSQL, а пустые retry.1–3 — старые очереди, которые больше не используются."
+								description="«Готово» — сообщения ожидают обработки. «В работе» — уже переданы consumer, но ещё не подтверждены через ack. «Consumers» — подключённые обработчики. Для retry-очередей Consumers = 0 штатно: RabbitMQ сам вернёт сообщение после задержки. У пассивных provider DLQ consumer тоже отсутствует; такая очередь здорова только при «Готово» = 0 и «В работе» = 0, а любое сообщение требует диагностики. Активные DLQ переносят окончательные ошибки в PostgreSQL для ручной обработки."
 							/>
 						</div>
 						<div className={styles.tableWrap}>
