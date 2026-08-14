@@ -7,12 +7,6 @@ export interface SiteSettings {
 	autoRenewalSignupEnabled: boolean
 	autoRenewalChargesEnabled: boolean
 	autoRenewalChargesEnabledAt: string
-	recaptchaEnabled: boolean
-	googleAuthEnabled: boolean
-	yandexAuthEnabled: boolean
-	githubAuthEnabled: boolean
-	vkAuthEnabled: boolean
-	telegramAuthEnabled: boolean
 	affiliateProgramEnabled: boolean
 	affiliateCashbackPercent: number
 	autoRenewalTerms: {

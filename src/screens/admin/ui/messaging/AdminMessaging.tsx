@@ -40,6 +40,9 @@ const integrationLabels: Record<MessagingIntegration, string> = {
 	'widgets-admin-audit': 'Аудит виджетов',
 	'reporting-admin-audit': 'Аудит Reporting',
 	'billing-admin-audit': 'Аудит Billing',
+	'identity-admin-audit': 'Аудит Identity',
+	'telegram-destination-unavailable':
+		'Недоступный Telegram-адресат Identity',
 	'billing-payment-projection': 'Проекция платежей Billing',
 	'billing-subscription-projection': 'Проекция подписок Billing',
 	'billing-affiliate-projection': 'Проекция партнёрки Billing',
@@ -374,7 +377,7 @@ export default function AdminMessaging() {
 							))}
 							<AdminTooltip
 								title="Состояние процессов"
-								description="Зелёный индикатор означает, что процесс присылал heartbeat в последние 30 секунд. Число показывает количество активных экземпляров. Heartbeat подтверждает, что Core, Notification Delivery, Widgets или Billing процесс жив, но не проверяет доступность SMTP, Telegram, CRM или PostgreSQL."
+								description="Зелёный индикатор означает, что процесс присылал heartbeat в последние 30 секунд. Число показывает количество активных экземпляров. Heartbeat подтверждает, что Core, Identity, Notification Delivery, Widgets или Billing процесс жив, но не проверяет доступность SMTP, Telegram, CRM или PostgreSQL."
 							/>
 						</div>
 						{overview.data.rabbitMqError && (
@@ -396,6 +399,11 @@ export default function AdminMessaging() {
 						{overview.data.billingError && (
 							<p className={styles.error}>
 								Billing: {overview.data.billingError}
+							</p>
+						)}
+						{overview.data.identityError && (
+							<p className={styles.error}>
+								Identity: {overview.data.identityError}
 							</p>
 						)}
 						<div className={styles.queueHeading}>

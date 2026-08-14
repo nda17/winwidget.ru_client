@@ -7,7 +7,9 @@ import Header from '@/app/_ui/layout/header/Header'
 import { ILayout } from '@/app/_ui/layout/layout.interface'
 import { PUBLIC_PAGES } from '@/shared/config/pages/public.config'
 import { useAuthStore } from '@/entities/user'
+import { authSettingsService } from '@/features/auth/api/auth.api'
 import { useVeilBackgroundStore } from '@/shared/lib/veil-background'
+import { useQuery } from '@tanstack/react-query'
 import { NextPage } from 'next'
 import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
@@ -21,6 +23,10 @@ const Layout: NextPage<ILayout> = ({
 		state => state.visible
 	)
 	const auth = useAuthStore(state => state.auth)
+	const { data: authSettings } = useQuery({
+		queryKey: ['auth-settings'],
+		queryFn: authSettingsService.get
+	})
 	const pathname = usePathname()
 	const isRecaptchaPage =
 		pathname === PUBLIC_PAGES.LOGIN ||
@@ -29,7 +35,7 @@ const Layout: NextPage<ILayout> = ({
 
 	useEffect(() => {
 		const shouldHideRecaptchaBadge =
-			auth || !isRecaptchaPage || siteSettings?.recaptchaEnabled === false
+			auth || !isRecaptchaPage || authSettings?.recaptchaEnabled === false
 
 		document.body.classList.toggle(
 			'hide-recaptcha-badge',
@@ -39,7 +45,7 @@ const Layout: NextPage<ILayout> = ({
 		return () => {
 			document.body.classList.remove('hide-recaptcha-badge')
 		}
-	}, [auth, isRecaptchaPage, siteSettings?.recaptchaEnabled])
+	}, [auth, authSettings?.recaptchaEnabled, isRecaptchaPage])
 
 	const isLandingPage = pathname === PUBLIC_PAGES.HOME
 	const isWidgetPreview =

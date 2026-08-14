@@ -17,12 +17,6 @@ const siteSettingsService = {
 				| 'paymentEnabled'
 				| 'autoRenewalSignupEnabled'
 				| 'autoRenewalChargesEnabled'
-				| 'recaptchaEnabled'
-				| 'googleAuthEnabled'
-				| 'yandexAuthEnabled'
-				| 'githubAuthEnabled'
-				| 'vkAuthEnabled'
-				| 'telegramAuthEnabled'
 			>
 		>
 	): Promise<SiteSettings> {

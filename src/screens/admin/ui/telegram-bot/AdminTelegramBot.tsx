@@ -11,6 +11,7 @@ import Heading from '@/shared/ui/heading/Heading'
 import SkeletonLoader from '@/shared/ui/skeleton-loader/SkeletonLoader'
 import {
 	adminTelegramBotService,
+	identityTelegramAuthService,
 	type AdminTelegramBotSettings,
 	type TelegramWebhookBot
 } from '@/features/manage-telegram-bot'
@@ -29,6 +30,8 @@ const DAILY_SUMMARY_SETTINGS_QUERY_KEY = [
 	'admin-reporting-daily-summary-settings'
 ]
 const WEBHOOKS_QUERY_KEY = ['admin-telegram-bot-webhooks']
+const IDENTITY_AUTH_SETTINGS_QUERY_KEY = ['admin-telegram-auth-settings']
+const IDENTITY_WEBHOOK_QUERY_KEY = ['admin-telegram-auth-webhook']
 const WEBHOOK_BOTS: TelegramWebhookBot[] = ['info', 'auth', 'support']
 const MIN_TASK_TIME_GAP_MINUTES = 5
 const MAX_TELEGRAM_TOPIC_ID = 2147483647
@@ -169,6 +172,16 @@ const AdminTelegramBot: NextPage = () => {
 			queryFn: adminTelegramBotService.get
 		})
 	const {
+		data: identityAuthSettings,
+		isLoading: isIdentityAuthSettingsLoading,
+		isFetching: isIdentityAuthSettingsFetching,
+		isError: isIdentityAuthSettingsError,
+		refetch: refetchIdentityAuthSettings
+	} = useQuery({
+		queryKey: IDENTITY_AUTH_SETTINGS_QUERY_KEY,
+		queryFn: identityTelegramAuthService.getSettings
+	})
+	const {
 		data: dailySummarySettings,
 		isLoading: isDailySummarySettingsLoading,
 		isError: isDailySummarySettingsError,
@@ -181,11 +194,20 @@ const AdminTelegramBot: NextPage = () => {
 
 	const {
 		data: webhookStatuses,
-		isLoading: isWebhookStatusesLoading,
+		isFetching: isWebhookStatusesFetching,
 		refetch: refetchWebhookStatuses
 	} = useQuery({
 		queryKey: WEBHOOKS_QUERY_KEY,
 		queryFn: adminTelegramBotService.getWebhookStatuses
+	})
+	const {
+		data: identityWebhookStatus,
+		isFetching: isIdentityWebhookStatusFetching,
+		isError: isIdentityWebhookStatusError,
+		refetch: refetchIdentityWebhookStatus
+	} = useQuery({
+		queryKey: IDENTITY_WEBHOOK_QUERY_KEY,
+		queryFn: identityTelegramAuthService.getWebhookStatus
 	})
 
 	useEffect(() => {
@@ -256,11 +278,10 @@ const AdminTelegramBot: NextPage = () => {
 	})
 
 	const webhookMutation = useMutation({
-		mutationFn: adminTelegramBotService.reinstallWebhook
-	})
-
-	const allWebhooksMutation = useMutation({
-		mutationFn: adminTelegramBotService.reinstallWebhooks
+		mutationFn: (bot: TelegramWebhookBot) =>
+			bot === 'auth'
+				? identityTelegramAuthService.reinstallWebhook()
+				: adminTelegramBotService.reinstallWebhook(bot)
 	})
 
 	const saveWithToast = (
@@ -292,7 +313,8 @@ const AdminTelegramBot: NextPage = () => {
 	const handleReinstallWebhook = (bot: TelegramWebhookBot) => {
 		const promise = webhookMutation.mutateAsync(bot).then(async result => {
 			await queryClient.invalidateQueries({
-				queryKey: WEBHOOKS_QUERY_KEY
+				queryKey:
+					bot === 'auth' ? IDENTITY_WEBHOOK_QUERY_KEY : WEBHOOKS_QUERY_KEY
 			})
 			return result
 		})
@@ -305,23 +327,6 @@ const AdminTelegramBot: NextPage = () => {
 						? 'Переустанавливаем webhook @winwidget_support_bot...'
 						: 'Переустанавливаем webhook @winwidget_info_bot...',
 			success: result => `Webhook ${result.title} переустановлен`,
-			error: error => `Ошибка webhook: ${errorCatch(error)}`
-		})
-	}
-
-	const handleReinstallAllWebhooks = () => {
-		const promise = allWebhooksMutation
-			.mutateAsync()
-			.then(async result => {
-				await queryClient.invalidateQueries({
-					queryKey: WEBHOOKS_QUERY_KEY
-				})
-				return result
-			})
-
-		toast.promise(promise, {
-			loading: 'Переустанавливаем webhook Telegram-ботов...',
-			success: 'Webhook Telegram-ботов переустановлены',
 			error: error => `Ошибка webhook: ${errorCatch(error)}`
 		})
 	}
@@ -470,7 +475,8 @@ const AdminTelegramBot: NextPage = () => {
 				settings.campaignsDatabaseBackupDelayMinutes,
 				settings.reportingDatabaseBackupDelayMinutes,
 				settings.widgetsDatabaseBackupDelayMinutes,
-				settings.billingDatabaseBackupDelayMinutes
+				settings.billingDatabaseBackupDelayMinutes,
+				settings.identityDatabaseBackupDelayMinutes
 			])
 		) {
 			toast.error(
@@ -552,7 +558,8 @@ const AdminTelegramBot: NextPage = () => {
 					settings.campaignsDatabaseBackupDelayMinutes,
 					settings.reportingDatabaseBackupDelayMinutes,
 					settings.widgetsDatabaseBackupDelayMinutes,
-					settings.billingDatabaseBackupDelayMinutes
+					settings.billingDatabaseBackupDelayMinutes,
+					settings.identityDatabaseBackupDelayMinutes
 				]
 			)
 		) {
@@ -587,8 +594,7 @@ const AdminTelegramBot: NextPage = () => {
 				).getTime())
 			? dailySummarySettings.lastFailedDelivery
 			: null
-	const isWebhookActionPending =
-		webhookMutation.isPending || allWebhooksMutation.isPending
+	const isWebhookActionPending = webhookMutation.isPending
 	const notificationDeliveryBackupTime = settings
 		? (addMinutesToTime(
 				backupTime,
@@ -619,6 +625,12 @@ const AdminTelegramBot: NextPage = () => {
 				settings.billingDatabaseBackupDelayMinutes
 			) ?? settings.billingDatabaseBackupTime)
 		: null
+	const identityBackupTime = settings
+		? (addMinutesToTime(
+				backupTime,
+				settings.identityDatabaseBackupDelayMinutes
+			) ?? settings.identityDatabaseBackupTime)
+		: null
 	const isLoading = isTelegramSettingsLoading
 	const isDailySummaryReadOnly =
 		dailySummarySettings?.owner !== 'REPORTING'
@@ -640,12 +652,19 @@ const AdminTelegramBot: NextPage = () => {
 					(settings[field.key]?.toString() ?? '')
 			))
 	)
+	const webhookStatusItems = [
+		...(webhookStatuses?.items.filter(status => status.bot !== 'auth') ??
+			[]),
+		...(identityWebhookStatus ? [identityWebhookStatus] : [])
+	]
 	const statusByBot = new Map(
-		webhookStatuses?.items.map(status => [status.bot, status]) ?? []
+		webhookStatusItems.map(status => [status.bot, status])
 	)
 	const isBotTokenConfigured = (bot: TelegramWebhookBot) => {
+		if (bot === 'auth') {
+			return Boolean(identityAuthSettings?.authTelegramBotTokenConfigured)
+		}
 		if (!settings) return false
-		if (bot === 'auth') return settings.authTelegramBotTokenConfigured
 		if (bot === 'support')
 			return settings.supportTelegramBotTokenConfigured
 		return settings.telegramBotTokenConfigured
@@ -659,7 +678,7 @@ const AdminTelegramBot: NextPage = () => {
 			<AdminSectionHeading
 				text="Telegram-боты"
 				title="Webhook и сообщения в Telegram"
-				description="Настраивает webhook Auth_bot, @winwidget_info_bot и @winwidget_support_bot, а также распределение служебных сообщений по топикам Telegram-группы администраторов."
+				description="Настраивает Identity webhook Auth_bot, Core webhook @winwidget_info_bot и @winwidget_support_bot, а также распределение служебных сообщений по топикам Telegram-группы администраторов."
 				risk="medium"
 				riskText="Группа должна быть супергруппой с включёнными Topics. Если ID группы или нужного топика указан неверно, соответствующие сообщения не отправятся. @winwidget_info_bot и @winwidget_support_bot должны быть добавлены в группу, а токены должны быть настроены на сервере."
 			/>
@@ -714,14 +733,18 @@ const AdminTelegramBot: NextPage = () => {
 								<p className={styles.statusLabel}>Токен Auth_bot</p>
 								<span
 									className={`${styles.badge} ${
-										settings.authTelegramBotTokenConfigured
+										identityAuthSettings?.authTelegramBotTokenConfigured
 											? styles.badgeOk
 											: styles.badgeWarning
 									}`}
 								>
-									{settings.authTelegramBotTokenConfigured
-										? 'Настроен'
-										: 'Не настроен'}
+									{isIdentityAuthSettingsLoading
+										? 'Загрузка...'
+										: isIdentityAuthSettingsError
+											? 'Недоступен'
+											: identityAuthSettings?.authTelegramBotTokenConfigured
+												? 'Настроен'
+												: 'Не настроен'}
 								</span>
 							</div>
 							<div className={styles.statusItem}>
@@ -744,14 +767,18 @@ const AdminTelegramBot: NextPage = () => {
 								<p className={styles.statusLabel}>Username Auth_bot</p>
 								<span
 									className={`${styles.badge} ${
-										settings.authTelegramBotUsernameConfigured
+										identityAuthSettings?.authTelegramBotUsernameConfigured
 											? styles.badgeOk
 											: styles.badgeWarning
 									}`}
 								>
-									{settings.authTelegramBotUsernameConfigured
-										? 'Настроен'
-										: 'Не настроен'}
+									{isIdentityAuthSettingsLoading
+										? 'Загрузка...'
+										: isIdentityAuthSettingsError
+											? 'Недоступен'
+											: identityAuthSettings?.authTelegramBotUsernameConfigured
+												? 'Настроен'
+												: 'Не настроен'}
 								</span>
 							</div>
 							<div className={styles.statusItem}>
@@ -826,8 +853,7 @@ const AdminTelegramBot: NextPage = () => {
 									onClick={() => handleReinstallWebhook('auth')}
 									disabled={
 										isWebhookActionPending ||
-										!settings.authTelegramBotTokenConfigured ||
-										!settings.telegramWebhookHostConfigured
+										!identityAuthSettings?.authTelegramBotTokenConfigured
 									}
 								>
 									Auth_bot
@@ -844,20 +870,6 @@ const AdminTelegramBot: NextPage = () => {
 								>
 									@winwidget_support_bot
 								</button>
-								<button
-									type="button"
-									className={styles.saveBtn}
-									onClick={handleReinstallAllWebhooks}
-									disabled={
-										isWebhookActionPending ||
-										!settings.telegramBotTokenConfigured ||
-										!settings.authTelegramBotTokenConfigured ||
-										!settings.supportTelegramBotTokenConfigured ||
-										!settings.telegramWebhookHostConfigured
-									}
-								>
-									Переустановить все
-								</button>
 							</div>
 						</div>
 
@@ -873,8 +885,18 @@ const AdminTelegramBot: NextPage = () => {
 								<button
 									type="button"
 									className={styles.actionBtn}
-									onClick={() => refetchWebhookStatuses()}
-									disabled={isWebhookStatusesLoading}
+									onClick={() =>
+										void Promise.all([
+											refetchWebhookStatuses(),
+											refetchIdentityWebhookStatus(),
+											refetchIdentityAuthSettings()
+										])
+									}
+									disabled={
+										isWebhookStatusesFetching ||
+										isIdentityWebhookStatusFetching ||
+										isIdentityAuthSettingsFetching
+									}
 								>
 									Обновить
 								</button>
@@ -884,6 +906,10 @@ const AdminTelegramBot: NextPage = () => {
 								{WEBHOOK_BOTS.map(bot => {
 									const status = statusByBot.get(bot)
 									const pendingCount = status?.pendingUpdateCount ?? null
+									const isIdentityUnavailable =
+										bot === 'auth' &&
+										(isIdentityAuthSettingsError ||
+											isIdentityWebhookStatusError)
 									const hasProblem = Boolean(
 										status &&
 										(!status.ok ||
@@ -912,11 +938,13 @@ const AdminTelegramBot: NextPage = () => {
 																: styles.badgeOk
 													}`}
 												>
-													{!status
-														? 'Проверяем'
-														: hasProblem
-															? 'Внимание'
-															: 'OK'}
+													{isIdentityUnavailable
+														? 'Недоступен'
+														: !status
+															? 'Проверяем'
+															: hasProblem
+																? 'Внимание'
+																: 'OK'}
 												</span>
 											</div>
 											<p className={styles.webhookStatusLine}>
@@ -978,11 +1006,15 @@ const AdminTelegramBot: NextPage = () => {
 													Username в env не совпадает с токеном
 												</p>
 											)}
-											{!isBotTokenConfigured(bot) && (
+											{isIdentityUnavailable ? (
+												<p className={styles.webhookStatusError}>
+													Identity Service недоступен
+												</p>
+											) : !isBotTokenConfigured(bot) ? (
 												<p className={styles.webhookStatusError}>
 													Токен не настроен
 												</p>
-											)}
+											) : null}
 										</div>
 									)
 								})}
@@ -1154,8 +1186,9 @@ const AdminTelegramBot: NextPage = () => {
 									Campaigns — в {settings.campaignsDatabaseBackupTimeLabel}
 									, Reporting — в{' '}
 									{settings.reportingDatabaseBackupTimeLabel}, Widgets — в{' '}
-									{settings.widgetsDatabaseBackupTimeLabel}, а Billing — в{' '}
-									{settings.billingDatabaseBackupTimeLabel}. Все файлы
+									{settings.widgetsDatabaseBackupTimeLabel}, Billing — в{' '}
+									{settings.billingDatabaseBackupTimeLabel}, а Identity — в{' '}
+									{settings.identityDatabaseBackupTimeLabel}. Все файлы
 									приходят отдельно в топик Backups.
 								</p>
 							</div>
@@ -1227,6 +1260,14 @@ const AdminTelegramBot: NextPage = () => {
 										{billingBackupTime ? `${billingBackupTime} МСК` : '—'}
 									</p>
 								</div>
+								<div className={styles.field}>
+									<span className={styles.label}>Backup Identity</span>
+									<p className={styles.derivedTime}>
+										{identityBackupTime
+											? `${identityBackupTime} МСК`
+											: '—'}
+									</p>
+								</div>
 								<button
 									type="button"
 									className={`${styles.saveBtn} ${styles.scheduleSaveBtn}`}
@@ -1241,7 +1282,8 @@ const AdminTelegramBot: NextPage = () => {
 							</div>
 							<p className={styles.hint}>
 								Время указывается по Москве. Notification Delivery,
-								Campaigns, Reporting, Widgets и Billing запускаются через{' '}
+								Campaigns, Reporting, Widgets, Billing и Identity
+								запускаются через{' '}
 								{settings.notificationDeliveryDatabaseBackupDelayMinutes}
 								{', '}
 								{settings.campaignsDatabaseBackupDelayMinutes}
@@ -1249,8 +1291,10 @@ const AdminTelegramBot: NextPage = () => {
 								{settings.reportingDatabaseBackupDelayMinutes}
 								{', '}
 								{settings.widgetsDatabaseBackupDelayMinutes}
+								{', '}
+								{settings.billingDatabaseBackupDelayMinutes}
 								{' и '}
-								{settings.billingDatabaseBackupDelayMinutes} минут после
+								{settings.identityDatabaseBackupDelayMinutes} минут после
 								основной БД соответственно. Сводка должна быть разнесена с
 								каждым backup минимум на {MIN_TASK_TIME_GAP_MINUTES} минут.
 							</p>

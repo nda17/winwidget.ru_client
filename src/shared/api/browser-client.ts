@@ -1,10 +1,10 @@
 import { API_URL } from '@/shared/config/api.config'
-import { PUBLIC_PAGES } from '@/shared/config/pages/public.config'
 import axios, { AxiosResponse, CreateAxiosDefaults } from 'axios'
+import { clearBrowserSession } from './clear-session'
 import { errorCatch, getContentType } from './error'
 import {
 	getAccessToken,
-	removeFromStorage,
+	isAccessTokenValid,
 	saveTokenStorage
 } from './token-storage'
 
@@ -38,6 +38,10 @@ export const refreshAccessToken = () => {
 
 			saveTokenStorage(response.data.accessToken)
 
+			if (!isAccessTokenValid(getAccessToken())) {
+				throw new Error('Refreshed access token is invalid')
+			}
+
 			return response
 		})
 		.finally(() => {
@@ -45,16 +49,6 @@ export const refreshAccessToken = () => {
 		})
 
 	return refreshPromise
-}
-
-const redirectToLogin = () => {
-	if (typeof window === 'undefined') {
-		return
-	}
-
-	if (window.location.pathname !== PUBLIC_PAGES.LOGIN) {
-		window.location.href = PUBLIC_PAGES.LOGIN
-	}
 }
 
 axiosInterceptorsRequest.interceptors.request.use(config => {
@@ -71,22 +65,24 @@ axiosInterceptorsRequest.interceptors.response.use(
 	config => config,
 	async error => {
 		const originalRequest = error.config
+		const isAuthenticationError =
+			error?.response?.status === 401 ||
+			errorCatch(error) === 'jwt expired' ||
+			errorCatch(error) === 'jwt must be provided'
 
-		if (
-			(error?.response?.status === 401 ||
-				errorCatch(error) === 'jwt expired' ||
-				errorCatch(error) === 'jwt must be provided') &&
-			error.config &&
-			!error.config._isRetry
-		) {
+		if (isAuthenticationError && originalRequest?._isRetry) {
+			clearBrowserSession()
+			throw error
+		}
+
+		if (isAuthenticationError && originalRequest) {
 			originalRequest._isRetry = true
 
 			try {
 				await refreshAccessToken()
 				return axiosInterceptorsRequest.request(originalRequest)
 			} catch {
-				removeFromStorage()
-				redirectToLogin()
+				clearBrowserSession()
 			}
 		}
 

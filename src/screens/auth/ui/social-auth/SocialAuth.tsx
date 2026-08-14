@@ -1,6 +1,8 @@
 'use client'
 import { authService } from '@/features/auth'
 import { useAuthStore } from '@/entities/user'
+import { clearBrowserSession } from '@/shared/api'
+import { PUBLIC_PAGES } from '@/shared/config/pages/public.config'
 import { NextPage } from 'next'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
@@ -26,14 +28,14 @@ const SocialAuthPage: NextPage = () => {
 				setAuth(true)
 				setAuthResolved(true)
 				toast.dismiss(toastId)
+				router.replace('/')
 			})
 			.catch(() => {
+				clearBrowserSession({ redirectToLogin: false })
 				toast.error('Ошибка авторизации через социальную сеть', {
 					id: toastId
 				})
-			})
-			.finally(() => {
-				router.replace('/')
+				router.replace(PUBLIC_PAGES.LOGIN)
 			})
 	}, [router, setAuth, setAuthResolved])
 

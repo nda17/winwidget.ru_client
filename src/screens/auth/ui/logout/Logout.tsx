@@ -1,26 +1,23 @@
 'use client'
 
-import { useAuthStore } from '@/entities/user'
 import { authService } from '@/features/auth'
+import { clearBrowserSession } from '@/shared/api'
 import { PUBLIC_PAGES } from '@/shared/config/pages/public.config'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import toast from 'react-hot-toast'
 
 const Logout = () => {
-	const setAuth = useAuthStore(state => state.setAuth)
-	const setAuthResolved = useAuthStore(state => state.setAuthResolved)
 	const { replace } = useRouter()
-	const queryClient = useQueryClient()
 
 	const { mutateAsync: mutateLogout } = useMutation({
 		mutationKey: ['logout'],
 		mutationFn: () => authService.logout(),
+		retry: true,
+		retryDelay: attempt => Math.min(1000 * 2 ** attempt, 10_000),
 		onSuccess() {
-			queryClient.clear()
-			setAuth(false)
-			setAuthResolved(true)
+			clearBrowserSession({ redirectToLogin: false })
 		}
 	})
 
@@ -29,13 +26,15 @@ const Logout = () => {
 		const logout = async () => {
 			try {
 				await mutateLogout()
-				toast.dismiss(toastId)
+				toast.success('Вы вышли из аккаунта', { id: toastId })
 				replace(PUBLIC_PAGES.LOGIN)
 			} catch {
-				toast.error('Не удалось завершить выход. Попробуйте ещё раз.', {
-					id: toastId
-				})
-				replace(PUBLIC_PAGES.HOME)
+				toast.error(
+					'Не удалось подтвердить выход. Обновите страницу для повторной попытки.',
+					{
+						id: toastId
+					}
+				)
 			}
 		}
 

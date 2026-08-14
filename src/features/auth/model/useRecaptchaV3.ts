@@ -1,5 +1,5 @@
 'use client'
-import { siteSettingsService } from '@/entities/site-settings'
+import { authSettingsService } from '@/features/auth/api/auth.api'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 
@@ -86,13 +86,13 @@ export const useRecaptchaV3 = () => {
 	const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
 	const isProductionMode = process.env.NEXT_PUBLIC_MODE === 'production'
 	const [isReady, setIsReady] = useState(false)
-	const { data: siteSettings } = useQuery({
-		queryKey: ['site-settings'],
-		queryFn: siteSettingsService.get,
+	const { data: authSettings } = useQuery({
+		queryKey: ['auth-settings'],
+		queryFn: authSettingsService.get,
 		enabled: isProductionMode
 	})
 	const isRecaptchaEnabled =
-		isProductionMode && (siteSettings?.recaptchaEnabled ?? true)
+		isProductionMode && (authSettings?.recaptchaEnabled ?? true)
 
 	useEffect(() => {
 		if (!siteKey || !isRecaptchaEnabled) {

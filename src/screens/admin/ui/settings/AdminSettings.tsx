@@ -10,6 +10,7 @@ import {
 	type ManualAdminTaskId,
 	type ManualAdminTaskRunResult
 } from '@/features/run-admin-task'
+import { authSettingsService } from '@/features/auth/api/auth.api'
 import { revalidateSiteSettings } from '@/entities/site-settings/actions'
 import { siteSettingsService } from '@/entities/site-settings'
 import {
@@ -62,6 +63,30 @@ const formatExecutedAt = (value: string) =>
 		timeStyle: 'medium'
 	}).format(new Date(value))
 
+interface SettingsLoadErrorProps {
+	description: string
+	onRetry: () => void
+	isRetrying: boolean
+}
+
+const SettingsLoadError = ({
+	description,
+	onRetry,
+	isRetrying
+}: SettingsLoadErrorProps) => (
+	<>
+		<p className={styles.fieldHint}>{description}</p>
+		<button
+			type="button"
+			className={styles.taskBtn}
+			onClick={onRetry}
+			disabled={isRetrying}
+		>
+			{isRetrying ? 'Загружаем...' : 'Загрузить ещё раз'}
+		</button>
+	</>
+)
+
 const AdminSettings: NextPage = () => {
 	const queryClient = useQueryClient()
 	const router = useRouter()
@@ -72,11 +97,20 @@ const AdminSettings: NextPage = () => {
 	const {
 		data: settings,
 		isLoading,
-		isError,
+		isFetching,
 		refetch: refetchSettings
 	} = useQuery({
 		queryKey: ['site-settings'],
 		queryFn: siteSettingsService.get
+	})
+	const {
+		data: authSettings,
+		isLoading: isAuthSettingsLoading,
+		isFetching: isAuthSettingsFetching,
+		refetch: refetchAuthSettings
+	} = useQuery({
+		queryKey: ['auth-settings'],
+		queryFn: authSettingsService.get
 	})
 
 	const [bannerText, setBannerText] = useState('')
@@ -99,6 +133,25 @@ const AdminSettings: NextPage = () => {
 		label?: string
 	) => {
 		const promise = mutation.mutateAsync(patch)
+		toast.promise(promise, {
+			loading: label ?? 'Сохранение...',
+			success: 'Сохранено',
+			error: 'Ошибка сохранения'
+		})
+	}
+
+	const authSettingsMutation = useMutation({
+		mutationFn: authSettingsService.update,
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ['auth-settings'] })
+		}
+	})
+
+	const saveAuthWithToast = (
+		patch: Parameters<typeof authSettingsService.update>[0],
+		label?: string
+	) => {
+		const promise = authSettingsMutation.mutateAsync(patch)
 		toast.promise(promise, {
 			loading: label ?? 'Сохранение...',
 			success: 'Сохранено',
@@ -148,58 +201,21 @@ const AdminSettings: NextPage = () => {
 		})
 	}
 
-	if (isLoading) {
-		return (
-			<section className={styles.wrapper}>
-				<Heading text="Панель администратора" />
-				<AdminNavigation />
-				<AdminSectionHeading
-					title="Настройки сайта"
-					description="Загружаем актуальные значения настроек."
-					text="Настройки"
-				/>
-				<div className={styles.section}>
-					{Array.from({ length: 3 }).map((_, index) => (
-						<div key={index} className={styles.toggleRow}>
-							<div style={{ flex: 1 }}>
-								<SkeletonLoader count={1} className="h-[18px] w-48 mb-2" />
-								<SkeletonLoader count={1} className="h-[14px] w-72" />
-							</div>
-							<SkeletonLoader count={1} className="h-[28px] w-[52px]" />
-						</div>
-					))}
-				</div>
-			</section>
-		)
-	}
+	const retryAuthSettingsWithToast = () => {
+		const promise = refetchAuthSettings().then(result => {
+			if (result.isError || !result.data) {
+				throw (
+					result.error ?? new Error('Настройки авторизации не получены')
+				)
+			}
+			return result.data
+		})
 
-	if (isError || !settings) {
-		return (
-			<section className={styles.wrapper}>
-				<Heading text="Панель администратора" />
-				<AdminNavigation />
-				<AdminSectionHeading
-					title="Настройки недоступны"
-					description="Тумблеры заблокированы, потому что актуальные значения не удалось получить с сервера."
-					risk="high"
-					riskText="Не меняйте критические настройки вслепую. Сначала восстановите загрузку текущего состояния."
-					text="Ошибка загрузки"
-				/>
-				<div className={styles.section}>
-					<p className={styles.fieldHint}>
-						Повторите загрузку. До успешного ответа сервера никакие
-						настройки не будут изменены.
-					</p>
-					<button
-						type="button"
-						className={styles.taskBtn}
-						onClick={retrySettingsWithToast}
-					>
-						Загрузить ещё раз
-					</button>
-				</div>
-			</section>
-		)
+		toast.promise(promise, {
+			loading: 'Повторно загружаем настройки авторизации...',
+			success: 'Настройки авторизации загружены',
+			error: 'Не удалось загрузить настройки авторизации'
+		})
 	}
 
 	return (
@@ -231,7 +247,7 @@ const AdminSettings: NextPage = () => {
 							</div>
 						))}
 					</>
-				) : (
+				) : settings ? (
 					<>
 						<div className={styles.toggleRow}>
 							<div>
@@ -343,6 +359,12 @@ const AdminSettings: NextPage = () => {
 							</button>
 						</div>
 					</>
+				) : (
+					<SettingsLoadError
+						description="Настройки платежей недоступны. До успешной загрузки изменения заблокированы."
+						onRetry={retrySettingsWithToast}
+						isRetrying={isFetching}
+					/>
 				)}
 			</div>
 
@@ -355,9 +377,9 @@ const AdminSettings: NextPage = () => {
 			/>
 
 			<div className={styles.section}>
-				{isLoading ? (
+				{isAuthSettingsLoading ? (
 					<>
-						{Array.from({ length: 5 }).map((_, index) => (
+						{Array.from({ length: 6 }).map((_, index) => (
 							<div key={index} className={styles.toggleRow}>
 								<div style={{ flex: 1 }}>
 									<SkeletonLoader
@@ -370,7 +392,7 @@ const AdminSettings: NextPage = () => {
 							</div>
 						))}
 					</>
-				) : (
+				) : authSettings ? (
 					<>
 						<div className={styles.toggleRow}>
 							<div>
@@ -381,16 +403,16 @@ const AdminSettings: NextPage = () => {
 								</p>
 							</div>
 							<button
-								className={`${styles.toggle} ${settings?.recaptchaEnabled ? styles.toggleOn : ''}`}
+								className={`${styles.toggle} ${authSettings.recaptchaEnabled ? styles.toggleOn : ''}`}
 								onClick={() =>
-									saveWithToast(
+									saveAuthWithToast(
 										{
-											recaptchaEnabled: !settings?.recaptchaEnabled
+											recaptchaEnabled: !authSettings.recaptchaEnabled
 										},
 										'Применяем настройку...'
 									)
 								}
-								disabled={mutation.isPending}
+								disabled={authSettingsMutation.isPending}
 							>
 								<span className={styles.toggleThumb} />
 							</button>
@@ -405,16 +427,16 @@ const AdminSettings: NextPage = () => {
 								</p>
 							</div>
 							<button
-								className={`${styles.toggle} ${settings?.googleAuthEnabled ? styles.toggleOn : ''}`}
+								className={`${styles.toggle} ${authSettings.googleAuthEnabled ? styles.toggleOn : ''}`}
 								onClick={() =>
-									saveWithToast(
+									saveAuthWithToast(
 										{
-											googleAuthEnabled: !settings?.googleAuthEnabled
+											googleAuthEnabled: !authSettings.googleAuthEnabled
 										},
 										'Применяем настройку...'
 									)
 								}
-								disabled={mutation.isPending}
+								disabled={authSettingsMutation.isPending}
 							>
 								<span className={styles.toggleThumb} />
 							</button>
@@ -429,16 +451,16 @@ const AdminSettings: NextPage = () => {
 								</p>
 							</div>
 							<button
-								className={`${styles.toggle} ${settings?.yandexAuthEnabled ? styles.toggleOn : ''}`}
+								className={`${styles.toggle} ${authSettings.yandexAuthEnabled ? styles.toggleOn : ''}`}
 								onClick={() =>
-									saveWithToast(
+									saveAuthWithToast(
 										{
-											yandexAuthEnabled: !settings?.yandexAuthEnabled
+											yandexAuthEnabled: !authSettings.yandexAuthEnabled
 										},
 										'Применяем настройку...'
 									)
 								}
-								disabled={mutation.isPending}
+								disabled={authSettingsMutation.isPending}
 							>
 								<span className={styles.toggleThumb} />
 							</button>
@@ -453,16 +475,16 @@ const AdminSettings: NextPage = () => {
 								</p>
 							</div>
 							<button
-								className={`${styles.toggle} ${settings?.githubAuthEnabled ? styles.toggleOn : ''}`}
+								className={`${styles.toggle} ${authSettings.githubAuthEnabled ? styles.toggleOn : ''}`}
 								onClick={() =>
-									saveWithToast(
+									saveAuthWithToast(
 										{
-											githubAuthEnabled: !settings?.githubAuthEnabled
+											githubAuthEnabled: !authSettings.githubAuthEnabled
 										},
 										'Применяем настройку...'
 									)
 								}
-								disabled={mutation.isPending}
+								disabled={authSettingsMutation.isPending}
 							>
 								<span className={styles.toggleThumb} />
 							</button>
@@ -477,16 +499,16 @@ const AdminSettings: NextPage = () => {
 								</p>
 							</div>
 							<button
-								className={`${styles.toggle} ${settings?.vkAuthEnabled ? styles.toggleOn : ''}`}
+								className={`${styles.toggle} ${authSettings.vkAuthEnabled ? styles.toggleOn : ''}`}
 								onClick={() =>
-									saveWithToast(
+									saveAuthWithToast(
 										{
-											vkAuthEnabled: !settings?.vkAuthEnabled
+											vkAuthEnabled: !authSettings.vkAuthEnabled
 										},
 										'Применяем настройку...'
 									)
 								}
-								disabled={mutation.isPending}
+								disabled={authSettingsMutation.isPending}
 							>
 								<span className={styles.toggleThumb} />
 							</button>
@@ -501,21 +523,28 @@ const AdminSettings: NextPage = () => {
 								</p>
 							</div>
 							<button
-								className={`${styles.toggle} ${settings?.telegramAuthEnabled ? styles.toggleOn : ''}`}
+								className={`${styles.toggle} ${authSettings.telegramAuthEnabled ? styles.toggleOn : ''}`}
 								onClick={() =>
-									saveWithToast(
+									saveAuthWithToast(
 										{
-											telegramAuthEnabled: !settings?.telegramAuthEnabled
+											telegramAuthEnabled:
+												!authSettings.telegramAuthEnabled
 										},
 										'Применяем настройку...'
 									)
 								}
-								disabled={mutation.isPending}
+								disabled={authSettingsMutation.isPending}
 							>
 								<span className={styles.toggleThumb} />
 							</button>
 						</div>
 					</>
+				) : (
+					<SettingsLoadError
+						description="Identity Service не вернул настройки авторизации. Тумблеры заблокированы до успешной загрузки."
+						onRetry={retryAuthSettingsWithToast}
+						isRetrying={isAuthSettingsFetching}
+					/>
 				)}
 			</div>
 
@@ -540,7 +569,7 @@ const AdminSettings: NextPage = () => {
 						<SkeletonLoader count={1} className="h-[80px]" />
 						<SkeletonLoader count={1} className="h-[38px] w-36" />
 					</>
-				) : (
+				) : settings ? (
 					<>
 						<div className={styles.toggleRow}>
 							<div>
@@ -592,6 +621,12 @@ const AdminSettings: NextPage = () => {
 							Сохранить текст
 						</button>
 					</>
+				) : (
+					<SettingsLoadError
+						description="Настройки баннера недоступны. До успешной загрузки изменения заблокированы."
+						onRetry={retrySettingsWithToast}
+						isRetrying={isFetching}
+					/>
 				)}
 			</div>
 
@@ -658,7 +693,7 @@ const AdminSettings: NextPage = () => {
 						</div>
 						<SkeletonLoader count={1} className="h-[28px] w-[52px]" />
 					</div>
-				) : (
+				) : settings ? (
 					<div className={styles.toggleRow}>
 						<div>
 							<p className={styles.fieldLabel}>Снежинки на сайте</p>
@@ -679,6 +714,12 @@ const AdminSettings: NextPage = () => {
 							<span className={styles.toggleThumb} />
 						</button>
 					</div>
+				) : (
+					<SettingsLoadError
+						description="Настройки оформления недоступны. До успешной загрузки изменения заблокированы."
+						onRetry={retrySettingsWithToast}
+						isRetrying={isFetching}
+					/>
 				)}
 			</div>
 		</section>

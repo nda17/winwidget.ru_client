@@ -24,12 +24,13 @@ export interface AdminTelegramBotSettings {
 	billingDatabaseBackupDelayMinutes: number
 	billingDatabaseBackupTime: string
 	billingDatabaseBackupTimeLabel: string
+	identityDatabaseBackupDelayMinutes: number
+	identityDatabaseBackupTime: string
+	identityDatabaseBackupTimeLabel: string
 	databaseBackupLastSentPeriodStart: string | null
 	databaseBackupLastSentAt: string | null
 	telegramBotTokenConfigured: boolean
 	telegramBotUsernameConfigured: boolean
-	authTelegramBotTokenConfigured: boolean
-	authTelegramBotUsernameConfigured: boolean
 	supportTelegramBotTokenConfigured: boolean
 	telegramWebhookHostConfigured: boolean
 	telegramWebhookHost: string | null
@@ -48,6 +49,12 @@ export interface UpdateAdminTelegramBotSettings {
 }
 
 export type TelegramWebhookBot = 'info' | 'auth' | 'support'
+export type CoreTelegramWebhookBot = Exclude<TelegramWebhookBot, 'auth'>
+
+export interface AdminTelegramAuthSettings {
+	authTelegramBotTokenConfigured: boolean
+	authTelegramBotUsernameConfigured: boolean
+}
 
 export interface TelegramWebhookInstallResult {
 	bot: TelegramWebhookBot
@@ -57,10 +64,6 @@ export interface TelegramWebhookInstallResult {
 	allowedUpdates: string[]
 	secretConfigured: boolean
 	installedAt: string
-}
-
-export interface TelegramWebhookInstallAllResult {
-	items: TelegramWebhookInstallResult[]
 }
 
 export interface TelegramWebhookStatus {
@@ -100,6 +103,7 @@ export type TelegramDatabaseBackupTarget =
 	| 'reporting'
 	| 'widgets'
 	| 'billing'
+	| 'identity'
 
 export interface TelegramDatabaseBackupJobResult {
 	target: TelegramDatabaseBackupTarget
@@ -149,17 +153,10 @@ const adminTelegramBotService = {
 	},
 
 	async reinstallWebhook(
-		bot: TelegramWebhookBot
+		bot: CoreTelegramWebhookBot
 	): Promise<TelegramWebhookInstallResult> {
 		const { data } = await axiosInterceptorsRequest.post(
 			`/telegram-bot/admin/webhooks/${bot}/reinstall`
-		)
-		return data
-	},
-
-	async reinstallWebhooks(): Promise<TelegramWebhookInstallAllResult> {
-		const { data } = await axiosInterceptorsRequest.post(
-			'/telegram-bot/admin/webhooks/reinstall'
 		)
 		return data
 	},
@@ -205,6 +202,35 @@ const adminTelegramBotService = {
 			await axiosInterceptorsRequest.get<TelegramDatabaseBackupJob>(
 				`/telegram-bot/admin/database-backups/${target}/jobs/${jobId}`
 			)
+		return data
+	}
+}
+
+export const identityTelegramAuthService = {
+	async getSettings(): Promise<AdminTelegramAuthSettings> {
+		const { data } =
+			await axiosInterceptorsRequest.get<AdminTelegramAuthSettings>(
+				'/telegram-auth/admin/settings'
+			)
+
+		return data
+	},
+
+	async getWebhookStatus(): Promise<TelegramWebhookStatus> {
+		const { data } =
+			await axiosInterceptorsRequest.get<TelegramWebhookStatus>(
+				'/telegram-auth/admin/webhook/status'
+			)
+
+		return data
+	},
+
+	async reinstallWebhook(): Promise<TelegramWebhookInstallResult> {
+		const { data } =
+			await axiosInterceptorsRequest.post<TelegramWebhookInstallResult>(
+				'/telegram-auth/admin/webhook/reinstall'
+			)
+
 		return data
 	}
 }

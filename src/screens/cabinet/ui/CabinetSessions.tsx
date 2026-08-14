@@ -4,15 +4,13 @@ import styles from '@/screens/cabinet/ui/Cabinet.module.scss'
 import authService, {
 	type IUserSession
 } from '@/features/auth/api/auth.api'
-import { useAuthStore } from '@/entities/user'
-import { removeFromStorage } from '@/shared/api'
+import { clearBrowserSession } from '@/shared/api'
 import ConfirmDialog from '@/shared/ui/confirm-dialog/ConfirmDialog'
 import {
 	useMutation,
 	useQuery,
 	useQueryClient
 } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
 import { FC, useState } from 'react'
 import toast from 'react-hot-toast'
 
@@ -60,10 +58,7 @@ const getDeviceName = (userAgent: string | null) => {
 
 const CabinetSessions: FC = () => {
 	const [confirmation, setConfirmation] = useState<Confirmation>(null)
-	const setAuth = useAuthStore(state => state.setAuth)
-	const setAuthResolved = useAuthStore(state => state.setAuthResolved)
 	const queryClient = useQueryClient()
-	const router = useRouter()
 
 	const {
 		data: sessions = [],
@@ -75,11 +70,7 @@ const CabinetSessions: FC = () => {
 	})
 
 	const finishCurrentSession = () => {
-		removeFromStorage()
-		queryClient.clear()
-		setAuth(false)
-		setAuthResolved(true)
-		router.replace('/login')
+		clearBrowserSession()
 	}
 
 	const revokeMutation = useMutation({

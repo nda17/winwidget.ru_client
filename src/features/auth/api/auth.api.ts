@@ -2,7 +2,6 @@ import {
 	axiosClassicRequest,
 	axiosInterceptorsRequest,
 	refreshAccessToken,
-	removeFromStorage,
 	saveTokenStorage
 } from '@/shared/api'
 import { IFormData } from '@/features/auth/model/form.types'
@@ -83,6 +82,33 @@ export interface IRevokeSessionResponse {
 	currentSessionRevoked: boolean
 }
 
+export interface IAuthSettings {
+	recaptchaEnabled: boolean
+	googleAuthEnabled: boolean
+	yandexAuthEnabled: boolean
+	githubAuthEnabled: boolean
+	vkAuthEnabled: boolean
+	telegramAuthEnabled: boolean
+}
+
+export const authSettingsService = {
+	async get(): Promise<IAuthSettings> {
+		const { data } =
+			await axiosClassicRequest.get<IAuthSettings>('/auth/settings')
+
+		return data
+	},
+
+	async update(payload: Partial<IAuthSettings>): Promise<IAuthSettings> {
+		const { data } = await axiosInterceptorsRequest.patch<IAuthSettings>(
+			'/auth/admin/settings',
+			payload
+		)
+
+		return data
+	}
+}
+
 class AuthService {
 	async main(type: 'login', data: IFormData, token?: string | null) {
 		const response = await axiosClassicRequest.post<IAuthResponse>(
@@ -121,14 +147,7 @@ class AuthService {
 	}
 
 	async logout() {
-		const response =
-			await axiosClassicRequest.post<boolean>('/auth/logout')
-
-		if (response.data) {
-			removeFromStorage()
-		}
-
-		return response
+		return axiosClassicRequest.post<boolean>('/auth/logout')
 	}
 
 	async getSessions() {

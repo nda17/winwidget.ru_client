@@ -2,7 +2,7 @@ import styles from '@/features/auth/ui/auth-form/social-media-buttons/SocialMedi
 import { API_URL } from '@/shared/config/api.config'
 import AppIcon from '@/shared/ui/icons/AppIcon'
 import SkeletonLoader from '@/shared/ui/skeleton-loader/SkeletonLoader'
-import { siteSettingsService } from '@/entities/site-settings'
+import { authSettingsService } from '@/features/auth/api/auth.api'
 import { useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 
@@ -18,16 +18,16 @@ const SocialMediaButtons = ({
 	onTelegramAuthStart,
 	isTelegramAuthLoading = false
 }: SocialMediaButtonsProps) => {
-	const { data: siteSettings, isPending: isSiteSettingsPending } =
+	const { data: authSettings, isPending: isAuthSettingsPending } =
 		useQuery({
-			queryKey: ['site-settings'],
-			queryFn: siteSettingsService.get
+			queryKey: ['auth-settings'],
+			queryFn: authSettingsService.get
 		})
-	const googleAuthEnabled = Boolean(siteSettings?.googleAuthEnabled)
-	const yandexAuthEnabled = Boolean(siteSettings?.yandexAuthEnabled)
-	const githubAuthEnabled = Boolean(siteSettings?.githubAuthEnabled)
-	const vkAuthEnabled = Boolean(siteSettings?.vkAuthEnabled)
-	const telegramAuthEnabled = Boolean(siteSettings?.telegramAuthEnabled)
+	const googleAuthEnabled = Boolean(authSettings?.googleAuthEnabled)
+	const yandexAuthEnabled = Boolean(authSettings?.yandexAuthEnabled)
+	const githubAuthEnabled = Boolean(authSettings?.githubAuthEnabled)
+	const vkAuthEnabled = Boolean(authSettings?.vkAuthEnabled)
+	const telegramAuthEnabled = Boolean(authSettings?.telegramAuthEnabled)
 	const hasSocialAuthButtons =
 		googleAuthEnabled ||
 		yandexAuthEnabled ||
@@ -50,7 +50,7 @@ const SocialMediaButtons = ({
 		window.location.assign(targetPath)
 	}
 
-	if (isSiteSettingsPending) {
+	if (isAuthSettingsPending) {
 		return (
 			<>
 				<div className={styles.sectionDivider}>

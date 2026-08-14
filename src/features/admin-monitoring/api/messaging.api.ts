@@ -14,6 +14,8 @@ export type MessagingIntegration =
 	| 'widgets-admin-audit'
 	| 'reporting-admin-audit'
 	| 'billing-admin-audit'
+	| 'identity-admin-audit'
+	| 'telegram-destination-unavailable'
 	| 'billing-payment-projection'
 	| 'billing-subscription-projection'
 	| 'billing-affiliate-projection'
@@ -55,6 +57,7 @@ export interface MessagingOverview {
 	notificationDeliveryError: string | null
 	widgetsError: string | null
 	billingError: string | null
+	identityError: string | null
 	heartbeats: Array<{
 		service: string
 		status: 'ok' | 'down'

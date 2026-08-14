@@ -1,9 +1,10 @@
 'use client'
 import { PUBLIC_PAGES } from '@/shared/config/pages/public.config'
 import {
+	clearBrowserSession,
 	getAccessToken,
 	isAccessTokenValid,
-	removeFromStorage
+	SESSION_CLEARED_EVENT
 } from '@/shared/api'
 import authService from '@/features/auth/api/auth.api'
 import { useAuthStore } from '@/entities/user'
@@ -26,14 +27,22 @@ const SessionProvider = ({
 	const setAuthResolved = useAuthStore(state => state.setAuthResolved)
 	const queryClient = useQueryClient()
 	const pathname = usePathname()
+	const pathnameRef = useRef(pathname)
+	pathnameRef.current = pathname
 	const isMountedRef = useRef(true)
 	const hasSessionHintRef = useRef(hasSessionHint)
+	const isSessionValidatedRef = useRef(false)
+	const isLogoutPath = pathname === '/logout'
 	const isProtectedPath =
 		pathname === PUBLIC_PAGES.USER_PROFILE ||
 		pathname.startsWith(`${PUBLIC_PAGES.USER_PROFILE}/`) ||
 		pathname.startsWith('/admin')
 
 	const syncSession = useCallback(async () => {
+		if (isLogoutPath) {
+			return
+		}
+
 		const accessToken = getAccessToken()
 
 		if (accessToken) {
@@ -41,6 +50,7 @@ const SessionProvider = ({
 		}
 
 		if (
+			isSessionValidatedRef.current &&
 			isAccessTokenValid(accessToken, ACCESS_TOKEN_REFRESH_THRESHOLD_MS)
 		) {
 			if (isMountedRef.current) {
@@ -67,7 +77,14 @@ const SessionProvider = ({
 
 		try {
 			await authService.getNewTokens()
+
+			if (pathnameRef.current === '/logout') {
+				clearBrowserSession({ redirectToLogin: false })
+				return
+			}
+
 			hasSessionHintRef.current = true
+			isSessionValidatedRef.current = true
 
 			if (isMountedRef.current) {
 				setAuth(true)
@@ -75,37 +92,58 @@ const SessionProvider = ({
 				queryClient.invalidateQueries({ queryKey: ['get-profile'] })
 			}
 		} catch {
-			removeFromStorage()
-
-			if (!isMountedRef.current) {
-				return
-			}
-
-			setAuth(false)
-			setAuthResolved(true)
-			queryClient.removeQueries({ queryKey: ['get-profile'] })
-			hasSessionHintRef.current = false
-
-			if (isProtectedPath) {
-				window.location.href = PUBLIC_PAGES.LOGIN
-			}
+			clearBrowserSession({
+				redirectToLogin: pathnameRef.current !== '/logout'
+			})
 		}
-	}, [isProtectedPath, queryClient, setAuth, setAuthResolved])
+	}, [
+		isLogoutPath,
+		isProtectedPath,
+		queryClient,
+		setAuth,
+		setAuthResolved
+	])
 
 	useEffect(() => {
 		hasSessionHintRef.current = hasSessionHint
 	}, [hasSessionHint])
 
 	useEffect(() => {
+		const handleSessionCleared = () => {
+			hasSessionHintRef.current = false
+			isSessionValidatedRef.current = false
+			queryClient.clear()
+			setAuth(false)
+			setAuthResolved(true)
+		}
+
+		window.addEventListener(SESSION_CLEARED_EVENT, handleSessionCleared)
+
+		return () => {
+			window.removeEventListener(
+				SESSION_CLEARED_EVENT,
+				handleSessionCleared
+			)
+		}
+	}, [queryClient, setAuth, setAuthResolved])
+
+	useEffect(() => {
 		isMountedRef.current = true
-		void syncSession()
+
+		if (!isLogoutPath) {
+			void syncSession()
+		}
 
 		return () => {
 			isMountedRef.current = false
 		}
-	}, [syncSession])
+	}, [isLogoutPath, syncSession])
 
 	useEffect(() => {
+		if (isLogoutPath) {
+			return
+		}
+
 		const handleVisibilityChange = () => {
 			if (document.visibilityState !== 'visible') {
 				return
@@ -126,7 +164,7 @@ const SessionProvider = ({
 				handleVisibilityChange
 			)
 		}
-	}, [syncSession])
+	}, [isLogoutPath, syncSession])
 
 	return <>{children}</>
 }
