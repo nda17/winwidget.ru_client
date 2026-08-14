@@ -4,8 +4,6 @@ export type AdminAlertType =
 	| 'SUBSCRIPTION_EXPIRES_SOON'
 	| 'EXPIRED_ACTIVE_SUBSCRIPTION'
 	| 'PENDING_PAYMENT'
-	| 'USER_WITHOUT_CONTACT'
-	| 'ACTIVE_SUBSCRIBER_WITHOUT_CONTACT'
 	| 'SUCCEEDED_PAYMENT_WITHOUT_ACCESS'
 	| 'MULTIPLE_PENDING_PAYMENTS'
 	| 'ACTIVE_WIDGET_WITHOUT_ACCESS'
@@ -21,7 +19,6 @@ export interface IAdminAlertTargetUser {
 	id: string
 	name: string | null
 	email: string | null
-	phone: string | null
 }
 
 export interface IAdminAlert {

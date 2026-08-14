@@ -26,8 +26,6 @@ const TYPE_LABELS: Record<AdminAlertType, string> = {
 	EXPIRED_ACTIVE_SUBSCRIPTION: 'Истёкшая ACTIVE-подписка',
 	SUBSCRIPTION_EXPIRES_SOON: 'Подписка скоро истекает',
 	PENDING_PAYMENT: 'Pending-платёж',
-	USER_WITHOUT_CONTACT: 'Пользователь без контакта',
-	ACTIVE_SUBSCRIBER_WITHOUT_CONTACT: 'Активная подписка без контакта',
 	SUCCEEDED_PAYMENT_WITHOUT_ACCESS: 'Оплата без доступа',
 	MULTIPLE_PENDING_PAYMENTS: 'Несколько pending-платежей',
 	ACTIVE_WIDGET_WITHOUT_ACCESS: 'Виджет без доступа',
@@ -100,15 +98,11 @@ const formatDateTime = (value: string) =>
 const formatUser = (item: IAdminAlert) =>
 	item.targetUser?.name ||
 	item.targetUser?.email ||
-	item.targetUser?.phone ||
 	item.targetUser?.id ||
 	'—'
 
 const formatUserContact = (item: IAdminAlert) =>
-	item.targetUser?.email ||
-	item.targetUser?.phone ||
-	item.targetUser?.id ||
-	''
+	item.targetUser?.email || item.targetUser?.id || ''
 
 const getUserHref = (item: IAdminAlert) =>
 	item.targetUser ? `/admin/user/edit/${item.targetUser.id}` : ''
@@ -134,11 +128,9 @@ const getAlertActions = (item: IAdminAlert) => {
 	}
 
 	if (
-		[
-			'SUBSCRIPTION_EXPIRES_SOON',
-			'EXPIRED_ACTIVE_SUBSCRIPTION',
-			'ACTIVE_SUBSCRIBER_WITHOUT_CONTACT'
-		].includes(item.type)
+		['SUBSCRIPTION_EXPIRES_SOON', 'EXPIRED_ACTIVE_SUBSCRIPTION'].includes(
+			item.type
+		)
 	) {
 		actions.push({ href: ADMIN_PAGES.SUBSCRIPTIONS, label: 'Подписки' })
 	}
@@ -263,7 +255,7 @@ const AdminAlerts: NextPage = () => {
 			<AdminSectionHeading
 				text="Предупреждения"
 				title="Центр предупреждений"
-				description="Собирает операционные ситуации, которые требуют внимания: подписки, платежи, домены виджетов, интеграции, партнёрские начисления и пользователей без email/телефона."
+				description="Собирает операционные ситуации, которые требуют внимания: подписки, платежи, домены виджетов, интеграции и партнёрские начисления."
 				risk="medium"
 				riskText="Раздел показывает проблемы, но не исправляет их автоматически. Перед ручным действием открой пользователя или платёж и проверь контекст."
 			/>
