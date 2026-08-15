@@ -8,6 +8,7 @@
 		"build": "next build",
 		"start": "next start",
 		"lint": "next lint",
+		"test:identity-avatar-client-evidence": "node scripts/test-identity-avatar-client-release-evidence.mjs && node scripts/test-identity-avatar-client-log-soak.mjs && node scripts/test-identity-avatar-client-soak-retarget.mjs && node scripts/test-identity-avatar-client-runtime-rebind.mjs",
 		"format": "prettier --write --no-error-on-unmatched-pattern \"src/**/*.{ts,tsx,scss}\" \"*.{js,mjs,ts,json}\"",
 		"prepare": "husky"
 	},

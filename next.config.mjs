@@ -1,9 +1,4 @@
 /** @type {import('next').NextConfig} */
-const apiBase =
-	process.env.NEXT_PUBLIC_MODE === 'production'
-		? process.env.NEXT_PUBLIC_PRODUCTION_HOST
-		: process.env.NEXT_PUBLIC_DEVELOPMENT_HOST || 'http://localhost:4200'
-
 const widgetPreviewFrameHeaders = [
 	{
 		key: 'Content-Security-Policy',
@@ -18,6 +13,15 @@ const widgetPreviewFrameHeaders = [
 const nextConfig = {
 	output: 'standalone',
 	headers: () => [
+		{
+			source: '/:path*',
+			headers: [
+				{
+					key: 'X-Winwidget-Revision',
+					value: process.env.APP_REVISION || 'unknown'
+				}
+			]
+		},
 		{
 			source: '/page-wheel/:path*',
 			headers: widgetPreviewFrameHeaders
@@ -47,14 +51,6 @@ const nextConfig = {
 			headers: widgetPreviewFrameHeaders
 		}
 	],
-	rewrites: () => {
-		return [
-			{
-				source: '/uploads/:path*',
-				destination: `${apiBase}/uploads/:path*`
-			}
-		]
-	},
 	images: {
 		remotePatterns: [
 			{
@@ -74,12 +70,6 @@ const nextConfig = {
 				hostname: 'avatars.yandex.net',
 				port: '',
 				pathname: '/**'
-			},
-			{
-				protocol: 'https',
-				hostname: 'winwidget.ru',
-				port: '',
-				pathname: '/uploads/**'
 			},
 			{
 				protocol: 'https',

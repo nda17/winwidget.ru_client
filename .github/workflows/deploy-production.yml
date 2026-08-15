@@ -2,6 +2,19 @@ name: Deploy Production
 
 on:
   workflow_dispatch:
+    inputs:
+      identity_avatar_client_soak_retarget:
+        description: Signed frontend avatar-soak retarget action
+        required: true
+        type: choice
+        default: none
+        options:
+          - none
+          - stage-descendant
+      identity_avatar_client_soak_retarget_confirmation:
+        description: Exact confirmation including the target SHA
+        required: false
+        type: string
   push:
     branches:
       - prod
@@ -15,6 +28,7 @@ concurrency:
 
 jobs:
   verify:
+    if: github.ref == 'refs/heads/prod'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -55,6 +69,9 @@ jobs:
 
       - name: Type check
         run: pnpm exec tsc --noEmit
+
+      - name: Test identity avatar client release evidence
+        run: pnpm test:identity-avatar-client-evidence
 
       - name: Validate production compose
         run: |
@@ -128,6 +145,21 @@ jobs:
               if (client.image !== `winwidget-client:${process.env.APP_VERSION}`) {
                 throw new Error("Frontend image tag is not pinned");
               }
+              if (
+                client.labels?.["ru.winwidget.identity-avatar.runtime-stability-generation"] !== "0"
+              ) {
+                throw new Error("Frontend routine runtime stability generation label must be 0");
+              }
+              const volumes = Array.isArray(client.volumes) ? client.volumes : [];
+              if (
+                volumes.length !== 1 ||
+                volumes[0].type !== "bind" ||
+                volumes[0].source !== "/opt/winwidget/deploy/frontend/identity-avatar-client-release" ||
+                volumes[0].target !== "/run/winwidget/identity-avatar-client-release" ||
+                volumes[0].read_only !== true
+              ) {
+                throw new Error("Frontend release evidence must use the exact read-only bind mount");
+              }
             '
 
       - name: Build
@@ -140,6 +172,7 @@ jobs:
           )" = "$APP_REVISION"
 
   deploy:
+    if: github.ref == 'refs/heads/prod' && needs.verify.result == 'success'
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -165,17 +198,275 @@ jobs:
         env:
           APP_ROOT: /opt/winwidget
           DEPLOY_REVISION: ${{ github.sha }}
+          RETARGET_ACTION: ${{ github.event.inputs.identity_avatar_client_soak_retarget || 'none' }}
+          RETARGET_CONFIRMATION: ${{ github.event.inputs.identity_avatar_client_soak_retarget_confirmation || '' }}
           SSH_HOST: ${{ secrets.PRODUCTION_SSH_HOST }}
           SSH_PORT: ${{ secrets.PRODUCTION_SSH_PORT }}
           SSH_USER: ${{ secrets.PRODUCTION_SSH_USER }}
         run: |
+          allow_retarget=0
+          case "$RETARGET_ACTION" in
+            none)
+              test -z "$RETARGET_CONFIRMATION"
+              ;;
+            stage-descendant)
+              test "${{ github.event_name }}" = 'workflow_dispatch'
+              test "$RETARGET_CONFIRMATION" = "STAGE IDENTITY AVATAR CLIENT SOAK RETARGET $DEPLOY_REVISION"
+              allow_retarget=1
+              ;;
+            *)
+              echo 'Unknown identity avatar client soak-retarget action' >&2
+              exit 1
+              ;;
+          esac
           ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -p "$SSH_PORT" \
             "$SSH_USER@$SSH_HOST" \
-            "APP_ROOT='$APP_ROOT' EXPECTED_REVISION='$DEPLOY_REVISION' bash -s" <<'EOF'
+            "APP_ROOT='$APP_ROOT' EXPECTED_REVISION='$DEPLOY_REVISION' ALLOW_IDENTITY_AVATAR_CLIENT_RETARGET='$allow_retarget' bash -s" <<'EOF'
           set -euo pipefail
-          cd "$APP_ROOT/winwidget.ru_client"
-          git fetch origin prod
-          git checkout prod
-          git pull --ff-only origin prod
+          client_root="$APP_ROOT/winwidget.ru_client"
+          receipt_path="$APP_ROOT/deploy/frontend/.identity-avatar-client-switch-v1.json"
+          evidence_tool="$client_root/scripts/identity-avatar-client-release-evidence.mjs"
+          retarget_tool="$client_root/scripts/identity-avatar-client-soak-retarget.mjs"
+          frontend_deploy_lock="$APP_ROOT/deploy/frontend/.production-deploy.lock"
+          test "$EUID" -eq 0
+          FRONTEND_PRODUCTION_DEPLOY_LOCK_FILE="$frontend_deploy_lock" node <<'NODE'
+          const {
+            closeSync,
+            constants,
+            fsyncSync,
+            lstatSync,
+            openSync,
+            realpathSync,
+          } = require('node:fs');
+          const { dirname, resolve } = require('node:path');
+
+          const lockFile = process.env.FRONTEND_PRODUCTION_DEPLOY_LOCK_FILE;
+          const parent = dirname(lockFile);
+          const parentMetadata = lstatSync(parent);
+          if (
+            realpathSync(parent) !== resolve(parent) ||
+            !parentMetadata.isDirectory() ||
+            parentMetadata.isSymbolicLink() ||
+            parentMetadata.uid !== 0 ||
+            parentMetadata.gid !== 0 ||
+            (parentMetadata.mode & 0o022) !== 0
+          ) {
+            throw new Error('Frontend production deploy lock directory is not secure');
+          }
+          let created = false;
+          try {
+            const descriptor = openSync(
+              lockFile,
+              constants.O_CREAT |
+                constants.O_EXCL |
+                constants.O_RDWR |
+                constants.O_NOFOLLOW,
+              0o600,
+            );
+            fsyncSync(descriptor);
+            closeSync(descriptor);
+            created = true;
+          } catch (error) {
+            if (error?.code !== 'EEXIST') throw error;
+          }
+          if (created) {
+            const parentDescriptor = openSync(parent, constants.O_RDONLY);
+            fsyncSync(parentDescriptor);
+            closeSync(parentDescriptor);
+          }
+          const metadata = lstatSync(lockFile);
+          if (
+            realpathSync(lockFile) !== resolve(lockFile) ||
+            !metadata.isFile() ||
+            metadata.isSymbolicLink() ||
+            metadata.uid !== 0 ||
+            metadata.gid !== 0 ||
+            (metadata.mode & 0o777) !== 0o600 ||
+            metadata.nlink !== 1
+          ) {
+            throw new Error('Frontend production deploy lock file is not secure');
+          }
+          NODE
+          exec 9<>"$frontend_deploy_lock"
+          FRONTEND_PRODUCTION_DEPLOY_LOCK_FILE="$frontend_deploy_lock" node <<'NODE'
+          const { lstatSync, readlinkSync, statSync } = require('node:fs');
+          const lockFile = process.env.FRONTEND_PRODUCTION_DEPLOY_LOCK_FILE;
+          const descriptorPath = '/proc/self/fd/9';
+          const metadata = lstatSync(lockFile);
+          const descriptorMetadata = statSync(descriptorPath);
+          if (
+            readlinkSync(descriptorPath) !== lockFile ||
+            metadata.uid !== 0 ||
+            metadata.gid !== 0 ||
+            (metadata.mode & 0o777) !== 0o600 ||
+            metadata.nlink !== 1 ||
+            descriptorMetadata.dev !== metadata.dev ||
+            descriptorMetadata.ino !== metadata.ino
+          ) {
+            throw new Error('Frontend production deploy lock descriptor is not secure');
+          }
+          NODE
+          if ! flock --exclusive --nonblock 9; then
+            echo "Another frontend production deployment holds $frontend_deploy_lock" >&2
+            exit 1
+          fi
+          exec 8<>"$frontend_deploy_lock"
+          if flock --exclusive --nonblock 8; then
+            flock --unlock 8
+            exec 8>&-
+            echo 'Frontend production deploy lock was not retained' >&2
+            exit 1
+          fi
+          exec 8>&-
+          export WINWIDGET_FRONTEND_PRODUCTION_DEPLOY_LOCK_HELD="$frontend_deploy_lock"
+          export FRONTEND_PRODUCTION_DEPLOY_LOCK_FD=9
+          cd "$client_root"
+          test "$(git symbolic-ref --short HEAD)" = 'prod'
+          test -z "$(git status --porcelain --untracked-files=all)"
+          current_revision="$(git rev-parse --verify HEAD)"
+          avatar_cleanup_released=0
+          if [[ -e "$receipt_path" || -L "$receipt_path" ]]; then
+            test -f "$evidence_tool"
+            test ! -L "$evidence_tool"
+            current_avatar_state="$(
+              node "$evidence_tool" client-switch-guard \
+                --repository-root "$client_root" \
+                --revision "$current_revision"
+            )"
+            if [[ "$current_avatar_state" == 'released' ]]; then
+              if [[ "$ALLOW_IDENTITY_AVATAR_CLIENT_RETARGET" == '1' ]]; then
+                echo 'Frontend avatar retarget is forbidden after permanent cleanup' >&2
+                exit 1
+              fi
+              prefetch_state='released'
+              avatar_cleanup_released=1
+            else
+              test -f "$retarget_tool"
+              test ! -L "$retarget_tool"
+              current_avatar_state="$(
+                node "$retarget_tool" guard \
+                  --repository-root "$client_root" \
+                  --revision "$current_revision"
+              )"
+              case "$current_avatar_state" in
+                soak-pinned | retarget-staged | retarget-applied)
+                  if [[ "$ALLOW_IDENTITY_AVATAR_CLIENT_RETARGET" == '1' ]]; then
+                    node "$retarget_tool" stage \
+                      --repository-root "$client_root" \
+                      --revision "$EXPECTED_REVISION" >/dev/null
+                  fi
+                  prefetch_state="$(
+                    node "$retarget_tool" guard \
+                      --repository-root "$client_root" \
+                      --revision "$EXPECTED_REVISION"
+                  )"
+                  ;;
+                cleanup-required)
+                  if [[ "$ALLOW_IDENTITY_AVATAR_CLIENT_RETARGET" == '1' ]]; then
+                    echo 'Frontend avatar retarget requires the current active soak head' >&2
+                    exit 1
+                  fi
+                  prefetch_state="$(
+                    node "$retarget_tool" prefetch-cleanup \
+                      --repository-root "$client_root"
+                  )"
+                  [[ "$prefetch_state" == 'released' ]]
+                  ;;
+                cleanup-released)
+                  released_state="$(
+                    node "$evidence_tool" client-switch-guard \
+                      --repository-root "$client_root" \
+                      --revision "$current_revision"
+                  )"
+                  [[ "$released_state" == 'released' ]]
+                  if [[ "$ALLOW_IDENTITY_AVATAR_CLIENT_RETARGET" == '1' ]]; then
+                    echo 'Frontend avatar retarget is forbidden after permanent cleanup' >&2
+                    exit 1
+                  fi
+                  prefetch_state='released'
+                  ;;
+                *)
+                  echo 'Frontend avatar current guard returned an unknown state' >&2
+                  exit 1
+                  ;;
+              esac
+              case "$prefetch_state" in
+                soak-pinned | retarget-staged | retarget-applied | released)
+                  ;;
+                cleanup-required)
+                  if [[ "$ALLOW_IDENTITY_AVATAR_CLIENT_RETARGET" == '1' ]]; then
+                    echo 'Staged frontend retarget did not bind the candidate' >&2
+                    exit 1
+                  fi
+                  prefetch_state="$(
+                    node "$retarget_tool" prefetch-cleanup \
+                      --repository-root "$client_root"
+                  )"
+                  [[ "$prefetch_state" == 'released' ]]
+                  ;;
+                cleanup-released)
+                  prefetch_state='released'
+                  ;;
+                *)
+                  echo 'Frontend avatar prefetch guard returned an unknown state' >&2
+                  exit 1
+                  ;;
+              esac
+              if [[ "$prefetch_state" == 'released' ]]; then
+                avatar_cleanup_released=1
+              fi
+            fi
+            if [[ "$avatar_cleanup_released" == '1' ]]; then
+              EXPECTED_REVISION="$current_revision" APP_ROOT="$APP_ROOT" \
+                bash "$client_root/scripts/deploy-production.sh" \
+                  --assert-avatar-cleanup-finalized
+            fi
+            if [[ "$prefetch_state" =~ ^(soak-pinned|retarget-applied)$ ]] &&
+              [[ "$current_revision" == "$EXPECTED_REVISION" ]]; then
+              echo "Frontend revision $EXPECTED_REVISION is already soak-pinned; deployment is deferred before fetch and runtime mutation."
+              exit 0
+            fi
+          elif [[ "$ALLOW_IDENTITY_AVATAR_CLIENT_RETARGET" == '1' ]]; then
+            echo 'Frontend avatar retarget requires an existing switch receipt' >&2
+            exit 1
+          fi
+          git fetch --no-tags origin refs/heads/prod
+          fetched_revision="$(git rev-parse --verify 'FETCH_HEAD^{commit}')"
+          test "$fetched_revision" = "$EXPECTED_REVISION"
+          if [[ -e "$receipt_path" || -L "$receipt_path" ]]; then
+            if [[ "$avatar_cleanup_released" == '1' ]]; then
+              postfetch_state="$(
+                node "$evidence_tool" client-switch-guard \
+                  --revision "$EXPECTED_REVISION" \
+                  --repository-root "$client_root"
+              )"
+              [[ "$postfetch_state" == 'released' ]]
+            else
+              postfetch_state="$(
+                node "$retarget_tool" guard \
+                  --revision "$EXPECTED_REVISION" \
+                  --repository-root "$client_root"
+              )"
+              case "$postfetch_state" in
+                soak-pinned | retarget-staged | retarget-applied)
+                  ;;
+                cleanup-released)
+                  postfetch_state="$(
+                    node "$evidence_tool" client-switch-guard \
+                      --revision "$EXPECTED_REVISION" \
+                      --repository-root "$client_root"
+                  )"
+                  [[ "$postfetch_state" == 'released' ]]
+                  ;;
+                *)
+                  echo 'Frontend avatar postfetch guard rejected the candidate' >&2
+                  exit 1
+                  ;;
+              esac
+            fi
+          fi
+          git merge-base --is-ancestor "$current_revision" "$EXPECTED_REVISION"
+          git merge --ff-only "$EXPECTED_REVISION"
+          test "$(git rev-parse --verify HEAD)" = "$EXPECTED_REVISION"
           APP_ROOT="$APP_ROOT" bash scripts/deploy-production.sh
           EOF

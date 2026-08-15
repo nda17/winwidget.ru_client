@@ -1,0 +1,15 @@
+/var/log/nginx/winwidget.identity-avatar-client.access.log {
+	daily
+	maxsize 32M
+	rotate 8
+	missingok
+	notifempty
+	nocompress
+	nodateext
+	nocopytruncate
+	create 0600 root root
+	sharedscripts
+	postrotate
+		/bin/systemctl kill -s USR1 --kill-who=main nginx.service
+	endscript
+}

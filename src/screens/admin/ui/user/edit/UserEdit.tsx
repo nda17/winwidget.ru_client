@@ -43,6 +43,7 @@ import { useEffect, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 
 const FIELD_STYLE = { marginBottom: 0 }
+type UserEditForm = IUserEditInput & { avatarPreview?: string }
 
 const PLAN_LABELS: Record<string, string> = {
 	TRIAL: 'Trial',
@@ -920,7 +921,7 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 		reset,
 		control,
 		watch
-	} = useForm<IUserEditInput>({ mode: 'onChange' })
+	} = useForm<UserEditForm>({ mode: 'onChange' })
 
 	const {
 		isLoading,
@@ -937,6 +938,7 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 		isSaving,
 		isActivationUpdating,
 		toggleActivation,
+		uploadAvatar,
 		deleteAvatar
 	} = useUserEdit(params)
 
@@ -954,7 +956,7 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 		if (!data) return
 
 		reset({
-			avatarPath: '',
+			avatarPreview: '',
 			email: data.email ?? '',
 			isAdmin: data.rights.includes(UserRole.ADMIN),
 			isDev: data.rights.includes(UserRole.DEV),
@@ -1008,9 +1010,15 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 	const hasPhoneValue = Boolean(
 		(watch('phone') ?? data?.phone ?? '').trim()
 	)
-	const handleUserSubmit = (values: IUserEditInput) =>
-		onSubmit(canManageDevRole ? values : { ...values, isDev: undefined })
-	const handleDeleteAvatar = () => deleteAvatar(data?.avatarPath)
+	const handleUserSubmit = (formValues: UserEditForm) => {
+		const values = { ...formValues }
+		delete values.avatarPreview
+
+		return onSubmit(
+			canManageDevRole ? values : { ...values, isDev: undefined }
+		)
+	}
+	const handleDeleteAvatar = () => deleteAvatar()
 	const autoRenewalDialog = autoRenewalDialogAction
 		? AUTO_RENEWAL_DIALOGS[autoRenewalDialogAction]
 		: null
@@ -1449,19 +1457,20 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 
 								<Controller
 									control={control}
-									name="avatarPath"
+									name="avatarPreview"
 									defaultValue=""
 									render={({ field: { value, onChange } }) => (
 										<FieldUploadFile
 											onChange={onChange}
+											onUpload={uploadAvatar}
 											value={value}
 											currentFile={
 												data.avatarPath || '/avatar-default.png'
 											}
-											folder="user-avatar"
 											placeholder="Фото профиля"
 											canDelete
 											onDelete={handleDeleteAvatar}
+											uploadSuccessMessage="Фото профиля обновлено"
 											showFilePath
 										/>
 									)}

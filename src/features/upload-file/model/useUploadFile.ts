@@ -1,68 +1,62 @@
-import fileService from '@/features/upload-file/api/file.api'
+import { errorCatch } from '@/shared/api'
 import { useMutation } from '@tanstack/react-query'
-import axios from 'axios'
-import { ChangeEvent, useCallback, useMemo, useState } from 'react'
+import {
+	ChangeEvent,
+	MutableRefObject,
+	useCallback,
+	useMemo,
+	useState
+} from 'react'
 import toast from 'react-hot-toast'
 
 interface IUseUploadFileOptions {
-	onUploadComplete?: (fileUrl: string) => Promise<void> | void
+	operationLockRef: MutableRefObject<boolean>
 	successMessage?: string
 }
 
 export const useUploadFile = (
-	onChange: (...event: any[]) => void,
-	folder?: string,
-	options: IUseUploadFileOptions = {}
+	onChange: (fileUrl: string) => void,
+	onUpload: (file: File) => Promise<string>,
+	options: IUseUploadFileOptions
 ) => {
-	const { onUploadComplete, successMessage } = options
+	const { operationLockRef, successMessage } = options
 	const [isProcessing, setIsProcessing] = useState(false)
 	const { mutateAsync } = useMutation({
 		mutationKey: ['upload-file'],
-		mutationFn: (data: FormData) => fileService.upload(data, folder)
+		mutationFn: onUpload
 	})
 
 	const uploadFile = useCallback(
 		async (e: ChangeEvent<HTMLInputElement>) => {
 			const files = e.target.files
 
-			if (!files?.length) {
+			if (!files?.length || operationLockRef.current) {
+				e.target.value = ''
 				return
 			}
 
-			const formData = new FormData()
-			formData.append('file', files[0])
-			const toastId = toast.loading('Загружаем файл...')
-
+			operationLockRef.current = true
+			const toastId = toast.loading('Загружаем фото...')
 			setIsProcessing(true)
 			try {
-				const { data } = await mutateAsync(formData)
-				const fileUrl = data[0]?.url
-
-				if (!fileUrl) {
-					throw new Error('Не удалось загрузить файл')
-				}
-
-				await onUploadComplete?.(fileUrl)
+				const fileUrl = await mutateAsync(files[0])
 				onChange(fileUrl)
-				toast.success(successMessage || 'Файл загружен', {
+				toast.success(successMessage || 'Фото загружено', {
 					id: toastId
 				})
 			} catch (error) {
-				const message = axios.isAxiosError(error)
-					? error.response?.data?.message || 'Не удалось загрузить файл'
-					: error instanceof Error
-						? error.message
-						: 'Не удалось загрузить файл'
+				const message = errorCatch(error) || 'Не удалось загрузить фото'
 
-				toast.error(`Ошибка загрузки файла: ${message}`, {
+				toast.error(`Ошибка загрузки фото: ${message}`, {
 					id: toastId
 				})
 			} finally {
+				operationLockRef.current = false
 				setIsProcessing(false)
 				e.target.value = ''
 			}
 		},
-		[mutateAsync, onChange, onUploadComplete, successMessage]
+		[mutateAsync, onChange, operationLockRef, successMessage]
 	)
 
 	return useMemo(

@@ -214,9 +214,11 @@ JWT_MAX_TOKEN_LIFETIME_SECONDS=900
 
 Gateway разрешает credentialed CORS только для точных development-origin
 `http://localhost:3000` и `http://127.0.0.1:3000`. Поэтому локальный frontend
-обращается к API через `:4100`; `NEXT_PUBLIC_DEVELOPMENT_HOST=:4200` остаётся
-для uploads из Core, а unversioned runtime-виджеты и preview используют
-`NEXT_PUBLIC_WIDGETS_HOST=:4700`.
+обращается к versioned API через `NEXT_PUBLIC_API_URL=:4100`, а runtime-виджеты
+и preview используют `NEXT_PUBLIC_WIDGETS_HOST=:4700`. Upload/avatar-запросы
+больше не проксируются через frontend в Core: они идут в профильные API через
+Gateway. `NEXT_PUBLIC_DEVELOPMENT_HOST` текущими frontend-маршрутами не
+используется.
 
 ## Запуск development-сервера
 
@@ -234,6 +236,28 @@ pnpm build
 pnpm start
 ```
 
+### Production trust для Identity Avatar
+
+До первого client cutover release-оператор вручную переносит только проверенный
+публичный Ed25519-ключ backend на frontend VPS во временный файл
+`/opt/winwidget/deploy/frontend/.identity-avatar-backend-signing.transfer.public.pem`.
+Файл должен принадлежать `root:root`, иметь mode `0600`, быть обычным файлом с
+одной ссылкой и передаваться вне deploy-скрипта через имеющиеся SSH-доступы к
+обоим VPS. Приватный ключ backend не переносится никогда.
+
+Deploy не скачивает и не заменяет trust key. Он no-clobber закрепляет его как
+`.identity-avatar-backend-signing.public.pem`, создаёт подписанное frontend-key
+bootstrap-доказательство `.identity-avatar-backend-trust-bootstrap-v1.json` и
+только после полной проверки удаляет transfer-файл. Повторный deploy принимает
+отсутствующий transfer-файл лишь при совпадающих pinned key и bootstrap evidence.
+
+Первый client switch дополнительно требует свежий подписанный backend
+`client-ready-v1.json`, архивирует его точные body/signature bytes и создаёт
+root-only `.identity-avatar-client-switch-v1.json`. Пока receipt находится в
+`soak-pinned`, другая frontend revision блокируется. После постоянного
+подписанного `cleanup-complete-v1.json` receipt переходит в `released`, и deploy
+разрешает только Git-потомков исходной client revision.
+
 ## Переменные окружения
 
 | Переменная                       | Назначение                                                                             |
@@ -241,7 +265,7 @@ pnpm start
 | `NEXT_PUBLIC_MODE`               | Режим выбора адресов: `development` или `production`                                   |
 | `NEXT_PUBLIC_SITE_URL`           | Публичный адрес frontend                                                               |
 | `NEXT_PUBLIC_PRODUCTION_HOST`    | Публичный адрес production backend                                                     |
-| `NEXT_PUBLIC_DEVELOPMENT_HOST`   | Адрес локального backend                                                               |
+| `NEXT_PUBLIC_DEVELOPMENT_HOST`   | Не используется текущими frontend-маршрутами; не является uploads fallback             |
 | `NEXT_PUBLIC_WIDGETS_HOST`       | Адрес Widgets Service; по умолчанию `:4700` локально и production backend в production |
 | `NEXT_PUBLIC_API_URL`            | Полный базовый URL API с `/api/v1`                                                     |
 | `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | Публичный ключ reCAPTCHA v3                                                            |

@@ -25,6 +25,10 @@ services:
       JWT_MAX_TOKEN_LIFETIME_SECONDS: ${JWT_MAX_TOKEN_LIFETIME_SECONDS:-900}
       PORT: '3000'
       HOSTNAME: 0.0.0.0
+    labels:
+      ru.winwidget.identity-avatar.runtime-stability-generation: '${IDENTITY_AVATAR_RUNTIME_STABILITY_GENERATION:-0}'
     restart: unless-stopped
     ports:
       - '127.0.0.1:${CLIENT_HOST_PORT:-3000}:3000'
+    volumes:
+      - /opt/winwidget/deploy/frontend/identity-avatar-client-release:/run/winwidget/identity-avatar-client-release:ro
