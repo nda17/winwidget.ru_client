@@ -218,6 +218,11 @@ compose() {
 
 compose config --quiet
 compose build client
+docker run --rm --network host \
+	--entrypoint node \
+	--volume "$client_root/scripts/verify-auth-settings-contract.mjs:/tmp/verify-auth-settings-contract.mjs:ro" \
+	"winwidget-client:$APP_VERSION" \
+	/tmp/verify-auth-settings-contract.mjs
 compose config --format json |
 	docker run --rm -i --network none \
 		-e APP_REVISION \

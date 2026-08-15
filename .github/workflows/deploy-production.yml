@@ -53,6 +53,9 @@ jobs:
           HUSKY: 0
         run: pnpm install --frozen-lockfile
 
+      - name: Verify production auth settings contract
+        run: node scripts/verify-auth-settings-contract.mjs
+
       - name: Type check
         run: pnpm exec tsc --noEmit
 
