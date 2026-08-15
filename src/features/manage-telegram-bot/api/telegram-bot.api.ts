@@ -49,7 +49,7 @@ export interface UpdateAdminTelegramBotSettings {
 }
 
 export type TelegramWebhookBot = 'info' | 'auth' | 'support'
-export type CoreTelegramWebhookBot = Exclude<TelegramWebhookBot, 'auth'>
+export type CoreTelegramWebhookBot = Extract<TelegramWebhookBot, 'support'>
 
 export interface AdminTelegramAuthSettings {
 	authTelegramBotTokenConfigured: boolean
@@ -95,6 +95,15 @@ export type TelegramDatabaseBackupJobStatus =
 	| 'SUCCEEDED'
 	| 'FAILED'
 	| 'CANCELLED'
+	| 'SKIPPED'
+
+export type TelegramDatabaseBackupJobTrigger = 'SCHEDULED' | 'MANUAL'
+
+export type TelegramDatabaseBackupFreshness =
+	| 'DISABLED'
+	| 'MISSING'
+	| 'FRESH'
+	| 'STALE'
 
 export type TelegramDatabaseBackupTarget =
 	| 'core'
@@ -104,16 +113,6 @@ export type TelegramDatabaseBackupTarget =
 	| 'widgets'
 	| 'billing'
 	| 'identity'
-
-export interface TelegramDatabaseBackupJobResult {
-	target: TelegramDatabaseBackupTarget
-	databaseName: string
-	schema: string
-	fileName: string
-	fileSize: number
-	createdAt: string
-	telegramSent: true
-}
 
 export interface TelegramDatabaseBackupAcceptedJob {
 	target: TelegramDatabaseBackupTarget
@@ -130,8 +129,55 @@ export interface TelegramDatabaseBackupJob {
 	queuedAt: string
 	startedAt: string | null
 	completedAt: string | null
-	lastError: string | null
-	result: TelegramDatabaseBackupJobResult | null
+	fileSize: number | null
+	hasError: boolean
+}
+
+export interface TelegramDatabaseBackupAdminJobSummary {
+	target: TelegramDatabaseBackupTarget
+	jobId: string
+	trigger: TelegramDatabaseBackupJobTrigger
+	status: TelegramDatabaseBackupJobStatus
+	queuedAt: string
+	startedAt: string | null
+	completedAt: string | null
+	attempts: number
+	maxAttempts: number
+	fileSize: number | null
+	hasError: boolean
+}
+
+export interface TelegramDatabaseBackupOverviewItem {
+	target: TelegramDatabaseBackupTarget
+	freshness: TelegramDatabaseBackupFreshness
+	staleAfter: string | null
+	latest: TelegramDatabaseBackupAdminJobSummary | null
+	latestScheduled: TelegramDatabaseBackupAdminJobSummary | null
+	latestManual: TelegramDatabaseBackupAdminJobSummary | null
+	latestSuccessful: TelegramDatabaseBackupAdminJobSummary | null
+}
+
+export interface TelegramDatabaseBackupOverview {
+	databaseBackupEnabled: boolean
+	generatedAt: string
+	staleAfterHours: number
+	items: TelegramDatabaseBackupOverviewItem[]
+}
+
+export interface TelegramDatabaseBackupJobsFilters {
+	target?: TelegramDatabaseBackupTarget
+	trigger?: TelegramDatabaseBackupJobTrigger
+	status?: TelegramDatabaseBackupJobStatus
+	page: number
+	limit: number
+}
+
+export interface TelegramDatabaseBackupJobsPage {
+	items: TelegramDatabaseBackupAdminJobSummary[]
+	page: number
+	limit: number
+	total: number
+	totalPages: number
 }
 
 const adminTelegramBotService = {
@@ -203,6 +249,25 @@ const adminTelegramBotService = {
 				`/telegram-bot/admin/database-backups/${target}/jobs/${jobId}`
 			)
 		return data
+	},
+
+	async getDatabaseBackupOverview(): Promise<TelegramDatabaseBackupOverview> {
+		const { data } =
+			await axiosInterceptorsRequest.get<TelegramDatabaseBackupOverview>(
+				'/telegram-bot/admin/database-backups/overview'
+			)
+		return data
+	},
+
+	async getDatabaseBackupJobs(
+		filters: TelegramDatabaseBackupJobsFilters
+	): Promise<TelegramDatabaseBackupJobsPage> {
+		const { data } =
+			await axiosInterceptorsRequest.get<TelegramDatabaseBackupJobsPage>(
+				'/telegram-bot/admin/database-backups/jobs',
+				{ params: filters }
+			)
+		return data
 	}
 }
 
@@ -229,6 +294,24 @@ export const identityTelegramAuthService = {
 		const { data } =
 			await axiosInterceptorsRequest.post<TelegramWebhookInstallResult>(
 				'/telegram-auth/admin/webhook/reinstall'
+			)
+
+		return data
+	},
+
+	async getInfoWebhookStatus(): Promise<TelegramWebhookStatus> {
+		const { data } =
+			await axiosInterceptorsRequest.get<TelegramWebhookStatus>(
+				'/telegram-auth/admin/info-webhook/status'
+			)
+
+		return data
+	},
+
+	async reinstallInfoWebhook(): Promise<TelegramWebhookInstallResult> {
+		const { data } =
+			await axiosInterceptorsRequest.post<TelegramWebhookInstallResult>(
+				'/telegram-auth/admin/info-webhook/reinstall'
 			)
 
 		return data

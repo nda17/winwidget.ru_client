@@ -10,6 +10,7 @@ export type MessagingIntegration =
 	| 'payment-telegram'
 	| 'campaign-email'
 	| 'campaign-telegram'
+	| 'daily-summary-delivery-telegram'
 	| 'campaign-admin-audit'
 	| 'widgets-admin-audit'
 	| 'reporting-admin-audit'
@@ -52,12 +53,15 @@ export interface MessagingOverview {
 	oldestPendingAt: string | null
 	unresolvedFailures: number
 	retryingFailures: number
-	deliveredLast24Hours: number
+	processedLast24Hours: number
+	completedBackupsLast24Hours: number
 	rabbitMqError: string | null
 	notificationDeliveryError: string | null
 	widgetsError: string | null
 	billingError: string | null
 	identityError: string | null
+	campaignsError: string | null
+	reportingError: string | null
 	heartbeats: Array<{
 		service: string
 		status: 'ok' | 'down'
@@ -100,12 +104,26 @@ export interface MessagingFailure {
 	}
 }
 
+export type MessagingFailureSource =
+	| 'core'
+	| 'notificationDelivery'
+	| 'widgets'
+	| 'billing'
+	| 'identity'
+
+export type MessagingFailureCoverage =
+	| 'complete'
+	| 'unavailable'
+	| 'not_queried'
+
 export interface MessagingFailuresResponse {
 	items: MessagingFailure[]
 	total: number
 	page: number
 	limit: number
 	totalPages: number
+	sourceErrors: Partial<Record<MessagingFailureSource, string>>
+	coverage: Record<MessagingFailureSource, MessagingFailureCoverage>
 }
 
 class MessagingService {

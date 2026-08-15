@@ -4,7 +4,11 @@ import { UserRole, useUser } from '@/entities/user'
 import { adminTelegramBotService } from '@/features/manage-telegram-bot'
 import type {
 	AdminTelegramBotSettings,
+	TelegramDatabaseBackupAdminJobSummary,
+	TelegramDatabaseBackupFreshness,
 	TelegramDatabaseBackupJobStatus,
+	TelegramDatabaseBackupJobTrigger,
+	TelegramDatabaseBackupOverviewItem,
 	TelegramDatabaseBackupTarget
 } from '@/features/manage-telegram-bot'
 import {
@@ -19,6 +23,7 @@ import AdminSectionHeading from '@/screens/admin/ui/common/admin-section-heading
 import AdminTooltip from '@/screens/admin/ui/common/admin-tooltip/AdminTooltip'
 import { errorCatch } from '@/shared/api'
 import Heading from '@/shared/ui/heading/Heading'
+import Pagination from '@/shared/ui/pagination/Pagination'
 import SkeletonLoader from '@/shared/ui/skeleton-loader/SkeletonLoader'
 import {
 	useMutation,
@@ -38,8 +43,15 @@ import toast from 'react-hot-toast'
 import styles from './AdminDatabases.module.scss'
 
 const SETTINGS_QUERY_KEY = ['admin-telegram-bot-settings']
+const DATABASE_BACKUP_OVERVIEW_QUERY_KEY = [
+	'admin-telegram-database-backup-overview'
+]
+const DATABASE_BACKUP_HISTORY_QUERY_KEY = [
+	'admin-telegram-database-backup-history'
+]
 const RESTORE_SETTINGS_QUERY_KEY = ['admin-database-restore-settings']
 const DATABASE_BACKUP_JOB_POLL_INTERVAL_MS = 2500
+const DATABASE_BACKUP_HISTORY_LIMIT = 20
 const DATABASE_RESTORE_JOB_POLL_INTERVAL_MS = 2500
 const DATABASE_RESTORE_PUBLICATION_GRACE_MS = 5 * 60 * 1000
 const DATABASE_BACKUP_STORAGE_KEY_PREFIX =
@@ -52,7 +64,8 @@ const TERMINAL_DATABASE_BACKUP_JOB_STATUSES: ReadonlySet<TelegramDatabaseBackupJ
 	new Set<TelegramDatabaseBackupJobStatus>([
 		'SUCCEEDED',
 		'FAILED',
-		'CANCELLED'
+		'CANCELLED',
+		'SKIPPED'
 	])
 const DATABASE_BACKUP_JOB_STATUS_LABELS: Record<
 	TelegramDatabaseBackupJobStatus,
@@ -62,7 +75,34 @@ const DATABASE_BACKUP_JOB_STATUS_LABELS: Record<
 	PROCESSING: 'Выполняется',
 	SUCCEEDED: 'Завершён',
 	FAILED: 'Ошибка',
-	CANCELLED: 'Отменён'
+	CANCELLED: 'Отменён',
+	SKIPPED: 'Пропущен'
+}
+const DATABASE_BACKUP_TARGET_OPTIONS: readonly TelegramDatabaseBackupTarget[] =
+	[
+		'core',
+		'notification-delivery',
+		'campaigns',
+		'reporting',
+		'widgets',
+		'billing',
+		'identity'
+	]
+const DATABASE_BACKUP_TRIGGER_LABELS: Record<
+	TelegramDatabaseBackupJobTrigger,
+	string
+> = {
+	SCHEDULED: 'Плановый',
+	MANUAL: 'Ручной'
+}
+const DATABASE_BACKUP_FRESHNESS_LABELS: Record<
+	TelegramDatabaseBackupFreshness,
+	string
+> = {
+	DISABLED: 'Расписание выключено',
+	MISSING: 'Нет успешного backup',
+	FRESH: 'Актуален',
+	STALE: 'Устарел'
 }
 const TERMINAL_DATABASE_RESTORE_JOB_STATUSES: ReadonlySet<DatabaseRestoreJobStatus> =
 	new Set<DatabaseRestoreJobStatus>([
@@ -265,6 +305,48 @@ const getDatabaseBackupTargetLabel = (
 		identity: 'БД Identity'
 	})[target]
 
+const formatDatabaseBackupDate = (value: string | null) => {
+	if (!value) return '—'
+	const parsed = new Date(value)
+	if (Number.isNaN(parsed.getTime())) return '—'
+
+	return new Intl.DateTimeFormat('ru-RU', {
+		dateStyle: 'short',
+		timeStyle: 'short'
+	}).format(parsed)
+}
+
+const getDatabaseBackupFreshnessBadgeClass = (
+	freshness: TelegramDatabaseBackupFreshness
+) => {
+	if (freshness === 'FRESH') return styles.badgeOk
+	if (freshness === 'STALE' || freshness === 'MISSING') {
+		return styles.badgeError
+	}
+	return styles.badgeNeutral
+}
+
+const DatabaseBackupJobSummary = ({
+	job
+}: {
+	job: TelegramDatabaseBackupAdminJobSummary | null
+}) => {
+	if (!job) return <p className={styles.statusValue}>Не запускался</p>
+
+	return (
+		<>
+			<span
+				className={`${styles.badge} ${getDatabaseBackupJobBadgeClass(job.status)}`}
+			>
+				{DATABASE_BACKUP_JOB_STATUS_LABELS[job.status]}
+			</span>
+			<p className={styles.hint}>
+				{formatDatabaseBackupDate(job.completedAt ?? job.queuedAt)}
+			</p>
+		</>
+	)
+}
+
 const getDatabaseRestoreTargetLabel = (
 	target: DatabaseRestoreTarget,
 	targetSettings: DatabaseRestoreTargetSettings[] = []
@@ -320,6 +402,12 @@ const useDatabaseBackup = (
 					jobId: result.jobId
 				})
 			}
+			void queryClient.invalidateQueries({
+				queryKey: DATABASE_BACKUP_OVERVIEW_QUERY_KEY
+			})
+			void queryClient.invalidateQueries({
+				queryKey: DATABASE_BACKUP_HISTORY_QUERY_KEY
+			})
 		}
 	})
 
@@ -453,11 +541,17 @@ const useDatabaseBackup = (
 			['admin-telegram-database-backup-active', target, userId ?? null],
 			null
 		)
+		void queryClient.invalidateQueries({
+			queryKey: DATABASE_BACKUP_OVERVIEW_QUERY_KEY
+		})
+		void queryClient.invalidateQueries({
+			queryKey: DATABASE_BACKUP_HISTORY_QUERY_KEY
+		})
 
 		if (job.status === 'SUCCEEDED') {
-			const fileSize = job.result?.fileSize
+			const fileSize = job.fileSize
 			toast.success(
-				fileSize === undefined
+				fileSize === null
 					? `Backup ${getDatabaseBackupTargetLabel(target)} создан и отправлен в Telegram`
 					: `Backup ${getDatabaseBackupTargetLabel(target)} отправлен в Telegram: ${formatFileSize(fileSize)}`
 			)
@@ -473,9 +567,15 @@ const useDatabaseBackup = (
 			)
 			return
 		}
+		if (job.status === 'SKIPPED') {
+			toast(
+				`Backup ${getDatabaseBackupTargetLabel(target)} пропущен планировщиком`
+			)
+			return
+		}
 
 		toast.error(
-			`Ошибка backup ${getDatabaseBackupTargetLabel(target)}: ${job.lastError || 'неизвестная ошибка'}`
+			`Backup ${getDatabaseBackupTargetLabel(target)} завершился с ошибкой`
 		)
 	}, [
 		databaseBackupJob.data,
@@ -543,6 +643,9 @@ const useDatabaseBackup = (
 
 interface DatabaseBackupPanelProps {
 	description: string
+	overviewError: unknown
+	overviewItem: TelegramDatabaseBackupOverviewItem | null
+	overviewLoading: boolean
 	scheduleTimeLabel: string
 	settings: AdminTelegramBotSettings
 	target: TelegramDatabaseBackupTarget
@@ -552,6 +655,9 @@ interface DatabaseBackupPanelProps {
 
 const DatabaseBackupPanel = ({
 	description,
+	overviewError,
+	overviewItem,
+	overviewLoading,
 	scheduleTimeLabel,
 	settings,
 	target,
@@ -591,11 +697,19 @@ const DatabaseBackupPanel = ({
 						<p className={styles.statusValue}>{scheduleTimeLabel}</p>
 					</div>
 					<div className={styles.statusItem}>
-						<p className={styles.statusLabel}>Формат</p>
-						<p className={styles.statusValue}>PostgreSQL .dump</p>
+						<p className={styles.statusLabel}>Последний плановый</p>
+						{overviewLoading ? (
+							<p className={styles.statusValue}>Загрузка...</p>
+						) : overviewError ? (
+							<p className={styles.hint}>Статус недоступен</p>
+						) : (
+							<DatabaseBackupJobSummary
+								job={overviewItem?.latestScheduled ?? null}
+							/>
+						)}
 					</div>
 					<div className={styles.statusItem} aria-live="polite">
-						<p className={styles.statusLabel}>Ручной backup</p>
+						<p className={styles.statusLabel}>Последний ручной</p>
 						{backup.databaseBackupJob.data ? (
 							<>
 								<span
@@ -607,12 +721,11 @@ const DatabaseBackupPanel = ({
 										]
 									}
 								</span>
-								{backup.databaseBackupJob.data.status === 'FAILED' &&
-									backup.databaseBackupJob.data.lastError && (
-										<p className={styles.hint}>
-											{backup.databaseBackupJob.data.lastError}
-										</p>
-									)}
+								{backup.databaseBackupJob.data.hasError && (
+									<p className={styles.hint}>
+										Подробности доступны в защищённых server logs
+									</p>
+								)}
 							</>
 						) : backup.databaseBackupJob.isError ? (
 							<p className={styles.hint}>
@@ -621,17 +734,253 @@ const DatabaseBackupPanel = ({
 							</p>
 						) : backup.databaseBackupJobId ? (
 							<p className={styles.statusValue}>Проверяем статус...</p>
-						) : backup.latestActiveDatabaseBackupJob.isError ? (
+						) : overviewLoading ? (
+							<p className={styles.statusValue}>Загрузка...</p>
+						) : overviewError ||
+						  backup.latestActiveDatabaseBackupJob.isError ? (
 							<p className={styles.hint}>
-								Не удалось проверить активный backup:{' '}
-								{errorCatch(backup.latestActiveDatabaseBackupJob.error)}
+								Не удалось получить общий статус backup
 							</p>
 						) : (
-							<p className={styles.statusValue}>Не запускался</p>
+							<DatabaseBackupJobSummary
+								job={overviewItem?.latestManual ?? null}
+							/>
+						)}
+					</div>
+					<div className={styles.statusItem}>
+						<p className={styles.statusLabel}>Свежесть</p>
+						{overviewLoading ? (
+							<p className={styles.statusValue}>Загрузка...</p>
+						) : overviewItem ? (
+							<>
+								<span
+									className={`${styles.badge} ${getDatabaseBackupFreshnessBadgeClass(overviewItem.freshness)}`}
+								>
+									{
+										DATABASE_BACKUP_FRESHNESS_LABELS[
+											overviewItem.freshness
+										]
+									}
+								</span>
+								{overviewItem.staleAfter && (
+									<p className={styles.hint}>
+										{overviewItem.freshness === 'STALE'
+											? 'устарел с'
+											: 'свеж до'}{' '}
+										{formatDatabaseBackupDate(overviewItem.staleAfter)}
+									</p>
+								)}
+							</>
+						) : (
+							<p className={styles.hint}>Статус недоступен</p>
+						)}
+					</div>
+					<div className={styles.statusItem}>
+						<p className={styles.statusLabel}>Последний успешный файл</p>
+						{overviewItem?.latestSuccessful ? (
+							<>
+								<p className={styles.statusValue}>
+									{overviewItem.latestSuccessful.fileSize === null
+										? 'Размер не записан'
+										: formatFileSize(
+												overviewItem.latestSuccessful.fileSize
+											)}
+								</p>
+								<p className={styles.hint}>
+									{formatDatabaseBackupDate(
+										overviewItem.latestSuccessful.completedAt
+									)}
+								</p>
+							</>
+						) : overviewLoading ? (
+							<p className={styles.statusValue}>Загрузка...</p>
+						) : (
+							<p className={styles.statusValue}>Нет данных</p>
 						)}
 					</div>
 				</div>
 			</div>
+		</div>
+	)
+}
+
+const DatabaseBackupHistory = () => {
+	const [page, setPage] = useState(1)
+	const [target, setTarget] = useState<TelegramDatabaseBackupTarget | ''>(
+		''
+	)
+	const [trigger, setTrigger] = useState<
+		TelegramDatabaseBackupJobTrigger | ''
+	>('')
+	const [status, setStatus] = useState<
+		TelegramDatabaseBackupJobStatus | ''
+	>('')
+	const history = useQuery({
+		queryKey: [
+			...DATABASE_BACKUP_HISTORY_QUERY_KEY,
+			page,
+			target,
+			trigger,
+			status
+		],
+		queryFn: () =>
+			adminTelegramBotService.getDatabaseBackupJobs({
+				page,
+				limit: DATABASE_BACKUP_HISTORY_LIMIT,
+				...(target ? { target } : {}),
+				...(trigger ? { trigger } : {}),
+				...(status ? { status } : {})
+			}),
+		refetchInterval: 30_000
+	})
+	const totalPages = history.data?.totalPages ?? 1
+	const pages = Array.from({ length: totalPages }, (_, index) => index + 1)
+
+	useEffect(() => {
+		if (page > totalPages) setPage(totalPages)
+	}, [page, totalPages])
+
+	return (
+		<div className={styles.card}>
+			<div className={styles.historyHeader}>
+				<div>
+					<p className={styles.label}>История резервных копий</p>
+					<p className={styles.hint}>
+						Общая серверная история плановых и ручных запусков всех
+						активных PostgreSQL-баз.
+					</p>
+				</div>
+				<p className={styles.hint}>
+					{history.data
+						? `Всего заданий: ${history.data.total}`
+						: 'Загрузка...'}
+				</p>
+			</div>
+			<div className={styles.historyFilters}>
+				<label className={styles.fieldLabel}>
+					База данных
+					<select
+						className={styles.select}
+						value={target}
+						onChange={event => {
+							setTarget(
+								event.target.value as TelegramDatabaseBackupTarget | ''
+							)
+							setPage(1)
+						}}
+					>
+						<option value="">Все базы</option>
+						{DATABASE_BACKUP_TARGET_OPTIONS.map(item => (
+							<option key={item} value={item}>
+								{getDatabaseBackupTargetLabel(item)}
+							</option>
+						))}
+					</select>
+				</label>
+				<label className={styles.fieldLabel}>
+					Запуск
+					<select
+						className={styles.select}
+						value={trigger}
+						onChange={event => {
+							setTrigger(
+								event.target.value as TelegramDatabaseBackupJobTrigger | ''
+							)
+							setPage(1)
+						}}
+					>
+						<option value="">Все запуски</option>
+						<option value="SCHEDULED">Плановые</option>
+						<option value="MANUAL">Ручные</option>
+					</select>
+				</label>
+				<label className={styles.fieldLabel}>
+					Статус
+					<select
+						className={styles.select}
+						value={status}
+						onChange={event => {
+							setStatus(
+								event.target.value as TelegramDatabaseBackupJobStatus | ''
+							)
+							setPage(1)
+						}}
+					>
+						<option value="">Все статусы</option>
+						{Object.entries(DATABASE_BACKUP_JOB_STATUS_LABELS).map(
+							([value, label]) => (
+								<option key={value} value={value}>
+									{label}
+								</option>
+							)
+						)}
+					</select>
+				</label>
+			</div>
+
+			{history.isLoading ? (
+				<SkeletonLoader count={4} className="h-[52px]" />
+			) : history.isError ? (
+				<p className={styles.restoreError}>
+					Не удалось получить историю backup: {errorCatch(history.error)}
+				</p>
+			) : history.data?.items.length ? (
+				<>
+					<div className={styles.historyTableWrap}>
+						<table className={styles.historyTable}>
+							<thead>
+								<tr>
+									<th>База</th>
+									<th>Запуск</th>
+									<th>Статус</th>
+									<th>Поставлен</th>
+									<th>Завершён</th>
+									<th>Попытки</th>
+									<th>Размер</th>
+								</tr>
+							</thead>
+							<tbody>
+								{history.data.items.map(job => (
+									<tr key={job.jobId}>
+										<td>{getDatabaseBackupTargetLabel(job.target)}</td>
+										<td>{DATABASE_BACKUP_TRIGGER_LABELS[job.trigger]}</td>
+										<td>
+											<span
+												className={`${styles.badge} ${getDatabaseBackupJobBadgeClass(job.status)}`}
+											>
+												{DATABASE_BACKUP_JOB_STATUS_LABELS[job.status]}
+											</span>
+										</td>
+										<td>{formatDatabaseBackupDate(job.queuedAt)}</td>
+										<td>{formatDatabaseBackupDate(job.completedAt)}</td>
+										<td>
+											{job.attempts} / {job.maxAttempts}
+										</td>
+										<td>
+											{job.fileSize === null
+												? '—'
+												: formatFileSize(job.fileSize)}
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+					{totalPages > 1 && (
+						<Pagination
+							listPage={pages}
+							currentPage={page}
+							prevPage={() => setPage(value => Math.max(1, value - 1))}
+							nextPage={() =>
+								setPage(value => Math.min(totalPages, value + 1))
+							}
+							changeActivePage={setPage}
+						/>
+					)}
+				</>
+			) : (
+				<p className={styles.empty}>По выбранным фильтрам запусков нет</p>
+			)}
 		</div>
 	)
 }
@@ -1521,6 +1870,22 @@ const AdminDatabases: NextPage = () => {
 		queryKey: SETTINGS_QUERY_KEY,
 		queryFn: adminTelegramBotService.get
 	})
+	const databaseBackupOverview = useQuery({
+		queryKey: DATABASE_BACKUP_OVERVIEW_QUERY_KEY,
+		queryFn: adminTelegramBotService.getDatabaseBackupOverview,
+		refetchInterval: 30_000
+	})
+	const databaseBackupOverviewByTarget = new Map(
+		databaseBackupOverview.data?.items.map(item => [item.target, item]) ??
+			[]
+	)
+	const getDatabaseBackupOverviewProps = (
+		target: TelegramDatabaseBackupTarget
+	) => ({
+		overviewError: databaseBackupOverview.error,
+		overviewItem: databaseBackupOverviewByTarget.get(target) ?? null,
+		overviewLoading: databaseBackupOverview.isLoading
+	})
 
 	return (
 		<section className={styles.wrapper}>
@@ -1562,6 +1927,7 @@ const AdminDatabases: NextPage = () => {
 				<>
 					<DatabaseBackupPanel
 						target="core"
+						{...getDatabaseBackupOverviewProps('core')}
 						title="Backup БАЗЫ СТАРОГО МОНОЛИТА"
 						description="БД ЛЕГАСИ МОНОЛИТА"
 						scheduleTimeLabel={settings.databaseBackupTimeLabel}
@@ -1570,6 +1936,7 @@ const AdminDatabases: NextPage = () => {
 					/>
 					<DatabaseBackupPanel
 						target="notification-delivery"
+						{...getDatabaseBackupOverviewProps('notification-delivery')}
 						title="Backup базы Notification Delivery"
 						description="Локальная БД микросервиса Notification Delivery Service"
 						scheduleTimeLabel={
@@ -1580,6 +1947,7 @@ const AdminDatabases: NextPage = () => {
 					/>
 					<DatabaseBackupPanel
 						target="campaigns"
+						{...getDatabaseBackupOverviewProps('campaigns')}
 						title="Backup базы Campaigns"
 						description="Локальная БД микросервиса Campaigns Service"
 						scheduleTimeLabel={settings.campaignsDatabaseBackupTimeLabel}
@@ -1588,6 +1956,7 @@ const AdminDatabases: NextPage = () => {
 					/>
 					<DatabaseBackupPanel
 						target="reporting"
+						{...getDatabaseBackupOverviewProps('reporting')}
 						title="Backup базы Reporting"
 						description="Локальная БД микросервиса Reporting Service"
 						scheduleTimeLabel={settings.reportingDatabaseBackupTimeLabel}
@@ -1596,6 +1965,7 @@ const AdminDatabases: NextPage = () => {
 					/>
 					<DatabaseBackupPanel
 						target="widgets"
+						{...getDatabaseBackupOverviewProps('widgets')}
 						title="Backup базы Widgets"
 						description="Локальная БД микросервиса Widgets Service"
 						scheduleTimeLabel={settings.widgetsDatabaseBackupTimeLabel}
@@ -1604,6 +1974,7 @@ const AdminDatabases: NextPage = () => {
 					/>
 					<DatabaseBackupPanel
 						target="billing"
+						{...getDatabaseBackupOverviewProps('billing')}
 						title="Backup базы Billing"
 						description="Локальная БД микросервиса Billing Service"
 						scheduleTimeLabel={settings.billingDatabaseBackupTimeLabel}
@@ -1612,6 +1983,7 @@ const AdminDatabases: NextPage = () => {
 					/>
 					<DatabaseBackupPanel
 						target="identity"
+						{...getDatabaseBackupOverviewProps('identity')}
 						title="Backup базы Identity"
 						description="Локальная БД микросервиса Identity Service"
 						scheduleTimeLabel={settings.identityDatabaseBackupTimeLabel}
@@ -1624,6 +1996,8 @@ const AdminDatabases: NextPage = () => {
 					<p className={styles.empty}>Не удалось загрузить настройки</p>
 				</div>
 			)}
+
+			<DatabaseBackupHistory />
 
 			<DatabaseRestorePanel
 				isDev={isDev}

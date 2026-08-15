@@ -32,6 +32,7 @@ const DAILY_SUMMARY_SETTINGS_QUERY_KEY = [
 const WEBHOOKS_QUERY_KEY = ['admin-telegram-bot-webhooks']
 const IDENTITY_AUTH_SETTINGS_QUERY_KEY = ['admin-telegram-auth-settings']
 const IDENTITY_WEBHOOK_QUERY_KEY = ['admin-telegram-auth-webhook']
+const IDENTITY_INFO_WEBHOOK_QUERY_KEY = ['admin-telegram-info-webhook']
 const WEBHOOK_BOTS: TelegramWebhookBot[] = ['info', 'auth', 'support']
 const MIN_TASK_TIME_GAP_MINUTES = 5
 const MAX_TELEGRAM_TOPIC_ID = 2147483647
@@ -209,6 +210,15 @@ const AdminTelegramBot: NextPage = () => {
 		queryKey: IDENTITY_WEBHOOK_QUERY_KEY,
 		queryFn: identityTelegramAuthService.getWebhookStatus
 	})
+	const {
+		data: identityInfoWebhookStatus,
+		isFetching: isIdentityInfoWebhookStatusFetching,
+		isError: isIdentityInfoWebhookStatusError,
+		refetch: refetchIdentityInfoWebhookStatus
+	} = useQuery({
+		queryKey: IDENTITY_INFO_WEBHOOK_QUERY_KEY,
+		queryFn: identityTelegramAuthService.getInfoWebhookStatus
+	})
 
 	useEffect(() => {
 		if (!settings) return
@@ -278,10 +288,15 @@ const AdminTelegramBot: NextPage = () => {
 	})
 
 	const webhookMutation = useMutation({
-		mutationFn: (bot: TelegramWebhookBot) =>
-			bot === 'auth'
-				? identityTelegramAuthService.reinstallWebhook()
-				: adminTelegramBotService.reinstallWebhook(bot)
+		mutationFn: (bot: TelegramWebhookBot) => {
+			if (bot === 'auth') {
+				return identityTelegramAuthService.reinstallWebhook()
+			}
+			if (bot === 'info') {
+				return identityTelegramAuthService.reinstallInfoWebhook()
+			}
+			return adminTelegramBotService.reinstallWebhook(bot)
+		}
 	})
 
 	const saveWithToast = (
@@ -311,12 +326,15 @@ const AdminTelegramBot: NextPage = () => {
 	}
 
 	const handleReinstallWebhook = (bot: TelegramWebhookBot) => {
-		const promise = webhookMutation.mutateAsync(bot).then(async result => {
+		const promise = webhookMutation.mutateAsync(bot).finally(async () => {
 			await queryClient.invalidateQueries({
 				queryKey:
-					bot === 'auth' ? IDENTITY_WEBHOOK_QUERY_KEY : WEBHOOKS_QUERY_KEY
+					bot === 'auth'
+						? IDENTITY_WEBHOOK_QUERY_KEY
+						: bot === 'info'
+							? IDENTITY_INFO_WEBHOOK_QUERY_KEY
+							: WEBHOOKS_QUERY_KEY
 			})
-			return result
 		})
 
 		toast.promise(promise, {
@@ -653,9 +671,11 @@ const AdminTelegramBot: NextPage = () => {
 			))
 	)
 	const webhookStatusItems = [
-		...(webhookStatuses?.items.filter(status => status.bot !== 'auth') ??
-			[]),
-		...(identityWebhookStatus ? [identityWebhookStatus] : [])
+		...(webhookStatuses?.items.filter(
+			status => status.bot === 'support'
+		) ?? []),
+		...(identityWebhookStatus ? [identityWebhookStatus] : []),
+		...(identityInfoWebhookStatus ? [identityInfoWebhookStatus] : [])
 	]
 	const statusByBot = new Map(
 		webhookStatusItems.map(status => [status.bot, status])
@@ -664,10 +684,11 @@ const AdminTelegramBot: NextPage = () => {
 		if (bot === 'auth') {
 			return Boolean(identityAuthSettings?.authTelegramBotTokenConfigured)
 		}
+		if (bot === 'info') {
+			return Boolean(identityInfoWebhookStatus?.configured)
+		}
 		if (!settings) return false
-		if (bot === 'support')
-			return settings.supportTelegramBotTokenConfigured
-		return settings.telegramBotTokenConfigured
+		return settings.supportTelegramBotTokenConfigured
 	}
 
 	return (
@@ -678,7 +699,7 @@ const AdminTelegramBot: NextPage = () => {
 			<AdminSectionHeading
 				text="Telegram-боты"
 				title="Webhook и сообщения в Telegram"
-				description="Настраивает Identity webhook Auth_bot, Core webhook @winwidget_info_bot и @winwidget_support_bot, а также распределение служебных сообщений по топикам Telegram-группы администраторов."
+				description="Настраивает Identity webhook Auth_bot и @winwidget_info_bot, Core webhook @winwidget_support_bot, а также распределение служебных сообщений по топикам Telegram-группы администраторов."
 				risk="medium"
 				riskText="Группа должна быть супергруппой с включёнными Topics. Если ID группы или нужного топика указан неверно, соответствующие сообщения не отправятся. @winwidget_info_bot и @winwidget_support_bot должны быть добавлены в группу, а токены должны быть настроены на сервере."
 			/>
@@ -841,8 +862,9 @@ const AdminTelegramBot: NextPage = () => {
 									onClick={() => handleReinstallWebhook('info')}
 									disabled={
 										isWebhookActionPending ||
-										!settings.telegramBotTokenConfigured ||
-										!settings.telegramWebhookHostConfigured
+										!identityInfoWebhookStatus?.configured ||
+										!identityInfoWebhookStatus.secretConfigured ||
+										!identityInfoWebhookStatus.expectedWebhookUrl
 									}
 								>
 									@winwidget_info_bot
@@ -889,12 +911,14 @@ const AdminTelegramBot: NextPage = () => {
 										void Promise.all([
 											refetchWebhookStatuses(),
 											refetchIdentityWebhookStatus(),
+											refetchIdentityInfoWebhookStatus(),
 											refetchIdentityAuthSettings()
 										])
 									}
 									disabled={
 										isWebhookStatusesFetching ||
 										isIdentityWebhookStatusFetching ||
+										isIdentityInfoWebhookStatusFetching ||
 										isIdentityAuthSettingsFetching
 									}
 								>
@@ -907,9 +931,10 @@ const AdminTelegramBot: NextPage = () => {
 									const status = statusByBot.get(bot)
 									const pendingCount = status?.pendingUpdateCount ?? null
 									const isIdentityUnavailable =
-										bot === 'auth' &&
-										(isIdentityAuthSettingsError ||
-											isIdentityWebhookStatusError)
+										(bot === 'auth' &&
+											(isIdentityAuthSettingsError ||
+												isIdentityWebhookStatusError)) ||
+										(bot === 'info' && isIdentityInfoWebhookStatusError)
 									const hasProblem = Boolean(
 										status &&
 										(!status.ok ||

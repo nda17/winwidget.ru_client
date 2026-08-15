@@ -5,6 +5,7 @@ import {
 	messagingService,
 	type MessagingFailure,
 	type MessagingFailureCategory,
+	type MessagingFailureSource,
 	type MessagingIntegration
 } from '@/features/admin-monitoring'
 import { errorCatch } from '@/shared/api'
@@ -36,6 +37,7 @@ const integrationLabels: Record<MessagingIntegration, string> = {
 	'payment-telegram': 'Telegram после оплаты',
 	'campaign-email': 'Email-кампания',
 	'campaign-telegram': 'Telegram-кампания',
+	'daily-summary-delivery-telegram': 'Ежедневная Telegram-сводка',
 	'campaign-admin-audit': 'Аудит кампаний',
 	'widgets-admin-audit': 'Аудит виджетов',
 	'reporting-admin-audit': 'Аудит Reporting',
@@ -68,6 +70,14 @@ const categoryLabels: Record<MessagingFailureCategory, string> = {
 	RATE_LIMIT: 'Ограничение частоты',
 	PERMANENT: 'Постоянная',
 	AUTH_CONFIGURATION: 'Авторизация или настройка'
+}
+
+const failureSourceLabels: Record<MessagingFailureSource, string> = {
+	core: 'Core',
+	notificationDelivery: 'Notification Delivery',
+	widgets: 'Widgets',
+	billing: 'Billing',
+	identity: 'Identity'
 }
 
 const formatDate = (value: string | null) =>
@@ -236,6 +246,9 @@ export default function AdminMessaging() {
 
 	const totalPages = failures.data?.totalPages || 1
 	const pages = Array.from({ length: totalPages }, (_, index) => index + 1)
+	const unavailableFailureSources = failures.data
+		? (Object.keys(failures.data.sourceErrors) as MessagingFailureSource[])
+		: []
 
 	useEffect(() => {
 		if (page > totalPages) {
@@ -319,7 +332,7 @@ export default function AdminMessaging() {
 				{isUserLoading || overview.isLoading ? (
 					<>
 						<div className={styles.cards}>
-							{Array.from({ length: 5 }, (_, index) => (
+							{Array.from({ length: 6 }, (_, index) => (
 								<SkeletonLoader
 									key={index}
 									count={1}
@@ -359,9 +372,14 @@ export default function AdminMessaging() {
 								description="Ошибки из DLQ, для которых DEV запустил ручную повторную отправку, но успешная доставка ещё не подтверждена."
 							/>
 							<Metric
-								title="Доставлено за 24 часа"
-								value={overview.data.deliveredLast24Hours}
-								description="Количество успешных обработок отдельными consumers и завершённых backup, а не уникальных бизнес-событий. Например, одна оплата с успешными email и Telegram даст две доставки."
+								title="Обработано за 24 часа"
+								value={overview.data.processedLast24Hours}
+								description="Успешно завершённые обработки отдельными consumers, а не уникальные бизнес-события. Например, одна оплата, обработанная email- и Telegram-consumers, даст две обработки. Завершённые backup сюда не входят."
+							/>
+							<Metric
+								title="Успешных бэкапов за 24 часа"
+								value={overview.data.completedBackupsLast24Hours}
+								description="Успешно завершённые за последние 24 часа резервные копии баз Core, Notification Delivery, Campaigns, Reporting, Widgets, Billing и Identity."
 							/>
 						</div>
 						<div className={styles.heartbeats}>
@@ -377,7 +395,7 @@ export default function AdminMessaging() {
 							))}
 							<AdminTooltip
 								title="Состояние процессов"
-								description="Зелёный индикатор означает, что процесс присылал heartbeat в последние 30 секунд. Число показывает количество активных экземпляров. Heartbeat подтверждает, что Core, Identity, Notification Delivery, Widgets или Billing процесс жив, но не проверяет доступность SMTP, Telegram, CRM или PostgreSQL."
+								description="Зелёный индикатор означает, что процесс присылал heartbeat в последние 30 секунд. Число показывает количество активных экземпляров. Heartbeat подтверждает, что процесс Core, Identity, Notification Delivery, Campaigns, Reporting, Widgets или Billing жив, но не проверяет доступность SMTP, Telegram, CRM или PostgreSQL."
 							/>
 						</div>
 						{overview.data.rabbitMqError && (
@@ -404,6 +422,16 @@ export default function AdminMessaging() {
 						{overview.data.identityError && (
 							<p className={styles.error}>
 								Identity: {overview.data.identityError}
+							</p>
+						)}
+						{overview.data.campaignsError && (
+							<p className={styles.error}>
+								Campaigns: {overview.data.campaignsError}
+							</p>
+						)}
+						{overview.data.reportingError && (
+							<p className={styles.error}>
+								Reporting: {overview.data.reportingError}
 							</p>
 						)}
 						<div className={styles.queueHeading}>
@@ -529,6 +557,13 @@ export default function AdminMessaging() {
 							</label>
 						</div>
 					</div>
+					{failures.data &&
+						unavailableFailureSources.map(source => (
+							<p key={source} className={styles.error}>
+								{failureSourceLabels[source]}:{' '}
+								{failures.data.sourceErrors[source]}
+							</p>
+						))}
 					{failures.isLoading ? (
 						<div className={styles.failureSkeletons}>
 							<SkeletonLoader count={1} className="h-[46px]" />
@@ -667,7 +702,9 @@ export default function AdminMessaging() {
 						</p>
 					) : (
 						<p className={styles.empty}>
-							По выбранным фильтрам ошибок нет
+							{unavailableFailureSources.length
+								? 'Доступные источники не вернули ошибок; часть данных временно недоступна'
+								: 'По выбранным фильтрам ошибок нет'}
 						</p>
 					)}
 				</div>
