@@ -1,5 +1,8 @@
 import { axiosInterceptorsRequest } from '@/shared/api'
-import type { SiteSettings } from '@/entities/site-settings/model/site-settings.types'
+import type {
+	SiteSettings,
+	SiteSettingsPatch
+} from '@/entities/site-settings/model/site-settings.types'
 
 const siteSettingsService = {
 	async get(): Promise<SiteSettings> {
@@ -7,19 +10,7 @@ const siteSettingsService = {
 		return data
 	},
 
-	async update(
-		payload: Partial<
-			Pick<
-				SiteSettings,
-				| 'bannerEnabled'
-				| 'bannerText'
-				| 'snowflakeEnabled'
-				| 'paymentEnabled'
-				| 'autoRenewalSignupEnabled'
-				| 'autoRenewalChargesEnabled'
-			>
-		>
-	): Promise<SiteSettings> {
+	async update(payload: SiteSettingsPatch): Promise<SiteSettings> {
 		const { data } = await axiosInterceptorsRequest.patch(
 			'/site-settings',
 			payload

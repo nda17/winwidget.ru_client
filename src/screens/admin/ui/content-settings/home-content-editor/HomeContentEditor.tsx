@@ -1,24 +1,28 @@
 'use client'
 
 import ConfirmDialog from '@/shared/ui/confirm-dialog/ConfirmDialog'
+import AdminTooltip from '@/screens/admin/ui/common/admin-tooltip/AdminTooltip'
 import { revalidateHomePageContent } from '@/entities/home-page-content/actions'
 import { normalizeHomePageContent } from '@/entities/home-page-content'
 import { homePageContentService } from '@/entities/home-page-content'
 import type {
 	HomePageCaseStudy,
 	HomePageContent,
+	HomePageContentRecord,
 	HomePageFeatureCard,
 	HomePageIntegrationIconKey,
 	HomePageIntegrationItem,
 	HomePagePricingPlan,
+	HomePageRawCodeContent,
 	HomePageSitemapChangeFrequency,
 	HomePageSitemapItem,
+	HomePageStructuredContent,
 	HomePageTariffComparisonRow,
 	HomePageTextCard,
 	HomePageToolItem,
 	HomePageToolPreviewType
 } from '@/entities/home-page-content'
-import { useAuthStore } from '@/entities/user'
+import { UserRole, useAuthStore, useUser } from '@/entities/user'
 import {
 	useMutation,
 	useQuery,
@@ -429,6 +433,23 @@ const prepareContentForSave = (
 	}
 })
 
+const getStructuredContent = (
+	content: HomePageContent
+): HomePageStructuredContent => {
+	const { head, body, ...structuredContent } = content
+	void head
+	void body
+
+	return structuredContent
+}
+
+const getRawCodeContent = (
+	content: HomePageContent
+): HomePageRawCodeContent => ({
+	head: content.head,
+	body: content.body
+})
+
 const normalizePriorityInput = (value: string) => {
 	const numeric = Number(value)
 	if (!Number.isFinite(numeric)) return 0
@@ -566,6 +587,7 @@ interface HomeContentEditorProps {
 
 const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 	const auth = useAuthStore(state => state.auth)
+	const { user, isLoading: isUserLoading } = useUser()
 	const queryClient = useQueryClient()
 	const router = useRouter()
 	const meta = EDITOR_META[area]
@@ -575,6 +597,8 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 	const isDemoArea = area === 'demo'
 	const isBodyArea = area === 'body'
 	const isHeadArea = area === 'head'
+	const isRawCodeArea = isBodyArea || isHeadArea
+	const isDev = Boolean(user?.rights?.includes(UserRole.DEV))
 	const defaultContent = useMemo(() => normalizeHomePageContent(), [])
 	const [draft, setDraft] = useState<HomePageContent>(defaultContent)
 	const [showFactoryResetConfirm, setShowFactoryResetConfirm] =
@@ -590,25 +614,53 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 		if (data?.content) setDraft(data.content)
 	}, [data])
 
-	const mutation = useMutation({
-		mutationFn: homePageContentService.update,
-		onSuccess: async result => {
-			setDraft(result.content)
-			await queryClient.invalidateQueries({
-				queryKey: ['home-page-content']
-			})
-			await revalidateHomePageContent()
-			router.refresh()
-		}
+	const handleMutationSuccess = async (result: HomePageContentRecord) => {
+		setDraft(result.content)
+		await queryClient.invalidateQueries({
+			queryKey: ['home-page-content']
+		})
+		await revalidateHomePageContent()
+		router.refresh()
+	}
+
+	const structuredMutation = useMutation({
+		mutationFn: homePageContentService.updateStructured,
+		onSuccess: handleMutationSuccess
 	})
 
+	const rawCodeMutation = useMutation({
+		mutationFn: homePageContentService.updateRawCode,
+		onSuccess: handleMutationSuccess
+	})
+
+	const activeMutation = isRawCodeArea
+		? rawCodeMutation
+		: structuredMutation
 	const persistedContent =
-		mutation.data?.content ?? data?.content ?? defaultContent
+		activeMutation.data?.content ?? data?.content ?? defaultContent
+	const draftScope = isRawCodeArea
+		? getRawCodeContent(draft)
+		: getStructuredContent(draft)
+	const persistedScope = isRawCodeArea
+		? getRawCodeContent(persistedContent)
+		: getStructuredContent(persistedContent)
 	const isDirty =
-		JSON.stringify(draft) !== JSON.stringify(persistedContent)
+		JSON.stringify(draftScope) !== JSON.stringify(persistedScope)
+	const isMutationPending =
+		structuredMutation.isPending || rawCodeMutation.isPending
 
 	const save = () => {
-		const promise = mutation.mutateAsync(prepareContentForSave(draft))
+		if (isRawCodeArea && !isDev) {
+			toast.error('Изменение raw-кода доступно только DEV')
+			return
+		}
+
+		const preparedContent = prepareContentForSave(draft)
+		const promise = isRawCodeArea
+			? rawCodeMutation.mutateAsync(getRawCodeContent(preparedContent))
+			: structuredMutation.mutateAsync(
+					getStructuredContent(preparedContent)
+				)
 
 		toast.promise(promise, {
 			loading: 'Сохраняем...',
@@ -644,7 +696,9 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 		setShowFactoryResetConfirm(false)
 		setDraft(nextContent)
 
-		const promise = mutation.mutateAsync(nextContent)
+		const promise = structuredMutation.mutateAsync(
+			getStructuredContent(nextContent)
+		)
 
 		toast.promise(promise, {
 			loading: 'Сбрасываем главную...',
@@ -673,7 +727,9 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 
 		setDraft(nextContent)
 
-		const promise = mutation.mutateAsync(nextContent)
+		const promise = structuredMutation.mutateAsync(
+			getStructuredContent(nextContent)
+		)
 
 		toast.promise(promise, {
 			loading: meta.resetLoadingText ?? 'Сбрасываем...',
@@ -826,11 +882,11 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 			technicalSeo: { ...prev.technicalSeo, sitemapItems }
 		}))
 
-	if (isLoading) {
+	if (isLoading || (isRawCodeArea && isUserLoading)) {
 		return <p className={styles.loading}>{meta.loadingText}</p>
 	}
 
-	return (
+	const editor = (
 		<div className={styles.editor}>
 			{isHomeArea && showFactoryResetConfirm && (
 				<ConfirmDialog
@@ -862,7 +918,7 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 							type="button"
 							className={styles.resetBtn}
 							onClick={resetAreaToDefault}
-							disabled={mutation.isPending}
+							disabled={isMutationPending}
 						>
 							Сбросить к дефолту
 						</button>
@@ -880,7 +936,9 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 						type="button"
 						className={styles.saveBtn}
 						onClick={save}
-						disabled={!isDirty || mutation.isPending}
+						disabled={
+							!isDirty || isMutationPending || (isRawCodeArea && !isDev)
+						}
 					>
 						{meta.saveLabel}
 					</button>
@@ -908,7 +966,7 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 						type="button"
 						className={styles.factoryResetBtn}
 						onClick={() => setShowFactoryResetConfirm(true)}
-						disabled={mutation.isPending}
+						disabled={isMutationPending}
 					>
 						Скинуть до заводских настроек
 					</button>
@@ -4219,6 +4277,29 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 					</section>
 				</>
 			)}
+		</div>
+	)
+
+	if (!isRawCodeArea || isDev) {
+		return editor
+	}
+
+	return (
+		<div className={styles.devOnlySection}>
+			<fieldset
+				disabled
+				className={styles.devOnlyPreview}
+				aria-label="DEV-only редактор raw-кода заблокирован"
+			>
+				{editor}
+			</fieldset>
+			<div className={styles.devOnlyOverlay}>
+				<span className={styles.devOnlyBadge}>Только для DEV</span>
+				<AdminTooltip
+					title="Raw-код главной заблокирован"
+					description="ADMIN видит этот технический блок без возможности изменения. Сохранение head/body защищено отдельным DEV-endpoint на backend."
+				/>
+			</div>
 		</div>
 	)
 }

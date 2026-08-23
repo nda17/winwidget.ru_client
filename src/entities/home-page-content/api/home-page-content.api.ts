@@ -1,8 +1,9 @@
 import { axiosInterceptorsRequest } from '@/shared/api'
 import { normalizeHomePageContent } from '@/entities/home-page-content/model/home-page-content.defaults'
 import type {
-	HomePageContent,
-	HomePageContentRecord
+	HomePageContentRecord,
+	HomePageRawCodeContent,
+	HomePageStructuredContent
 } from '@/entities/home-page-content/model/home-page-content.types'
 
 interface HomePageContentApiRecord {
@@ -28,10 +29,24 @@ const homePageContentService = {
 		return normalizeRecord(data)
 	},
 
-	async update(content: HomePageContent): Promise<HomePageContentRecord> {
+	async updateStructured(
+		content: HomePageStructuredContent
+	): Promise<HomePageContentRecord> {
 		const { data } =
 			await axiosInterceptorsRequest.patch<HomePageContentApiRecord>(
 				'/home-page-content',
+				{ content }
+			)
+
+		return normalizeRecord(data)
+	},
+
+	async updateRawCode(
+		content: HomePageRawCodeContent
+	): Promise<HomePageContentRecord> {
+		const { data } =
+			await axiosInterceptorsRequest.patch<HomePageContentApiRecord>(
+				'/home-page-content/raw-code',
 				{ content }
 			)
 

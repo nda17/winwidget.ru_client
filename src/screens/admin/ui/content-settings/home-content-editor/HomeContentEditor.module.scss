@@ -2,6 +2,26 @@
 	@apply max-w-[1100px] mx-auto w-full flex flex-col gap-4 mb-8;
 }
 
+.devOnlySection {
+	@apply relative mx-auto mb-8 w-full max-w-[1100px] overflow-visible;
+}
+
+.devOnlyPreview {
+	@apply pointer-events-none m-0 select-none border-0 p-0 opacity-55 blur-[1px];
+
+	.editor {
+		@apply mb-0;
+	}
+}
+
+.devOnlyOverlay {
+	@apply absolute inset-0 z-20 flex items-center justify-center gap-2 rounded-xl bg-white/30;
+}
+
+.devOnlyBadge {
+	@apply rounded-full border border-[#d7c4ee] bg-white px-4 py-2 text-sm font-semibold text-[#6b2d8f] shadow-sm;
+}
+
 .loading {
 	@apply text-[#bbb] text-[0.9rem] text-center py-10;
 }
