@@ -78,11 +78,19 @@ export const useUserEdit = (params: { id: string }) => {
 	const router = useRouter()
 	const userId = params.id
 	const queryClient = useQueryClient()
+	const setAvatarDetailCache = (avatarPath: string | null) =>
+		queryClient.setQueryData<
+			Awaited<ReturnType<typeof UserService.fetchUserById>>
+		>(['get-user-by-id', userId], cached =>
+			cached
+				? {
+						...cached,
+						data: { ...cached.data, avatarPath }
+					}
+				: cached
+		)
 	const invalidateAvatarQueries = () =>
 		Promise.all([
-			queryClient.invalidateQueries({
-				queryKey: ['get-user-by-id', userId]
-			}),
 			queryClient.invalidateQueries({
 				queryKey: ['get-user-overview', userId]
 			}),
@@ -204,12 +212,14 @@ export const useUserEdit = (params: { id: string }) => {
 
 	const uploadAvatar = async (file: File) => {
 		const avatarPath = await uploadAvatarAsync(file)
+		setAvatarDetailCache(avatarPath)
 		await invalidateAvatarQueries()
 		return avatarPath
 	}
 
 	const deleteAvatar = async () => {
 		await deleteAvatarAsync()
+		setAvatarDetailCache(null)
 		await invalidateAvatarQueries()
 	}
 

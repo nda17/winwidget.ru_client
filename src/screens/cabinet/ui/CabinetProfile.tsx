@@ -22,7 +22,9 @@ import styles from './Cabinet.module.scss'
 
 type EmailBindingForm = { email: string; code: string }
 type PhoneBindingForm = { phone: string; code: string }
-type ProfileEditForm = IProfileEditInput & { avatarPreview?: string }
+type ProfileEditForm = IProfileEditInput & {
+	avatarPreview?: string | null
+}
 
 const DEFAULT_AVATAR = '/avatar-default.png'
 const TELEGRAM_STATUS_POLL_INTERVAL_MS = 2500

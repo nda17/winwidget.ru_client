@@ -232,7 +232,12 @@ class UserService {
 		const { data } =
 			await axiosInterceptorsRequest.put<IUserAvatarResponse>(
 				path,
-				formData
+				formData,
+				{
+					headers: {
+						'Content-Type': 'multipart/form-data'
+					}
+				}
 			)
 
 		if (!data.avatarPath) {

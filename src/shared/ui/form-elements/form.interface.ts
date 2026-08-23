@@ -12,8 +12,8 @@ export interface IField extends TypeInputPropsField {}
 
 export interface IUploadField {
 	currentFile?: string
-	value?: string
-	onChange: (fileUrl: string) => void
+	value?: string | null
+	onChange: (fileUrl: string | null) => void
 	onUpload: (file: File) => Promise<string>
 	placeholder: string
 	error?: FieldError

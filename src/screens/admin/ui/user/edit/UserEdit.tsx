@@ -44,7 +44,7 @@ import { Controller, useForm } from 'react-hook-form'
 
 const FIELD_STYLE = { marginBottom: 0 }
 
-type UserEditForm = IUserEditInput & { avatarPreview?: string }
+type UserEditForm = IUserEditInput & { avatarPreview?: string | null }
 
 const PLAN_LABELS: Record<string, string> = {
 	TRIAL: 'Trial',
@@ -956,16 +956,23 @@ const UserEdit: NextPage<IParamsUrl> = ({ params }) => {
 	useEffect(() => {
 		if (!data) return
 
-		reset({
-			avatarPreview: '',
-			email: data.email ?? '',
-			isAdmin: data.rights.includes(UserRole.ADMIN),
-			isDev: data.rights.includes(UserRole.DEV),
-			isPhoneVerified: Boolean(data.isPhoneVerified),
-			name: data.name ?? '',
-			password: '',
-			phone: data.phone ?? ''
-		})
+		reset(
+			{
+				avatarPreview: '',
+				email: data.email ?? '',
+				isAdmin: data.rights.includes(UserRole.ADMIN),
+				isDev: data.rights.includes(UserRole.DEV),
+				isPhoneVerified: Boolean(data.isPhoneVerified),
+				name: data.name ?? '',
+				password: '',
+				phone: data.phone ?? ''
+			},
+			{
+				keepDirtyValues: true,
+				keepErrors: true,
+				keepTouched: true
+			}
+		)
 	}, [data, reset])
 
 	const loginMethods =

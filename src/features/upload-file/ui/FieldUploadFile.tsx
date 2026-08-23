@@ -35,17 +35,21 @@ const FieldUploadFile: NextPage<IUploadField> = ({
 	const valueImageSrc = value ? encodeURI(value) : ''
 	const inputId = useId()
 	const busy = isLoading || isDeleting
-	const hasCustomAvatar =
-		value || (currentFile && currentFile !== DEFAULT_AVATAR)
-	const fileLabel = value
-		? 'Фото обновлено'
-		: currentFile
-			? currentFile === DEFAULT_AVATAR
-				? 'Фото по умолчанию'
-				: 'Фото загружено'
-			: 'Фото не выбрано'
+	const avatarWasDeleted = value === null
+	const hasCustomAvatar = avatarWasDeleted
+		? false
+		: value || (currentFile && currentFile !== DEFAULT_AVATAR)
+	const fileLabel = avatarWasDeleted
+		? 'Фото по умолчанию'
+		: value
+			? 'Фото обновлено'
+			: currentFile
+				? currentFile === DEFAULT_AVATAR
+					? 'Фото по умолчанию'
+					: 'Фото загружено'
+				: 'Фото не выбрано'
 	const shouldShowCurrentPath = Boolean(
-		currentFile && currentFile !== DEFAULT_AVATAR
+		!avatarWasDeleted && currentFile && currentFile !== DEFAULT_AVATAR
 	)
 	const displayLabel = showFilePath
 		? value ||
@@ -60,7 +64,7 @@ const FieldUploadFile: NextPage<IUploadField> = ({
 		setIsDeleting(true)
 		try {
 			await onDelete()
-			onChange('')
+			onChange(null)
 			toast.success('Фото удалено', { id: toastId })
 		} catch {
 			toast.error('Не удалось удалить фото', { id: toastId })
@@ -80,6 +84,14 @@ const FieldUploadFile: NextPage<IUploadField> = ({
 				) : value ? (
 					<Image
 						src={valueImageSrc}
+						alt={placeholder}
+						priority
+						fill
+						unoptimized
+					/>
+				) : avatarWasDeleted ? (
+					<Image
+						src={DEFAULT_AVATAR}
 						alt={placeholder}
 						priority
 						fill

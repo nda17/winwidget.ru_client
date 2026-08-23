@@ -34,7 +34,7 @@ const getAvatarValidationError = (file: File) => {
 }
 
 export const useUploadFile = (
-	onChange: (fileUrl: string) => void,
+	onChange: (fileUrl: string | null) => void,
 	onUpload: (file: File) => Promise<string>,
 	options: IUseUploadFileOptions
 ) => {
