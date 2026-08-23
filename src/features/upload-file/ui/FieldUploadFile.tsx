@@ -7,7 +7,7 @@ import SkeletonLoader from '@/shared/ui/skeleton-loader/SkeletonLoader'
 import clsx from 'clsx'
 import { NextPage } from 'next'
 import Image from 'next/image'
-import { useId, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 
 const DEFAULT_AVATAR = '/avatar-default.png'
@@ -17,18 +17,18 @@ const FieldUploadFile: NextPage<IUploadField> = ({
 	placeholder,
 	style,
 	value,
-	folder,
 	onChange,
+	onUpload,
 	canDelete,
 	disabled,
 	showFilePath,
-	onUploadComplete,
 	uploadSuccessMessage,
 	onDelete
 }) => {
 	const [isDeleting, setIsDeleting] = useState(false)
-	const { uploadFile, isLoading } = useUploadFile(onChange, folder, {
-		onUploadComplete,
+	const operationLockRef = useRef(false)
+	const { uploadFile, isLoading } = useUploadFile(onChange, onUpload, {
+		operationLockRef,
 		successMessage: uploadSuccessMessage
 	})
 	const currentImageSrc = currentFile ? encodeURI(currentFile) : ''
@@ -38,14 +38,12 @@ const FieldUploadFile: NextPage<IUploadField> = ({
 	const hasCustomAvatar =
 		value || (currentFile && currentFile !== DEFAULT_AVATAR)
 	const fileLabel = value
-		? onUploadComplete
-			? 'Файл загружен'
-			: 'Новый файл загружен'
+		? 'Фото обновлено'
 		: currentFile
 			? currentFile === DEFAULT_AVATAR
 				? 'Фото по умолчанию'
-				: 'Файл загружен'
-			: 'Файл не выбран'
+				: 'Фото загружено'
+			: 'Фото не выбрано'
 	const shouldShowCurrentPath = Boolean(
 		currentFile && currentFile !== DEFAULT_AVATAR
 	)
@@ -56,16 +54,18 @@ const FieldUploadFile: NextPage<IUploadField> = ({
 		: fileLabel
 
 	const handleDelete = async () => {
-		if (!onDelete) return
-		const toastId = toast.loading('Удаляем файл...')
+		if (!onDelete || operationLockRef.current) return
+		operationLockRef.current = true
+		const toastId = toast.loading('Удаляем фото...')
 		setIsDeleting(true)
 		try {
 			await onDelete()
 			onChange('')
-			toast.success('Файл удалён', { id: toastId })
+			toast.success('Фото удалено', { id: toastId })
 		} catch {
-			toast.error('Не удалось удалить файл', { id: toastId })
+			toast.error('Не удалось удалить фото', { id: toastId })
 		} finally {
+			operationLockRef.current = false
 			setIsDeleting(false)
 		}
 	}
@@ -144,7 +144,9 @@ const FieldUploadFile: NextPage<IUploadField> = ({
 							<input
 								id={inputId}
 								type="file"
+								accept="image/jpeg,image/png,image/webp"
 								onChange={uploadFile}
+								disabled={busy}
 								className={clsx(styles['input-field'])}
 								aria-label={placeholder}
 							/>

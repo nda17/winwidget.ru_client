@@ -9,8 +9,11 @@ import {
 
 export interface IProfileEditInput {
 	name?: string
-	avatarPath?: string | null
 	password?: string
+}
+
+export interface IUserAvatarResponse {
+	avatarPath: string | null
 }
 
 export interface IProfileIdentityCodeInput {
@@ -222,6 +225,32 @@ export interface IAdminUserOverview {
 class UserService {
 	private _BASE_URL = '/users'
 
+	private async uploadAvatar(path: string, file: File) {
+		const formData = new FormData()
+		formData.append('file', file)
+
+		const { data } =
+			await axiosInterceptorsRequest.put<IUserAvatarResponse>(
+				path,
+				formData
+			)
+
+		if (!data.avatarPath) {
+			throw new Error('Ответ загрузки не содержит адрес аватара')
+		}
+
+		return data.avatarPath
+	}
+
+	private async deleteAvatar(path: string) {
+		const { data } =
+			await axiosInterceptorsRequest.delete<IUserAvatarResponse>(path)
+
+		if (data.avatarPath !== null) {
+			throw new Error('Ответ удаления содержит некорректный адрес аватара')
+		}
+	}
+
 	async fetchProfile() {
 		return axiosInterceptorsRequest.get<IUser>(`${this._BASE_URL}/profile`)
 	}
@@ -316,6 +345,14 @@ class UserService {
 		)
 	}
 
+	async uploadAdminUserAvatar(id: string, file: File) {
+		return this.uploadAvatar(`${this._BASE_URL}/user/${id}/avatar`, file)
+	}
+
+	async deleteAdminUserAvatar(id: string) {
+		return this.deleteAvatar(`${this._BASE_URL}/user/${id}/avatar`)
+	}
+
 	async toggleUserActivation(id: string) {
 		return axiosInterceptorsRequest.patch<IUser>(
 			`${this._BASE_URL}/user/${id}/toggle-activation`
@@ -327,6 +364,14 @@ class UserService {
 			`${this._BASE_URL}/profile`,
 			data
 		)
+	}
+
+	async uploadProfileAvatar(file: File) {
+		return this.uploadAvatar(`${this._BASE_URL}/profile/avatar`, file)
+	}
+
+	async deleteProfileAvatar() {
+		return this.deleteAvatar(`${this._BASE_URL}/profile/avatar`)
 	}
 
 	async sendProfileEmailCode(data: IProfileIdentityCodeInput) {
