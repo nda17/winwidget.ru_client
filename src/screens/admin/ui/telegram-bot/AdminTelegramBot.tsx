@@ -1,5 +1,6 @@
 'use client'
 
+import { UserRole, useAuthStore, useUser } from '@/entities/user'
 import { errorCatch } from '@/shared/api'
 import {
 	reportingDailySummaryService,
@@ -7,11 +8,13 @@ import {
 } from '@/features/admin-monitoring'
 import AdminNavigation from '@/screens/admin/ui/common/admin-navigation/AdminNavigation'
 import AdminSectionHeading from '@/screens/admin/ui/common/admin-section-heading/AdminSectionHeading'
+import AdminTooltip from '@/screens/admin/ui/common/admin-tooltip/AdminTooltip'
 import Heading from '@/shared/ui/heading/Heading'
 import SkeletonLoader from '@/shared/ui/skeleton-loader/SkeletonLoader'
 import {
 	adminTelegramBotService,
 	identityTelegramAuthService,
+	supportTelegramService,
 	type AdminTelegramBotSettings,
 	type TelegramWebhookBot
 } from '@/features/manage-telegram-bot'
@@ -29,19 +32,17 @@ const SETTINGS_QUERY_KEY = ['admin-telegram-bot-settings']
 const DAILY_SUMMARY_SETTINGS_QUERY_KEY = [
 	'admin-reporting-daily-summary-settings'
 ]
-const WEBHOOKS_QUERY_KEY = ['admin-telegram-bot-webhooks']
+const SUPPORT_ROUTING_SETTINGS_QUERY_KEY = [
+	'admin-support-routing-settings'
+]
+const SUPPORT_WEBHOOK_QUERY_KEY = ['admin-support-webhook']
 const IDENTITY_AUTH_SETTINGS_QUERY_KEY = ['admin-telegram-auth-settings']
 const IDENTITY_WEBHOOK_QUERY_KEY = ['admin-telegram-auth-webhook']
 const IDENTITY_INFO_WEBHOOK_QUERY_KEY = ['admin-telegram-info-webhook']
 const WEBHOOK_BOTS: TelegramWebhookBot[] = ['info', 'auth', 'support']
 const MIN_TASK_TIME_GAP_MINUTES = 5
 const MAX_TELEGRAM_TOPIC_ID = 2147483647
-const TELEGRAM_TOPIC_FIELDS = [
-	{
-		key: 'supportThreadId',
-		label: 'Support_chat',
-		description: 'Переписка техподдержки с пользователями'
-	},
+const CORE_TELEGRAM_TOPIC_FIELDS = [
 	{
 		key: 'databaseBackupThreadId',
 		label: 'Backups',
@@ -59,11 +60,11 @@ const TELEGRAM_TOPIC_FIELDS = [
 	}
 ] as const
 
-type TelegramTopicField = (typeof TELEGRAM_TOPIC_FIELDS)[number]['key']
-type TelegramTopicInputs = Record<TelegramTopicField, string>
+type CoreTelegramTopicField =
+	(typeof CORE_TELEGRAM_TOPIC_FIELDS)[number]['key']
+type TelegramTopicInputs = Record<CoreTelegramTopicField, string>
 
 const EMPTY_TELEGRAM_TOPIC_INPUTS: TelegramTopicInputs = {
-	supportThreadId: '',
 	databaseBackupThreadId: '',
 	paymentsThreadId: '',
 	operationalAlertsThreadId: ''
@@ -72,7 +73,6 @@ const EMPTY_TELEGRAM_TOPIC_INPUTS: TelegramTopicInputs = {
 const getTelegramTopicInputs = (
 	settings: AdminTelegramBotSettings
 ): TelegramTopicInputs => ({
-	supportThreadId: settings.supportThreadId?.toString() ?? '',
 	databaseBackupThreadId:
 		settings.databaseBackupThreadId?.toString() ?? '',
 	paymentsThreadId: settings.paymentsThreadId?.toString() ?? '',
@@ -153,17 +153,23 @@ const hasMinimumTaskTimeGap = (
 	})
 
 const AdminTelegramBot: NextPage = () => {
+	const auth = useAuthStore(state => state.auth)
+	const { user, isLoading: isUserLoading } = useUser()
+	const isDev = Boolean(user?.rights?.includes(UserRole.DEV))
 	const queryClient = useQueryClient()
 	const [chatId, setChatId] = useState('')
 	const [topicIds, setTopicIds] = useState<TelegramTopicInputs>(
 		EMPTY_TELEGRAM_TOPIC_INPUTS
 	)
+	const [supportChatId, setSupportChatId] = useState('')
+	const [supportThreadId, setSupportThreadId] = useState('')
 	const [dailySummaryThreadId, setDailySummaryThreadId] = useState('')
 	const [dailySummaryDestinationChatId, setDailySummaryDestinationChatId] =
 		useState('')
 	const [summaryTime, setSummaryTime] = useState('')
 	const [backupTime, setBackupTime] = useState('')
 	const isTelegramRoutingDraftDirty = useRef(false)
+	const isSupportRoutingDraftDirty = useRef(false)
 	const isDailySummaryDraftDirty = useRef(false)
 	const isBackupScheduleDraftDirty = useRef(false)
 
@@ -172,6 +178,16 @@ const AdminTelegramBot: NextPage = () => {
 			queryKey: SETTINGS_QUERY_KEY,
 			queryFn: adminTelegramBotService.get
 		})
+	const {
+		data: supportRoutingSettings,
+		isLoading: isSupportRoutingSettingsLoading,
+		error: supportRoutingSettingsError,
+		refetch: refetchSupportRoutingSettings
+	} = useQuery({
+		queryKey: SUPPORT_ROUTING_SETTINGS_QUERY_KEY,
+		queryFn: supportTelegramService.getRoutingSettings,
+		enabled: auth
+	})
 	const {
 		data: identityAuthSettings,
 		isLoading: isIdentityAuthSettingsLoading,
@@ -194,12 +210,14 @@ const AdminTelegramBot: NextPage = () => {
 	})
 
 	const {
-		data: webhookStatuses,
-		isFetching: isWebhookStatusesFetching,
-		refetch: refetchWebhookStatuses
+		data: supportWebhookStatus,
+		isFetching: isSupportWebhookStatusFetching,
+		isError: isSupportWebhookStatusError,
+		refetch: refetchSupportWebhookStatus
 	} = useQuery({
-		queryKey: WEBHOOKS_QUERY_KEY,
-		queryFn: adminTelegramBotService.getWebhookStatuses
+		queryKey: SUPPORT_WEBHOOK_QUERY_KEY,
+		queryFn: supportTelegramService.getWebhookStatus,
+		enabled: auth
 	})
 	const {
 		data: identityWebhookStatus,
@@ -234,6 +252,17 @@ const AdminTelegramBot: NextPage = () => {
 	}, [settings])
 
 	useEffect(() => {
+		if (!supportRoutingSettings || isSupportRoutingDraftDirty.current) {
+			return
+		}
+
+		setSupportChatId(supportRoutingSettings.adminChatId)
+		setSupportThreadId(
+			supportRoutingSettings.supportThreadId?.toString() ?? ''
+		)
+	}, [supportRoutingSettings])
+
+	useEffect(() => {
 		if (!dailySummarySettings || isDailySummaryDraftDirty.current) return
 
 		setDailySummaryThreadId(
@@ -250,7 +279,7 @@ const AdminTelegramBot: NextPage = () => {
 		onSuccess: async (result, patch) => {
 			if (
 				'dailySummaryChatId' in patch ||
-				TELEGRAM_TOPIC_FIELDS.some(field => field.key in patch)
+				CORE_TELEGRAM_TOPIC_FIELDS.some(field => field.key in patch)
 			) {
 				isTelegramRoutingDraftDirty.current = false
 				setChatId(result.dailySummaryChatId)
@@ -264,6 +293,23 @@ const AdminTelegramBot: NextPage = () => {
 
 			await queryClient.invalidateQueries({
 				queryKey: SETTINGS_QUERY_KEY
+			})
+		}
+	})
+
+	const supportRoutingMutation = useMutation({
+		mutationFn: supportTelegramService.updateRoutingSettings,
+		onSuccess: async result => {
+			isSupportRoutingDraftDirty.current = false
+			setSupportChatId(result.adminChatId)
+			setSupportThreadId(result.supportThreadId?.toString() ?? '')
+			await queryClient.invalidateQueries({
+				queryKey: SUPPORT_ROUTING_SETTINGS_QUERY_KEY
+			})
+		},
+		onError: async () => {
+			await queryClient.invalidateQueries({
+				queryKey: SUPPORT_ROUTING_SETTINGS_QUERY_KEY
 			})
 		}
 	})
@@ -288,14 +334,18 @@ const AdminTelegramBot: NextPage = () => {
 	})
 
 	const webhookMutation = useMutation({
-		mutationFn: (bot: TelegramWebhookBot) => {
+		mutationFn: async (bot: TelegramWebhookBot) => {
 			if (bot === 'auth') {
-				return identityTelegramAuthService.reinstallWebhook()
+				const result = await identityTelegramAuthService.reinstallWebhook()
+				return { title: result.title }
 			}
 			if (bot === 'info') {
-				return identityTelegramAuthService.reinstallInfoWebhook()
+				const result =
+					await identityTelegramAuthService.reinstallInfoWebhook()
+				return { title: result.title }
 			}
-			return adminTelegramBotService.reinstallWebhook(bot)
+			const result = await supportTelegramService.reinstallWebhook()
+			return { title: result.title }
 		}
 	})
 
@@ -325,6 +375,20 @@ const AdminTelegramBot: NextPage = () => {
 		})
 	}
 
+	const saveSupportRoutingWithToast = (
+		patch: Parameters<
+			typeof supportTelegramService.updateRoutingSettings
+		>[0]
+	) => {
+		const promise = supportRoutingMutation.mutateAsync(patch)
+
+		toast.promise(promise, {
+			loading: 'Сохраняем маршрутизацию Support_bot...',
+			success: 'Настройки Support_bot сохранены',
+			error: error => `Ошибка сохранения Support: ${errorCatch(error)}`
+		})
+	}
+
 	const handleReinstallWebhook = (bot: TelegramWebhookBot) => {
 		const promise = webhookMutation.mutateAsync(bot).finally(async () => {
 			await queryClient.invalidateQueries({
@@ -333,7 +397,7 @@ const AdminTelegramBot: NextPage = () => {
 						? IDENTITY_WEBHOOK_QUERY_KEY
 						: bot === 'info'
 							? IDENTITY_INFO_WEBHOOK_QUERY_KEY
-							: WEBHOOKS_QUERY_KEY
+							: SUPPORT_WEBHOOK_QUERY_KEY
 			})
 		})
 
@@ -346,6 +410,21 @@ const AdminTelegramBot: NextPage = () => {
 						: 'Переустанавливаем webhook @winwidget_info_bot...',
 			success: result => `Webhook ${result.title} переустановлен`,
 			error: error => `Ошибка webhook: ${errorCatch(error)}`
+		})
+	}
+
+	const handleRefreshWebhookStatuses = () => {
+		const promise = Promise.all([
+			refetchSupportWebhookStatus({ throwOnError: true }),
+			refetchIdentityWebhookStatus({ throwOnError: true }),
+			refetchIdentityInfoWebhookStatus({ throwOnError: true }),
+			refetchIdentityAuthSettings({ throwOnError: true })
+		])
+
+		toast.promise(promise, {
+			loading: 'Обновляем статусы webhook...',
+			success: 'Статусы webhook обновлены',
+			error: error => `Ошибка обновления: ${errorCatch(error)}`
 		})
 	}
 
@@ -415,11 +494,11 @@ const AdminTelegramBot: NextPage = () => {
 
 		const normalizedChatId = chatId.trim()
 		const normalizedTopicIds = {} as Record<
-			TelegramTopicField,
+			CoreTelegramTopicField,
 			number | null
 		>
 
-		for (const field of TELEGRAM_TOPIC_FIELDS) {
+		for (const field of CORE_TELEGRAM_TOPIC_FIELDS) {
 			const topicId = parseTelegramTopicId(topicIds[field.key])
 
 			if (topicId === undefined) {
@@ -474,6 +553,37 @@ const AdminTelegramBot: NextPage = () => {
 		)
 	}
 
+	const handleSaveSupportRouting = () => {
+		if (!supportRoutingSettings || !isDev) return
+
+		const adminChatId = supportChatId.trim()
+		const parsedSupportThreadId = parseTelegramTopicId(supportThreadId)
+
+		if (
+			!/^(?:-?[1-9]\d*|@[A-Za-z][A-Za-z0-9_]{4,31})$/.test(adminChatId)
+		) {
+			toast.error(
+				'ID группы Support должен быть целым числом без ведущих нулей или username вида @group_name'
+			)
+			return
+		}
+
+		if (
+			parsedSupportThreadId === undefined ||
+			parsedSupportThreadId === null
+		) {
+			toast.error(
+				`ID топика Support_chat должен быть целым числом от 1 до ${MAX_TELEGRAM_TOPIC_ID}`
+			)
+			return
+		}
+
+		saveSupportRoutingWithToast({
+			adminChatId,
+			supportThreadId: parsedSupportThreadId
+		})
+	}
+
 	const handleSaveDailySummary = () => {
 		if (
 			!settings ||
@@ -495,7 +605,8 @@ const AdminTelegramBot: NextPage = () => {
 				settings.widgetsDatabaseBackupDelayMinutes,
 				settings.billingDatabaseBackupDelayMinutes,
 				settings.identityDatabaseBackupDelayMinutes,
-				settings.platformDatabaseBackupDelayMinutes
+				settings.platformDatabaseBackupDelayMinutes,
+				settings.supportDatabaseBackupDelayMinutes
 			])
 		) {
 			toast.error(
@@ -579,7 +690,8 @@ const AdminTelegramBot: NextPage = () => {
 					settings.widgetsDatabaseBackupDelayMinutes,
 					settings.billingDatabaseBackupDelayMinutes,
 					settings.identityDatabaseBackupDelayMinutes,
-					settings.platformDatabaseBackupDelayMinutes
+					settings.platformDatabaseBackupDelayMinutes,
+					settings.supportDatabaseBackupDelayMinutes
 				]
 			)
 		) {
@@ -657,6 +769,12 @@ const AdminTelegramBot: NextPage = () => {
 				settings.platformDatabaseBackupDelayMinutes
 			) ?? settings.platformDatabaseBackupTime)
 		: null
+	const supportBackupTime = settings
+		? (addMinutesToTime(
+				backupTime,
+				settings.supportDatabaseBackupDelayMinutes
+			) ?? settings.supportDatabaseBackupTime)
+		: null
 	const isLoading = isTelegramSettingsLoading
 	const isDailySummaryReadOnly =
 		dailySummarySettings?.owner !== 'REPORTING'
@@ -672,16 +790,20 @@ const AdminTelegramBot: NextPage = () => {
 	const isTelegramRoutingChanged = Boolean(
 		settings &&
 		(chatId.trim() !== settings.dailySummaryChatId ||
-			TELEGRAM_TOPIC_FIELDS.some(
+			CORE_TELEGRAM_TOPIC_FIELDS.some(
 				field =>
 					topicIds[field.key].trim() !==
 					(settings[field.key]?.toString() ?? '')
 			))
 	)
+	const isSupportRoutingChanged = Boolean(
+		supportRoutingSettings &&
+		(supportChatId.trim() !== supportRoutingSettings.adminChatId ||
+			supportThreadId.trim() !==
+				(supportRoutingSettings.supportThreadId?.toString() ?? ''))
+	)
 	const webhookStatusItems = [
-		...(webhookStatuses?.items.filter(
-			status => status.bot === 'support'
-		) ?? []),
+		...(supportWebhookStatus ? [supportWebhookStatus] : []),
 		...(identityWebhookStatus ? [identityWebhookStatus] : []),
 		...(identityInfoWebhookStatus ? [identityInfoWebhookStatus] : [])
 	]
@@ -695,8 +817,7 @@ const AdminTelegramBot: NextPage = () => {
 		if (bot === 'info') {
 			return Boolean(identityInfoWebhookStatus?.configured)
 		}
-		if (!settings) return false
-		return settings.supportTelegramBotTokenConfigured
+		return Boolean(supportWebhookStatus?.configured)
 	}
 
 	return (
@@ -707,7 +828,7 @@ const AdminTelegramBot: NextPage = () => {
 			<AdminSectionHeading
 				text="Telegram-боты"
 				title="Webhook и сообщения в Telegram"
-				description="Настраивает Identity webhook Auth_bot и @winwidget_info_bot, Core webhook @winwidget_support_bot, а также распределение служебных сообщений по топикам Telegram-группы администраторов."
+				description="Показывает webhook Identity-ботов и Support_bot, маршрутизацию служебных сообщений и расписание резервных копий сервисов."
 				risk="medium"
 				riskText="Группа должна быть супергруппой с включёнными Topics. Если ID группы или нужного топика указан неверно, соответствующие сообщения не отправятся. @winwidget_info_bot и @winwidget_support_bot должны быть добавлены в группу, а токены должны быть настроены на сервере."
 			/>
@@ -782,14 +903,18 @@ const AdminTelegramBot: NextPage = () => {
 								</p>
 								<span
 									className={`${styles.badge} ${
-										settings.supportTelegramBotTokenConfigured
+										supportWebhookStatus?.configured
 											? styles.badgeOk
 											: styles.badgeWarning
 									}`}
 								>
-									{settings.supportTelegramBotTokenConfigured
-										? 'Настроен'
-										: 'Не настроен'}
+									{isSupportWebhookStatusFetching
+										? 'Загрузка...'
+										: isSupportWebhookStatusError
+											? 'Support недоступен'
+											: supportWebhookStatus?.configured
+												? 'Настроен'
+												: 'Не настроен'}
 								</span>
 							</div>
 							<div className={styles.statusItem}>
@@ -811,21 +936,20 @@ const AdminTelegramBot: NextPage = () => {
 								</span>
 							</div>
 							<div className={styles.statusItem}>
-								<p className={styles.statusLabel}>Webhook host</p>
+								<p className={styles.statusLabel}>Webhook Support_bot</p>
 								<span
 									className={`${styles.badge} ${
-										settings.telegramWebhookHostConfigured
+										supportWebhookStatus?.webhookMatchesExpected
 											? styles.badgeOk
 											: styles.badgeWarning
 									}`}
 								>
-									{settings.telegramWebhookHostConfigured
-										? 'Настроен'
-										: 'Не настроен'}
+									{isSupportWebhookStatusFetching
+										? 'Проверяем'
+										: supportWebhookStatus?.webhookMatchesExpected
+											? 'Актуальный'
+											: 'Требует проверки'}
 								</span>
-								<p className={styles.statusValue}>
-									{settings.telegramWebhookHost ?? '—'}
-								</p>
 							</div>
 							<div className={styles.statusItem}>
 								<p className={styles.statusLabel}>Последняя сводка</p>
@@ -888,18 +1012,31 @@ const AdminTelegramBot: NextPage = () => {
 								>
 									Auth_bot
 								</button>
-								<button
-									type="button"
-									className={styles.actionBtn}
-									onClick={() => handleReinstallWebhook('support')}
-									disabled={
-										isWebhookActionPending ||
-										!settings.supportTelegramBotTokenConfigured ||
-										!settings.telegramWebhookHostConfigured
-									}
-								>
-									@winwidget_support_bot
-								</button>
+								<span className={styles.devOnlyAction}>
+									<button
+										type="button"
+										className={styles.actionBtn}
+										onClick={() => handleReinstallWebhook('support')}
+										disabled={
+											isUserLoading ||
+											!isDev ||
+											isWebhookActionPending ||
+											!supportWebhookStatus?.configured ||
+											!supportWebhookStatus.secretConfigured ||
+											!supportWebhookStatus.expectedWebhookUrl
+										}
+									>
+										@winwidget_support_bot
+									</button>
+									{!isUserLoading && !isDev && (
+										<AdminTooltip
+											title="Переустановка Support webhook"
+											description="Статус доступен ADMIN, а переустанавливать webhook может только DEV."
+											risk="medium"
+											riskText="Операция изменяет webhook Telegram для Support Service."
+										/>
+									)}
+								</span>
 							</div>
 						</div>
 
@@ -915,16 +1052,9 @@ const AdminTelegramBot: NextPage = () => {
 								<button
 									type="button"
 									className={styles.actionBtn}
-									onClick={() =>
-										void Promise.all([
-											refetchWebhookStatuses(),
-											refetchIdentityWebhookStatus(),
-											refetchIdentityInfoWebhookStatus(),
-											refetchIdentityAuthSettings()
-										])
-									}
+									onClick={handleRefreshWebhookStatuses}
 									disabled={
-										isWebhookStatusesFetching ||
+										isSupportWebhookStatusFetching ||
 										isIdentityWebhookStatusFetching ||
 										isIdentityInfoWebhookStatusFetching ||
 										isIdentityAuthSettingsFetching
@@ -943,6 +1073,8 @@ const AdminTelegramBot: NextPage = () => {
 											(isIdentityAuthSettingsError ||
 												isIdentityWebhookStatusError)) ||
 										(bot === 'info' && isIdentityInfoWebhookStatusError)
+									const isSupportUnavailable =
+										bot === 'support' && isSupportWebhookStatusError
 									const hasProblem = Boolean(
 										status &&
 										(!status.ok ||
@@ -971,7 +1103,7 @@ const AdminTelegramBot: NextPage = () => {
 																: styles.badgeOk
 													}`}
 												>
-													{isIdentityUnavailable
+													{isIdentityUnavailable || isSupportUnavailable
 														? 'Недоступен'
 														: !status
 															? 'Проверяем'
@@ -1039,9 +1171,11 @@ const AdminTelegramBot: NextPage = () => {
 													Username в env не совпадает с токеном
 												</p>
 											)}
-											{isIdentityUnavailable ? (
+											{isIdentityUnavailable || isSupportUnavailable ? (
 												<p className={styles.webhookStatusError}>
-													Identity Service недоступен
+													{isSupportUnavailable
+														? 'Support Service недоступен'
+														: 'Identity Service недоступен'}
 												</p>
 											) : !isBotTokenConfigured(bot) ? (
 												<p className={styles.webhookStatusError}>
@@ -1212,18 +1346,20 @@ const AdminTelegramBot: NextPage = () => {
 							<div>
 								<p className={styles.label}>Отправка backup</p>
 								<p className={styles.hint}>
-									@winwidget_info_bot отправляет backup основной БД в{' '}
-									{settings.databaseBackupTimeLabel}, а Notification
-									Delivery — в{' '}
+									@winwidget_info_bot отправляет отдельные backup баз
+									микросервисов. Notification Delivery — в{' '}
 									{settings.notificationDeliveryDatabaseBackupTimeLabel},
 									Campaigns — в {settings.campaignsDatabaseBackupTimeLabel}
 									, Reporting — в{' '}
 									{settings.reportingDatabaseBackupTimeLabel}, Widgets — в{' '}
 									{settings.widgetsDatabaseBackupTimeLabel}, Billing — в{' '}
 									{settings.billingDatabaseBackupTimeLabel}, Identity — в{' '}
-									{settings.identityDatabaseBackupTimeLabel}, а Platform —
-									в {settings.platformDatabaseBackupTimeLabel}. Все файлы
-									приходят отдельно в топик Backups.
+									{settings.identityDatabaseBackupTimeLabel}, Platform — в{' '}
+									{settings.platformDatabaseBackupTimeLabel}, Support — в{' '}
+									{settings.supportDatabaseBackupTimeLabel}. Базовое время{' '}
+									{settings.databaseBackupTimeLabel} задаёт расписание, но
+									backup монолита не создаётся. Все файлы приходят отдельно
+									в топик Backups.
 								</p>
 							</div>
 							<button
@@ -1244,7 +1380,9 @@ const AdminTelegramBot: NextPage = () => {
 						<div className={styles.schedulePanel}>
 							<div className={styles.scheduleGrid}>
 								<label className={styles.field}>
-									<span className={styles.label}>Backup основной БД</span>
+									<span className={styles.label}>
+										Базовое время backup
+									</span>
 									<input
 										type="time"
 										className={styles.input}
@@ -1310,6 +1448,12 @@ const AdminTelegramBot: NextPage = () => {
 											: '—'}
 									</p>
 								</div>
+								<div className={styles.field}>
+									<span className={styles.label}>Backup Support</span>
+									<p className={styles.derivedTime}>
+										{supportBackupTime ? `${supportBackupTime} МСК` : '—'}
+									</p>
+								</div>
 								<button
 									type="button"
 									className={`${styles.saveBtn} ${styles.scheduleSaveBtn}`}
@@ -1324,8 +1468,8 @@ const AdminTelegramBot: NextPage = () => {
 							</div>
 							<p className={styles.hint}>
 								Время указывается по Москве. Notification Delivery,
-								Campaigns, Reporting, Widgets, Billing, Identity и Platform
-								запускаются через{' '}
+								Campaigns, Reporting, Widgets, Billing, Identity, Platform
+								и Support запускаются через{' '}
 								{settings.notificationDeliveryDatabaseBackupDelayMinutes}
 								{', '}
 								{settings.campaignsDatabaseBackupDelayMinutes}
@@ -1337,11 +1481,144 @@ const AdminTelegramBot: NextPage = () => {
 								{settings.billingDatabaseBackupDelayMinutes}
 								{', '}
 								{settings.identityDatabaseBackupDelayMinutes}
+								{', '}
+								{settings.platformDatabaseBackupDelayMinutes}
 								{' и '}
-								{settings.platformDatabaseBackupDelayMinutes} минут после
-								основной БД соответственно. Сводка должна быть разнесена с
-								каждым backup минимум на {MIN_TASK_TIME_GAP_MINUTES} минут.
+								{settings.supportDatabaseBackupDelayMinutes} минут после
+								базового времени соответственно. Сводка должна быть
+								разнесена с каждым backup минимум на{' '}
+								{MIN_TASK_TIME_GAP_MINUTES} минут.
 							</p>
+						</div>
+
+						<div className={styles.schedulePanel}>
+							<div className={styles.panelTitleRow}>
+								<div>
+									<p className={styles.label}>Маршрутизация Support_bot</p>
+									<p className={styles.hint}>
+										Источник истины — Support Service. ADMIN видит текущий
+										маршрут, изменять его может только DEV.
+									</p>
+								</div>
+								<AdminTooltip
+									title="Маршрут чата с оператором"
+									description="Support_bot направляет сообщения операторам в указанную группу и топик Support_chat."
+									risk="medium"
+									riskText="Неверный маршрут остановит доставку новых сообщений операторам."
+								/>
+							</div>
+
+							{isUserLoading || isSupportRoutingSettingsLoading ? (
+								<SkeletonLoader count={1} className="h-[150px]" />
+							) : supportRoutingSettings ? (
+								<>
+									<p className={styles.readOnlyValue}>
+										Текущий маршрут: {supportRoutingSettings.adminChatId} ·
+										топик {supportRoutingSettings.supportThreadId ?? '—'}
+									</p>
+									<div
+										className={!isDev ? styles.lockedSection : undefined}
+										aria-disabled={!isDev}
+									>
+										<div
+											className={!isDev ? styles.lockedContent : undefined}
+											aria-hidden={!isDev}
+										>
+											<div className={styles.supportRoutingGrid}>
+												<label className={styles.field}>
+													<span className={styles.label}>
+														ID группы Support
+													</span>
+													<input
+														className={styles.input}
+														value={supportChatId}
+														disabled={
+															!isDev || supportRoutingMutation.isPending
+														}
+														onChange={event => {
+															isSupportRoutingDraftDirty.current = true
+															setSupportChatId(event.target.value)
+														}}
+														placeholder="-1001234567890"
+														maxLength={100}
+													/>
+												</label>
+												<label className={styles.field}>
+													<span className={styles.label}>
+														Топик Support_chat
+													</span>
+													<input
+														type="number"
+														className={styles.input}
+														value={supportThreadId}
+														disabled={
+															!isDev || supportRoutingMutation.isPending
+														}
+														onChange={event => {
+															isSupportRoutingDraftDirty.current = true
+															setSupportThreadId(event.target.value)
+														}}
+														placeholder="123"
+														min={1}
+														max={MAX_TELEGRAM_TOPIC_ID}
+														step={1}
+														inputMode="numeric"
+													/>
+												</label>
+												<button
+													type="button"
+													className={styles.saveBtn}
+													onClick={handleSaveSupportRouting}
+													disabled={
+														!isDev ||
+														supportRoutingMutation.isPending ||
+														!isSupportRoutingChanged
+													}
+												>
+													Сохранить маршрут Support
+												</button>
+											</div>
+										</div>
+										{!isUserLoading && !isDev && (
+											<div className={styles.lockedOverlay}>
+												<span className={styles.lockedBadge}>
+													Только для DEV
+												</span>
+												<AdminTooltip
+													title="Изменение маршрута заблокировано"
+													description="ADMIN доступен read-only просмотр. Изменять группу и топик Support_bot может только DEV."
+												/>
+											</div>
+										)}
+									</div>
+								</>
+							) : (
+								<div>
+									<p className={styles.empty}>
+										Настройки Support Service недоступны
+									</p>
+									<p className={styles.hint}>
+										{supportRoutingSettingsError
+											? errorCatch(supportRoutingSettingsError)
+											: 'Support Service не вернул настройки'}
+									</p>
+									<button
+										type="button"
+										className={styles.actionBtn}
+										onClick={() => {
+											const promise = refetchSupportRoutingSettings()
+											toast.promise(promise, {
+												loading: 'Проверяем Support Service...',
+												success: 'Настройки Support обновлены',
+												error: error =>
+													`Support недоступен: ${errorCatch(error)}`
+											})
+										}}
+									>
+										Повторить
+									</button>
+								</div>
+							)}
 						</div>
 
 						<div className={styles.schedulePanel}>
@@ -1367,7 +1644,7 @@ const AdminTelegramBot: NextPage = () => {
 							</div>
 
 							<div className={styles.statusGrid}>
-								{TELEGRAM_TOPIC_FIELDS.map(field => (
+								{CORE_TELEGRAM_TOPIC_FIELDS.map(field => (
 									<label key={field.key} className={styles.field}>
 										<span className={styles.label}>{field.label}</span>
 										<input

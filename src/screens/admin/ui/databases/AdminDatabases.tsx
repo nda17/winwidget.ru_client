@@ -12,6 +12,7 @@ import type {
 	TelegramDatabaseBackupTarget
 } from '@/features/manage-telegram-bot'
 import {
+	DATABASE_RESTORE_TARGETS,
 	devToolsService,
 	type DatabaseRestoreJob,
 	type DatabaseRestoreJobStatus,
@@ -86,7 +87,8 @@ const DATABASE_BACKUP_TARGET_OPTIONS: readonly TelegramDatabaseBackupTarget[] =
 		'widgets',
 		'billing',
 		'identity',
-		'platform'
+		'platform',
+		'support'
 	]
 const DATABASE_BACKUP_TRIGGER_LABELS: Record<
 	TelegramDatabaseBackupJobTrigger,
@@ -132,17 +134,6 @@ interface DatabaseRestoreMarker {
 	target: DatabaseRestoreTarget
 	recoveryStartedAt: string | null
 }
-
-const DATABASE_RESTORE_TARGETS: readonly DatabaseRestoreTarget[] = [
-	'core',
-	'notification-delivery',
-	'campaigns',
-	'reporting',
-	'widgets',
-	'billing',
-	'identity',
-	'platform'
-]
 
 interface DatabaseBackupActiveMarker {
 	idempotencyKey: string | null
@@ -303,7 +294,8 @@ const getDatabaseBackupTargetLabel = (
 		widgets: 'БД Widgets',
 		billing: 'БД Billing',
 		identity: 'БД Identity',
-		platform: 'БД Platform'
+		platform: 'БД Platform',
+		support: 'БД Support'
 	})[target]
 
 const formatDatabaseBackupDate = (value: string | null) => {
@@ -354,14 +346,14 @@ const getDatabaseRestoreTargetLabel = (
 ) =>
 	targetSettings.find(item => item.id === target)?.label ??
 	{
-		core: 'Основная БД',
 		'notification-delivery': 'Notification Delivery',
 		campaigns: 'Campaigns',
 		reporting: 'Reporting',
 		widgets: 'Widgets',
 		billing: 'Billing',
 		identity: 'Identity',
-		platform: 'Platform'
+		platform: 'Platform',
+		support: 'Support'
 	}[target]
 
 const useDatabaseBackup = (
@@ -1011,7 +1003,7 @@ const DatabaseRestorePanel = ({
 }: DatabaseRestorePanelProps) => {
 	const queryClient = useQueryClient()
 	const [restoreTarget, setRestoreTarget] =
-		useState<DatabaseRestoreTarget>('core')
+		useState<DatabaseRestoreTarget>('notification-delivery')
 	const [restoreFile, setRestoreFile] = useState<File | null>(null)
 	const [restoreConfirmation, setRestoreConfirmation] = useState('')
 	const [restoreJobMarker, setRestoreJobMarker] =
@@ -1379,14 +1371,14 @@ const DatabaseRestorePanel = ({
 					<div>
 						<p className={styles.label}>Восстановление БД из backup</p>
 						<p className={styles.hint}>
-							Изолированный worker восстанавливает основную БД или БД
-							выбранного микросервиса и проверяет результат до снятия
-							защитной блокировки.
+							Изолированный worker восстанавливает БД выбранного
+							микросервиса и проверяет результат до снятия защитной
+							блокировки.
 						</p>
 					</div>
 					<div className={styles.restoreGrid}>
 						<select className={styles.select} disabled>
-							<option>Основная БД</option>
+							<option>БД микросервиса</option>
 						</select>
 						<label className={styles.fileInputLabel}>
 							<span>Файл .dump</span>
@@ -1899,7 +1891,7 @@ const AdminDatabases: NextPage = () => {
 				title="Backup и восстановление PostgreSQL"
 				description={
 					isDev
-						? 'Здесь можно отдельно поставить backup каждой БД в очередь и восстановить основную БД или БД выбранного микросервиса из PostgreSQL .dump.'
+						? 'Здесь можно отдельно поставить backup каждой БД в очередь и восстановить БД выбранного микросервиса из PostgreSQL .dump.'
 						: 'Здесь можно отдельно поставить backup каждой базы PostgreSQL в очередь и следить за их выполнением.'
 				}
 				risk={isDev ? 'high' : 'medium'}
@@ -1911,7 +1903,7 @@ const AdminDatabases: NextPage = () => {
 			/>
 
 			{isLoading ? (
-				Array.from({ length: 7 }, (_, cardIndex) => (
+				Array.from({ length: 8 }, (_, cardIndex) => (
 					<div key={cardIndex} className={styles.card}>
 						<SkeletonLoader count={1} className="h-[64px]" />
 						<div className={styles.backupMetaGrid}>
@@ -1989,6 +1981,15 @@ const AdminDatabases: NextPage = () => {
 						title="Backup базы Platform"
 						description="Локальная БД микросервиса Platform Service"
 						scheduleTimeLabel={settings.platformDatabaseBackupTimeLabel}
+						settings={settings}
+						userId={user.id}
+					/>
+					<DatabaseBackupPanel
+						target="support"
+						{...getDatabaseBackupOverviewProps('support')}
+						title="Backup базы Support"
+						description="Локальная БД микросервиса Support Service"
+						scheduleTimeLabel={settings.supportDatabaseBackupTimeLabel}
 						settings={settings}
 						userId={user.id}
 					/>

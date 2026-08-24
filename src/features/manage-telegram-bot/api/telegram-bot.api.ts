@@ -2,7 +2,6 @@ import { axiosInterceptorsRequest } from '@/shared/api'
 
 export interface AdminTelegramBotSettings {
 	dailySummaryChatId: string
-	supportThreadId: number | null
 	databaseBackupThreadId: number | null
 	paymentsThreadId: number | null
 	operationalAlertsThreadId: number | null
@@ -30,20 +29,18 @@ export interface AdminTelegramBotSettings {
 	platformDatabaseBackupDelayMinutes: number
 	platformDatabaseBackupTime: string
 	platformDatabaseBackupTimeLabel: string
+	supportDatabaseBackupDelayMinutes: number
+	supportDatabaseBackupTime: string
+	supportDatabaseBackupTimeLabel: string
 	databaseBackupLastSentPeriodStart: string | null
 	databaseBackupLastSentAt: string | null
 	telegramBotTokenConfigured: boolean
 	telegramBotUsernameConfigured: boolean
-	supportTelegramBotTokenConfigured: boolean
-	telegramWebhookHostConfigured: boolean
-	telegramWebhookHost: string | null
-	telegramWebhookHealthUrl: string | null
 	updatedAt: string
 }
 
 export interface UpdateAdminTelegramBotSettings {
 	dailySummaryChatId?: string
-	supportThreadId?: number | null
 	databaseBackupThreadId?: number | null
 	paymentsThreadId?: number | null
 	operationalAlertsThreadId?: number | null
@@ -52,7 +49,33 @@ export interface UpdateAdminTelegramBotSettings {
 }
 
 export type TelegramWebhookBot = 'info' | 'auth' | 'support'
-export type CoreTelegramWebhookBot = Extract<TelegramWebhookBot, 'support'>
+
+export interface AdminSupportRoutingSettings {
+	schemaVersion: 1
+	adminChatId: string
+	supportThreadId: number | null
+	aggregateVersion: string
+	updatedAt: string
+}
+
+export interface UpdateAdminSupportRoutingSettings {
+	adminChatId: string
+	supportThreadId: number
+}
+
+interface SupportTelegramWebhookStatus {
+	schemaVersion: 1
+	bot: 'support'
+	configuredUsername: string
+	actualUsername: string
+	usernameMatchesConfigured: boolean
+	expectedWebhookUrl: string
+	webhookUrl: string
+	webhookMatchesExpected: boolean
+	pendingUpdateCount: number
+	lastErrorMessage: string | null
+	secretConfigured: boolean
+}
 
 export interface AdminTelegramAuthSettings {
 	authTelegramBotTokenConfigured: boolean
@@ -116,6 +139,7 @@ export type TelegramDatabaseBackupTarget =
 	| 'billing'
 	| 'identity'
 	| 'platform'
+	| 'support'
 
 export interface TelegramDatabaseBackupAcceptedJob {
 	target: TelegramDatabaseBackupTarget
@@ -183,6 +207,30 @@ export interface TelegramDatabaseBackupJobsPage {
 	totalPages: number
 }
 
+const normalizeSupportWebhookStatus = (
+	status: SupportTelegramWebhookStatus
+): TelegramWebhookStatus => ({
+	bot: 'support',
+	title: '@winwidget_support_bot',
+	configured: true,
+	ok:
+		status.webhookMatchesExpected &&
+		status.usernameMatchesConfigured &&
+		status.secretConfigured,
+	expectedWebhookUrl: status.expectedWebhookUrl,
+	webhookUrl: status.webhookUrl,
+	webhookMatchesExpected: status.webhookMatchesExpected,
+	pendingUpdateCount: status.pendingUpdateCount,
+	lastErrorAt: null,
+	lastErrorMessage: status.lastErrorMessage,
+	allowedUpdates: null,
+	secretConfigured: status.secretConfigured,
+	configuredUsername: status.configuredUsername,
+	actualUsername: status.actualUsername,
+	usernameMatchesConfigured: status.usernameMatchesConfigured,
+	error: null
+})
+
 const adminTelegramBotService = {
 	async get(): Promise<AdminTelegramBotSettings> {
 		const { data } = await axiosInterceptorsRequest.get(
@@ -197,22 +245,6 @@ const adminTelegramBotService = {
 		const { data } = await axiosInterceptorsRequest.patch(
 			'/telegram-bot/admin/settings',
 			dto
-		)
-		return data
-	},
-
-	async reinstallWebhook(
-		bot: CoreTelegramWebhookBot
-	): Promise<TelegramWebhookInstallResult> {
-		const { data } = await axiosInterceptorsRequest.post(
-			`/telegram-bot/admin/webhooks/${bot}/reinstall`
-		)
-		return data
-	},
-
-	async getWebhookStatuses(): Promise<TelegramWebhookStatusResponse> {
-		const { data } = await axiosInterceptorsRequest.get(
-			'/telegram-bot/admin/webhooks/status'
 		)
 		return data
 	},
@@ -271,6 +303,47 @@ const adminTelegramBotService = {
 				{ params: filters }
 			)
 		return data
+	}
+}
+
+export const supportTelegramService = {
+	async getRoutingSettings(): Promise<AdminSupportRoutingSettings> {
+		const { data } =
+			await axiosInterceptorsRequest.get<AdminSupportRoutingSettings>(
+				'/support/admin/routing-settings'
+			)
+
+		return data
+	},
+
+	async updateRoutingSettings(
+		dto: UpdateAdminSupportRoutingSettings
+	): Promise<AdminSupportRoutingSettings> {
+		const { data } =
+			await axiosInterceptorsRequest.patch<AdminSupportRoutingSettings>(
+				'/support/admin/routing-settings',
+				dto
+			)
+
+		return data
+	},
+
+	async getWebhookStatus(): Promise<TelegramWebhookStatus> {
+		const { data } =
+			await axiosInterceptorsRequest.get<SupportTelegramWebhookStatus>(
+				'/support/admin/webhook/status'
+			)
+
+		return normalizeSupportWebhookStatus(data)
+	},
+
+	async reinstallWebhook(): Promise<TelegramWebhookStatus> {
+		const { data } =
+			await axiosInterceptorsRequest.post<SupportTelegramWebhookStatus>(
+				'/support/admin/webhook/reinstall'
+			)
+
+		return normalizeSupportWebhookStatus(data)
 	}
 }
 

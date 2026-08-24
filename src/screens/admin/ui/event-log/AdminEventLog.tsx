@@ -36,6 +36,7 @@ const SECTION_LABELS: Record<AdminEventLogSection, string> = {
 	DEV_TOOLS: 'Базы данных',
 	MESSAGING: 'Очереди',
 	REPORTING: 'Reporting',
+	SUPPORT: 'Support',
 	PLATFORM_CONTENT: 'Platform: контент'
 }
 
@@ -90,6 +91,8 @@ const ACTION_LABELS: Record<AdminEventLogAction, string> = {
 	REPORTING_DAILY_SUMMARY_SCHEDULE_REJECTED:
 		'Отклонение расписания Daily Summary',
 	REPORTING_DELIVERY_RETRY: 'Повтор обработки Reporting',
+	SUPPORT_ROUTING_SETTINGS_UPDATE: 'Настройки маршрутизации Support',
+	SUPPORT_WEBHOOK_REINSTALL: 'Webhook Support-бота',
 	PLATFORM_SITE_SETTINGS_UPDATE: 'Настройки сайта Platform',
 	PLATFORM_LEGAL_PAGE_UPDATE: 'Юридическая страница Platform',
 	PLATFORM_HOME_PAGE_CONTENT_UPDATE: 'Контент главной Platform',

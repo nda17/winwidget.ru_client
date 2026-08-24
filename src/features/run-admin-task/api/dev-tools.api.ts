@@ -1,14 +1,18 @@
 import { axiosInterceptorsRequest } from '@/shared/api'
 
+export const DATABASE_RESTORE_TARGETS = [
+	'notification-delivery',
+	'campaigns',
+	'reporting',
+	'widgets',
+	'billing',
+	'identity',
+	'platform',
+	'support'
+] as const
+
 export type DatabaseRestoreTarget =
-	| 'core'
-	| 'notification-delivery'
-	| 'campaigns'
-	| 'reporting'
-	| 'widgets'
-	| 'billing'
-	| 'identity'
-	| 'platform'
+	(typeof DATABASE_RESTORE_TARGETS)[number]
 
 export type DatabaseRestoreJobStatus =
 	| 'QUEUED'
@@ -61,6 +65,12 @@ export interface DatabaseRestoreJob {
 	publicationConfirmed: boolean
 }
 
+const isDatabaseRestoreTarget = (
+	value: unknown
+): value is DatabaseRestoreTarget =>
+	typeof value === 'string' &&
+	DATABASE_RESTORE_TARGETS.includes(value as DatabaseRestoreTarget)
+
 const devToolsService = {
 	async getDatabaseRestoresSettings(): Promise<DatabaseRestoresSettings> {
 		const { data } =
@@ -68,7 +78,16 @@ const devToolsService = {
 				'/dev-tools/database-restores/settings'
 			)
 
-		return data
+		return {
+			...data,
+			approved:
+				data.approved && isDatabaseRestoreTarget(data.approved.target)
+					? data.approved
+					: null,
+			targets: data.targets.filter(target =>
+				isDatabaseRestoreTarget(target.id)
+			)
+		}
 	},
 
 	async startDatabaseRestore(
