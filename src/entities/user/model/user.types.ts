@@ -19,7 +19,7 @@ export interface IUser {
 	isPhoneVerified?: boolean
 	loginMethods?: UserLoginMethod[]
 	password?: string
-	avatarPath?: string
+	avatarPath: string | null
 	status: UserStatus
 	personalDataConsentRevokedAt?: string | null
 	deletedAt?: string | null

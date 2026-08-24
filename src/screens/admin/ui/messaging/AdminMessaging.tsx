@@ -43,6 +43,7 @@ const integrationLabels: Record<MessagingIntegration, string> = {
 	'reporting-admin-audit': 'Аудит Reporting',
 	'billing-admin-audit': 'Аудит Billing',
 	'identity-admin-audit': 'Аудит Identity',
+	'platform-admin-audit': 'Аудит Platform',
 	'telegram-destination-unavailable':
 		'Недоступный Telegram-адресат Identity',
 	'billing-payment-projection': 'Проекция платежей Billing',
@@ -52,7 +53,6 @@ const integrationLabels: Record<MessagingIntegration, string> = {
 	'billing-identity-source': 'Идентичность для Billing',
 	'billing-offer-source': 'Тарифы для Billing',
 	'billing-notification-routing-source': 'Маршруты уведомлений Billing',
-	'billing-settings-source': 'Настройки для Billing',
 	'billing-trial-source': 'Trial-подписка Billing',
 	'billing-referral-source': 'Реферал Billing',
 	'billing-lifecycle-repair-source': 'Восстановление lifecycle Billing',
@@ -379,7 +379,7 @@ export default function AdminMessaging() {
 							<Metric
 								title="Успешных бэкапов за 24 часа"
 								value={overview.data.completedBackupsLast24Hours}
-								description="Успешно завершённые за последние 24 часа резервные копии баз Core, Notification Delivery, Campaigns, Reporting, Widgets, Billing и Identity."
+								description="Успешно завершённые за последние 24 часа резервные копии баз Notification Delivery, Campaigns, Reporting, Widgets, Billing, Identity и Platform."
 							/>
 						</div>
 						<div className={styles.heartbeats}>
@@ -395,7 +395,7 @@ export default function AdminMessaging() {
 							))}
 							<AdminTooltip
 								title="Состояние процессов"
-								description="Зелёный индикатор означает, что процесс присылал heartbeat в последние 30 секунд. Число показывает количество активных экземпляров. Heartbeat подтверждает, что процесс Core, Identity, Notification Delivery, Campaigns, Reporting, Widgets или Billing жив, но не проверяет доступность SMTP, Telegram, CRM или PostgreSQL."
+								description="Для Core, Identity, Notification Delivery, Campaigns, Reporting, Widgets и Billing зелёный индикатор означает heartbeat за последние 30 секунд. Platform API и publisher проверяются отдельными live readiness-запросами при каждом обновлении страницы — это не 30-секундный heartbeat. Число показывает количество активных экземпляров; эти проверки не подтверждают доступность SMTP, Telegram или CRM."
 							/>
 						</div>
 						{overview.data.rabbitMqError && (
@@ -422,6 +422,11 @@ export default function AdminMessaging() {
 						{overview.data.identityError && (
 							<p className={styles.error}>
 								Identity: {overview.data.identityError}
+							</p>
+						)}
+						{overview.data.platformError && (
+							<p className={styles.error}>
+								Platform: {overview.data.platformError}
 							</p>
 						)}
 						{overview.data.campaignsError && (

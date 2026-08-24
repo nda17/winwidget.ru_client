@@ -173,6 +173,18 @@
 	}
 }
 
+.toggleFieldDisabled {
+	@apply cursor-not-allowed opacity-60;
+}
+
+.devLockedContent {
+	@apply pointer-events-none select-none opacity-60 blur-[1px];
+}
+
+.devLockHint {
+	@apply flex items-center justify-end gap-2 text-xs font-semibold text-[#7b3fa0];
+}
+
 .toggleVisual {
 	@apply shrink-0 w-[44px] h-[24px] rounded-full bg-[#d8cce3] transition-colors duration-150 relative;
 

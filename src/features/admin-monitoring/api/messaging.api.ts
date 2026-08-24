@@ -16,6 +16,7 @@ export type MessagingIntegration =
 	| 'reporting-admin-audit'
 	| 'billing-admin-audit'
 	| 'identity-admin-audit'
+	| 'platform-admin-audit'
 	| 'telegram-destination-unavailable'
 	| 'billing-payment-projection'
 	| 'billing-subscription-projection'
@@ -24,7 +25,6 @@ export type MessagingIntegration =
 	| 'billing-identity-source'
 	| 'billing-offer-source'
 	| 'billing-notification-routing-source'
-	| 'billing-settings-source'
 	| 'billing-trial-source'
 	| 'billing-referral-source'
 	| 'billing-lifecycle-repair-source'
@@ -60,6 +60,7 @@ export interface MessagingOverview {
 	widgetsError: string | null
 	billingError: string | null
 	identityError: string | null
+	platformError: string | null
 	campaignsError: string | null
 	reportingError: string | null
 	heartbeats: Array<{

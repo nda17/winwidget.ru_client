@@ -6,7 +6,6 @@ import { FieldUploadFile } from '@/features/upload-file'
 import AppIcon from '@/shared/ui/icons/AppIcon'
 import { usePhoneMask } from '@/shared/lib/hooks/usePhoneMask'
 import { useUser } from '@/entities/user'
-import { fileService } from '@/features/upload-file'
 import { userService, IProfileEditInput } from '@/entities/user'
 import {
 	validEmail,
@@ -23,29 +22,13 @@ import styles from './Cabinet.module.scss'
 
 type EmailBindingForm = { email: string; code: string }
 type PhoneBindingForm = { phone: string; code: string }
+type ProfileEditForm = IProfileEditInput & {
+	avatarPreview?: string | null
+}
 
 const DEFAULT_AVATAR = '/avatar-default.png'
 const TELEGRAM_STATUS_POLL_INTERVAL_MS = 2500
 const TELEGRAM_STATUS_POLL_TIMEOUT_MS = 120000
-
-const isManagedAvatarFile = (avatarPath?: string | null) => {
-	return Boolean(
-		avatarPath &&
-		avatarPath !== DEFAULT_AVATAR &&
-		(avatarPath.startsWith('/uploads/') ||
-			avatarPath.includes('/user-avatar/'))
-	)
-}
-
-const deleteAvatarFileSilently = async (avatarPath?: string | null) => {
-	if (!isManagedAvatarFile(avatarPath)) return
-
-	try {
-		await fileService.delete(avatarPath)
-	} catch {
-		// файл мог быть уже удалён или недоступен — профиль уже обновлён
-	}
-}
 
 const CabinetProfile = () => {
 	const { user } = useUser()
@@ -109,27 +92,14 @@ const CabinetProfile = () => {
 	}, [hasTelegramNotifications, pendingTelegramNotificationsRequest])
 
 	const handleDeleteAvatar = async () => {
-		const currentAvatar = user?.avatarPath
-		await userService.updateProfile({ avatarPath: null })
+		await userService.deleteProfileAvatar()
 		await queryClient.invalidateQueries({ queryKey: ['get-profile'] })
-		await deleteAvatarFileSilently(currentAvatar)
 	}
 
-	const handleUploadAvatar = async (avatarPath: string) => {
-		const previousAvatar = user?.avatarPath
-
-		try {
-			await userService.updateProfile({ avatarPath })
-		} catch (error) {
-			await deleteAvatarFileSilently(avatarPath)
-			throw error
-		}
-
+	const handleUploadAvatar = async (file: File) => {
+		const avatarPath = await userService.uploadProfileAvatar(file)
 		await queryClient.invalidateQueries({ queryKey: ['get-profile'] })
-
-		if (previousAvatar !== avatarPath) {
-			await deleteAvatarFileSilently(previousAvatar)
-		}
+		return avatarPath
 	}
 	const {
 		emailCodeRequested,
@@ -178,12 +148,12 @@ const CabinetProfile = () => {
 		reset,
 		control,
 		formState: { errors }
-	} = useForm<IProfileEditInput>({ mode: 'onChange' })
+	} = useForm<ProfileEditForm>({ mode: 'onChange' })
 
 	const handleProfileSubmit = handleSubmit(async data => {
-		const ok = await onSubmit(data)
+		const ok = await onSubmit({ name: data.name, password: data.password })
 		if (ok) {
-			reset({ name: data.name || '', password: '' })
+			reset({ avatarPreview: '', name: data.name || '', password: '' })
 			setIsProfilePasswordVisible(false)
 		}
 	})
@@ -534,16 +504,15 @@ const CabinetProfile = () => {
 						<p className={styles.label}>Фото профиля</p>
 						<Controller
 							control={control}
-							name="avatarPath"
+							name="avatarPreview"
 							render={({ field: { value, onChange } }) => (
 								<FieldUploadFile
 									onChange={onChange}
+									onUpload={handleUploadAvatar}
 									value={value}
 									currentFile={user?.avatarPath || DEFAULT_AVATAR}
-									folder="user-avatar"
 									placeholder="Фото профиля"
 									canDelete
-									onUploadComplete={handleUploadAvatar}
 									uploadSuccessMessage="Фото профиля обновлено"
 									onDelete={handleDeleteAvatar}
 								/>

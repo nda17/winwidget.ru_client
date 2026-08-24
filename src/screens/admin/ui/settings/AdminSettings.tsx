@@ -11,6 +11,8 @@ import {
 	type ManualAdminTaskRunResult
 } from '@/features/run-admin-task'
 import { authSettingsService } from '@/features/auth/api/auth.api'
+import { revalidateBillingSettings } from '@/entities/billing-settings/actions'
+import { billingSettingsService } from '@/entities/billing-settings'
 import { revalidateSiteSettings } from '@/entities/site-settings/actions'
 import { siteSettingsService } from '@/entities/site-settings'
 import {
@@ -104,6 +106,15 @@ const AdminSettings: NextPage = () => {
 		queryFn: siteSettingsService.get
 	})
 	const {
+		data: billingSettings,
+		isLoading: isBillingSettingsLoading,
+		isFetching: isBillingSettingsFetching,
+		refetch: refetchBillingSettings
+	} = useQuery({
+		queryKey: ['billing-settings'],
+		queryFn: billingSettingsService.getAdmin
+	})
+	const {
 		data: authSettings,
 		isLoading: isAuthSettingsLoading,
 		isFetching: isAuthSettingsFetching,
@@ -119,7 +130,7 @@ const AdminSettings: NextPage = () => {
 		if (settings) setBannerText(settings.bannerText)
 	}, [settings])
 
-	const mutation = useMutation({
+	const siteSettingsMutation = useMutation({
 		mutationFn: siteSettingsService.update,
 		onSuccess: async () => {
 			await queryClient.invalidateQueries({ queryKey: ['site-settings'] })
@@ -128,11 +139,34 @@ const AdminSettings: NextPage = () => {
 		}
 	})
 
-	const saveWithToast = (
+	const saveSiteSettingsWithToast = (
 		patch: Parameters<typeof siteSettingsService.update>[0],
 		label?: string
 	) => {
-		const promise = mutation.mutateAsync(patch)
+		const promise = siteSettingsMutation.mutateAsync(patch)
+		toast.promise(promise, {
+			loading: label ?? 'Сохранение...',
+			success: 'Сохранено',
+			error: 'Ошибка сохранения'
+		})
+	}
+
+	const billingSettingsMutation = useMutation({
+		mutationFn: billingSettingsService.updateAdmin,
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({
+				queryKey: ['billing-settings']
+			})
+			await revalidateBillingSettings()
+			router.refresh()
+		}
+	})
+
+	const saveBillingSettingsWithToast = (
+		patch: Parameters<typeof billingSettingsService.updateAdmin>[0],
+		label?: string
+	) => {
+		const promise = billingSettingsMutation.mutateAsync(patch)
 		toast.promise(promise, {
 			loading: label ?? 'Сохранение...',
 			success: 'Сохранено',
@@ -201,6 +235,21 @@ const AdminSettings: NextPage = () => {
 		})
 	}
 
+	const retryBillingSettingsWithToast = () => {
+		const promise = refetchBillingSettings().then(result => {
+			if (result.isError || !result.data) {
+				throw result.error ?? new Error('Настройки Billing не получены')
+			}
+			return result.data
+		})
+
+		toast.promise(promise, {
+			loading: 'Повторно загружаем настройки Billing...',
+			success: 'Настройки Billing загружены',
+			error: 'Не удалось загрузить настройки Billing'
+		})
+	}
+
 	const retryAuthSettingsWithToast = () => {
 		const promise = refetchAuthSettings().then(result => {
 			if (result.isError || !result.data) {
@@ -232,7 +281,7 @@ const AdminSettings: NextPage = () => {
 			/>
 
 			<div className={styles.section}>
-				{isLoading ? (
+				{isBillingSettingsLoading ? (
 					<>
 						{Array.from({ length: 3 }).map((_, index) => (
 							<div key={index} className={styles.toggleRow}>
@@ -247,7 +296,7 @@ const AdminSettings: NextPage = () => {
 							</div>
 						))}
 					</>
-				) : settings ? (
+				) : billingSettings ? (
 					<>
 						<div className={styles.toggleRow}>
 							<div>
@@ -269,15 +318,15 @@ const AdminSettings: NextPage = () => {
 							<button
 								type="button"
 								aria-label="Приём платежей через ЮKassa"
-								aria-pressed={settings.paymentEnabled}
-								className={`${styles.toggle} ${settings.paymentEnabled ? styles.toggleOn : ''}`}
+								aria-pressed={billingSettings.paymentEnabled}
+								className={`${styles.toggle} ${billingSettings.paymentEnabled ? styles.toggleOn : ''}`}
 								onClick={() =>
-									saveWithToast(
-										{ paymentEnabled: !settings.paymentEnabled },
+									saveBillingSettingsWithToast(
+										{ paymentEnabled: !billingSettings.paymentEnabled },
 										'Применяем настройку...'
 									)
 								}
-								disabled={mutation.isPending}
+								disabled={billingSettingsMutation.isPending}
 							>
 								<span className={styles.toggleThumb} />
 							</button>
@@ -302,20 +351,22 @@ const AdminSettings: NextPage = () => {
 							<button
 								type="button"
 								aria-label="Разрешать подключение автопродления"
-								aria-pressed={settings.autoRenewalSignupEnabled}
+								aria-pressed={billingSettings.autoRenewalSignupEnabled}
 								className={`${styles.toggle} ${
-									settings.autoRenewalSignupEnabled ? styles.toggleOn : ''
+									billingSettings.autoRenewalSignupEnabled
+										? styles.toggleOn
+										: ''
 								}`}
 								onClick={() =>
-									saveWithToast(
+									saveBillingSettingsWithToast(
 										{
 											autoRenewalSignupEnabled:
-												!settings.autoRenewalSignupEnabled
+												!billingSettings.autoRenewalSignupEnabled
 										},
 										'Обновляем доступность автопродления...'
 									)
 								}
-								disabled={mutation.isPending}
+								disabled={billingSettingsMutation.isPending}
 							>
 								<span className={styles.toggleThumb} />
 							</button>
@@ -340,20 +391,22 @@ const AdminSettings: NextPage = () => {
 							<button
 								type="button"
 								aria-label="Выполнять автоматические списания"
-								aria-pressed={settings.autoRenewalChargesEnabled}
+								aria-pressed={billingSettings.autoRenewalChargesEnabled}
 								className={`${styles.toggle} ${
-									settings.autoRenewalChargesEnabled ? styles.toggleOn : ''
+									billingSettings.autoRenewalChargesEnabled
+										? styles.toggleOn
+										: ''
 								}`}
 								onClick={() =>
-									saveWithToast(
+									saveBillingSettingsWithToast(
 										{
 											autoRenewalChargesEnabled:
-												!settings.autoRenewalChargesEnabled
+												!billingSettings.autoRenewalChargesEnabled
 										},
 										'Обновляем выполнение автосписаний...'
 									)
 								}
-								disabled={mutation.isPending}
+								disabled={billingSettingsMutation.isPending}
 							>
 								<span className={styles.toggleThumb} />
 							</button>
@@ -362,8 +415,8 @@ const AdminSettings: NextPage = () => {
 				) : (
 					<SettingsLoadError
 						description="Настройки платежей недоступны. До успешной загрузки изменения заблокированы."
-						onRetry={retrySettingsWithToast}
-						isRetrying={isFetching}
+						onRetry={retryBillingSettingsWithToast}
+						isRetrying={isBillingSettingsFetching}
 					/>
 				)}
 			</div>
@@ -581,12 +634,12 @@ const AdminSettings: NextPage = () => {
 							<button
 								className={`${styles.toggle} ${settings?.bannerEnabled ? styles.toggleOn : ''}`}
 								onClick={() =>
-									saveWithToast(
+									saveSiteSettingsWithToast(
 										{ bannerEnabled: !settings?.bannerEnabled },
 										'Применяем настройку...'
 									)
 								}
-								disabled={mutation.isPending}
+								disabled={siteSettingsMutation.isPending}
 							>
 								<span className={styles.toggleThumb} />
 							</button>
@@ -613,9 +666,10 @@ const AdminSettings: NextPage = () => {
 
 						<button
 							className={styles.saveBtn}
-							onClick={() => saveWithToast({ bannerText })}
+							onClick={() => saveSiteSettingsWithToast({ bannerText })}
 							disabled={
-								mutation.isPending || bannerText === settings?.bannerText
+								siteSettingsMutation.isPending ||
+								bannerText === settings?.bannerText
 							}
 						>
 							Сохранить текст
@@ -704,12 +758,12 @@ const AdminSettings: NextPage = () => {
 						<button
 							className={`${styles.toggle} ${settings?.snowflakeEnabled ? styles.toggleOn : ''}`}
 							onClick={() =>
-								saveWithToast(
+								saveSiteSettingsWithToast(
 									{ snowflakeEnabled: !settings?.snowflakeEnabled },
 									'Применяем настройку...'
 								)
 							}
-							disabled={mutation.isPending}
+							disabled={siteSettingsMutation.isPending}
 						>
 							<span className={styles.toggleThumb} />
 						</button>

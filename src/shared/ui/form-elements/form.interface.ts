@@ -12,16 +12,15 @@ export interface IField extends TypeInputPropsField {}
 
 export interface IUploadField {
 	currentFile?: string
-	folder?: string
-	value?: string
-	onChange: (...event: any[]) => void
+	value?: string | null
+	onChange: (fileUrl: string | null) => void
+	onUpload: (file: File) => Promise<string>
 	placeholder: string
 	error?: FieldError
 	style?: CSSProperties
 	canDelete?: boolean
 	disabled?: boolean
 	showFilePath?: boolean
-	onUploadComplete?: (fileUrl: string) => Promise<void> | void
 	uploadSuccessMessage?: string
 	onDelete?: () => Promise<void>
 }

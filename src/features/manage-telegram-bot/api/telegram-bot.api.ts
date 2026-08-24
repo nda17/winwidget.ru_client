@@ -27,6 +27,9 @@ export interface AdminTelegramBotSettings {
 	identityDatabaseBackupDelayMinutes: number
 	identityDatabaseBackupTime: string
 	identityDatabaseBackupTimeLabel: string
+	platformDatabaseBackupDelayMinutes: number
+	platformDatabaseBackupTime: string
+	platformDatabaseBackupTimeLabel: string
 	databaseBackupLastSentPeriodStart: string | null
 	databaseBackupLastSentAt: string | null
 	telegramBotTokenConfigured: boolean
@@ -106,13 +109,13 @@ export type TelegramDatabaseBackupFreshness =
 	| 'STALE'
 
 export type TelegramDatabaseBackupTarget =
-	| 'core'
 	| 'notification-delivery'
 	| 'campaigns'
 	| 'reporting'
 	| 'widgets'
 	| 'billing'
 	| 'identity'
+	| 'platform'
 
 export interface TelegramDatabaseBackupAcceptedJob {
 	target: TelegramDatabaseBackupTarget

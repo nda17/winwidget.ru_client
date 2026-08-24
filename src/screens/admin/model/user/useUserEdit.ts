@@ -1,6 +1,5 @@
 import { IUserEditInput } from '@/entities/user'
 import { ADMIN_PAGES } from '@/shared/config/pages/admin.config'
-import { fileService } from '@/features/upload-file'
 import { userService as UserService } from '@/entities/user'
 import { useAuthStore } from '@/entities/user'
 import { errorCatch } from '@/shared/api'
@@ -15,7 +14,6 @@ import { useEffect } from 'react'
 import { SubmitHandler } from 'react-hook-form'
 import toast from 'react-hot-toast'
 
-const DEFAULT_AVATAR = '/avatar-default.png'
 const AUTO_RENEWAL_QUERY_KEY = 'get-user-auto-renewal'
 
 export type AdminAutoRenewalAction =
@@ -75,30 +73,31 @@ const AUTO_RENEWAL_ACTION_COPY: Record<
 	}
 }
 
-const isManagedAvatarFile = (avatarPath?: string | null) => {
-	return Boolean(
-		avatarPath &&
-		avatarPath !== DEFAULT_AVATAR &&
-		(avatarPath.startsWith('/uploads/') ||
-			avatarPath.includes('/user-avatar/'))
-	)
-}
-
-const deleteAvatarFileSilently = async (avatarPath?: string | null) => {
-	if (!isManagedAvatarFile(avatarPath)) return
-
-	try {
-		await fileService.delete(avatarPath)
-	} catch {
-		// Файл мог быть уже удалён или недоступен, профиль уже обновлён.
-	}
-}
-
 export const useUserEdit = (params: { id: string }) => {
 	const auth = useAuthStore(state => state.auth)
 	const router = useRouter()
 	const userId = params.id
 	const queryClient = useQueryClient()
+	const setAvatarDetailCache = (avatarPath: string | null) =>
+		queryClient.setQueryData<
+			Awaited<ReturnType<typeof UserService.fetchUserById>>
+		>(['get-user-by-id', userId], cached =>
+			cached
+				? {
+						...cached,
+						data: { ...cached.data, avatarPath }
+					}
+				: cached
+		)
+	const invalidateAvatarQueries = () =>
+		Promise.all([
+			queryClient.invalidateQueries({
+				queryKey: ['get-user-overview', userId]
+			}),
+			queryClient.invalidateQueries({ queryKey: ['get-user-list'] }),
+			queryClient.invalidateQueries({ queryKey: ['get-profile'] }),
+			queryClient.invalidateQueries({ queryKey: ['admin-event-log'] })
+		])
 
 	const { data, error, isLoading, isError } = useQuery({
 		queryKey: ['get-user-by-id', userId],
@@ -200,22 +199,29 @@ export const useUserEdit = (params: { id: string }) => {
 		}
 	})
 
-	const { isPending: isAvatarDeleting, mutateAsync: deleteAvatarAsync } =
-		useMutation({
-			mutationKey: ['delete-user-avatar', userId],
-			mutationFn: async (avatarPath?: string | null) => {
-				await UserService.updateUser(userId, {
-					avatarPath: null
-				} as IUserEditInput)
-				await queryClient.invalidateQueries({
-					queryKey: ['get-user-by-id', userId]
-				})
-				await queryClient.invalidateQueries({
-					queryKey: ['get-user-list']
-				})
-				await deleteAvatarFileSilently(avatarPath)
-			}
-		})
+	const { mutateAsync: uploadAvatarAsync } = useMutation({
+		mutationKey: ['upload-user-avatar', userId],
+		mutationFn: (file: File) =>
+			UserService.uploadAdminUserAvatar(userId, file)
+	})
+
+	const { mutateAsync: deleteAvatarAsync } = useMutation({
+		mutationKey: ['delete-user-avatar', userId],
+		mutationFn: () => UserService.deleteAdminUserAvatar(userId)
+	})
+
+	const uploadAvatar = async (file: File) => {
+		const avatarPath = await uploadAvatarAsync(file)
+		setAvatarDetailCache(avatarPath)
+		await invalidateAvatarQueries()
+		return avatarPath
+	}
+
+	const deleteAvatar = async () => {
+		await deleteAvatarAsync()
+		setAvatarDetailCache(null)
+		await invalidateAvatarQueries()
+	}
 
 	const {
 		isPending: isAutoRenewalUpdating,
@@ -297,7 +303,7 @@ export const useUserEdit = (params: { id: string }) => {
 		isSaving: isPending,
 		isActivationUpdating,
 		toggleActivation: toggleActivationAsync,
-		isAvatarDeleting,
-		deleteAvatar: deleteAvatarAsync
+		uploadAvatar,
+		deleteAvatar
 	}
 }

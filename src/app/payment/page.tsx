@@ -1,6 +1,6 @@
 import { Pricing } from '@/screens/payment'
 import { getHomePageContent } from '@/entities/home-page-content/server'
-import { getSiteSettings } from '@/entities/site-settings/server'
+import { getBillingPublicSettings } from '@/entities/billing-settings/server'
 import { getTariffPrices } from '@/entities/subscription/server'
 import { Metadata } from 'next'
 
@@ -14,19 +14,19 @@ export const generateMetadata = async (): Promise<Metadata> => {
 }
 
 const PaymentPage = async () => {
-	const [settings, tariffPrices, content] = await Promise.all([
-		getSiteSettings(),
+	const [billingSettings, tariffPrices, content] = await Promise.all([
+		getBillingPublicSettings(),
 		getTariffPrices(),
 		getHomePageContent()
 	])
 	return (
 		<Pricing
 			pricingContent={content.pricing}
-			paymentEnabled={settings?.paymentEnabled ?? true}
+			paymentEnabled={billingSettings?.paymentEnabled ?? false}
 			autoRenewalSignupEnabled={
-				settings?.autoRenewalSignupEnabled ?? false
+				billingSettings?.autoRenewalSignupEnabled ?? false
 			}
-			autoRenewalTerms={settings?.autoRenewalTerms ?? null}
+			autoRenewalTerms={billingSettings?.autoRenewalTerms ?? null}
 			tariffPrices={tariffPrices}
 		/>
 	)

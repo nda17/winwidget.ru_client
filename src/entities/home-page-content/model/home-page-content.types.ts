@@ -54,6 +54,13 @@ export interface HomePageContent {
 	body: HomePageBodyContent
 }
 
+export type StructuredHomePageContent = Omit<
+	HomePageContent,
+	'head' | 'body'
+>
+
+export type RawHomePageContent = Pick<HomePageContent, 'head' | 'body'>
+
 export interface HomePageSeoContent {
 	title: string
 	description: string

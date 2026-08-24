@@ -2,9 +2,10 @@
 
 import AdminNavigation from '@/screens/admin/ui/common/admin-navigation/AdminNavigation'
 import AdminSectionHeading from '@/screens/admin/ui/common/admin-section-heading/AdminSectionHeading'
+import AdminTooltip from '@/screens/admin/ui/common/admin-tooltip/AdminTooltip'
 import Heading from '@/shared/ui/heading/Heading'
 import { legalPagesService } from '@/entities/legal-page'
-import { useAuthStore } from '@/entities/user'
+import { UserRole, useAuthStore, useUser } from '@/entities/user'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { NextPage } from 'next'
 import dynamic from 'next/dynamic'
@@ -47,6 +48,8 @@ const AREAS: Array<{ key: ContentArea; label: string }> = [
 
 const AdminContentSettings: NextPage = () => {
 	const auth = useAuthStore(state => state.auth)
+	const { user } = useUser()
+	const isDev = Boolean(user?.rights?.includes(UserRole.DEV))
 	const [activeArea, setActiveArea] = useState<ContentArea>('home')
 	const [activeSlug, setActiveSlug] = useState<Slug>('personal-policy')
 	const [drafts, setDrafts] = useState<Record<string, string>>({})
@@ -211,7 +214,16 @@ const AdminContentSettings: NextPage = () => {
 							risk="high"
 							riskText="Любой код здесь выполняется на сайте. Ошибка может сломать страницы или создать XSS-риск, поэтому вставляйте только доверенный код."
 						/>
-						<HomeContentEditor area="body" />
+						{!isDev && (
+							<div className={styles.devOnlyNotice}>
+								<span>Изменение доступно только DEV</span>
+								<AdminTooltip
+									title="DEV-only блок"
+									description="ADMIN видит текущий Body-код только для проверки. Изменение защищено отдельным DEV-endpoint на backend."
+								/>
+							</div>
+						)}
+						<HomeContentEditor area="body" canEditRawCode={isDev} />
 					</>
 				)
 			case 'head':
@@ -224,7 +236,16 @@ const AdminContentSettings: NextPage = () => {
 							risk="high"
 							riskText="Любой код здесь попадает в head сайта. Ошибка может сломать SEO, загрузку страниц или создать XSS-риск, поэтому вставляйте только доверенный код."
 						/>
-						<HomeContentEditor area="head" />
+						{!isDev && (
+							<div className={styles.devOnlyNotice}>
+								<span>Изменение доступно только DEV</span>
+								<AdminTooltip
+									title="DEV-only блок"
+									description="ADMIN видит текущий Head-код только для проверки. Изменение защищено отдельным DEV-endpoint на backend."
+								/>
+							</div>
+						)}
+						<HomeContentEditor area="head" canEditRawCode={isDev} />
 					</>
 				)
 			default:

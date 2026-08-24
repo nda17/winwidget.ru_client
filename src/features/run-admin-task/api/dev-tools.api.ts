@@ -8,6 +8,7 @@ export type DatabaseRestoreTarget =
 	| 'widgets'
 	| 'billing'
 	| 'identity'
+	| 'platform'
 
 export type DatabaseRestoreJobStatus =
 	| 'QUEUED'

@@ -28,7 +28,6 @@ export const useProfileEdit = () => {
 		try {
 			await mutateAsync({
 				name: data.name || undefined,
-				avatarPath: data.avatarPath || undefined,
 				password: data.password || undefined
 			})
 

@@ -7,6 +7,7 @@ import { homePageContentService } from '@/entities/home-page-content'
 import type {
 	HomePageCaseStudy,
 	HomePageContent,
+	HomePageContentRecord,
 	HomePageFeatureCard,
 	HomePageIntegrationIconKey,
 	HomePageIntegrationItem,
@@ -16,9 +17,11 @@ import type {
 	HomePageTariffComparisonRow,
 	HomePageTextCard,
 	HomePageToolItem,
-	HomePageToolPreviewType
+	HomePageToolPreviewType,
+	StructuredHomePageContent
 } from '@/entities/home-page-content'
 import { useAuthStore } from '@/entities/user'
+import AdminTooltip from '@/screens/admin/ui/common/admin-tooltip/AdminTooltip'
 import {
 	useMutation,
 	useQuery,
@@ -429,6 +432,17 @@ const prepareContentForSave = (
 	}
 })
 
+const prepareStructuredContentForSave = (
+	content: HomePageContent
+): StructuredHomePageContent => {
+	const prepared = prepareContentForSave(content)
+	const { head, body, ...structured } = prepared
+	void head
+	void body
+
+	return structured
+}
+
 const normalizePriorityInput = (value: string) => {
 	const numeric = Number(value)
 	if (!Number.isFinite(numeric)) return 0
@@ -468,6 +482,7 @@ const TextField = ({
 interface TextAreaFieldProps extends TextFieldProps {
 	rows?: number
 	hint?: string
+	disabled?: boolean
 }
 
 const TextAreaField = ({
@@ -477,7 +492,8 @@ const TextAreaField = ({
 	onChange,
 	placeholder,
 	rows = 3,
-	hint
+	hint,
+	disabled = false
 }: TextAreaFieldProps) => (
 	<div className={styles.field}>
 		<label htmlFor={id} className={styles.fieldLabel}>
@@ -490,6 +506,7 @@ const TextAreaField = ({
 			onChange={event => onChange(event.target.value)}
 			placeholder={placeholder}
 			rows={rows}
+			disabled={disabled}
 		/>
 		{hint && <span className={styles.fieldHint}>{hint}</span>}
 	</div>
@@ -500,19 +517,24 @@ interface ToggleFieldProps {
 	checked: boolean
 	onChange: (checked: boolean) => void
 	hint?: string
+	disabled?: boolean
 }
 
 const ToggleField = ({
 	label,
 	checked,
 	onChange,
-	hint
+	hint,
+	disabled = false
 }: ToggleFieldProps) => (
-	<label className={styles.toggleField}>
+	<label
+		className={`${styles.toggleField} ${disabled ? styles.toggleFieldDisabled : ''}`}
+	>
 		<input
 			type="checkbox"
 			checked={checked}
 			onChange={event => onChange(event.target.checked)}
+			disabled={disabled}
 		/>
 		<span className={styles.toggleVisual} />
 		<span className={styles.toggleText}>
@@ -562,9 +584,13 @@ const ListActions = ({
 
 interface HomeContentEditorProps {
 	area?: HomeContentEditorArea
+	canEditRawCode?: boolean
 }
 
-const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
+const HomeContentEditor = ({
+	area = 'home',
+	canEditRawCode = false
+}: HomeContentEditorProps) => {
 	const auth = useAuthStore(state => state.auth)
 	const queryClient = useQueryClient()
 	const router = useRouter()
@@ -575,8 +601,11 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 	const isDemoArea = area === 'demo'
 	const isBodyArea = area === 'body'
 	const isHeadArea = area === 'head'
+	const isRawArea = isBodyArea || isHeadArea
 	const defaultContent = useMemo(() => normalizeHomePageContent(), [])
 	const [draft, setDraft] = useState<HomePageContent>(defaultContent)
+	const [persistedContent, setPersistedContent] =
+		useState<HomePageContent>(defaultContent)
 	const [showFactoryResetConfirm, setShowFactoryResetConfirm] =
 		useState(false)
 
@@ -587,28 +616,45 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 	})
 
 	useEffect(() => {
-		if (data?.content) setDraft(data.content)
+		if (data?.content) {
+			setDraft(data.content)
+			setPersistedContent(data.content)
+		}
 	}, [data])
 
-	const mutation = useMutation({
-		mutationFn: homePageContentService.update,
-		onSuccess: async result => {
-			setDraft(result.content)
-			await queryClient.invalidateQueries({
-				queryKey: ['home-page-content']
-			})
-			await revalidateHomePageContent()
-			router.refresh()
-		}
+	const handleUpdateSuccess = async (result: HomePageContentRecord) => {
+		setDraft(result.content)
+		setPersistedContent(result.content)
+		await queryClient.invalidateQueries({
+			queryKey: ['home-page-content']
+		})
+		await revalidateHomePageContent()
+		router.refresh()
+	}
+
+	const structuredMutation = useMutation({
+		mutationFn: homePageContentService.updateStructured,
+		onSuccess: handleUpdateSuccess
+	})
+	const rawMutation = useMutation({
+		mutationFn: homePageContentService.updateRaw,
+		onSuccess: handleUpdateSuccess
 	})
 
-	const persistedContent =
-		mutation.data?.content ?? data?.content ?? defaultContent
 	const isDirty =
 		JSON.stringify(draft) !== JSON.stringify(persistedContent)
+	const isSaving = structuredMutation.isPending || rawMutation.isPending
 
 	const save = () => {
-		const promise = mutation.mutateAsync(prepareContentForSave(draft))
+		if (isRawArea && !canEditRawCode) {
+			toast.error('Изменение Head/Body доступно только DEV')
+			return
+		}
+		const promise = isRawArea
+			? rawMutation.mutateAsync({ head: draft.head, body: draft.body })
+			: structuredMutation.mutateAsync(
+					prepareStructuredContentForSave(draft)
+				)
 
 		toast.promise(promise, {
 			loading: 'Сохраняем...',
@@ -644,7 +690,9 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 		setShowFactoryResetConfirm(false)
 		setDraft(nextContent)
 
-		const promise = mutation.mutateAsync(nextContent)
+		const promise = structuredMutation.mutateAsync(
+			prepareStructuredContentForSave(nextContent)
+		)
 
 		toast.promise(promise, {
 			loading: 'Сбрасываем главную...',
@@ -673,7 +721,9 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 
 		setDraft(nextContent)
 
-		const promise = mutation.mutateAsync(nextContent)
+		const promise = structuredMutation.mutateAsync(
+			prepareStructuredContentForSave(nextContent)
+		)
 
 		toast.promise(promise, {
 			loading: meta.resetLoadingText ?? 'Сбрасываем...',
@@ -862,7 +912,7 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 							type="button"
 							className={styles.resetBtn}
 							onClick={resetAreaToDefault}
-							disabled={mutation.isPending}
+							disabled={isSaving}
 						>
 							Сбросить к дефолту
 						</button>
@@ -880,7 +930,9 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 						type="button"
 						className={styles.saveBtn}
 						onClick={save}
-						disabled={!isDirty || mutation.isPending}
+						disabled={
+							!isDirty || isSaving || (isRawArea && !canEditRawCode)
+						}
 					>
 						{meta.saveLabel}
 					</button>
@@ -908,7 +960,7 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 						type="button"
 						className={styles.factoryResetBtn}
 						onClick={() => setShowFactoryResetConfirm(true)}
-						disabled={mutation.isPending}
+						disabled={isSaving}
 					>
 						Скинуть до заводских настроек
 					</button>
@@ -1484,24 +1536,41 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 									body: { ...prev.body, enabled: checked }
 								}))
 							}
+							disabled={!canEditRawCode}
 						/>
 					</div>
-					<TextAreaField
-						id="body-html"
-						label="HTML / script перед </body>"
-						value={draft.body.html}
-						onChange={value =>
-							updateDraft(prev => ({
-								...prev,
-								body: { ...prev.body, html: value }
-							}))
+					<div
+						className={
+							!canEditRawCode ? styles.devLockedContent : undefined
 						}
-						rows={12}
-						placeholder={
-							'<script src="https://example.com/script.js"></script>'
-						}
-						hint="Код будет добавлен перед закрывающим тегом body после сохранения."
-					/>
+					>
+						<TextAreaField
+							id="body-html"
+							label="HTML / script перед </body>"
+							value={draft.body.html}
+							onChange={value =>
+								updateDraft(prev => ({
+									...prev,
+									body: { ...prev.body, html: value }
+								}))
+							}
+							rows={12}
+							placeholder={
+								'<script src="https://example.com/script.js"></script>'
+							}
+							hint="Код будет добавлен перед закрывающим тегом body после сохранения."
+							disabled={!canEditRawCode}
+						/>
+					</div>
+					{!canEditRawCode && (
+						<div className={styles.devLockHint}>
+							<span>Только просмотр для ADMIN</span>
+							<AdminTooltip
+								title="DEV-only действие"
+								description="Изменение Body-кода разрешено только DEV и отдельно проверяется backend."
+							/>
+						</div>
+					)}
 				</section>
 			)}
 
@@ -1531,22 +1600,39 @@ const HomeContentEditor = ({ area = 'home' }: HomeContentEditorProps) => {
 									head: { ...prev.head, enabled: checked }
 								}))
 							}
+							disabled={!canEditRawCode}
 						/>
 					</div>
-					<TextAreaField
-						id="head-html"
-						label="HTML / script внутри <head>"
-						value={draft.head.html}
-						onChange={value =>
-							updateDraft(prev => ({
-								...prev,
-								head: { ...prev.head, html: value }
-							}))
+					<div
+						className={
+							!canEditRawCode ? styles.devLockedContent : undefined
 						}
-						rows={12}
-						placeholder={'<meta name="example" content="value" />'}
-						hint="Код будет добавлен внутри тега head после сохранения."
-					/>
+					>
+						<TextAreaField
+							id="head-html"
+							label="HTML / script внутри <head>"
+							value={draft.head.html}
+							onChange={value =>
+								updateDraft(prev => ({
+									...prev,
+									head: { ...prev.head, html: value }
+								}))
+							}
+							rows={12}
+							placeholder={'<meta name="example" content="value" />'}
+							hint="Код будет добавлен внутри тега head после сохранения."
+							disabled={!canEditRawCode}
+						/>
+					</div>
+					{!canEditRawCode && (
+						<div className={styles.devLockHint}>
+							<span>Только просмотр для ADMIN</span>
+							<AdminTooltip
+								title="DEV-only действие"
+								description="Изменение Head-кода разрешено только DEV и отдельно проверяется backend."
+							/>
+						</div>
+					)}
 				</section>
 			)}
 

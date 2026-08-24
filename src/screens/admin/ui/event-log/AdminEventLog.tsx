@@ -35,7 +35,8 @@ const SECTION_LABELS: Record<AdminEventLogSection, string> = {
 	AFFILIATE: 'Партнёрка',
 	DEV_TOOLS: 'Базы данных',
 	MESSAGING: 'Очереди',
-	REPORTING: 'Reporting'
+	REPORTING: 'Reporting',
+	PLATFORM_CONTENT: 'Platform: контент'
 }
 
 const ACTION_LABELS: Record<AdminEventLogAction, string> = {
@@ -88,7 +89,11 @@ const ACTION_LABELS: Record<AdminEventLogAction, string> = {
 	REPORTING_DAILY_SUMMARY_SCHEDULE_UPDATE: 'Расписание Daily Summary',
 	REPORTING_DAILY_SUMMARY_SCHEDULE_REJECTED:
 		'Отклонение расписания Daily Summary',
-	REPORTING_DELIVERY_RETRY: 'Повтор обработки Reporting'
+	REPORTING_DELIVERY_RETRY: 'Повтор обработки Reporting',
+	PLATFORM_SITE_SETTINGS_UPDATE: 'Настройки сайта Platform',
+	PLATFORM_LEGAL_PAGE_UPDATE: 'Юридическая страница Platform',
+	PLATFORM_HOME_PAGE_CONTENT_UPDATE: 'Контент главной Platform',
+	PLATFORM_HOME_PAGE_RAW_CODE_UPDATE: 'DEV-код Head/Body Platform'
 }
 
 type EventLogSectionFilter = AdminEventLogSection | 'ALL'

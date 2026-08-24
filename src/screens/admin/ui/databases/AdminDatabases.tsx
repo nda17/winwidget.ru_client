@@ -80,13 +80,13 @@ const DATABASE_BACKUP_JOB_STATUS_LABELS: Record<
 }
 const DATABASE_BACKUP_TARGET_OPTIONS: readonly TelegramDatabaseBackupTarget[] =
 	[
-		'core',
 		'notification-delivery',
 		'campaigns',
 		'reporting',
 		'widgets',
 		'billing',
-		'identity'
+		'identity',
+		'platform'
 	]
 const DATABASE_BACKUP_TRIGGER_LABELS: Record<
 	TelegramDatabaseBackupJobTrigger,
@@ -140,7 +140,8 @@ const DATABASE_RESTORE_TARGETS: readonly DatabaseRestoreTarget[] = [
 	'reporting',
 	'widgets',
 	'billing',
-	'identity'
+	'identity',
+	'platform'
 ]
 
 interface DatabaseBackupActiveMarker {
@@ -296,13 +297,13 @@ const getDatabaseBackupTargetLabel = (
 	target: TelegramDatabaseBackupTarget
 ) =>
 	({
-		core: 'основной БД',
 		'notification-delivery': 'БД Notification Delivery',
 		campaigns: 'БД Campaigns',
 		reporting: 'БД Reporting',
 		widgets: 'БД Widgets',
 		billing: 'БД Billing',
-		identity: 'БД Identity'
+		identity: 'БД Identity',
+		platform: 'БД Platform'
 	})[target]
 
 const formatDatabaseBackupDate = (value: string | null) => {
@@ -359,7 +360,8 @@ const getDatabaseRestoreTargetLabel = (
 		reporting: 'Reporting',
 		widgets: 'Widgets',
 		billing: 'Billing',
-		identity: 'Identity'
+		identity: 'Identity',
+		platform: 'Platform'
 	}[target]
 
 const useDatabaseBackup = (
@@ -1926,15 +1928,6 @@ const AdminDatabases: NextPage = () => {
 			) : settings ? (
 				<>
 					<DatabaseBackupPanel
-						target="core"
-						{...getDatabaseBackupOverviewProps('core')}
-						title="Backup БАЗЫ СТАРОГО МОНОЛИТА"
-						description="БД ЛЕГАСИ МОНОЛИТА"
-						scheduleTimeLabel={settings.databaseBackupTimeLabel}
-						settings={settings}
-						userId={user.id}
-					/>
-					<DatabaseBackupPanel
 						target="notification-delivery"
 						{...getDatabaseBackupOverviewProps('notification-delivery')}
 						title="Backup базы Notification Delivery"
@@ -1987,6 +1980,15 @@ const AdminDatabases: NextPage = () => {
 						title="Backup базы Identity"
 						description="Локальная БД микросервиса Identity Service"
 						scheduleTimeLabel={settings.identityDatabaseBackupTimeLabel}
+						settings={settings}
+						userId={user.id}
+					/>
+					<DatabaseBackupPanel
+						target="platform"
+						{...getDatabaseBackupOverviewProps('platform')}
+						title="Backup базы Platform"
+						description="Локальная БД микросервиса Platform Service"
+						scheduleTimeLabel={settings.platformDatabaseBackupTimeLabel}
 						settings={settings}
 						userId={user.id}
 					/>
