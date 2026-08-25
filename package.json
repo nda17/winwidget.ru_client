@@ -8,6 +8,7 @@
 		"build": "next build",
 		"start": "next start",
 		"lint": "next lint",
+		"test:payment-auth": "node --test scripts/payment-auth-guard.test.mjs",
 		"format": "prettier --write --no-error-on-unmatched-pattern \"src/**/*.{ts,tsx,scss}\" \"*.{js,mjs,ts,json}\"",
 		"prepare": "husky"
 	},

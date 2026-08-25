@@ -19,12 +19,14 @@ import {
 import type { BillingPeriod, Plan } from '@/entities/subscription'
 import { validEmail, validPhoneCode } from '@/shared/regex'
 import { useAuthStore } from '@/entities/user'
+import { PUBLIC_PAGES } from '@/shared/config/pages/public.config'
 import {
 	useMutation,
 	useQuery,
 	useQueryClient
 } from '@tanstack/react-query'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
 	type ReactNode,
 	useCallback,
@@ -87,6 +89,7 @@ const PAYMENT_COPY = {
 		'Обновите страницу перед созданием нового платежа.',
 	paymentPopupBlockedText:
 		'Браузер заблокировал новую вкладку. Разрешите всплывающие окна для WinWidget и повторите оплату.',
+	authenticationRequiredText: 'Для оплаты войдите в аккаунт.',
 	paymentOpenedInNewTabText: 'Страница оплаты открыта в новой вкладке',
 	paymentCreatedWithoutOpenTabText:
 		'Платёж создан. Вернуться к нему можно из карточки незавершённого платежа.',
@@ -246,6 +249,7 @@ const Pricing = ({
 	tariffPrices = null
 }: PricingProps) => {
 	const auth = useAuthStore(state => state.auth)
+	const router = useRouter()
 	const queryClient = useQueryClient()
 	const { user, isLoading: isUserLoading } = useUser()
 	const [period, setPeriod] = useState<BillingPeriod>('YEARLY')
@@ -578,6 +582,12 @@ const Pricing = ({
 		expectedAmount: number,
 		autoRenew: boolean
 	) => {
+		if (!auth) {
+			toast.error(PAYMENT_COPY.authenticationRequiredText)
+			router.push(PUBLIC_PAGES.LOGIN)
+			return
+		}
+
 		if (shouldShowPaymentContactPrompt) {
 			setPendingPaymentRequest({
 				plan,
