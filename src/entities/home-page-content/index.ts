@@ -5,6 +5,7 @@ export {
 	DEFAULT_HOME_PAGE_FOOTER_CONTENT,
 	DEFAULT_HOME_PAGE_HEAD_CONTENT,
 	DEFAULT_HOME_PAGE_TECHNICAL_SEO_CONTENT,
-	normalizeHomePageContent
+	normalizeHomePageContent,
+	normalizeHomePageDemoWidgetsContent
 } from './model/home-page-content.defaults'
 export type * from './model/home-page-content.types'

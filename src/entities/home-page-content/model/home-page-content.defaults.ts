@@ -12,6 +12,39 @@ const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 const isRecord = (value: unknown): value is Record<string, unknown> =>
 	typeof value === 'object' && value !== null && !Array.isArray(value)
 
+const normalizeDemoWidgetsContent = (
+	value: unknown,
+	fallback: HomePageContent['demoWidgets']
+): HomePageContent['demoWidgets'] => {
+	const demoWidgets = isRecord(value) ? value : {}
+	const bubbleTexts = isRecord(demoWidgets.bubbleTexts)
+		? demoWidgets.bubbleTexts
+		: {}
+
+	const normalizeBubbleText = (
+		key: keyof HomePageContent['demoWidgets']['bubbleTexts']
+	) =>
+		typeof bubbleTexts[key] === 'string'
+			? bubbleTexts[key]
+			: fallback.bubbleTexts[key]
+
+	return {
+		enabled:
+			typeof demoWidgets.enabled === 'boolean'
+				? demoWidgets.enabled
+				: fallback.enabled,
+		bubbleTexts: {
+			wheel: normalizeBubbleText('wheel'),
+			quiz: normalizeBubbleText('quiz'),
+			callback: normalizeBubbleText('callback'),
+			countdown: normalizeBubbleText('countdown'),
+			onlineConsultant: normalizeBubbleText('onlineConsultant'),
+			stopOffer: normalizeBubbleText('stopOffer'),
+			calculator: normalizeBubbleText('calculator')
+		}
+	}
+}
+
 const mergeObject = <T extends object>(
 	fallback: T,
 	value: unknown
@@ -982,6 +1015,11 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
 	body: DEFAULT_HOME_PAGE_BODY_CONTENT
 }
 
+export const normalizeHomePageDemoWidgetsContent = (
+	value: unknown
+): HomePageContent['demoWidgets'] =>
+	normalizeDemoWidgetsContent(value, DEFAULT_HOME_PAGE_CONTENT.demoWidgets)
+
 export const normalizeHomePageContent = (
 	value?: unknown
 ): HomePageContent => {
@@ -1033,16 +1071,10 @@ export const normalizeHomePageContent = (
 				defaultContent.technicalSeo.sitemapItems
 			)
 		},
-		demoWidgets: {
-			...defaultContent.demoWidgets,
-			...(isRecord(content.demoWidgets) ? content.demoWidgets : {}),
-			bubbleTexts: {
-				...defaultContent.demoWidgets.bubbleTexts,
-				...(isRecord(content.demoWidgets?.bubbleTexts)
-					? content.demoWidgets.bubbleTexts
-					: {})
-			}
-		},
+		demoWidgets: normalizeDemoWidgetsContent(
+			content.demoWidgets,
+			defaultContent.demoWidgets
+		),
 		hero: {
 			...mergeObject(defaultContent.hero, content.hero),
 			benefits: mergeSimpleArray(

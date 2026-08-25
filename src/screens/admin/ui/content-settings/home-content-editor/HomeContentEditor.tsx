@@ -2,7 +2,10 @@
 
 import ConfirmDialog from '@/shared/ui/confirm-dialog/ConfirmDialog'
 import { revalidateHomePageContent } from '@/entities/home-page-content/actions'
-import { normalizeHomePageContent } from '@/entities/home-page-content'
+import {
+	normalizeHomePageContent,
+	normalizeHomePageDemoWidgetsContent
+} from '@/entities/home-page-content'
 import { homePageContentService } from '@/entities/home-page-content'
 import type {
 	HomePageCaseStudy,
@@ -359,6 +362,7 @@ const prepareContentForSave = (
 	content: HomePageContent
 ): HomePageContent => ({
 	...content,
+	demoWidgets: normalizeHomePageDemoWidgetsContent(content.demoWidgets),
 	hero: {
 		...content.hero,
 		benefits: cleanTextCards(content.hero.benefits)
