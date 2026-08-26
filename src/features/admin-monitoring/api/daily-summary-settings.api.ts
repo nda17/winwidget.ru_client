@@ -1,7 +1,5 @@
 import { axiosInterceptorsRequest } from '@/shared/api'
 
-export type ReportingDailySummaryOwner = 'CORE_SHADOW' | 'REPORTING'
-
 export interface ReportingDailySummaryDelivery {
 	periodStart: string
 }
@@ -18,12 +16,10 @@ export interface ReportingDailySummaryFailedDelivery extends ReportingDailySumma
 
 export interface ReportingDailySummarySettings {
 	id: 'daily-summary'
-	owner: ReportingDailySummaryOwner
 	enabled: boolean
 	destinationChatId: string | null
 	messageThreadId: number | null
-	coreOperationalAlertsDestinationChatId: string | null
-	coreOperationalAlertsThreadId: number | null
+	operationalAlertsThreadId: number | null
 	scheduleTime: string
 	timezone: string
 	scheduleGeneration: string

@@ -42,7 +42,7 @@ const IDENTITY_INFO_WEBHOOK_QUERY_KEY = ['admin-telegram-info-webhook']
 const WEBHOOK_BOTS: TelegramWebhookBot[] = ['info', 'auth', 'support']
 const MIN_TASK_TIME_GAP_MINUTES = 5
 const MAX_TELEGRAM_TOPIC_ID = 2147483647
-const CORE_TELEGRAM_TOPIC_FIELDS = [
+const OPERATIONS_TELEGRAM_TOPIC_FIELDS = [
 	{
 		key: 'databaseBackupThreadId',
 		label: 'Backups',
@@ -56,13 +56,14 @@ const CORE_TELEGRAM_TOPIC_FIELDS = [
 	{
 		key: 'operationalAlertsThreadId',
 		label: 'Системные уведомления',
-		description: 'Ошибки RabbitMQ, workers, Outbox и фоновых задач Core'
+		description:
+			'Ошибки RabbitMQ, workers, Outbox и фоновых задач Operations'
 	}
 ] as const
 
-type CoreTelegramTopicField =
-	(typeof CORE_TELEGRAM_TOPIC_FIELDS)[number]['key']
-type TelegramTopicInputs = Record<CoreTelegramTopicField, string>
+type OperationsTelegramTopicField =
+	(typeof OPERATIONS_TELEGRAM_TOPIC_FIELDS)[number]['key']
+type TelegramTopicInputs = Record<OperationsTelegramTopicField, string>
 
 const EMPTY_TELEGRAM_TOPIC_INPUTS: TelegramTopicInputs = {
 	databaseBackupThreadId: '',
@@ -141,7 +142,7 @@ const hasMinimumTaskTimeGap = (
 	backupTime: string,
 	backupDelayMinutes: number[]
 ) =>
-	[0, ...backupDelayMinutes].every(delayMinutes => {
+	backupDelayMinutes.every(delayMinutes => {
 		const delayedBackupTime = addMinutesToTime(backupTime, delayMinutes)
 		if (delayedBackupTime === null) return false
 
@@ -237,6 +238,15 @@ const AdminTelegramBot: NextPage = () => {
 		queryKey: IDENTITY_INFO_WEBHOOK_QUERY_KEY,
 		queryFn: identityTelegramAuthService.getInfoWebhookStatus
 	})
+	const isOperationsChatFrozen = Boolean(
+		settings?.dailySummaryChatId.trim()
+	)
+	const isOperationalAlertsThreadFrozen = Boolean(
+		settings && settings.operationalAlertsThreadId !== null
+	)
+	const isDailySummaryDestinationFrozen = Boolean(
+		dailySummarySettings && dailySummarySettings.destinationChatId !== null
+	)
 
 	useEffect(() => {
 		if (!settings) return
@@ -279,7 +289,7 @@ const AdminTelegramBot: NextPage = () => {
 		onSuccess: async (result, patch) => {
 			if (
 				'dailySummaryChatId' in patch ||
-				CORE_TELEGRAM_TOPIC_FIELDS.some(field => field.key in patch)
+				OPERATIONS_TELEGRAM_TOPIC_FIELDS.some(field => field.key in patch)
 			) {
 				isTelegramRoutingDraftDirty.current = false
 				setChatId(result.dailySummaryChatId)
@@ -429,11 +439,7 @@ const AdminTelegramBot: NextPage = () => {
 	}
 
 	const handleToggleSummary = () => {
-		if (
-			!dailySummarySettings ||
-			dailySummarySettings.owner !== 'REPORTING'
-		)
-			return
+		if (!dailySummarySettings) return
 
 		if (!dailySummarySettings.enabled) {
 			if (!dailySummarySettings.destinationChatId?.trim()) {
@@ -446,14 +452,14 @@ const AdminTelegramBot: NextPage = () => {
 				return
 			}
 
-			if (!dailySummarySettings.coreOperationalAlertsThreadId) {
+			if (!dailySummarySettings.operationalAlertsThreadId) {
 				toast.error('Сначала сохраните ID топика системных уведомлений')
 				return
 			}
 
 			if (
 				dailySummarySettings.messageThreadId ===
-				dailySummarySettings.coreOperationalAlertsThreadId
+				dailySummarySettings.operationalAlertsThreadId
 			) {
 				toast.error(
 					'Daily Summary и системные уведомления должны использовать разные топики'
@@ -493,12 +499,23 @@ const AdminTelegramBot: NextPage = () => {
 		if (!settings) return
 
 		const normalizedChatId = chatId.trim()
+		const effectiveChatId = isOperationsChatFrozen
+			? settings.dailySummaryChatId
+			: normalizedChatId
 		const normalizedTopicIds = {} as Record<
-			CoreTelegramTopicField,
+			OperationsTelegramTopicField,
 			number | null
 		>
 
-		for (const field of CORE_TELEGRAM_TOPIC_FIELDS) {
+		for (const field of OPERATIONS_TELEGRAM_TOPIC_FIELDS) {
+			if (
+				field.key === 'operationalAlertsThreadId' &&
+				isOperationalAlertsThreadFrozen
+			) {
+				normalizedTopicIds[field.key] = settings.operationalAlertsThreadId
+				continue
+			}
+
 			const topicId = parseTelegramTopicId(topicIds[field.key])
 
 			if (topicId === undefined) {
@@ -511,13 +528,13 @@ const AdminTelegramBot: NextPage = () => {
 			normalizedTopicIds[field.key] = topicId
 		}
 
-		if (settings.databaseBackupEnabled && !normalizedChatId) {
+		if (settings.databaseBackupEnabled && !effectiveChatId) {
 			toast.error('Укажите ID группы Telegram')
 			return
 		}
 
 		if (
-			!normalizedChatId &&
+			!effectiveChatId &&
 			Object.values(normalizedTopicIds).some(topicId => topicId !== null)
 		) {
 			toast.error('Укажите ID Telegram-группы для настроенных топиков')
@@ -533,7 +550,7 @@ const AdminTelegramBot: NextPage = () => {
 		}
 
 		if (
-			normalizedChatId === dailySummarySettings?.destinationChatId &&
+			effectiveChatId === dailySummarySettings?.destinationChatId &&
 			normalizedTopicIds.operationalAlertsThreadId !== null &&
 			normalizedTopicIds.operationalAlertsThreadId ===
 				dailySummarySettings?.messageThreadId
@@ -544,13 +561,19 @@ const AdminTelegramBot: NextPage = () => {
 			return
 		}
 
-		saveWithToast(
-			{
-				dailySummaryChatId: normalizedChatId,
-				...normalizedTopicIds
-			},
-			'Сохраняем маршрутизацию Telegram...'
-		)
+		const patch: Parameters<typeof adminTelegramBotService.update>[0] = {
+			databaseBackupThreadId: normalizedTopicIds.databaseBackupThreadId,
+			paymentsThreadId: normalizedTopicIds.paymentsThreadId
+		}
+		if (!isOperationsChatFrozen) {
+			patch.dailySummaryChatId = normalizedChatId
+		}
+		if (!isOperationalAlertsThreadFrozen) {
+			patch.operationalAlertsThreadId =
+				normalizedTopicIds.operationalAlertsThreadId
+		}
+
+		saveWithToast(patch, 'Сохраняем маршрутизацию Telegram...')
 	}
 
 	const handleSaveSupportRouting = () => {
@@ -585,12 +608,7 @@ const AdminTelegramBot: NextPage = () => {
 	}
 
 	const handleSaveDailySummary = () => {
-		if (
-			!settings ||
-			!dailySummarySettings ||
-			dailySummarySettings.owner !== 'REPORTING'
-		)
-			return
+		if (!settings || !dailySummarySettings) return
 
 		if (!summaryTime) {
 			toast.error('Укажите время сводки')
@@ -606,7 +624,8 @@ const AdminTelegramBot: NextPage = () => {
 				settings.billingDatabaseBackupDelayMinutes,
 				settings.identityDatabaseBackupDelayMinutes,
 				settings.platformDatabaseBackupDelayMinutes,
-				settings.supportDatabaseBackupDelayMinutes
+				settings.supportDatabaseBackupDelayMinutes,
+				settings.operationsDatabaseBackupDelayMinutes
 			])
 		) {
 			toast.error(
@@ -616,7 +635,9 @@ const AdminTelegramBot: NextPage = () => {
 		}
 
 		const messageThreadId = parseTelegramTopicId(dailySummaryThreadId)
-		const destinationChatId = dailySummaryDestinationChatId.trim()
+		const destinationChatId = isDailySummaryDestinationFrozen
+			? (dailySummarySettings.destinationChatId ?? '')
+			: dailySummaryDestinationChatId.trim()
 
 		if (messageThreadId === undefined) {
 			toast.error(
@@ -636,11 +657,9 @@ const AdminTelegramBot: NextPage = () => {
 		}
 
 		if (
-			destinationChatId ===
-				dailySummarySettings.coreOperationalAlertsDestinationChatId &&
+			destinationChatId === settings?.dailySummaryChatId &&
 			messageThreadId !== null &&
-			messageThreadId ===
-				dailySummarySettings.coreOperationalAlertsThreadId
+			messageThreadId === dailySummarySettings.operationalAlertsThreadId
 		) {
 			toast.error(
 				'Daily Summary и системные уведомления должны использовать разные топики'
@@ -650,6 +669,7 @@ const AdminTelegramBot: NextPage = () => {
 
 		const patch: UpdateReportingDailySummarySettings = {}
 		if (
+			!isDailySummaryDestinationFrozen &&
 			destinationChatId !== (dailySummarySettings.destinationChatId ?? '')
 		) {
 			patch.destinationChatId = destinationChatId || null
@@ -691,7 +711,8 @@ const AdminTelegramBot: NextPage = () => {
 					settings.billingDatabaseBackupDelayMinutes,
 					settings.identityDatabaseBackupDelayMinutes,
 					settings.platformDatabaseBackupDelayMinutes,
-					settings.supportDatabaseBackupDelayMinutes
+					settings.supportDatabaseBackupDelayMinutes,
+					settings.operationsDatabaseBackupDelayMinutes
 				]
 			)
 		) {
@@ -775,13 +796,18 @@ const AdminTelegramBot: NextPage = () => {
 				settings.supportDatabaseBackupDelayMinutes
 			) ?? settings.supportDatabaseBackupTime)
 		: null
+	const operationsBackupTime = settings
+		? (addMinutesToTime(
+				backupTime,
+				settings.operationsDatabaseBackupDelayMinutes
+			) ?? settings.operationsDatabaseBackupTime)
+		: null
 	const isLoading = isTelegramSettingsLoading
-	const isDailySummaryReadOnly =
-		dailySummarySettings?.owner !== 'REPORTING'
 	const isDailySummarySettingsChanged = Boolean(
 		dailySummarySettings &&
-		(dailySummaryDestinationChatId.trim() !==
-			(dailySummarySettings.destinationChatId ?? '') ||
+		((!isDailySummaryDestinationFrozen &&
+			dailySummaryDestinationChatId.trim() !==
+				(dailySummarySettings.destinationChatId ?? '')) ||
 			dailySummaryThreadId.trim() !==
 				(dailySummarySettings.messageThreadId?.toString() ?? '') ||
 			summaryTime !== dailySummarySettings.scheduleTime ||
@@ -789,11 +815,14 @@ const AdminTelegramBot: NextPage = () => {
 	)
 	const isTelegramRoutingChanged = Boolean(
 		settings &&
-		(chatId.trim() !== settings.dailySummaryChatId ||
-			CORE_TELEGRAM_TOPIC_FIELDS.some(
+		((!isOperationsChatFrozen &&
+			chatId.trim() !== settings.dailySummaryChatId) ||
+			OPERATIONS_TELEGRAM_TOPIC_FIELDS.some(
 				field =>
+					(field.key !== 'operationalAlertsThreadId' ||
+						!isOperationalAlertsThreadFrozen) &&
 					topicIds[field.key].trim() !==
-					(settings[field.key]?.toString() ?? '')
+						(settings[field.key]?.toString() ?? '')
 			))
 	)
 	const isSupportRoutingChanged = Boolean(
@@ -1203,21 +1232,12 @@ const AdminTelegramBot: NextPage = () => {
 											{dailySummarySettings.timezone}) и явно показывает
 											период отчёта. Настройками владеет Reporting Service.
 										</p>
-										{isDailySummaryReadOnly && (
-											<p className={styles.hint}>
-												Изменение станет доступно после переключения
-												владельца Daily Summary на Reporting.
-											</p>
-										)}
 									</div>
 									<button
 										type="button"
 										className={`${styles.toggle} ${dailySummarySettings.enabled ? styles.toggleOn : ''}`}
 										onClick={handleToggleSummary}
-										disabled={
-											dailySummaryMutation.isPending ||
-											isDailySummaryReadOnly
-										}
+										disabled={dailySummaryMutation.isPending}
 										aria-label={
 											dailySummarySettings.enabled
 												? 'Выключить отправку сводки'
@@ -1236,10 +1256,7 @@ const AdminTelegramBot: NextPage = () => {
 												type="time"
 												className={styles.input}
 												value={summaryTime}
-												disabled={
-													dailySummaryMutation.isPending ||
-													isDailySummaryReadOnly
-												}
+												disabled={dailySummaryMutation.isPending}
 												onChange={event => {
 													isDailySummaryDraftDirty.current = true
 													setSummaryTime(event.target.value)
@@ -1255,7 +1272,7 @@ const AdminTelegramBot: NextPage = () => {
 												value={dailySummaryDestinationChatId}
 												disabled={
 													dailySummaryMutation.isPending ||
-													isDailySummaryReadOnly
+													isDailySummaryDestinationFrozen
 												}
 												onChange={event => {
 													isDailySummaryDraftDirty.current = true
@@ -1273,10 +1290,7 @@ const AdminTelegramBot: NextPage = () => {
 												type="number"
 												className={styles.input}
 												value={dailySummaryThreadId}
-												disabled={
-													dailySummaryMutation.isPending ||
-													isDailySummaryReadOnly
-												}
+												disabled={dailySummaryMutation.isPending}
 												onChange={event => {
 													isDailySummaryDraftDirty.current = true
 													setDailySummaryThreadId(event.target.value)
@@ -1300,7 +1314,6 @@ const AdminTelegramBot: NextPage = () => {
 											onClick={handleSaveDailySummary}
 											disabled={
 												dailySummaryMutation.isPending ||
-												isDailySummaryReadOnly ||
 												!isDailySummarySettingsChanged
 											}
 										>
@@ -1313,11 +1326,15 @@ const AdminTelegramBot: NextPage = () => {
 										должно быть разнесено с каждым backup минимум на{' '}
 										{MIN_TASK_TIME_GAP_MINUTES} минут.
 									</p>
+									<p className={styles.hint}>
+										После первичной настройки ID группы Daily Summary
+										изменяется только через maintenance-процедуру.
+									</p>
 									{dailySummarySettings.schedulePolicyConfirmationPending && (
 										<p className={styles.webhookStatusError}>
 											Настройки сохранены в Reporting, но подтверждение
-											policy в Core ещё не завершено. Нажмите сохранить
-											повторно.
+											policy в Operations ещё не завершено. Нажмите
+											сохранить повторно.
 										</p>
 									)}
 								</div>
@@ -1356,10 +1373,11 @@ const AdminTelegramBot: NextPage = () => {
 									{settings.billingDatabaseBackupTimeLabel}, Identity — в{' '}
 									{settings.identityDatabaseBackupTimeLabel}, Platform — в{' '}
 									{settings.platformDatabaseBackupTimeLabel}, Support — в{' '}
-									{settings.supportDatabaseBackupTimeLabel}. Базовое время{' '}
-									{settings.databaseBackupTimeLabel} задаёт расписание, но
-									backup монолита не создаётся. Все файлы приходят отдельно
-									в топик Backups.
+									{settings.supportDatabaseBackupTimeLabel}, Operations — в{' '}
+									{settings.operationsDatabaseBackupTimeLabel}. Базовое
+									время {settings.databaseBackupTimeLabel} задаёт
+									расписание, но все файлы приходят отдельно в топик
+									Backups.
 								</p>
 							</div>
 							<button
@@ -1454,6 +1472,14 @@ const AdminTelegramBot: NextPage = () => {
 										{supportBackupTime ? `${supportBackupTime} МСК` : '—'}
 									</p>
 								</div>
+								<div className={styles.field}>
+									<span className={styles.label}>Backup Operations</span>
+									<p className={styles.derivedTime}>
+										{operationsBackupTime
+											? `${operationsBackupTime} МСК`
+											: '—'}
+									</p>
+								</div>
 								<button
 									type="button"
 									className={`${styles.saveBtn} ${styles.scheduleSaveBtn}`}
@@ -1468,8 +1494,8 @@ const AdminTelegramBot: NextPage = () => {
 							</div>
 							<p className={styles.hint}>
 								Время указывается по Москве. Notification Delivery,
-								Campaigns, Reporting, Widgets, Billing, Identity, Platform
-								и Support запускаются через{' '}
+								Campaigns, Reporting, Widgets, Billing, Identity, Platform,
+								Support и Operations запускаются через{' '}
 								{settings.notificationDeliveryDatabaseBackupDelayMinutes}
 								{', '}
 								{settings.campaignsDatabaseBackupDelayMinutes}
@@ -1483,8 +1509,10 @@ const AdminTelegramBot: NextPage = () => {
 								{settings.identityDatabaseBackupDelayMinutes}
 								{', '}
 								{settings.platformDatabaseBackupDelayMinutes}
+								{', '}
+								{settings.supportDatabaseBackupDelayMinutes}
 								{' и '}
-								{settings.supportDatabaseBackupDelayMinutes} минут после
+								{settings.operationsDatabaseBackupDelayMinutes} минут после
 								базового времени соответственно. Сводка должна быть
 								разнесена с каждым backup минимум на{' '}
 								{MIN_TASK_TIME_GAP_MINUTES} минут.
@@ -1627,13 +1655,13 @@ const AdminTelegramBot: NextPage = () => {
 									htmlFor="telegram-group-id"
 									className={styles.label}
 								>
-									ID группы Core
+									ID группы Operations
 								</label>
 								<input
 									id="telegram-group-id"
 									className={styles.input}
 									value={chatId}
-									disabled={mutation.isPending}
+									disabled={mutation.isPending || isOperationsChatFrozen}
 									onChange={event => {
 										isTelegramRoutingDraftDirty.current = true
 										setChatId(event.target.value)
@@ -1644,14 +1672,18 @@ const AdminTelegramBot: NextPage = () => {
 							</div>
 
 							<div className={styles.statusGrid}>
-								{CORE_TELEGRAM_TOPIC_FIELDS.map(field => (
+								{OPERATIONS_TELEGRAM_TOPIC_FIELDS.map(field => (
 									<label key={field.key} className={styles.field}>
 										<span className={styles.label}>{field.label}</span>
 										<input
 											type="number"
 											className={styles.input}
 											value={topicIds[field.key]}
-											disabled={mutation.isPending}
+											disabled={
+												mutation.isPending ||
+												(field.key === 'operationalAlertsThreadId' &&
+													isOperationalAlertsThreadFrozen)
+											}
 											onChange={event => {
 												isTelegramRoutingDraftDirty.current = true
 												setTopicIds(current => ({
@@ -1678,8 +1710,14 @@ const AdminTelegramBot: NextPage = () => {
 								топика не заполнен, сообщения этого типа не отправляются;
 								fallback в General не используется. Маршрут Daily Summary
 								настраивается отдельно в Reporting Service выше. После
-								переключения владельца Core и Reporting хранят свои ID
-								групп независимо.
+								Operations хранит системную маршрутизацию, а Reporting
+								отдельно хранит назначение Daily Summary.
+							</p>
+							<p className={styles.hint}>
+								После первичной настройки ID общей группы Operations и
+								топик системных уведомлений изменяются только через
+								maintenance-процедуру. Топики Backups и Payments остаются
+								редактируемыми.
 							</p>
 
 							<button

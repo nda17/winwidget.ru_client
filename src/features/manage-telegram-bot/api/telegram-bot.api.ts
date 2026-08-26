@@ -32,6 +32,9 @@ export interface AdminTelegramBotSettings {
 	supportDatabaseBackupDelayMinutes: number
 	supportDatabaseBackupTime: string
 	supportDatabaseBackupTimeLabel: string
+	operationsDatabaseBackupDelayMinutes: number
+	operationsDatabaseBackupTime: string
+	operationsDatabaseBackupTimeLabel: string
 	databaseBackupLastSentPeriodStart: string | null
 	databaseBackupLastSentAt: string | null
 	telegramBotTokenConfigured: boolean
@@ -140,6 +143,7 @@ export type TelegramDatabaseBackupTarget =
 	| 'identity'
 	| 'platform'
 	| 'support'
+	| 'operations'
 
 export interface TelegramDatabaseBackupAcceptedJob {
 	target: TelegramDatabaseBackupTarget

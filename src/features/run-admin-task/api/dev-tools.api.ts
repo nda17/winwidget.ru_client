@@ -8,7 +8,8 @@ export const DATABASE_RESTORE_TARGETS = [
 	'billing',
 	'identity',
 	'platform',
-	'support'
+	'support',
+	'operations'
 ] as const
 
 export type DatabaseRestoreTarget =

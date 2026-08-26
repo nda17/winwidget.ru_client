@@ -61,6 +61,7 @@ export interface MessagingOverview {
 	billingError: string | null
 	identityError: string | null
 	platformError: string | null
+	supportError: string | null
 	campaignsError: string | null
 	reportingError: string | null
 	heartbeats: Array<{
@@ -106,7 +107,7 @@ export interface MessagingFailure {
 }
 
 export type MessagingFailureSource =
-	| 'core'
+	| 'operations'
 	| 'notificationDelivery'
 	| 'widgets'
 	| 'billing'

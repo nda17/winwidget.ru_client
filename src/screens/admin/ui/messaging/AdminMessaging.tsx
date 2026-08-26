@@ -73,7 +73,7 @@ const categoryLabels: Record<MessagingFailureCategory, string> = {
 }
 
 const failureSourceLabels: Record<MessagingFailureSource, string> = {
-	core: 'Core',
+	operations: 'Operations',
 	notificationDelivery: 'Notification Delivery',
 	widgets: 'Widgets',
 	billing: 'Billing',
@@ -379,7 +379,7 @@ export default function AdminMessaging() {
 							<Metric
 								title="Успешных бэкапов за 24 часа"
 								value={overview.data.completedBackupsLast24Hours}
-								description="Успешно завершённые за последние 24 часа резервные копии баз Notification Delivery, Campaigns, Reporting, Widgets, Billing, Identity и Platform."
+								description="Успешно завершённые за последние 24 часа резервные копии баз Notification Delivery, Campaigns, Reporting, Widgets, Billing, Identity, Platform, Support и Operations."
 							/>
 						</div>
 						<div className={styles.heartbeats}>
@@ -395,7 +395,7 @@ export default function AdminMessaging() {
 							))}
 							<AdminTooltip
 								title="Состояние процессов"
-								description="Для Core, Identity, Notification Delivery, Campaigns, Reporting, Widgets и Billing зелёный индикатор означает heartbeat за последние 30 секунд. Platform API и publisher проверяются отдельными live readiness-запросами при каждом обновлении страницы — это не 30-секундный heartbeat. Число показывает количество активных экземпляров; эти проверки не подтверждают доступность SMTP, Telegram или CRM."
+								description="Для Operations, Identity, Notification Delivery, Campaigns, Reporting, Widgets и Billing зелёный индикатор означает heartbeat за последние 30 секунд. Platform и Support проверяются через собственные health endpoints. Число показывает количество активных экземпляров; эти проверки не подтверждают доступность SMTP, Telegram или CRM."
 							/>
 						</div>
 						{overview.data.rabbitMqError && (
@@ -427,6 +427,11 @@ export default function AdminMessaging() {
 						{overview.data.platformError && (
 							<p className={styles.error}>
 								Platform: {overview.data.platformError}
+							</p>
+						)}
+						{overview.data.supportError && (
+							<p className={styles.error}>
+								Support: {overview.data.supportError}
 							</p>
 						)}
 						{overview.data.campaignsError && (

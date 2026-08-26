@@ -88,7 +88,8 @@ const DATABASE_BACKUP_TARGET_OPTIONS: readonly TelegramDatabaseBackupTarget[] =
 		'billing',
 		'identity',
 		'platform',
-		'support'
+		'support',
+		'operations'
 	]
 const DATABASE_BACKUP_TRIGGER_LABELS: Record<
 	TelegramDatabaseBackupJobTrigger,
@@ -295,7 +296,8 @@ const getDatabaseBackupTargetLabel = (
 		billing: 'БД Billing',
 		identity: 'БД Identity',
 		platform: 'БД Platform',
-		support: 'БД Support'
+		support: 'БД Support',
+		operations: 'БД Operations'
 	})[target]
 
 const formatDatabaseBackupDate = (value: string | null) => {
@@ -353,7 +355,8 @@ const getDatabaseRestoreTargetLabel = (
 		billing: 'Billing',
 		identity: 'Identity',
 		platform: 'Platform',
-		support: 'Support'
+		support: 'Support',
+		operations: 'Operations'
 	}[target]
 
 const useDatabaseBackup = (
@@ -1903,7 +1906,7 @@ const AdminDatabases: NextPage = () => {
 			/>
 
 			{isLoading ? (
-				Array.from({ length: 8 }, (_, cardIndex) => (
+				Array.from({ length: 9 }, (_, cardIndex) => (
 					<div key={cardIndex} className={styles.card}>
 						<SkeletonLoader count={1} className="h-[64px]" />
 						<div className={styles.backupMetaGrid}>
@@ -1990,6 +1993,15 @@ const AdminDatabases: NextPage = () => {
 						title="Backup базы Support"
 						description="Локальная БД микросервиса Support Service"
 						scheduleTimeLabel={settings.supportDatabaseBackupTimeLabel}
+						settings={settings}
+						userId={user.id}
+					/>
+					<DatabaseBackupPanel
+						target="operations"
+						{...getDatabaseBackupOverviewProps('operations')}
+						title="Backup базы Operations"
+						description="Локальная БД микросервиса Operations Service"
+						scheduleTimeLabel={settings.operationsDatabaseBackupTimeLabel}
 						settings={settings}
 						userId={user.id}
 					/>

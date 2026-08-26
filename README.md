@@ -180,8 +180,9 @@ Route-файлы остаются тонкими и подключают экр�
 
 - Node.js 20;
 - pnpm 9;
-- запущенные backend API на `http://localhost:4200` и API Gateway на
-  `http://localhost:4100` для полного локального сценария.
+- запущенный API Gateway на `http://localhost:4100` и сервисы из его локального
+  route manifest; Widgets API/assets по умолчанию доступны на
+  `http://localhost:4700`.
 
 ## Установка зависимостей
 
@@ -213,10 +214,9 @@ JWT_MAX_TOKEN_LIFETIME_SECONDS=900
 `NEXT_PUBLIC_`.
 
 Gateway разрешает credentialed CORS только для точных development-origin
-`http://localhost:3000` и `http://127.0.0.1:3000`. Поэтому локальный frontend
-обращается к API через `:4100`; `NEXT_PUBLIC_DEVELOPMENT_HOST=:4200` остаётся
-для uploads из Core, а unversioned runtime-виджеты и preview используют
-`NEXT_PUBLIC_WIDGETS_HOST=:4700`.
+`http://localhost:3000` и `http://127.0.0.1:3000`. Поэтому весь локальный
+versioned API идёт через `:4100`, а unversioned runtime-виджеты и preview —
+через `NEXT_PUBLIC_WIDGETS_HOST=:4700`. Core endpoint и fallback отсутствуют.
 
 ## Запуск development-сервера
 
@@ -241,7 +241,6 @@ pnpm start
 | `NEXT_PUBLIC_MODE`               | Режим выбора адресов: `development` или `production`                                   |
 | `NEXT_PUBLIC_SITE_URL`           | Публичный адрес frontend                                                               |
 | `NEXT_PUBLIC_PRODUCTION_HOST`    | Публичный адрес production backend                                                     |
-| `NEXT_PUBLIC_DEVELOPMENT_HOST`   | Адрес локального backend                                                               |
 | `NEXT_PUBLIC_WIDGETS_HOST`       | Адрес Widgets Service; по умолчанию `:4700` локально и production backend в production |
 | `NEXT_PUBLIC_API_URL`            | Полный базовый URL API с `/api/v1`                                                     |
 | `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | Публичный ключ reCAPTCHA v3                                                            |
