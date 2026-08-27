@@ -433,5 +433,5 @@ pnpm build
 - `../winwidget.ru_infra` — Nginx и общий production-контур;
 - защищённый локальный `../deploy/frontend/.env.production` — единственный
   нетрековый env-файл фронтенда;
-- [документация сервисов и технический backlog](https://github.com/nda17/winwidget.ru_services/tree/prod/docs);
-- [production/deploy runbook](https://github.com/nda17/winwidget.ru_infra/blob/master/docs/runbook.md).
+- [документация сервисов и технический backlog](https://github.com/nda17/winwidget.ru_services/tree/prod/DOCUMENTATION);
+- [production/deploy runbook](https://github.com/nda17/winwidget.ru_infra/blob/master/DOCUMENTATION/runbook.md).
