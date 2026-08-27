@@ -10,7 +10,15 @@ import { WidgetConfig } from '@/entities/site-widget'
 import { WIDGETS_HOST } from '@/shared/config/api.config'
 import { useDebounce } from '@/shared/lib/hooks/useDebounce'
 import type { CSSProperties } from 'react'
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import {
+	useCallback,
+	useEffect,
+	useId,
+	useLayoutEffect,
+	useRef,
+	useState
+} from 'react'
+import toast from 'react-hot-toast'
 import ActionTooltip from './ActionTooltip'
 import styles from './WidgetLivePreview.module.scss'
 import { stabilizeWidgetPreviewColors } from './widgetColor'
@@ -71,6 +79,7 @@ type WidgetLivePreviewProps = WidgetLivePreviewEntityProps & {
 
 type PreviewDevice = 'desktop' | 'mobile'
 type PreviewSurface = 'dialog' | 'launcher'
+type PreviewLoadStatus = 'loading' | 'ready' | 'error'
 
 const API_URL = WIDGETS_HOST
 
@@ -118,9 +127,17 @@ const DEFAULT_PREVIEW_LAYOUT = {
 	frameHeight: DESKTOP_PREVIEW_FRAME.height,
 	scale: DEFAULT_PREVIEW_SCALE
 }
+const PREVIEW_LOAD_TIMEOUT_MS = 12_000
 
 const escapeScriptJson = (value: unknown) =>
 	JSON.stringify(value).replace(/</g, '\\u003c')
+
+const escapeHtmlAttribute = (value: string) =>
+	value
+		.replace(/&/g, '&amp;')
+		.replace(/"/g, '&quot;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
 
 const hashString = (value: string) => {
 	let hash = 0
@@ -430,12 +447,36 @@ const buildPreviewSandboxDocument = (
 ) => {
 	const scriptUrl = `${API_URL}/widgets/${SCRIPT_BY_TYPE[type]}`
 	const configPath = CONFIG_PATH_BY_TYPE[type]
+	const widgetsOrigin = (() => {
+		try {
+			return new URL(scriptUrl).origin
+		} catch {
+			return API_URL
+		}
+	})()
+	const safeScriptUrl = escapeHtmlAttribute(scriptUrl)
+	const safeWidgetsOrigin = escapeHtmlAttribute(widgetsOrigin)
+	const helperPreloads =
+		type === 'onlineConsultant'
+			? ''
+			: [
+					new URL('helpers/winwidget-phone.js', scriptUrl).toString(),
+					new URL('helpers/libphonenumber-min.js', scriptUrl).toString()
+				]
+					.map(
+						url =>
+							`\t<link rel="preload" href="${escapeHtmlAttribute(url)}" as="script" />`
+					)
+					.join('\n')
 
 	return `<!doctype html>
 <html lang="ru">
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link rel="preconnect" href="${safeWidgetsOrigin}" crossorigin />
+	<link rel="preload" href="${safeScriptUrl}" as="script" />
+${helperPreloads}
 	<style>
 		html,
 		body {
@@ -967,6 +1008,7 @@ const buildPreviewSandboxDocument = (
 			var publicConfig = ${escapeScriptJson(publicConfig)};
 			var nativeFetch = window.fetch.bind(window);
 			var restartNoticeSent = false;
+			var previewTerminalStatus = null;
 			var previewStoragePrefixes = [
 				'winwidget_played_',
 				'wintimer_submitted_',
@@ -978,32 +1020,88 @@ const buildPreviewSandboxDocument = (
 			var sandboxStageLayouts = {
 				wheel: {
 					host: 'wheel-widget-host',
+					dialogContainer: '#main-wrapper.visible',
+					dialogContent: '#banner-wrapper',
+					launcher: '#ww-btn-icon',
+					launcherInDocument: true,
+					launcherParent: true,
 					css: '#main-wrapper{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:16px!important;padding-right:16px!important}#main-wrapper::-webkit-scrollbar{display:none!important}#banner-wrapper{max-width:calc(100vw - 32px)!important;max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
 				},
 				quiz: {
 					host: 'quiz-widget-host',
+					dialogContainer: '#wq-wrap.visible',
+					dialogContent: '#wq-card',
+					launcher: '#wq-btn-icon',
+					launcherInDocument: true,
+					launcherParent: true,
 					css: '#wq-wrap{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:clamp(16px,8vw,52px)!important;padding-right:clamp(16px,8vw,52px)!important}#wq-wrap::-webkit-scrollbar{display:none!important}#wq-card{max-width:min(520px, calc(100vw - 32px))!important;max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
 				},
 				callback: {
 					host: 'callback-widget-host',
+					dialogContainer: '#callback-widget-overlay',
+					dialogContent: '#wcb-modal',
+					launcher: '#callback-widget-button',
+					launcherInDocument: true,
 					css: '#callback-widget-overlay{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:clamp(16px,8vw,52px)!important;padding-right:clamp(16px,8vw,52px)!important}#callback-widget-overlay::-webkit-scrollbar{display:none!important}#wcb-modal{max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
 				},
 				timer: {
 					host: 'timer-widget-host',
+					dialogContainer: '#timer-widget-overlay',
+					dialogContent: '#wt-modal',
+					launcher: '#timer-widget-button',
+					launcherInDocument: true,
 					css: '#timer-widget-overlay{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:clamp(16px,8vw,52px)!important;padding-right:clamp(16px,8vw,52px)!important}#wt-modal{max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
 				},
 				stopOffer: {
 					host: 'stop-offer-widget-host',
+					dialogContainer: '#wso-overlay',
+					dialogContent: '#wso-modal',
 					css: '#wso-overlay{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:clamp(16px,8vw,52px)!important;padding-right:clamp(16px,8vw,52px)!important}#wso-modal{max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
 				},
 				onlineConsultant: {
 					host: 'online-consultant-widget-host',
+					dialogContainer: '#woc-overlay.woc-overlay-open',
+					dialogContent: '#woc-modal',
+					launcher: '#woc-button',
 					css: '.woc-overlay{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:clamp(16px,8vw,52px)!important;padding-right:clamp(16px,8vw,52px)!important}.woc-modal{max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
 				},
 				calculator: {
 					host: 'calculator-widget-host',
+					dialogContainer: '#wwc-overlay.visible',
+					dialogContent: '#wwc-card',
+					launcher: '#wwc-launcher',
 					css: '#wwc-overlay{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:clamp(16px,8vw,52px)!important;padding-right:clamp(16px,8vw,52px)!important}#wwc-card{max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
 				}
+			};
+
+			function postPreviewEvent(eventName, reason) {
+				window.parent.postMessage(
+					{
+						source: 'winwidget-live-preview',
+						previewKey: previewKey,
+						event: eventName,
+						reason: reason || undefined
+					},
+					'*'
+				);
+			}
+
+			function reportPreviewReady() {
+				if (previewTerminalStatus) return;
+
+				previewTerminalStatus = 'ready';
+				postPreviewEvent('preview-ready');
+			}
+
+			function reportPreviewError(reason) {
+				if (previewTerminalStatus) return;
+
+				previewTerminalStatus = 'error';
+				postPreviewEvent('preview-error', reason);
+			}
+
+			window.__winwidgetPreviewScriptError = function () {
+				reportPreviewError('script-load-failed');
 			};
 
 			window.addEventListener(
@@ -1130,14 +1228,7 @@ const buildPreviewSandboxDocument = (
 
 				setTimeout(
 					function () {
-						window.parent.postMessage(
-							{
-								source: 'winwidget-live-preview',
-								previewKey: previewKey,
-								event: 'ready-to-restart'
-							},
-							'*'
-						);
+						postPreviewEvent('ready-to-restart');
 					},
 					previewType === 'wheel' ? 1800 : 900
 				);
@@ -1192,6 +1283,24 @@ const buildPreviewSandboxDocument = (
 				return nativeFetch(input, init);
 			};
 
+			function isPreviewElementVisible(element) {
+				if (!element) return false;
+
+				var style = window.getComputedStyle(element);
+				var opacity = Number.parseFloat(style.opacity || '1');
+				var rect = element.getBoundingClientRect();
+
+				return (
+					style.display !== 'none' &&
+					style.visibility !== 'hidden' &&
+					style.visibility !== 'collapse' &&
+					Number.isFinite(opacity) &&
+					opacity > 0.01 &&
+					rect.width > 0 &&
+					rect.height > 0
+				);
+			}
+
 			function applySandboxStageLayout() {
 				var target = sandboxStageLayouts[previewType];
 				var host = target && document.getElementById(target.host);
@@ -1209,15 +1318,35 @@ const buildPreviewSandboxDocument = (
 
 				style.textContent = target.css + '*{cursor:pointer!important}';
 
-				return true;
+				if (previewSurface === 'launcher') {
+					if (!target.launcher) return false;
+
+					var launcherRoot = target.launcherInDocument ? document : root;
+					var launcher = launcherRoot.querySelector(target.launcher);
+					if (target.launcherParent) launcher = launcher && launcher.parentElement;
+
+					return isPreviewElementVisible(launcher);
+				}
+
+				return (
+					isPreviewElementVisible(root.querySelector(target.dialogContainer)) &&
+					isPreviewElementVisible(root.querySelector(target.dialogContent))
+				);
 			}
 
 			var layoutAttempts = 0;
 			var layoutTimer = setInterval(function () {
 				layoutAttempts += 1;
 
-				if (applySandboxStageLayout() || layoutAttempts > 80) {
+				if (applySandboxStageLayout()) {
 					clearInterval(layoutTimer);
+					reportPreviewReady();
+					return;
+				}
+
+				if (layoutAttempts >= 200) {
+					clearInterval(layoutTimer);
+					reportPreviewError('widget-mount-timeout');
 				}
 			}, 50);
 		})();
@@ -1326,7 +1455,12 @@ const buildPreviewSandboxDocument = (
 			</section>
 		</main>
 	</div>
-	<script src="${scriptUrl}" data-key="${previewKey}" async></script>
+	<script
+		src="${safeScriptUrl}"
+		data-key="${previewKey}"
+		async
+		onerror="if (window.__winwidgetPreviewScriptError) window.__winwidgetPreviewScriptError()"
+	></script>
 </body>
 </html>`
 }
@@ -1355,6 +1489,11 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 	const debouncedSerializedConfig = useDebounce(serializedConfig, 300)
 	const [previewRunId, setPreviewRunId] = useState(0)
 	const [canRestartPreview, setCanRestartPreview] = useState(false)
+	const [previewLoadState, setPreviewLoadState] = useState<{
+		key: string
+		status: PreviewLoadStatus
+	}>({ key: '', status: 'loading' })
+	const retryToastIdRef = useRef<string | null>(null)
 	const [localIsCollapsed, setLocalIsCollapsed] = useState(false)
 	const isCollapsed = collapsed ?? localIsCollapsed
 	const setCollapsed = useCallback(
@@ -1366,10 +1505,15 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 	)
 	const [device, setDevice] = useState<PreviewDevice>('desktop')
 	const [surface, setSurface] = useState<PreviewSurface>('dialog')
+	const supportsLauncherPreview = props.type !== 'stopOffer'
 	const previewContentId = useId()
 	const previewViewportRef = useRef<HTMLDivElement | null>(null)
 	const previewFrameRef = useRef<HTMLIFrameElement | null>(null)
 	const previewKey = `live-preview-${props.type}-${hashString(debouncedSerializedConfig)}-${props.isHardPlan ? 'hard' : 'base'}-${surface}-${previewRunId}`
+	const previewStatus =
+		previewLoadState.key === previewKey
+			? previewLoadState.status
+			: 'loading'
 	const [previewLayout, setPreviewLayout] = useState(
 		DEFAULT_PREVIEW_LAYOUT
 	)
@@ -1408,11 +1552,53 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 	}, [props.autoCollapse, setCollapsed])
 
 	useEffect(() => {
+		if (!supportsLauncherPreview && surface !== 'dialog') {
+			setSurface('dialog')
+		}
+	}, [supportsLauncherPreview, surface])
+
+	useEffect(() => {
 		if (previousSerializedConfigRef.current === serializedConfig) return
 
 		previousSerializedConfigRef.current = serializedConfig
 		onConfigChange?.()
 	}, [onConfigChange, serializedConfig])
+
+	useEffect(() => {
+		if (isCollapsed) return
+
+		setPreviewLoadState(currentState =>
+			currentState.key === previewKey && currentState.status === 'loading'
+				? currentState
+				: { key: previewKey, status: 'loading' }
+		)
+	}, [isCollapsed, previewKey])
+
+	useEffect(() => {
+		if (isCollapsed || previewStatus !== 'loading') return
+
+		const timeoutId = window.setTimeout(() => {
+			setPreviewLoadState(currentState => {
+				if (
+					currentState.key === previewKey &&
+					currentState.status !== 'loading'
+				) {
+					return currentState
+				}
+
+				return { key: previewKey, status: 'error' }
+			})
+
+			if (retryToastIdRef.current) {
+				toast.error('Не удалось загрузить предпросмотр', {
+					id: retryToastIdRef.current
+				})
+				retryToastIdRef.current = null
+			}
+		}, PREVIEW_LOAD_TIMEOUT_MS)
+
+		return () => window.clearTimeout(timeoutId)
+	}, [isCollapsed, previewKey, previewStatus])
 
 	useEffect(() => {
 		if (isCollapsed) return
@@ -1461,7 +1647,7 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 		}
 	}, [device, isCollapsed])
 
-	useEffect(() => {
+	useLayoutEffect(() => {
 		setCanRestartPreview(false)
 
 		const handleMessage = (event: MessageEvent) => {
@@ -1470,6 +1656,7 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 						source?: string
 						previewKey?: string
 						event?: string
+						reason?: string
 				  }
 				| undefined
 
@@ -1479,6 +1666,32 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 				data.source !== 'winwidget-live-preview' ||
 				data.previewKey !== previewKey
 			) {
+				return
+			}
+
+			if (data.event === 'preview-ready') {
+				setPreviewLoadState({ key: previewKey, status: 'ready' })
+
+				if (retryToastIdRef.current) {
+					toast.success('Предпросмотр загружен', {
+						id: retryToastIdRef.current
+					})
+					retryToastIdRef.current = null
+				}
+
+				return
+			}
+
+			if (data.event === 'preview-error') {
+				setPreviewLoadState({ key: previewKey, status: 'error' })
+
+				if (retryToastIdRef.current) {
+					toast.error('Не удалось загрузить предпросмотр', {
+						id: retryToastIdRef.current
+					})
+					retryToastIdRef.current = null
+				}
+
 				return
 			}
 
@@ -1492,8 +1705,32 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 		return () => window.removeEventListener('message', handleMessage)
 	}, [previewKey, surface])
 
+	useEffect(
+		() => () => {
+			if (retryToastIdRef.current) {
+				toast.dismiss(retryToastIdRef.current)
+			}
+		},
+		[]
+	)
+
+	useEffect(() => {
+		if (!isCollapsed || !retryToastIdRef.current) return
+
+		toast.dismiss(retryToastIdRef.current)
+		retryToastIdRef.current = null
+	}, [isCollapsed])
+
 	const restartPreview = () => {
 		setCanRestartPreview(false)
+		setPreviewRunId(current => current + 1)
+	}
+
+	const retryPreviewLoad = () => {
+		setCanRestartPreview(false)
+		retryToastIdRef.current = toast.loading(
+			'Повторно загружаем предпросмотр...'
+		)
 		setPreviewRunId(current => current + 1)
 	}
 
@@ -1538,25 +1775,27 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 										Окно
 									</button>
 								</ActionTooltip>
-								<ActionTooltip
-									content="Показывает кнопку запуска до открытия основного окна виджета."
-									placement="bottom"
-									align="end"
-									className={styles.previewControlTooltip}
-								>
-									<button
-										type="button"
-										className={`${styles.previewControlBtn} ${
-											surface === 'launcher'
-												? styles.previewControlBtnActive
-												: ''
-										}`}
-										onClick={() => setSurface('launcher')}
-										aria-pressed={surface === 'launcher'}
+								{supportsLauncherPreview && (
+									<ActionTooltip
+										content="Показывает кнопку запуска до открытия основного окна виджета."
+										placement="bottom"
+										align="end"
+										className={styles.previewControlTooltip}
 									>
-										Кнопка
-									</button>
-								</ActionTooltip>
+										<button
+											type="button"
+											className={`${styles.previewControlBtn} ${
+												surface === 'launcher'
+													? styles.previewControlBtnActive
+													: ''
+											}`}
+											onClick={() => setSurface('launcher')}
+											aria-pressed={surface === 'launcher'}
+										>
+											Кнопка
+										</button>
+									</ActionTooltip>
+								)}
 							</div>
 							<div
 								className={styles.previewSegmented}
@@ -1652,7 +1891,41 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 										? styles.deviceScreenMobile
 										: styles.deviceScreenDesktop
 								}`}
+								aria-busy={previewStatus === 'loading'}
 							>
+								{previewStatus !== 'ready' && (
+									<div
+										className={styles.previewStatus}
+										role={previewStatus === 'error' ? 'alert' : 'status'}
+										aria-live="polite"
+									>
+										{previewStatus === 'loading' ? (
+											<>
+												<span
+													className={styles.previewSpinner}
+													aria-hidden="true"
+												/>
+												<p>Загружаем предпросмотр...</p>
+											</>
+										) : (
+											<>
+												<p className={styles.previewStatusTitle}>
+													Предпросмотр не загрузился
+												</p>
+												<p className={styles.previewStatusText}>
+													Проверьте соединение и попробуйте ещё раз.
+												</p>
+												<button
+													type="button"
+													className={styles.previewRetry}
+													onClick={retryPreviewLoad}
+												>
+													Повторить загрузку
+												</button>
+											</>
+										)}
+									</div>
+								)}
 								{canRestartPreview && surface === 'dialog' && (
 									<ActionTooltip
 										content="Перезапускает тестовый сценарий, чтобы пройти его ещё раз."
@@ -1676,6 +1949,8 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 										srcDoc={previewDocument}
 										sandbox="allow-scripts"
 										scrolling="no"
+										aria-hidden={previewStatus !== 'ready'}
+										tabIndex={previewStatus === 'ready' ? 0 : -1}
 										style={frameStyle}
 									/>
 								</div>

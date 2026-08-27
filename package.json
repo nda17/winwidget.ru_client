@@ -11,6 +11,7 @@
 		"test:home-page-content": "node --test scripts/home-page-content-normalization.test.mjs",
 		"test:payment-auth": "node --test scripts/payment-auth-guard.test.mjs",
 		"test:admin-payments-resolution": "node --test scripts/admin-payments-resolution.test.mjs",
+		"test:widget-preview": "node --test scripts/widget-live-preview.test.mjs",
 		"format": "prettier --write --no-error-on-unmatched-pattern \"src/**/*.{ts,tsx,scss}\" \"*.{js,mjs,ts,json}\"",
 		"prepare": "husky"
 	},
