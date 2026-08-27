@@ -776,12 +776,73 @@ const WidgetSettings = ({
 	if (isLoading) {
 		return (
 			<WidgetSettingsState>
-				<div className={styles.loadingGrid} aria-label="Загрузка настроек">
-					<div className={styles.previewSkeleton}>
-						<SkeletonLoader count={1} className="h-full w-full" />
+				<div
+					className={styles.loadingGrid}
+					aria-label="Загрузка настроек"
+					aria-busy="true"
+				>
+					<div className={styles.previewSkeleton} aria-hidden="true">
+						<div className={styles.skeletonPreviewHeader}>
+							<div className={styles.skeletonStack}>
+								<SkeletonLoader width="58%" height={12} />
+								<SkeletonLoader
+									width="42%"
+									height={24}
+									borderRadius={999}
+								/>
+							</div>
+							<div className={styles.skeletonControlRow}>
+								<SkeletonLoader width={68} height={30} />
+								<SkeletonLoader width={68} height={30} />
+								<SkeletonLoader width={76} height={30} />
+							</div>
+						</div>
+						<div className={styles.skeletonPreviewCanvas}>
+							<div className={styles.skeletonPreviewDevice}>
+								<SkeletonLoader width="60%" height={16} />
+								<SkeletonLoader width="84%" height={10} />
+								<div className={styles.skeletonPreviewFields}>
+									<SkeletonLoader height={34} />
+									<SkeletonLoader height={34} />
+								</div>
+								<SkeletonLoader
+									height={34}
+									containerClassName={styles.skeletonPreviewButton}
+								/>
+							</div>
+						</div>
+						<SkeletonLoader width="68%" height={10} />
 					</div>
-					<div className={styles.editorSkeleton}>
-						<SkeletonLoader count={1} className="h-full w-full" />
+					<div className={styles.editorSkeleton} aria-hidden="true">
+						<div className={styles.skeletonEditorHeader}>
+							<div className={styles.skeletonStack}>
+								<SkeletonLoader width="46%" height={18} />
+								<SkeletonLoader width="72%" height={10} />
+							</div>
+							<SkeletonLoader width={92} height={34} />
+						</div>
+						<div className={styles.skeletonTabs}>
+							<SkeletonLoader width={74} height={28} />
+							<SkeletonLoader width={88} height={28} />
+							<SkeletonLoader width={70} height={28} />
+						</div>
+						{[0, 1, 2].map(groupIndex => (
+							<div key={groupIndex} className={styles.skeletonFieldGroup}>
+								<SkeletonLoader width="36%" height={13} />
+								<div className={styles.skeletonFieldGrid}>
+									{[0, 1].map(fieldIndex => (
+										<div key={fieldIndex} className={styles.skeletonField}>
+											<SkeletonLoader width="44%" height={9} />
+											<SkeletonLoader height={36} />
+										</div>
+									))}
+								</div>
+							</div>
+						))}
+						<div className={styles.skeletonActions}>
+							<SkeletonLoader width={112} height={38} />
+							<SkeletonLoader width={92} height={38} />
+						</div>
 					</div>
 				</div>
 			</WidgetSettingsState>

@@ -10,10 +10,25 @@ const stylesPath = new URL(
 	'../src/features/edit-widget-settings/ui/shared/WidgetLivePreview.module.scss',
 	import.meta.url
 )
+const widgetSettingsPath = new URL(
+	'../src/screens/widget-settings/ui/WidgetSettings.tsx',
+	import.meta.url
+)
+const widgetSettingsStylesPath = new URL(
+	'../src/screens/widget-settings/ui/WidgetSettings.module.scss',
+	import.meta.url
+)
 
-const [previewSource, stylesSource] = await Promise.all([
+const [
+	previewSource,
+	stylesSource,
+	widgetSettingsSource,
+	widgetSettingsStylesSource
+] = await Promise.all([
 	readFile(previewPath, 'utf8'),
-	readFile(stylesPath, 'utf8')
+	readFile(stylesPath, 'utf8'),
+	readFile(widgetSettingsPath, 'utf8'),
+	readFile(widgetSettingsStylesPath, 'utf8')
 ])
 
 test('sandbox reports mounted and failed widget runtimes to the parent', () => {
@@ -153,4 +168,52 @@ test('responsive viewport height is independent from scaled iframe content', () 
 	assert.match(responsiveViewport, /max-h-\[32rem\]/)
 	assert.match(responsiveViewport, /flex-none/)
 	assert.doesNotMatch(responsiveViewport, /h-auto|flex-1/)
+})
+
+test('preview error copy uses an explicit compact line height', () => {
+	const statusTextStyles = stylesSource.match(
+		/\.previewStatusText \{([\s\S]*?)\n\}/
+	)?.[1]
+
+	assert.ok(statusTextStyles)
+	assert.match(statusTextStyles, /leading-\[1\.25rem\]/)
+	assert.doesNotMatch(statusTextStyles, /\bleading-5\b/)
+})
+
+test('widget settings loading state uses shared structural skeletons', () => {
+	const loadingBranch = widgetSettingsSource.slice(
+		widgetSettingsSource.indexOf('if (isLoading) {'),
+		widgetSettingsSource.indexOf('if (isError) {')
+	)
+
+	assert.ok(loadingBranch)
+	assert.doesNotMatch(loadingBranch, /h-full w-full/)
+	for (const className of [
+		'skeletonPreviewHeader',
+		'skeletonPreviewCanvas',
+		'skeletonPreviewDevice',
+		'skeletonEditorHeader',
+		'skeletonTabs',
+		'skeletonFieldGroup',
+		'skeletonFieldGrid',
+		'skeletonActions'
+	]) {
+		assert.ok(loadingBranch.includes(`styles.${className}`))
+		assert.match(
+			widgetSettingsStylesSource,
+			new RegExp(`\\.${className}\\b`)
+		)
+	}
+
+	for (const type of [
+		'wheel',
+		'quiz',
+		'callback',
+		'timer',
+		'stop-offer',
+		'online-consultant',
+		'calculator'
+	]) {
+		assert.ok(widgetSettingsSource.includes(`'${type}'`))
+	}
 })

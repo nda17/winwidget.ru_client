@@ -54,15 +54,70 @@
 
 .previewSkeleton,
 .editorSkeleton {
-	@apply overflow-hidden rounded-2xl border border-[#e0d6f0] bg-white p-1;
+	@apply overflow-hidden rounded-2xl border border-[#e0d6f0] bg-white p-4 shadow-sm;
 }
 
 .previewSkeleton {
-	@apply sticky top-[6.5rem] h-[34rem];
+	@apply sticky top-[6.5rem] flex h-[34rem] flex-col gap-4;
 }
 
 .editorSkeleton {
-	@apply h-[48rem];
+	@apply flex h-[48rem] flex-col gap-5 p-5;
+}
+
+.skeletonPreviewHeader,
+.skeletonEditorHeader {
+	@apply flex items-start justify-between gap-4;
+}
+
+.skeletonStack {
+	@apply flex min-w-0 w-full max-w-[18rem] flex-col gap-2;
+}
+
+.skeletonControlRow,
+.skeletonTabs,
+.skeletonActions {
+	@apply flex flex-wrap items-center gap-2;
+}
+
+.skeletonControlRow {
+	@apply justify-end;
+}
+
+.skeletonPreviewCanvas {
+	@apply flex min-h-0 flex-1 items-center justify-center rounded-xl border border-[#eee8f6] bg-[#faf8ff] p-5;
+}
+
+.skeletonPreviewDevice {
+	@apply flex w-full max-w-[22rem] flex-col gap-4 rounded-[2rem] border-[8px] border-[#e4dfeb] bg-white p-6 shadow-sm;
+}
+
+.skeletonPreviewFields {
+	@apply grid grid-cols-2 gap-3;
+}
+
+.skeletonPreviewButton {
+	@apply mx-auto block w-[46%];
+}
+
+.skeletonTabs {
+	@apply border-b border-[#eee8f6] pb-3;
+}
+
+.skeletonFieldGroup {
+	@apply flex flex-col gap-3 rounded-xl border border-[#eee8f6] bg-[#fdfcff] p-4;
+}
+
+.skeletonFieldGrid {
+	@apply grid grid-cols-2 gap-3;
+}
+
+.skeletonField {
+	@apply flex min-w-0 flex-col gap-2;
+}
+
+.skeletonActions {
+	@apply mt-auto justify-end border-t border-[#eee8f6] pt-4;
 }
 
 .stateCard {
@@ -190,11 +245,36 @@
 	}
 
 	.previewSkeleton {
-		@apply h-[14rem];
+		@apply h-[22rem] p-3;
 	}
 
 	.editorSkeleton {
-		@apply h-[36rem];
+		@apply h-auto min-h-[36rem] gap-3 p-3;
+	}
+
+	.skeletonPreviewHeader,
+	.skeletonEditorHeader {
+		@apply gap-3;
+	}
+
+	.skeletonControlRow {
+		@apply max-w-[9.5rem];
+	}
+
+	.skeletonPreviewCanvas {
+		@apply p-3;
+	}
+
+	.skeletonPreviewDevice {
+		@apply max-w-[14rem] gap-3 border-[6px] p-4;
+	}
+
+	.skeletonFieldGrid {
+		@apply grid-cols-1;
+	}
+
+	.skeletonFieldGroup {
+		@apply gap-2 p-3;
 	}
 
 	.stateCard {

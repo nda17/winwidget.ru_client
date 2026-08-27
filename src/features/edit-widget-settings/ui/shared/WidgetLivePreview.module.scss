@@ -85,7 +85,7 @@
 }
 
 .previewStatusText {
-	@apply max-w-[18rem] text-xs font-normal leading-5 text-[#765f83];
+	@apply max-w-[18rem] text-xs font-normal leading-[1.25rem] text-[#765f83];
 }
 
 .previewRetry {
@@ -190,6 +190,10 @@
 
 	.previewViewport {
 		@apply h-[calc(100dvh-13rem)] min-h-[22rem] max-h-[28rem] flex-none p-2;
+	}
+
+	.previewStatus {
+		@apply gap-2 px-4;
 	}
 
 	.previewControlBtn,
