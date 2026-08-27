@@ -1,8 +1,10 @@
 'use client'
 
 import { errorCatch } from '@/shared/api'
+import { billingSettingsService } from '@/entities/billing-settings'
 import AdminNavigation from '@/screens/admin/ui/common/admin-navigation/AdminNavigation'
 import AdminSectionHeading from '@/screens/admin/ui/common/admin-section-heading/AdminSectionHeading'
+import AdminTooltip from '@/screens/admin/ui/common/admin-tooltip/AdminTooltip'
 import Heading from '@/shared/ui/heading/Heading'
 import Pagination from '@/shared/ui/pagination/Pagination'
 import SkeletonLoader from '@/shared/ui/skeleton-loader/SkeletonLoader'
@@ -13,10 +15,12 @@ import {
 	AdminPaymentStatus,
 	IAdminPaymentFilters,
 	IAdminCheckPaymentResult,
-	IAdminPayment
+	IAdminPayment,
+	IDevUnknownProviderPaymentEvidence,
+	IDevResolveUnknownProviderPaymentInput
 } from '@/features/manage-payments'
 import type { BillingPeriod, Plan } from '@/entities/subscription'
-import { useAuthStore } from '@/entities/user'
+import { UserRole, useAuthStore, useUser } from '@/entities/user'
 import {
 	useMutation,
 	useQuery,
@@ -57,6 +61,12 @@ interface PaymentFilterDraft {
 	createdFrom: string
 	createdTo: string
 	search: string
+}
+
+interface UnknownProviderResolutionDraft {
+	paymentId: string
+	reason: string
+	providerReconciliationConfirmed: boolean
 }
 
 const STATUS_FILTER_OPTIONS: Array<{
@@ -100,6 +110,13 @@ const DEFAULT_PAYMENT_FILTERS: PaymentFilterDraft = {
 	search: ''
 }
 
+const DEFAULT_UNKNOWN_PROVIDER_RESOLUTION: UnknownProviderResolutionDraft =
+	{
+		paymentId: '',
+		reason: '',
+		providerReconciliationConfirmed: false
+	}
+
 const normalizePaymentFilters = (
 	draft: PaymentFilterDraft
 ): IAdminPaymentFilters => ({
@@ -134,6 +151,12 @@ const formatAmount = (value: string) => {
 	}).format(amount)
 }
 
+const formatConfigured = (value: boolean) =>
+	value ? 'Настроено' : 'Не настроено'
+
+const formatEnabled = (value: boolean) =>
+	value ? 'Включено' : 'Выключено'
+
 const getUserName = (payment: IAdminPayment) =>
 	payment.user.name ||
 	payment.user.email ||
@@ -149,18 +172,34 @@ const getPaymentReference = (payment: IAdminPayment) =>
 const AdminPayments: NextPage = () => {
 	const queryClient = useQueryClient()
 	const auth = useAuthStore(state => state.auth)
+	const { user, isLoading: isUserLoading } = useUser()
+	const isDev = Boolean(user?.rights?.includes(UserRole.DEV))
 	const [currentPage, setCurrentPage] = useState(1)
 	const [filterDraft, setFilterDraft] = useState(DEFAULT_PAYMENT_FILTERS)
 	const [filters, setFilters] = useState<IAdminPaymentFilters>({})
 	const [paymentId, setPaymentId] = useState('')
 	const [lastResult, setLastResult] =
 		useState<IAdminCheckPaymentResult | null>(null)
+	const [resolutionDraft, setResolutionDraft] = useState(
+		DEFAULT_UNKNOWN_PROVIDER_RESOLUTION
+	)
+	const [resolutionEvidence, setResolutionEvidence] =
+		useState<IDevUnknownProviderPaymentEvidence | null>(null)
 	const itemQuantity = 20
 
 	const { data, isLoading, isFetching } = useQuery({
 		queryKey: ['admin-payments', currentPage, itemQuantity, filters],
 		queryFn: () =>
 			adminPaymentsService.getPayments(currentPage, itemQuantity, filters),
+		enabled: auth
+	})
+	const {
+		data: providerReadiness,
+		isLoading: isProviderReadinessLoading,
+		isError: isProviderReadinessError
+	} = useQuery({
+		queryKey: ['billing-provider-readiness'],
+		queryFn: billingSettingsService.getProviderReadiness,
 		enabled: auth
 	})
 
@@ -184,6 +223,22 @@ const AdminPayments: NextPage = () => {
 			queryClient.invalidateQueries({ queryKey: ['admin-payments'] })
 			setPaymentId('')
 		}
+	})
+
+	const resolveUnknownProviderMutation = useMutation({
+		mutationKey: ['dev-resolve-unknown-provider-payment'],
+		mutationFn: adminPaymentsService.resolveUnknownProviderPayment,
+		onSuccess: () => {
+			setResolutionDraft(DEFAULT_UNKNOWN_PROVIDER_RESOLUTION)
+			setResolutionEvidence(null)
+			void queryClient.invalidateQueries({ queryKey: ['admin-payments'] })
+			void queryClient.invalidateQueries({ queryKey: ['admin-event-log'] })
+		}
+	})
+	const loadUnknownProviderEvidenceMutation = useMutation({
+		mutationKey: ['dev-load-unknown-provider-payment-evidence'],
+		mutationFn: adminPaymentsService.getUnknownProviderPaymentEvidence,
+		onSuccess: evidence => setResolutionEvidence(evidence)
 	})
 
 	const activePaymentId = checkPaymentMutation.isPending
@@ -210,6 +265,83 @@ const AdminPayments: NextPage = () => {
 	const handleManualCheck = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault()
 		runCheck(paymentId)
+	}
+
+	const handleUnknownProviderResolution = (
+		event: FormEvent<HTMLFormElement>
+	) => {
+		event.preventDefault()
+		if (resolveUnknownProviderMutation.isPending) return
+		if (!isDev) {
+			toast.error('Ручное разрешение платежа доступно только DEV')
+			return
+		}
+
+		const paymentId = resolutionDraft.paymentId.trim()
+		const reason = resolutionDraft.reason.trim()
+
+		if (
+			!resolutionEvidence ||
+			resolutionEvidence.paymentId !== paymentId
+		) {
+			toast.error(
+				'Сначала загрузите актуальный evidence для этого платежа'
+			)
+			return
+		}
+		if (reason.length < 3) {
+			toast.error('Укажите причину ручного разрешения платежа')
+			return
+		}
+		if (!resolutionDraft.providerReconciliationConfirmed) {
+			toast.error('Подтвердите внешнюю сверку с YooKassa')
+			return
+		}
+
+		const commandId = globalThis.crypto.randomUUID()
+		const payload: IDevResolveUnknownProviderPaymentInput = {
+			schemaVersion: 1,
+			commandId,
+			paymentId,
+			resolution: 'PROVIDER_PAYMENT_NOT_FOUND',
+			reason,
+			providerReconciliationConfirmed: true,
+			checkedMetadataPaymentId: resolutionEvidence.paymentId,
+			checkedProviderIdempotencyKey:
+				resolutionEvidence.providerOperation.idempotencyKey
+		}
+		const promise = resolveUnknownProviderMutation.mutateAsync(payload)
+
+		toast.promise(promise, {
+			loading: 'Разрешаем неизвестное provider-состояние...',
+			success: result =>
+				`Платёж ${result.paymentId} переведён в статус «Отменён»`,
+			error: error => `Ошибка ручного разрешения: ${errorCatch(error)}`
+		})
+	}
+
+	const handleLoadUnknownProviderEvidence = () => {
+		if (loadUnknownProviderEvidenceMutation.isPending) return
+		if (!isDev) {
+			toast.error('Evidence неизвестного платежа доступен только DEV')
+			return
+		}
+
+		const paymentId = resolutionDraft.paymentId.trim()
+		if (!paymentId) {
+			toast.error('Укажите ID платежа')
+			return
+		}
+
+		setResolutionEvidence(null)
+		const promise =
+			loadUnknownProviderEvidenceMutation.mutateAsync(paymentId)
+		toast.promise(promise, {
+			loading: 'Загружаем persisted evidence...',
+			success: evidence =>
+				`Evidence для платежа ${evidence.paymentId} загружен`,
+			error: error => `Не удалось загрузить evidence: ${errorCatch(error)}`
+		})
 	}
 
 	const applyFilters = (event: FormEvent<HTMLFormElement>) => {
@@ -262,6 +394,11 @@ const AdminPayments: NextPage = () => {
 			</button>
 		)
 	}
+	const isResolutionLocked = !isUserLoading && !isDev
+	const isResolutionEvidenceReady = Boolean(
+		resolutionEvidence &&
+		resolutionEvidence.paymentId === resolutionDraft.paymentId.trim()
+	)
 
 	return (
 		<section className={styles.wrapper}>
@@ -336,6 +473,392 @@ const AdminPayments: NextPage = () => {
 					<p className={styles.resultMessage}>{lastResult.message}</p>
 				</div>
 			)}
+
+			<AdminSectionHeading
+				text="Готовность платёжного провайдера"
+				title="Read-only готовность YooKassa"
+				description="Показывает только безопасные признаки конфигурации, включённые Billing-функции и зафиксированные кодом контракты чеков и webhook. Значения ключей и Shop ID endpoint не возвращает."
+				risk="medium"
+				riskText="Статус «Не проверено внешне» означает, что кабинет YooKassa, онлайн-касса или ОФД не подтверждены этим endpoint и требуют отдельной проверки."
+			/>
+			{isProviderReadinessLoading ? (
+				<div className={styles.readinessCard}>
+					{Array.from({ length: 4 }).map((_, index) => (
+						<SkeletonLoader
+							key={index}
+							count={1}
+							className={styles.skeletonRow}
+						/>
+					))}
+				</div>
+			) : isProviderReadinessError ? (
+				<div className={styles.readinessCard} role="alert">
+					<p className={styles.readinessError}>
+						Не удалось загрузить безопасный отчёт готовности Billing.
+					</p>
+				</div>
+			) : providerReadiness ? (
+				<div className={styles.readinessCard}>
+					<div className={styles.readinessHeader}>
+						<div>
+							<p className={styles.resultTitle}>YooKassa</p>
+							<p className={styles.hint}>
+								Источник: код и сохранённые настройки · схема{' '}
+								{providerReadiness.schemaVersion}
+							</p>
+						</div>
+						<span className={styles.readinessMode}>
+							{providerReadiness.provider.mode === 'production'
+								? 'Production'
+								: 'Не production'}
+						</span>
+					</div>
+
+					<div className={styles.readinessGrid}>
+						<div className={styles.readinessGroup}>
+							<p className={styles.readinessGroupTitle}>Конфигурация</p>
+							<p className={styles.readinessRow}>
+								<span>Credentials</span>
+								<strong>
+									{formatConfigured(
+										providerReadiness.provider.credentialsConfigured
+									)}
+								</strong>
+							</p>
+							<p className={styles.readinessRow}>
+								<span>Shop ID</span>
+								<strong>
+									{formatConfigured(
+										providerReadiness.provider.shopIdConfigured
+									)}
+								</strong>
+							</p>
+							<p className={styles.readinessRow}>
+								<span>Secret key</span>
+								<strong>
+									{formatConfigured(
+										providerReadiness.provider.secretKeyConfigured
+									)}
+								</strong>
+							</p>
+						</div>
+
+						<div className={styles.readinessGroup}>
+							<p className={styles.readinessGroupTitle}>Billing-функции</p>
+							<p className={styles.readinessRow}>
+								<span>Разовые платежи</span>
+								<strong>
+									{formatEnabled(
+										providerReadiness.features.paymentEnabled
+									)}
+								</strong>
+							</p>
+							<p className={styles.readinessRow}>
+								<span>Новые автопродления</span>
+								<strong>
+									{formatEnabled(
+										providerReadiness.features.autoRenewalSignupEnabled
+									)}
+								</strong>
+							</p>
+							<p className={styles.readinessRow}>
+								<span>Автосписания</span>
+								<strong>
+									{formatEnabled(
+										providerReadiness.features.autoRenewalChargesEnabled
+									)}
+								</strong>
+							</p>
+						</div>
+
+						<div className={styles.readinessGroup}>
+							<p className={styles.readinessGroupTitle}>Фискальный чек</p>
+							<p className={styles.readinessRow}>
+								<span>Контракт</span>
+								<strong>
+									{providerReadiness.receipt.contractVersion}
+								</strong>
+							</p>
+							<p className={styles.readinessRow}>
+								<span>Чек в запросе</span>
+								<strong>
+									{formatConfigured(
+										providerReadiness.receipt.requestIncluded
+									)}
+								</strong>
+							</p>
+							<p className={styles.readinessRow}>
+								<span>Контакт покупателя</span>
+								<strong>
+									{formatConfigured(
+										providerReadiness.receipt.customerContactRequired
+									)}
+								</strong>
+							</p>
+							<p className={styles.readinessDetail}>
+								НДС: {providerReadiness.receipt.item.vatCode} · предмет:{' '}
+								{providerReadiness.receipt.item.paymentSubject} · способ:{' '}
+								{providerReadiness.receipt.item.paymentMode}
+							</p>
+							<p className={styles.readinessDetail}>
+								Нормализованные сохраняемые provider-поля:{' '}
+								{providerReadiness.receipt.normalizedStoredFields.join(
+									', '
+								)}
+							</p>
+							<p className={styles.readinessRow}>
+								<span>Raw provider response</span>
+								<strong>
+									{formatConfigured(
+										providerReadiness.receipt.rawProviderResponseStored
+									)}
+								</strong>
+							</p>
+						</div>
+
+						<div className={styles.readinessGroup}>
+							<p className={styles.readinessGroupTitle}>Webhook</p>
+							<p className={styles.readinessRow}>
+								<span>Маршрут</span>
+								<strong>
+									{providerReadiness.webhook.method}{' '}
+									{providerReadiness.webhook.route}
+								</strong>
+							</p>
+							<p className={styles.readinessRow}>
+								<span>Код обработчика</span>
+								<strong>
+									{formatConfigured(
+										providerReadiness.webhook.codeConfigured
+									)}
+								</strong>
+							</p>
+							<p className={styles.readinessDetail}>
+								События:{' '}
+								{providerReadiness.webhook.acceptedEvents.join(', ')}
+							</p>
+							<p className={styles.readinessDetail}>
+								Защита дублей:{' '}
+								{providerReadiness.webhook.duplicateDeliveryFence}
+							</p>
+						</div>
+					</div>
+
+					<div className={styles.readinessExternal} role="note">
+						<p className={styles.readinessGroupTitle}>Внешняя проверка</p>
+						<p>
+							Автоплатежи мерчанта:{' '}
+							<strong>
+								{providerReadiness.externalVerification
+									.merchantAutoPayments === 'NOT_VERIFIED'
+									? 'Не проверено внешне'
+									: providerReadiness.externalVerification
+											.merchantAutoPayments}
+							</strong>
+						</p>
+						<p>
+							Онлайн-касса:{' '}
+							<strong>
+								{providerReadiness.externalVerification
+									.onlineCashRegister === 'NOT_VERIFIED'
+									? 'Не проверено внешне'
+									: providerReadiness.externalVerification
+											.onlineCashRegister}
+							</strong>
+						</p>
+						<p>
+							ОФД:{' '}
+							<strong>
+								{providerReadiness.externalVerification.ofd ===
+								'NOT_VERIFIED'
+									? 'Не проверено внешне'
+									: providerReadiness.externalVerification.ofd}
+							</strong>
+						</p>
+					</div>
+				</div>
+			) : null}
+
+			<AdminSectionHeading
+				text="Ручное разрешение неизвестного платежа"
+				title="DEV-only recovery creating/unknown"
+				description="Только после внешней сверки подтверждает, что платежа нет в YooKassa, и атомарно переводит просроченную локальную попытку из неизвестного provider-состояния в отменённую."
+				risk="high"
+				riskText="Неверное подтверждение отменит локальный платёж. Используйте только сохранённые payment_id и provider idempotency key из проверенной операции."
+			/>
+			<div
+				className={clsx(
+					styles.resolutionPanel,
+					isResolutionLocked && styles.resolutionPanelLocked
+				)}
+			>
+				<form
+					className={clsx(
+						styles.resolutionContent,
+						isResolutionLocked && styles.resolutionContentBlurred
+					)}
+					onSubmit={handleUnknownProviderResolution}
+					autoComplete="off"
+					aria-hidden={isResolutionLocked || undefined}
+				>
+					<p className={styles.resolutionWarning}>
+						Перед отправкой вручную найдите платёж по обоим ключам в
+						сохранённой операции и отдельно убедитесь в YooKassa, что
+						платёж не создан.
+					</p>
+					<div className={styles.resolutionEvidenceControls}>
+						<label className={styles.field}>
+							<span className={styles.label}>Внутренний ID платежа</span>
+							<input
+								className={styles.input}
+								value={resolutionDraft.paymentId}
+								maxLength={100}
+								disabled={
+									!isDev ||
+									resolveUnknownProviderMutation.isPending ||
+									loadUnknownProviderEvidenceMutation.isPending
+								}
+								onChange={event => {
+									setResolutionEvidence(null)
+									loadUnknownProviderEvidenceMutation.reset()
+									setResolutionDraft(current => ({
+										...current,
+										paymentId: event.target.value,
+										providerReconciliationConfirmed: false
+									}))
+								}}
+							/>
+						</label>
+						<button
+							type="button"
+							className={styles.evidenceButton}
+							disabled={
+								!isDev ||
+								resolveUnknownProviderMutation.isPending ||
+								loadUnknownProviderEvidenceMutation.isPending
+							}
+							onClick={handleLoadUnknownProviderEvidence}
+						>
+							{loadUnknownProviderEvidenceMutation.isPending
+								? 'Загружаем...'
+								: 'Загрузить evidence'}
+						</button>
+					</div>
+
+					{isDev && resolutionEvidence && (
+						<div className={styles.evidenceCard}>
+							<div className={styles.resolutionGrid}>
+								<label className={styles.field}>
+									<span className={styles.label}>
+										Проверенный payment_id из metadata
+									</span>
+									<input
+										className={styles.input}
+										value={resolutionEvidence.paymentId}
+										readOnly
+									/>
+								</label>
+								<label className={styles.field}>
+									<span className={styles.label}>
+										Сохранённый provider idempotency key
+									</span>
+									<input
+										className={styles.input}
+										value={
+											resolutionEvidence.providerOperation.idempotencyKey
+										}
+										spellCheck={false}
+										readOnly
+									/>
+								</label>
+							</div>
+							<div className={styles.evidenceMeta}>
+								<p>
+									Статус:{' '}
+									<strong>{resolutionEvidence.providerStatus}</strong>
+								</p>
+								<p>
+									Истекает:{' '}
+									<strong>
+										{formatDate(resolutionEvidence.checkoutExpiresAt)}
+									</strong>
+								</p>
+								<p>
+									Операция:{' '}
+									<strong>
+										{resolutionEvidence.providerOperation.kind}
+									</strong>
+								</p>
+							</div>
+						</div>
+					)}
+					<label className={styles.field}>
+						<span className={styles.label}>Причина решения</span>
+						<textarea
+							className={styles.resolutionReason}
+							value={resolutionDraft.reason}
+							minLength={3}
+							maxLength={1000}
+							disabled={!isDev || resolveUnknownProviderMutation.isPending}
+							placeholder="Опишите проверку в YooKassa и источник persisted evidence"
+							onChange={event =>
+								setResolutionDraft(current => ({
+									...current,
+									reason: event.target.value
+								}))
+							}
+						/>
+						<span className={styles.hint}>
+							Обязательное поле, 3–1000 символов; причина попадёт в журнал.
+						</span>
+					</label>
+					<label className={styles.resolutionConfirmation}>
+						<input
+							type="checkbox"
+							checked={resolutionDraft.providerReconciliationConfirmed}
+							disabled={!isDev || resolveUnknownProviderMutation.isPending}
+							onChange={event =>
+								setResolutionDraft(current => ({
+									...current,
+									providerReconciliationConfirmed: event.target.checked
+								}))
+							}
+						/>
+						<span>
+							Я выполнил внешнюю сверку и подтверждаю, что платежа с этими
+							реквизитами нет в YooKassa.
+						</span>
+					</label>
+					<button
+						type="submit"
+						className={styles.resolutionButton}
+						disabled={
+							!isDev ||
+							!isResolutionEvidenceReady ||
+							resolveUnknownProviderMutation.isPending ||
+							loadUnknownProviderEvidenceMutation.isPending
+						}
+					>
+						{resolveUnknownProviderMutation.isPending
+							? 'Разрешаем...'
+							: 'Подтвердить отсутствие и отменить'}
+					</button>
+				</form>
+
+				{isResolutionLocked && (
+					<div className={styles.resolutionOverlay}>
+						<span className={styles.resolutionLockedBadge}>
+							Только для DEV
+						</span>
+						<AdminTooltip
+							title="Ручное разрешение заблокировано"
+							description="ADMIN сохраняет read-only доступ к платежам и безопасному отчёту готовности. Подтверждать отсутствие provider-платежа может только DEV через отдельный backend endpoint."
+							risk="high"
+							riskText="Действие переводит просроченную попытку в CANCELLED и освобождает локальный платёжный контур."
+						/>
+					</div>
+				)}
+			</div>
 
 			<AdminSectionHeading
 				text="Список платежей YooKassa"

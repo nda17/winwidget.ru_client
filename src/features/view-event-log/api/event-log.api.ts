@@ -19,6 +19,7 @@ export type AdminEventLogSection =
 
 export type AdminEventLogAction =
 	| 'PAYMENT_MANUAL_CHECK'
+	| 'PAYMENT_UNKNOWN_PROVIDER_RESOLVED'
 	| 'PAYMENT_CLEANUP_RUN'
 	| 'AUTO_RENEWAL_ADMIN_PAUSE'
 	| 'AUTO_RENEWAL_ADMIN_RESUME'

@@ -219,8 +219,8 @@ Gateway разрешает CORS с передачей учетных данны�
 разработки
 `http://localhost:3000` и `http://127.0.0.1:3000`. Поэтому весь локальный
 версионированный API идёт через `:4100`, а исполняемые файлы виджетов и
-предпросмотр без версии — через `NEXT_PUBLIC_WIDGETS_HOST=:4700`. Endpoint Core
-и резервный маршрут отсутствуют.
+предпросмотр без версии — через `NEXT_PUBLIC_WIDGETS_HOST=:4700`. Общего
+catch-all маршрута и резервного backend upstream нет.
 
 ## Запуск сервера разработки
 
@@ -430,5 +430,8 @@ pnpm build
 - [`Dockerfile`](Dockerfile);
 - [`.github/workflows/deploy-production.yml`](.github/workflows/deploy-production.yml);
 - [`scripts/deploy-production.sh`](scripts/deploy-production.sh);
-- `../deploy/frontend` — production-конфигурация фронтенда;
-- `../DOCUMENTATION` — общая документация проекта c аналитическими артефактами.
+- `../winwidget.ru_infra` — Nginx и общий production-контур;
+- защищённый локальный `../deploy/frontend/.env.production` — единственный
+  нетрековый env-файл фронтенда;
+- [документация сервисов и технический backlog](https://github.com/nda17/winwidget.ru_services/tree/prod/docs);
+- [production/deploy runbook](https://github.com/nda17/winwidget.ru_infra/blob/master/docs/runbook.md).

@@ -42,6 +42,8 @@ const SECTION_LABELS: Record<AdminEventLogSection, string> = {
 
 const ACTION_LABELS: Record<AdminEventLogAction, string> = {
 	PAYMENT_MANUAL_CHECK: 'Проверка платежа',
+	PAYMENT_UNKNOWN_PROVIDER_RESOLVED:
+		'Ручное разрешение неизвестного платежа',
 	PAYMENT_CLEANUP_RUN: 'Очистка платежей',
 	AUTO_RENEWAL_ADMIN_PAUSE: 'Пауза автопродления',
 	AUTO_RENEWAL_ADMIN_RESUME: 'Возобновление автопродления',

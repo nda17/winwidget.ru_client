@@ -55,6 +55,44 @@ export interface IAdminCheckPaymentResult {
 	checkedAt: string
 }
 
+export interface IDevResolveUnknownProviderPaymentInput {
+	schemaVersion: 1
+	commandId: string
+	paymentId: string
+	resolution: 'PROVIDER_PAYMENT_NOT_FOUND'
+	reason: string
+	providerReconciliationConfirmed: true
+	checkedMetadataPaymentId: string
+	checkedProviderIdempotencyKey: string
+}
+
+export interface IDevResolveUnknownProviderPaymentResult {
+	schemaVersion: 1
+	resolved: true
+	commandId: string
+	paymentId: string
+	resolution: 'PROVIDER_PAYMENT_NOT_FOUND'
+	status: 'CANCELLED'
+	providerStatus: 'not_found'
+	resolvedAt: string
+}
+
+export interface IDevUnknownProviderPaymentEvidence {
+	schemaVersion: 1
+	paymentId: string
+	status: 'PENDING'
+	providerStatus: 'creating' | 'unknown'
+	checkoutExpiresAt: string
+	yookassaId: null
+	providerOperation: {
+		id: string
+		kind: 'CREATE_CHECKOUT' | 'CAPTURE_RECURRING'
+		status: 'UNKNOWN'
+		providerPaymentId: null
+		idempotencyKey: string
+	}
+}
+
 const adminPaymentsService = {
 	async getPayments(
 		page: number,
@@ -76,6 +114,25 @@ const adminPaymentsService = {
 		const { data } = await axiosInterceptorsRequest.post(
 			'/payments/admin/check',
 			{ paymentId }
+		)
+		return data
+	},
+
+	async resolveUnknownProviderPayment(
+		payload: IDevResolveUnknownProviderPaymentInput
+	): Promise<IDevResolveUnknownProviderPaymentResult> {
+		const { data } = await axiosInterceptorsRequest.post(
+			'/payments/dev/unknown-provider/resolve',
+			payload
+		)
+		return data
+	},
+
+	async getUnknownProviderPaymentEvidence(
+		paymentId: string
+	): Promise<IDevUnknownProviderPaymentEvidence> {
+		const { data } = await axiosInterceptorsRequest.get(
+			`/payments/dev/unknown-provider/${encodeURIComponent(paymentId)}/evidence`
 		)
 		return data
 	}
