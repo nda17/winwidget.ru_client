@@ -28,6 +28,9 @@ const TYPE_LABELS: Record<AdminAlertType, string> = {
 	PENDING_PAYMENT: 'Pending-платёж',
 	SUCCEEDED_PAYMENT_WITHOUT_ACCESS: 'Оплата без доступа',
 	MULTIPLE_PENDING_PAYMENTS: 'Несколько pending-платежей',
+	PAYMENT_RECEIPT_CANCELLED: 'Чек отменён',
+	PAYMENT_RECEIPT_SYNC_FAILED: 'Ошибка синхронизации чека',
+	PAYMENT_RECEIPT_STALE: 'Чек не зарегистрирован',
 	ACTIVE_WIDGET_WITHOUT_ACCESS: 'Виджет без доступа',
 	WIDGET_DOMAIN_CONFLICT: 'Конфликт домена',
 	WIDGET_INVALID_DOMAIN: 'Некорректный домен',
@@ -121,7 +124,10 @@ const getAlertActions = (item: IAdminAlert) => {
 		[
 			'PENDING_PAYMENT',
 			'SUCCEEDED_PAYMENT_WITHOUT_ACCESS',
-			'MULTIPLE_PENDING_PAYMENTS'
+			'MULTIPLE_PENDING_PAYMENTS',
+			'PAYMENT_RECEIPT_CANCELLED',
+			'PAYMENT_RECEIPT_SYNC_FAILED',
+			'PAYMENT_RECEIPT_STALE'
 		].includes(item.type)
 	) {
 		actions.push({ href: ADMIN_PAGES.PAYMENTS, label: 'Платежи' })

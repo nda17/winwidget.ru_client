@@ -253,13 +253,11 @@ const Pricing = ({
 	const queryClient = useQueryClient()
 	const { user, isLoading: isUserLoading } = useUser()
 	const [period, setPeriod] = useState<BillingPeriod>('YEARLY')
-	const autoRenewalDefaultEnabled =
-		autoRenewalSignupEnabled && Boolean(autoRenewalTerms)
 	const [autoRenewByPlan, setAutoRenewByPlan] = useState<
 		Record<PaidPlan, boolean>
 	>({
-		EASY: autoRenewalDefaultEnabled,
-		HARD: autoRenewalDefaultEnabled
+		EASY: false,
+		HARD: false
 	})
 	const [paymentEmail, setPaymentEmail] = useState('')
 	const [paymentEmailCode, setPaymentEmailCode] = useState('')

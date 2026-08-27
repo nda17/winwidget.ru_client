@@ -38,6 +38,35 @@ const findArrowFunction = name => {
 	return result
 }
 
+const findVariableDeclaration = name => {
+	let result = null
+
+	const visit = node => {
+		if (ts.isVariableDeclaration(node)) {
+			const declaresName =
+				ts.isIdentifier(node.name) && node.name.text === name
+			const declaresArrayBinding =
+				ts.isArrayBindingPattern(node.name) &&
+				node.name.elements.some(
+					element =>
+						ts.isBindingElement(element) &&
+						ts.isIdentifier(element.name) &&
+						element.name.text === name
+				)
+
+			if (declaresName || declaresArrayBinding) {
+				result = node
+				return
+			}
+		}
+
+		ts.forEachChild(node, visit)
+	}
+
+	visit(sourceFile)
+	return result
+}
+
 test('anonymous payment redirects to login before opening checkout', () => {
 	const handler = findArrowFunction('handlePaymentClick')
 
@@ -75,4 +104,29 @@ test('anonymous payment redirects to login before opening checkout', () => {
 		guardText,
 		/openPaymentWindow|window\.open|startPayment/
 	)
+})
+
+test('auto-renewal requires explicit user opt-in', () => {
+	const declaration = findVariableDeclaration('autoRenewByPlan')
+
+	assert.ok(declaration)
+	assert.ok(ts.isCallExpression(declaration.initializer))
+
+	const initialState = declaration.initializer.arguments[0]
+	assert.ok(initialState)
+	assert.ok(ts.isObjectLiteralExpression(initialState))
+
+	const defaults = Object.fromEntries(
+		initialState.properties.map(property => {
+			assert.ok(ts.isPropertyAssignment(property))
+			assert.ok(ts.isIdentifier(property.name))
+
+			return [property.name.text, property.initializer.getText(sourceFile)]
+		})
+	)
+
+	assert.deepEqual(defaults, {
+		EASY: 'false',
+		HARD: 'false'
+	})
 })
