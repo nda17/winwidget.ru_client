@@ -58,6 +58,7 @@ const DEFAULT_CONFIG: CallbackConfig = {
 	buttonOffset: 3,
 	buttonSize: 60,
 	buttonImageUrl: '',
+	launcherEnabled: true,
 	autoOpenDelay: null,
 	bubbleEnabled: true,
 	bubbleText: 'Перезвоним!',
@@ -70,6 +71,7 @@ const DEFAULT_CONFIG: CallbackConfig = {
 		'https://winwidget.ru/legal-documentation/consent-processing',
 	developInfoActive: true,
 	filterDuplicates: false,
+	verificationMode: 'OFF',
 	timeSlots: [
 		'9:00–11:00',
 		'11:00–13:00',
@@ -341,6 +343,55 @@ const CallbackSettingsModal = ({
 	).replace(/\/$/, '')
 
 	const embedCode = `<script src="${apiUrl}/widgets/callback.js" data-key="${callback.publicKey}" async></script>`
+	const nativeButtonIntegrationCode = `function openWinwidgetCallback(event) {
+  if (event) event.preventDefault();
+
+  var callbackKey = ${JSON.stringify(callback.publicKey)};
+  var callbackApi = window.winwidgetCallback;
+  if (
+    callbackApi &&
+    callbackApi.key === callbackKey &&
+    callbackApi.ready === true
+  ) {
+    callbackApi.open();
+    return;
+  }
+
+  if (
+    callbackApi &&
+    callbackApi.key === callbackKey &&
+    typeof callbackApi.open === 'function'
+  ) {
+    callbackApi.open();
+    return;
+  }
+
+  function handleCallbackReady(readyEvent) {
+    if (!readyEvent.detail || readyEvent.detail.key !== callbackKey) return;
+
+    document.removeEventListener('winwidget:callback:ready', handleCallbackReady);
+    callbackApi = window.winwidgetCallback;
+    if (
+      callbackApi &&
+      callbackApi.key === callbackKey &&
+      typeof callbackApi.open === 'function'
+    ) {
+      callbackApi.open();
+    }
+  }
+
+  document.addEventListener('winwidget:callback:ready', handleCallbackReady);
+
+  callbackApi = window.winwidgetCallback;
+  if (
+    callbackApi &&
+    callbackApi.key === callbackKey &&
+    typeof callbackApi.open === 'function'
+  ) {
+    document.removeEventListener('winwidget:callback:ready', handleCallbackReady);
+    callbackApi.open();
+  }
+}`
 	const previewUrl = `${publicSiteUrl}/page-callback/${callback.publicKey}`
 	const savedInstallDomain = (
 		JSON.parse(savedSnapshot) as { installDomain: string }
@@ -489,6 +540,7 @@ const CallbackSettingsModal = ({
 					privacyUrl: DEFAULT_CONFIG.privacyUrl,
 					developInfoActive: DEFAULT_CONFIG.developInfoActive,
 					filterDuplicates: DEFAULT_CONFIG.filterDuplicates,
+					verificationMode: DEFAULT_CONFIG.verificationMode,
 					timeSlots: [...DEFAULT_CONFIG.timeSlots]
 				}
 			}
@@ -504,6 +556,7 @@ const CallbackSettingsModal = ({
 				buttonOffset: DEFAULT_CONFIG.buttonOffset,
 				buttonSize: DEFAULT_CONFIG.buttonSize,
 				buttonImageUrl: DEFAULT_CONFIG.buttonImageUrl,
+				launcherEnabled: DEFAULT_CONFIG.launcherEnabled,
 				autoOpenDelay: DEFAULT_CONFIG.autoOpenDelay,
 				bubbleEnabled: DEFAULT_CONFIG.bubbleEnabled,
 				bubbleText: DEFAULT_CONFIG.bubbleText
@@ -597,6 +650,8 @@ const CallbackSettingsModal = ({
 			successTitle: cfg.successTitle.trim(),
 			successSubtitle: cfg.successSubtitle.trim(),
 			privacyUrl,
+			launcherEnabled: cfg.launcherEnabled === true,
+			verificationMode: cfg.verificationMode,
 			timeSlots: sanitizedSlots,
 			autoOpenDelay: autoOpenEnabled ? autoOpenDelay : null
 		}
@@ -932,6 +987,29 @@ const CallbackSettingsModal = ({
 									<h3 className={styles.settingsGroupTitle}>
 										Кнопка открытия
 									</h3>
+								</div>
+								<div className={styles.field}>
+									<div className={styles.checkRow}>
+										<input
+											id="callbackLauncherEnabled"
+											type="checkbox"
+											checked={cfg.launcherEnabled}
+											onChange={event =>
+												set({ launcherEnabled: event.target.checked })
+											}
+										/>
+										<label
+											htmlFor="callbackLauncherEnabled"
+											className={styles.checkLabel}
+										>
+											Показывать кнопку WinWidget на сайте
+										</label>
+									</div>
+									<p className={styles.hint}>
+										Отключите, если встроенная кнопка WinWidget не нужна.
+										Открытие из своей кнопки настраивается во вкладке
+										«Установка», а автооткрытие — отдельно ниже.
+									</p>
 								</div>
 								<details className={styles.advancedBlock}>
 									<summary className={styles.advancedSummary}>
@@ -1683,6 +1761,39 @@ const CallbackSettingsModal = ({
 								</div>
 
 								<div className={styles.field}>
+									<label
+										className={styles.label}
+										htmlFor="callbackVerificationMode"
+									>
+										Подтверждение заявки одноразовым кодом
+									</label>
+									<select
+										id="callbackVerificationMode"
+										className={styles.input}
+										value={cfg.verificationMode}
+										onChange={event =>
+											set({
+												verificationMode: event.target
+													.value as CallbackConfig['verificationMode']
+											})
+										}
+									>
+										<option value="OFF">Без подтверждения</option>
+										<option value="SMS">
+											Код по SMS на указанный телефон
+										</option>
+										<option value="EMAIL">Код на email посетителя</option>
+									</select>
+									<p className={styles.hint}>
+										SMS подтверждает доступ к указанному телефону.
+										Email-режим подтверждает только доступ к введённому
+										email, но не владение телефоном; email посетителя
+										используется для отправки кода и не сохраняется в
+										заявке.
+									</p>
+								</div>
+
+								<div className={styles.field}>
 									<p className={styles.label}>
 										Ссылка на политику конфиденциальности
 									</p>
@@ -2058,6 +2169,50 @@ const CallbackSettingsModal = ({
 								</div>
 							</div>
 
+							{!cfg.launcherEnabled && (
+								<div className={styles.settingsGroup}>
+									<div className={styles.settingsGroupHeader}>
+										<h3 className={styles.settingsGroupTitle}>
+											Открытие своей кнопкой
+										</h3>
+									</div>
+									<p className={styles.infoText}>
+										Основной скрипт установки выше остаётся обязательным.
+										Добавьте эту функцию на сайт и вызовите{' '}
+										<code>openWinwidgetCallback(event)</code> в обработчике
+										своей кнопки.
+									</p>
+									<textarea
+										readOnly
+										className={`${styles.input} ${styles.codeArea}`}
+										rows={18}
+										value={nativeButtonIntegrationCode}
+										onClick={event => event.currentTarget.select()}
+									/>
+									<button
+										type="button"
+										className={styles.copyBtn}
+										onClick={() =>
+											copyToClipboard(
+												nativeButtonIntegrationCode,
+												'Код открытия своей кнопкой скопирован',
+												true
+											)
+										}
+									>
+										Копировать обработчик
+									</button>
+									<p className={styles.hint}>
+										Публичный API доступен как{' '}
+										<code>window.winwidgetCallback</code>. Поле{' '}
+										<code>ready</code> сообщает о готовности, ранний вызов{' '}
+										<code>open()</code> ставится в очередь, а событие{' '}
+										<code>winwidget:callback:ready</code> закрывает гонку
+										при асинхронной загрузке скрипта.
+									</p>
+								</div>
+							)}
+
 							<div className={styles.settingsGroup}>
 								<div className={styles.settingsGroupHeader}>
 									<h3 className={styles.settingsGroupTitle}>
@@ -2119,8 +2274,9 @@ const CallbackSettingsModal = ({
 								<p className={styles.infoText}>
 									Виджет открывает форму заказа звонка. Посетитель
 									оставляет телефон, при необходимости выбирает удобное
-									время, а заявка сохраняется в кабинете и отправляется в
-									подключённые каналы.
+									время и подтверждает заявку кодом, если проверка
+									включена. Только после этого заявка сохраняется в
+									кабинете и отправляется в подключённые каналы.
 								</p>
 								<ul className={styles.infoList}>
 									<li>
@@ -2128,7 +2284,8 @@ const CallbackSettingsModal = ({
 									</li>
 									<li>
 										В «Форме» задайте содержимое, цвет кнопки отправки,
-										тексты успеха и варианты времени звонка.
+										тексты успеха, варианты времени звонка и способ
+										OTP-проверки.
 									</li>
 									<li>
 										В «Интеграциях» подключите уведомления, CRM, webhook и
@@ -2136,7 +2293,8 @@ const CallbackSettingsModal = ({
 									</li>
 									<li>
 										В «Установке» добавьте виджет на сайт или используйте
-										прямую ссылку/QR-код.
+										прямую ссылку/QR-код. Для своей кнопки скопируйте
+										готовый обработчик открытия.
 									</li>
 								</ul>
 							</div>
@@ -2157,12 +2315,14 @@ const CallbackSettingsModal = ({
 										или CRM.
 									</li>
 									<li>
-										Настройте защиту от дублей, если повторные заявки от
-										одного контакта нежелательны.
+										Если включён OTP, проверьте получение, ввод и повторную
+										отправку кода. Email-проверка не подтверждает владение
+										телефоном и не сохраняет email посетителя в заявке.
 									</li>
 									<li>
-										Проверьте мобильную версию: кнопка должна быть заметной
-										и не мешать покупке.
+										Проверьте защиту от дублей и мобильную версию. Если
+										кнопка WinWidget отключена, отдельно проверьте открытие
+										из своей кнопки сайта.
 									</li>
 								</ul>
 							</div>

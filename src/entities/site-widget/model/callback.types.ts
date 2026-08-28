@@ -1,5 +1,7 @@
 import type { Subscription } from '@/entities/subscription/@x/site-widget'
 
+export type CallbackVerificationMode = 'OFF' | 'SMS' | 'EMAIL'
+
 export interface CallbackIntegrations {
 	email?: string
 	webhookUrl?: string
@@ -23,6 +25,7 @@ export interface CallbackConfig {
 	buttonOffset: number
 	buttonSize: number
 	buttonImageUrl: string
+	launcherEnabled: boolean
 	autoOpenDelay: number | null
 	bubbleEnabled?: boolean
 	bubbleText?: string
@@ -34,6 +37,7 @@ export interface CallbackConfig {
 	privacyUrl: string
 	developInfoActive: boolean
 	filterDuplicates: boolean
+	verificationMode: CallbackVerificationMode
 	timeSlots: string[]
 	integrations: CallbackIntegrations
 }

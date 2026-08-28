@@ -18,17 +18,29 @@ const widgetSettingsStylesPath = new URL(
 	'../src/screens/widget-settings/ui/WidgetSettings.module.scss',
 	import.meta.url
 )
+const callbackTypesPath = new URL(
+	'../src/entities/site-widget/model/callback.types.ts',
+	import.meta.url
+)
+const callbackSettingsPath = new URL(
+	'../src/features/edit-widget-settings/ui/callback/CallbackSettingsModal.tsx',
+	import.meta.url
+)
 
 const [
 	previewSource,
 	stylesSource,
 	widgetSettingsSource,
-	widgetSettingsStylesSource
+	widgetSettingsStylesSource,
+	callbackTypesSource,
+	callbackSettingsSource
 ] = await Promise.all([
 	readFile(previewPath, 'utf8'),
 	readFile(stylesPath, 'utf8'),
 	readFile(widgetSettingsPath, 'utf8'),
-	readFile(widgetSettingsStylesPath, 'utf8')
+	readFile(widgetSettingsStylesPath, 'utf8'),
+	readFile(callbackTypesPath, 'utf8'),
+	readFile(callbackSettingsPath, 'utf8')
 ])
 
 test('sandbox reports mounted and failed widget runtimes to the parent', () => {
@@ -152,7 +164,7 @@ test('every widget runtime maps to its exact script, host and visible surface', 
 
 	assert.match(
 		previewSource,
-		/supportsLauncherPreview = props\.type !== 'stopOffer'/
+		/props\.type !== 'stopOffer' &&[\s\S]*?props\.type !== 'callback' \|\| props\.config\.launcherEnabled/
 	)
 	assert.match(previewSource, /\{supportsLauncherPreview && \(/)
 })
@@ -195,6 +207,74 @@ test('AI consultant preview exposes only public config and complete JSON replies
 		/ReadableStream|EventSource|text\/event-stream/
 	)
 	assert.doesNotMatch(previewSource, /winwidgetAiConsultantAutoOpen/)
+})
+
+test('callback settings expose strict verification and launcher contracts', () => {
+	assert.match(
+		callbackTypesSource,
+		/export type CallbackVerificationMode = 'OFF' \| 'SMS' \| 'EMAIL'/
+	)
+	assert.match(callbackTypesSource, /launcherEnabled: boolean/)
+	assert.match(
+		callbackTypesSource,
+		/verificationMode: CallbackVerificationMode/
+	)
+	assert.match(callbackSettingsSource, /launcherEnabled: true/)
+	assert.match(callbackSettingsSource, /verificationMode: 'OFF'/)
+	assert.match(callbackSettingsSource, /<option value="OFF">/)
+	assert.match(callbackSettingsSource, /<option value="SMS">/)
+	assert.match(callbackSettingsSource, /<option value="EMAIL">/)
+	assert.match(callbackSettingsSource, /не владение[\s\S]*?телефоном/)
+	assert.match(
+		callbackSettingsSource,
+		/не сохраняется[\s\S]*?в[\s\S]*?заявке/
+	)
+	assert.match(callbackSettingsSource, /!cfg\.launcherEnabled/)
+	assert.match(callbackSettingsSource, /window\.winwidgetCallback/)
+	assert.match(callbackSettingsSource, /callbackApi\.key === callbackKey/)
+	assert.match(callbackSettingsSource, /callbackApi\.ready === true/)
+	assert.match(callbackSettingsSource, /winwidget:callback:ready/)
+})
+
+test('callback preview mocks OTP start and verified lead submission locally', () => {
+	const callbackConfigBranch = previewSource.slice(
+		previewSource.indexOf("if (props.type === 'callback')"),
+		previewSource.indexOf("if (props.type === 'calculator')")
+	)
+	const callbackVerificationStart = previewSource.indexOf(
+		"'/api/v1/callback/' + previewKey + '/verification/start'"
+	)
+	const callbackVerificationMock = previewSource.slice(
+		callbackVerificationStart,
+		previewSource.indexOf(
+			"previewType === 'aiConsultant'",
+			callbackVerificationStart
+		)
+	)
+	const callbackLeadMock = previewSource.slice(
+		previewSource.indexOf(
+			"url.indexOf('/api/v1/callback/' + previewKey + '/lead')"
+		),
+		previewSource.indexOf("url.indexOf('/' + previewKey + '/lead')")
+	)
+
+	assert.match(callbackConfigBranch, /launcherEnabled:/)
+	assert.match(callbackConfigBranch, /verificationMode:/)
+	assert.match(callbackVerificationMock, /\/verification\/start/)
+	assert.match(callbackVerificationMock, /challengeId:/)
+	assert.match(callbackVerificationMock, /expiresAt:/)
+	assert.match(callbackVerificationMock, /resendAvailableAt:/)
+	assert.match(callbackVerificationMock, /destinationHint:/)
+	assert.match(callbackLeadMock, /callbackLeadBody\.challengeId/)
+	assert.match(callbackLeadMock, /callbackLeadBody\.code/)
+	assert.match(callbackLeadMock, /callbackLeadBody\.email/)
+	assert.match(callbackLeadMock, /previewCallbackCode/)
+	assert.match(callbackLeadMock, /success:\s*true/)
+	assert.match(callbackLeadMock, /lead:\s*\{\s*id:/)
+	assert.match(
+		previewSource,
+		/#wcb-modal\{[^}]*overflow-y:auto!important[^}]*\}/
+	)
 })
 
 test('preview identity depends only on public config', () => {

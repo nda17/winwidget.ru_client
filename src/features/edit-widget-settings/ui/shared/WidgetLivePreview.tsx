@@ -314,6 +314,8 @@ const buildPreviewPublicConfig = (props: WidgetLivePreviewProps) => {
 			successTitle: props.config.successTitle || 'Спасибо! Мы перезвоним',
 			successSubtitle: props.config.successSubtitle || '',
 			privacyUrl: props.config.privacyUrl || null,
+			launcherEnabled: props.config.launcherEnabled,
+			verificationMode: props.config.verificationMode,
 			filterDuplicates: false,
 			timeSlots: props.config.timeSlots || [],
 			hasSubmittedByIp: false
@@ -1025,6 +1027,9 @@ ${helperPreloads}
 			var restartNoticeSent = false;
 			var previewTerminalStatus = null;
 			var previewTurnstileOptions = null;
+			var previewCallbackChallengeId =
+				'00000000-0000-4000-8000-000000000001';
+			var previewCallbackCode = '123456';
 
 			if (previewType === 'aiConsultant') {
 				window.__winwidgetPreviewDisableAutoFocus = true;
@@ -1083,7 +1088,7 @@ ${helperPreloads}
 					dialogContent: '#wcb-modal',
 					launcher: '#callback-widget-button',
 					launcherInDocument: true,
-					css: '#callback-widget-overlay{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:clamp(16px,8vw,52px)!important;padding-right:clamp(16px,8vw,52px)!important}#callback-widget-overlay::-webkit-scrollbar{display:none!important}#wcb-modal{max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
+					css: '#callback-widget-overlay{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:clamp(16px,8vw,52px)!important;padding-right:clamp(16px,8vw,52px)!important}#callback-widget-overlay::-webkit-scrollbar{display:none!important}#wcb-modal{max-height:calc(100vh - 32px)!important;overflow-x:hidden!important;overflow-y:auto!important;scrollbar-width:none!important}#wcb-modal::-webkit-scrollbar{display:none!important}'
 				},
 				timer: {
 					host: 'timer-widget-host',
@@ -1304,6 +1309,33 @@ ${helperPreloads}
 
 				if (
 					url &&
+					previewType === 'callback' &&
+					url.indexOf(
+						'/api/v1/callback/' + previewKey + '/verification/start'
+					) !== -1 &&
+					method === 'POST'
+				) {
+					return Promise.resolve(
+						new Response(
+							JSON.stringify({
+								challengeId: previewCallbackChallengeId,
+								expiresAt: new Date(Date.now() + 300000).toISOString(),
+								resendAvailableAt: new Date(Date.now() + 60000).toISOString(),
+								destinationHint:
+									publicConfig.verificationMode === 'EMAIL'
+										? 'email предпросмотра, код 123456'
+										: 'телефон предпросмотра, код 123456'
+							}),
+							{
+								status: 200,
+								headers: { 'Content-Type': 'application/json' }
+							}
+						)
+					);
+				}
+
+				if (
+					url &&
 					previewType === 'aiConsultant' &&
 					url.indexOf(
 						'/api/v1/ai-consultant/' + previewKey + '/session'
@@ -1354,6 +1386,54 @@ ${helperPreloads}
 								outcome: 'ANSWER',
 								reply:
 									'Это визуальный предпросмотр. Проверьте ответы по сохранённой инструкции во вкладке «Тест».'
+							}),
+							{
+								status: 200,
+								headers: { 'Content-Type': 'application/json' }
+							}
+						)
+					);
+				}
+
+				if (
+					url &&
+					previewType === 'callback' &&
+					url.indexOf('/api/v1/callback/' + previewKey + '/lead') !== -1 &&
+					method === 'POST'
+				) {
+					var callbackLeadBody = {};
+
+					try {
+						callbackLeadBody = JSON.parse((init && init.body) || '{}');
+					} catch (e) {}
+
+					if (
+						publicConfig.verificationMode !== 'OFF' &&
+						(callbackLeadBody.challengeId !== previewCallbackChallengeId ||
+							callbackLeadBody.code !== previewCallbackCode ||
+							(publicConfig.verificationMode === 'EMAIL' &&
+								typeof callbackLeadBody.email !== 'string'))
+					) {
+						return Promise.resolve(
+							new Response(
+								JSON.stringify({
+									message: 'Для предпросмотра используйте код 123456'
+								}),
+								{
+									status: 400,
+									headers: { 'Content-Type': 'application/json' }
+								}
+							)
+						);
+					}
+
+					schedulePreviewRestart();
+
+					return Promise.resolve(
+						new Response(
+							JSON.stringify({
+								success: true,
+								lead: { id: 'preview-callback-lead' }
 							}),
 							{
 								status: 200,
@@ -1611,7 +1691,9 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 	)
 	const [device, setDevice] = useState<PreviewDevice>('desktop')
 	const [surface, setSurface] = useState<PreviewSurface>('dialog')
-	const supportsLauncherPreview = props.type !== 'stopOffer'
+	const supportsLauncherPreview =
+		props.type !== 'stopOffer' &&
+		(props.type !== 'callback' || props.config.launcherEnabled)
 	const previewContentId = useId()
 	const previewViewportRef = useRef<HTMLDivElement | null>(null)
 	const previewFrameRef = useRef<HTMLIFrameElement | null>(null)
