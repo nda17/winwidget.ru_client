@@ -167,11 +167,11 @@ FSD-слой `widgets` намеренно не используется. В эт
 - `/page-callback/[key]`;
 - `/page-timer/[key]`;
 - `/page-stop-offer/[key]`;
-- `/page-online-consultant/[key]`;
+- `/page-ai-consultant/[key]`;
 - `/page-calculator/[key]`.
 
-Все типы виджетов используют единую композицию страницы заявок в
-`screens/widget-leads`.
+Виджеты, которые собирают контакты, используют единую композицию страницы
+заявок в `screens/widget-leads`. AI-консультант заявки не создаёт.
 
 ---
 

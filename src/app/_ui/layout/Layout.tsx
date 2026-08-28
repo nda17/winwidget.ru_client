@@ -54,7 +54,7 @@ const Layout: NextPage<ILayout> = ({
 		pathname.startsWith('/page-callback/') ||
 		pathname.startsWith('/page-timer/') ||
 		pathname.startsWith('/page-stop-offer/') ||
-		pathname.startsWith('/page-online-consultant/') ||
+		pathname.startsWith('/page-ai-consultant/') ||
 		pathname.startsWith('/page-calculator/')
 
 	if (isWidgetPreview) {

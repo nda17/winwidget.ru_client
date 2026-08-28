@@ -130,6 +130,42 @@ const getReadinessChecks = (
 	hasReviewedMobilePreview: boolean
 ): ReadinessCheck[] => {
 	const config = asConfig(lifecycle.config)
+
+	if (lifecycle.type === 'ai-consultant') {
+		return [
+			{
+				code: 'AI_INSTRUCTIONS',
+				label: 'Текстовая инструкция для AI заполнена',
+				ready: hasText(config.instructionsPrompt)
+			},
+			{
+				code: 'AI_IDENTITY',
+				label: 'Имя и приветствие AI-оператора заполнены',
+				ready: hasText(config.operatorName) && hasText(config.greeting)
+			},
+			{
+				code: 'DIALOGUE_TIMEOUT',
+				label: 'Завершение неактивного диалога настроено',
+				ready:
+					Number(config.inactivityTimeoutMinutes) > 0 &&
+					hasText(config.farewellMessage)
+			},
+			{
+				code: 'DISPLAY_SCENARIO',
+				label: 'Сценарий показа настроен',
+				ready:
+					config.buttonSide === 'left' ||
+					config.buttonSide === 'right' ||
+					Number(config.autoOpenDelay) > 0
+			},
+			{
+				code: 'MOBILE_PREVIEW',
+				label: 'Мобильная версия просмотрена',
+				ready: hasReviewedMobilePreview
+			}
+		]
+	}
+
 	const dataType =
 		typeof config.dataType === 'string'
 			? config.dataType.trim().toUpperCase()
@@ -608,8 +644,9 @@ const WidgetExperiencePanel = ({
 									)}
 									{!analytics.submitAvailable && (
 										<p className={styles.notice}>
-											Сейчас сбор контактов отключён. Последний этап
-											воронки показывает завершения сценария, а не заявки.
+											{lifecycle.type === 'ai-consultant'
+												? 'AI-консультант не собирает заявки. Последний этап показывает завершённые ответы в чате.'
+												: 'Сейчас сбор контактов отключён. Последний этап воронки показывает завершения сценария, а не заявки.'}
 										</p>
 									)}
 								</>

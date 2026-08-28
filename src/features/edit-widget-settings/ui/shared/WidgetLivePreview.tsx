@@ -3,7 +3,7 @@
 import { CallbackConfig } from '@/entities/site-widget'
 import { CalculatorConfig } from '@/entities/site-widget'
 import { CountdownTimerConfig } from '@/entities/site-widget'
-import { OnlineConsultantConfig } from '@/entities/site-widget'
+import { AiConsultantConfig } from '@/entities/site-widget'
 import { QuizConfig } from '@/entities/site-widget'
 import { StopOfferConfig } from '@/entities/site-widget'
 import { WidgetConfig } from '@/entities/site-widget'
@@ -29,7 +29,7 @@ type PreviewType =
 	| 'callback'
 	| 'timer'
 	| 'stopOffer'
-	| 'onlineConsultant'
+	| 'aiConsultant'
 	| 'calculator'
 
 type WidgetLivePreviewEntityProps =
@@ -59,8 +59,8 @@ type WidgetLivePreviewEntityProps =
 			isHardPlan: boolean
 	  }
 	| {
-			type: 'onlineConsultant'
-			config: OnlineConsultantConfig
+			type: 'aiConsultant'
+			config: AiConsultantConfig
 			isHardPlan: boolean
 	  }
 	| {
@@ -89,7 +89,7 @@ const SCRIPT_BY_TYPE: Record<PreviewType, string> = {
 	callback: 'callback.js',
 	timer: 'timer.js',
 	stopOffer: 'stop-offer.js',
-	onlineConsultant: 'online-consultant.js',
+	aiConsultant: 'ai-consultant.js',
 	calculator: 'calculator.js'
 }
 
@@ -99,7 +99,7 @@ const CONFIG_PATH_BY_TYPE: Record<PreviewType, string> = {
 	callback: 'callback',
 	timer: 'countdown-timer',
 	stopOffer: 'stop-offer',
-	onlineConsultant: 'online-consultant',
+	aiConsultant: 'ai-consultant',
 	calculator: 'calculator'
 }
 
@@ -383,27 +383,42 @@ const buildPreviewPublicConfig = (props: WidgetLivePreviewProps) => {
 		}
 	}
 
-	if (props.type === 'onlineConsultant') {
+	if (props.type === 'aiConsultant') {
 		return {
-			...getSharedPublicConfig(props.config, props.isHardPlan),
-			color: props.config.color || '#ef2b17',
+			isActive: true,
+			color: props.config.color || '#4705fb',
+			bgColor: props.config.bgColor || '#ffffff',
+			textColor: props.config.textColor || '#1f2937',
+			buttonColor: props.config.buttonColor || '',
+			openButtonColor: props.config.openButtonColor || '',
+			buttonSide: props.config.buttonSide || 'right',
+			buttonPulse: props.config.buttonPulse !== false,
+			buttonBottom: props.config.buttonBottom ?? 3,
+			buttonOffset: props.config.buttonOffset ?? 3,
 			buttonSize: props.config.buttonSize ?? 60,
-			bubbleEnabled: false,
-			bubbleText: '',
-			title: props.config.title || 'Онлайн-консультант',
-			subtitle: props.config.subtitle || '',
-			dataType: getDataType(props.config.dataType, 'PHONE'),
-			contactTitle:
-				props.config.contactTitle ||
-				'Оставьте контакт, если нужен персональный ответ',
-			submitButtonText: props.config.submitButtonText || 'Отправить',
-			successTitle:
-				props.config.successTitle || 'Спасибо! Заявка отправлена',
-			successSubtitle: props.config.successSubtitle || '',
-			privacyUrl: props.config.privacyUrl || null,
-			filterDuplicates: false,
-			quickActions: props.config.quickActions || [],
-			hasSubmittedByIp: false
+			buttonImageUrl: props.isHardPlan
+				? props.config.buttonImageUrl || ''
+				: '',
+			hideBranding: props.isHardPlan,
+			autoOpenDelay: props.config.autoOpenDelay || null,
+			operatorName: props.config.operatorName || 'Alex',
+			greeting:
+				props.config.greeting ||
+				'Здравствуйте! Я Alex, AI-оператор.\nГотов помочь и ответить на ваши вопросы о товарах, услугах и условиях компании.',
+			inactivityTimeoutMinutes:
+				props.config.inactivityTimeoutMinutes ?? 10,
+			farewellMessage:
+				props.config.farewellMessage ||
+				'Я не дождался ответа. Если у вас появятся вопросы, напишите снова — я обязательно помогу.',
+			inputPlaceholder:
+				props.config.inputPlaceholder || 'Задайте вопрос...',
+			privacyUrl:
+				props.config.privacyUrl ||
+				'https://winwidget.ru/legal-documentation/consent-processing',
+			developInfoActive:
+				props.config.developInfoActive !== false && !props.isHardPlan,
+			turnstileSiteKey: 'preview-site-key',
+			turnstileAction: 'ai-consultant-session'
 		}
 	}
 
@@ -457,7 +472,7 @@ const buildPreviewSandboxDocument = (
 	const safeScriptUrl = escapeHtmlAttribute(scriptUrl)
 	const safeWidgetsOrigin = escapeHtmlAttribute(widgetsOrigin)
 	const helperPreloads =
-		type === 'onlineConsultant'
+		type === 'aiConsultant'
 			? ''
 			: [
 					new URL('helpers/winwidget-phone.js', scriptUrl).toString(),
@@ -1009,12 +1024,37 @@ ${helperPreloads}
 			var nativeFetch = window.fetch.bind(window);
 			var restartNoticeSent = false;
 			var previewTerminalStatus = null;
+			var previewTurnstileOptions = null;
+
+			if (previewType === 'aiConsultant') {
+				window.turnstile = {
+					render: function (_container, options) {
+						previewTurnstileOptions = options || {};
+
+						return 0;
+					},
+					reset: function () {},
+					execute: function () {
+						setTimeout(function () {
+							if (
+								previewTurnstileOptions &&
+								typeof previewTurnstileOptions.callback === 'function'
+							) {
+								previewTurnstileOptions.callback('preview-turnstile-token');
+							}
+						}, 0);
+					},
+					remove: function () {
+						previewTurnstileOptions = null;
+					}
+				};
+			}
 			var previewStoragePrefixes = [
 				'winwidget_played_',
 				'wintimer_submitted_',
 				'winstopoffer_seen_',
 				'winstopoffer_submitted_',
-				'winonlineconsultant_submitted_',
+				'win_ai_consultant_session_',
 				'wincalculator_submitted_'
 			];
 			var sandboxStageLayouts = {
@@ -1058,12 +1098,12 @@ ${helperPreloads}
 					dialogContent: '#wso-modal',
 					css: '#wso-overlay{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:clamp(16px,8vw,52px)!important;padding-right:clamp(16px,8vw,52px)!important}#wso-modal{max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
 				},
-				onlineConsultant: {
-					host: 'online-consultant-widget-host',
-					dialogContainer: '#woc-overlay.woc-overlay-open',
-					dialogContent: '#woc-modal',
-					launcher: '#woc-button',
-					css: '.woc-overlay{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:clamp(16px,8vw,52px)!important;padding-right:clamp(16px,8vw,52px)!important}.woc-modal{max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
+				aiConsultant: {
+					host: 'ai-consultant-widget-host',
+					dialogContainer: '#waic-overlay.waic-overlay-open',
+					dialogContent: '#waic-modal',
+					launcher: '#waic-button',
+					css: '.waic-overlay{align-items:center!important;justify-content:center!important;overflow:hidden!important;overscroll-behavior:none!important;padding-left:clamp(16px,8vw,52px)!important;padding-right:clamp(16px,8vw,52px)!important}.waic-modal{max-height:calc(100vh - 32px)!important;overflow:hidden!important}'
 				},
 				calculator: {
 					host: 'calculator-widget-host',
@@ -1210,12 +1250,10 @@ ${helperPreloads}
 				previewType === 'stopOffer' && shouldAutoOpen;
 			window.winstopoffer =
 				previewType === 'stopOffer' ? previewKey : undefined;
-			window.winonlineconsultantAutoOpen =
-				previewType === 'onlineConsultant' && shouldAutoOpen;
-			window.winwidgetOnlineConsultantAutoOpen =
-				previewType === 'onlineConsultant' && shouldAutoOpen;
-			window.winonlineconsultant =
-				previewType === 'onlineConsultant' ? previewKey : undefined;
+			window.winAiConsultantAutoOpen =
+				previewType === 'aiConsultant' && shouldAutoOpen;
+			window.winAiConsultant =
+				previewType === 'aiConsultant' ? previewKey : undefined;
 			window.wincalculatorAutoOpen =
 				previewType === 'calculator' && shouldAutoOpen;
 			window.wincalculator =
@@ -1261,6 +1299,67 @@ ${helperPreloads}
 					url.indexOf('/api/v1/widget-events/') !== -1
 				) {
 					return Promise.resolve(new Response(null, { status: 204 }));
+				}
+
+				if (
+					url &&
+					previewType === 'aiConsultant' &&
+					url.indexOf(
+						'/api/v1/ai-consultant/' + previewKey + '/session'
+					) !== -1 &&
+					method === 'POST'
+				) {
+					var sessionId = '';
+
+					try {
+						var sessionBody = JSON.parse((init && init.body) || '{}');
+						sessionId = sessionBody.sessionId || '';
+					} catch (e) {}
+
+					return Promise.resolve(
+						new Response(
+							JSON.stringify({
+								sessionId: sessionId,
+								sessionToken: 'preview-session-token',
+								expiresAt: new Date(Date.now() + 600000).toISOString()
+							}),
+							{
+								status: 200,
+								headers: { 'Content-Type': 'application/json' }
+							}
+						)
+					);
+				}
+
+				if (
+					url &&
+					previewType === 'aiConsultant' &&
+					url.indexOf(
+						'/api/v1/ai-consultant/' + previewKey + '/messages'
+					) !== -1 &&
+					method === 'POST'
+				) {
+					var requestId = '00000000-0000-4000-8000-000000000000';
+
+					try {
+						var requestBody = JSON.parse((init && init.body) || '{}');
+						requestId = requestBody.requestId || requestId;
+					} catch (e) {}
+
+					return Promise.resolve(
+						new Response(
+							JSON.stringify({
+								requestId: requestId,
+								outcome: 'ANSWER',
+								reply:
+									'Это визуальный предпросмотр. Проверьте ответы по сохранённой инструкции во вкладке «Тест».'
+							}),
+							{
+								status: 200,
+								headers: { 'Content-Type': 'application/json' }
+							}
+						)
+					);
 				}
 
 				if (
@@ -1470,7 +1569,7 @@ const getTypeLabel = (type: PreviewType) => {
 	if (type === 'quiz') return 'Квиз'
 	if (type === 'callback') return 'Звонок'
 	if (type === 'stopOffer') return 'Стоп-оффер'
-	if (type === 'onlineConsultant') return 'Онлайн-консультант'
+	if (type === 'aiConsultant') return 'AI-консультант'
 	if (type === 'calculator') return 'Калькулятор'
 
 	return 'Таймер'

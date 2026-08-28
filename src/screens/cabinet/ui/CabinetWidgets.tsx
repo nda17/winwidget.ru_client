@@ -15,8 +15,8 @@ import { calculatorService } from '@/entities/site-widget'
 import { Calculator } from '@/entities/site-widget'
 import { countdownTimerService } from '@/entities/site-widget'
 import { CountdownTimer } from '@/entities/site-widget'
-import { onlineConsultantService } from '@/entities/site-widget'
-import { OnlineConsultant } from '@/entities/site-widget'
+import { aiConsultantService } from '@/entities/site-widget'
+import { AiConsultant } from '@/entities/site-widget'
 import { quizService } from '@/entities/site-widget'
 import { Quiz } from '@/entities/site-widget'
 import { stopOfferService } from '@/entities/site-widget'
@@ -40,7 +40,7 @@ type ListItem =
 	| { kind: 'callback'; item: Callback }
 	| { kind: 'timer'; item: CountdownTimer }
 	| { kind: 'stop-offer'; item: StopOffer }
-	| { kind: 'online-consultant'; item: OnlineConsultant }
+	| { kind: 'ai-consultant'; item: AiConsultant }
 	| { kind: 'calculator'; item: Calculator }
 
 const CabinetWidgets = () => {
@@ -84,14 +84,12 @@ const CabinetWidgets = () => {
 		enabled: !!auth
 	})
 
-	const {
-		data: onlineConsultantsData,
-		isLoading: onlineConsultantsLoading
-	} = useQuery({
-		queryKey: ['online-consultants'],
-		queryFn: onlineConsultantService.getMyOnlineConsultants,
-		enabled: !!auth
-	})
+	const { data: aiConsultantsData, isLoading: aiConsultantsLoading } =
+		useQuery({
+			queryKey: ['ai-consultants'],
+			queryFn: aiConsultantService.getMyAiConsultants,
+			enabled: !!auth
+		})
 
 	const { data: calculatorsData, isLoading: calculatorsLoading } =
 		useQuery({
@@ -106,7 +104,7 @@ const CabinetWidgets = () => {
 		callbacksData?.subscription ||
 		timersData?.subscription ||
 		stopOffersData?.subscription ||
-		onlineConsultantsData?.subscription ||
+		aiConsultantsData?.subscription ||
 		calculatorsData?.subscription
 
 	const allItems: ListItem[] = [
@@ -130,8 +128,8 @@ const CabinetWidgets = () => {
 			kind: 'stop-offer' as const,
 			item: s
 		})),
-		...(onlineConsultantsData?.onlineConsultants || []).map(c => ({
-			kind: 'online-consultant' as const,
+		...(aiConsultantsData?.aiConsultants || []).map(c => ({
+			kind: 'ai-consultant' as const,
 			item: c
 		})),
 		...(calculatorsData?.calculators || []).map(calculator => ({
@@ -152,7 +150,7 @@ const CabinetWidgets = () => {
 				callbacksLoading ||
 				timersLoading ||
 				stopOffersLoading ||
-				onlineConsultantsLoading ||
+				aiConsultantsLoading ||
 				calculatorsLoading))
 
 	const createMutation = useMutation({
@@ -164,10 +162,8 @@ const CabinetWidgets = () => {
 				return countdownTimerService.createCountdownTimer('Таймер')
 			if (typeId === 'stop-offer')
 				return stopOfferService.createStopOffer('Стоп-оффер')
-			if (typeId === 'online-consultant')
-				return onlineConsultantService.createOnlineConsultant(
-					'Онлайн-консультант'
-				)
+			if (typeId === 'ai-consultant')
+				return aiConsultantService.createAiConsultant('AI-консультант')
 			if (typeId === 'calculator')
 				return calculatorService.createCalculator('Калькулятор стоимости')
 			const names: Record<string, string> = {
@@ -188,8 +184,8 @@ const CabinetWidgets = () => {
 								? ['countdown-timers']
 								: typeId === 'stop-offer'
 									? ['stop-offers']
-									: typeId === 'online-consultant'
-										? ['online-consultants']
+									: typeId === 'ai-consultant'
+										? ['ai-consultants']
 										: typeId === 'calculator'
 											? ['calculators']
 											: ['widgets']
@@ -292,13 +288,12 @@ const CabinetWidgets = () => {
 		}
 	})
 
-	const deleteOnlineConsultantMutation = useMutation({
-		mutationFn: (id: string) =>
-			onlineConsultantService.deleteOnlineConsultant(id),
+	const deleteAiConsultantMutation = useMutation({
+		mutationFn: (id: string) => aiConsultantService.deleteAiConsultant(id),
 		onMutate: () =>
 			toast.loading('Удаляем виджет, пожалуйста подождите...'),
 		onSuccess: (_, __, toastId) => {
-			queryClient.invalidateQueries({ queryKey: ['online-consultants'] })
+			queryClient.invalidateQueries({ queryKey: ['ai-consultants'] })
 			setConfirmDeleteId(null)
 			toast.success('Виджет удалён', { id: toastId })
 		},
@@ -405,16 +400,21 @@ const CabinetWidgets = () => {
 		}
 	})
 
-	const toggleOnlineConsultantMutation = useMutation({
+	const toggleAiConsultantMutation = useMutation({
 		mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-			onlineConsultantService.updateOnlineConsultant(id, { isActive }),
+			aiConsultantService.updateAiConsultant(id, { isActive }),
 		onMutate: ({ isActive }) =>
 			toast.loading(
 				isActive ? 'Включаем виджет...' : 'Отключаем виджет...'
 			),
-		onSuccess: (_, __, toastId) => {
-			queryClient.invalidateQueries({ queryKey: ['online-consultants'] })
-			toast.dismiss(toastId)
+		onSuccess: (_, variables, toastId) => {
+			queryClient.invalidateQueries({ queryKey: ['ai-consultants'] })
+			toast.success(
+				variables.isActive
+					? 'AI-консультант включён'
+					: 'AI-консультант отключён',
+				{ id: toastId }
+			)
 		},
 		onError: (e: any, __, toastId) => {
 			toast.error(e?.response?.data?.message || 'Ошибка', { id: toastId })
@@ -486,7 +486,7 @@ const CabinetWidgets = () => {
 							</p>
 							<p className={styles.limitBannerText}>
 								7-дневный период тест-драйва истёк. Виджеты больше не
-								принимают новые заявки.
+								работают на сайтах.
 							</p>
 						</div>
 					</div>
@@ -504,8 +504,8 @@ const CabinetWidgets = () => {
 								Лимит заявок исчерпан
 							</p>
 							<p className={styles.limitBannerText}>
-								Виджеты больше не принимают новые заявки. Перейдите на
-								другой тариф, чтобы продолжить сбор заявок.
+								Виджеты, которые собирают заявки, приостановлены. Перейдите
+								на другой тариф, чтобы продолжить сбор заявок.
 							</p>
 						</div>
 					</div>
@@ -601,8 +601,8 @@ const CabinetWidgets = () => {
 												? deleteTimerMutation.isPending
 												: kind === 'stop-offer'
 													? deleteStopOfferMutation.isPending
-													: kind === 'online-consultant'
-														? deleteOnlineConsultantMutation.isPending
+													: kind === 'ai-consultant'
+														? deleteAiConsultantMutation.isPending
 														: deleteCalculatorMutation.isPending) &&
 								confirmDeleteId === item.id
 
@@ -631,7 +631,7 @@ const CabinetWidgets = () => {
 														'Виджет не работает, пока подписка не активна.',
 													className: styles.widgetStatusBlocked
 												}
-											: isLeadLimitReached
+											: kind !== 'ai-consultant' && isLeadLimitReached
 												? {
 														label: 'Лимит заявок',
 														description:
@@ -674,8 +674,8 @@ const CabinetWidgets = () => {
 												? `${publicSiteUrl}/page-timer/${item.publicKey}`
 												: kind === 'stop-offer'
 													? `${publicSiteUrl}/page-stop-offer/${item.publicKey}`
-													: kind === 'online-consultant'
-														? `${publicSiteUrl}/page-online-consultant/${item.publicKey}`
+													: kind === 'ai-consultant'
+														? `${publicSiteUrl}/page-ai-consultant/${item.publicKey}`
 														: `${publicSiteUrl}/page-calculator/${item.publicKey}`
 
 							const leadsUrl =
@@ -689,9 +689,11 @@ const CabinetWidgets = () => {
 												? `/timers/${item.id}/leads`
 												: kind === 'stop-offer'
 													? `/stop-offers/${item.id}/leads`
-													: kind === 'online-consultant'
-														? `/online-consultants/${item.id}/leads`
+													: kind === 'ai-consultant'
+														? null
 														: `/calculators/${item.id}/leads`
+							const leadCount =
+								kind === 'ai-consultant' ? 0 : item._count?.leads || 0
 
 							return (
 								<div
@@ -726,8 +728,8 @@ const CabinetWidgets = () => {
 													id: item.id,
 													isActive: !item.isActive
 												})
-											} else if (kind === 'online-consultant') {
-												toggleOnlineConsultantMutation.mutate({
+											} else if (kind === 'ai-consultant') {
+												toggleAiConsultantMutation.mutate({
 													id: item.id,
 													isActive: !item.isActive
 												})
@@ -768,8 +770,8 @@ const CabinetWidgets = () => {
 																? 'Таймер'
 																: kind === 'stop-offer'
 																	? 'Стоп-оффер'
-																	: kind === 'online-consultant'
-																		? 'Онлайн-консультант'
+																	: kind === 'ai-consultant'
+																		? 'AI-консультант'
 																		: 'Калькулятор'}
 											</span>
 										</div>
@@ -816,14 +818,16 @@ const CabinetWidgets = () => {
 											<ExternalLinkIcon size={17} /> прямая ссылка
 										</a>
 
-										<a href={leadsUrl} className={styles.actionBtn}>
-											<FileListIcon size={17} /> заявки
-											{item._count?.leads ? (
-												<span className={styles.leadsCountBadge}>
-													{item._count.leads}
-												</span>
-											) : null}
-										</a>
+										{leadsUrl && (
+											<a href={leadsUrl} className={styles.actionBtn}>
+												<FileListIcon size={17} /> заявки
+												{leadCount > 0 && (
+													<span className={styles.leadsCountBadge}>
+														{leadCount}
+													</span>
+												)}
+											</a>
+										)}
 
 										<button
 											className={styles.actionBtn}
@@ -849,10 +853,8 @@ const CabinetWidgets = () => {
 															deleteTimerMutation.mutate(item.id)
 														} else if (kind === 'stop-offer') {
 															deleteStopOfferMutation.mutate(item.id)
-														} else if (kind === 'online-consultant') {
-															deleteOnlineConsultantMutation.mutate(
-																item.id
-															)
+														} else if (kind === 'ai-consultant') {
+															deleteAiConsultantMutation.mutate(item.id)
 														} else {
 															deleteCalculatorMutation.mutate(item.id)
 														}
@@ -892,7 +894,7 @@ const CabinetWidgets = () => {
 								У вас пока нет виджетов
 							</p>
 							<p className={styles.emptyWidgetText}>
-								Создайте первый виджет, чтобы начать сбор заявок.
+								Создайте первый виджет и настройте его для своего сайта.
 							</p>
 						</div>
 					)}

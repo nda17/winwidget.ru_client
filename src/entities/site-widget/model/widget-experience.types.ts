@@ -4,7 +4,7 @@ export type WidgetExperienceType =
 	| 'callback'
 	| 'timer'
 	| 'stop-offer'
-	| 'online-consultant'
+	| 'ai-consultant'
 	| 'calculator'
 
 export type WidgetPublicationStatus =

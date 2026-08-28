@@ -9,7 +9,7 @@ import {
 	calculatorService,
 	callbackService,
 	countdownTimerService,
-	onlineConsultantService,
+	aiConsultantService,
 	quizService,
 	stopOfferService,
 	widgetExperienceService,
@@ -19,7 +19,7 @@ import type {
 	Calculator,
 	Callback,
 	CountdownTimer,
-	OnlineConsultant,
+	AiConsultant,
 	Quiz,
 	StopOffer,
 	Widget,
@@ -30,7 +30,7 @@ import {
 	CalculatorSettingsModal,
 	CallbackSettingsModal,
 	CountdownTimerSettingsModal,
-	OnlineConsultantSettingsModal,
+	AiConsultantSettingsModal,
 	QuizSettingsModal,
 	StopOfferSettingsModal,
 	WheelSettingsModal
@@ -59,7 +59,7 @@ const WIDGET_SETTINGS_TYPES = [
 	'callback',
 	'timer',
 	'stop-offer',
-	'online-consultant',
+	'ai-consultant',
 	'calculator'
 ] as const
 const DESKTOP_SETTINGS_MEDIA_QUERY = '(min-width: 1101px)'
@@ -95,8 +95,8 @@ type WidgetSettingsSelection = WidgetSettingsAccess &
 				entity: StopOffer
 		  }
 		| {
-				type: 'online-consultant'
-				entity: OnlineConsultant
+				type: 'ai-consultant'
+				entity: AiConsultant
 		  }
 		| {
 				type: 'calculator'
@@ -195,17 +195,17 @@ const WIDGET_SETTINGS_SOURCES: Record<
 				: null
 		}
 	},
-	'online-consultant': {
-		ownerQueryKey: 'online-consultants',
+	'ai-consultant': {
+		ownerQueryKey: 'ai-consultants',
 		load: async id => {
-			const data = await onlineConsultantService.getMyOnlineConsultants()
-			const entity = data.onlineConsultants.find(
+			const data = await aiConsultantService.getMyAiConsultants()
+			const entity = data.aiConsultants.find(
 				consultant => consultant.id === id
 			)
 
 			return entity
 				? {
-						type: 'online-consultant',
+						type: 'ai-consultant',
 						entity,
 						...getSubscriptionAccess(data.subscription)
 					}
@@ -240,7 +240,7 @@ const ADMIN_WIDGET_TYPE_BY_SETTINGS_TYPE: Record<
 	callback: 'CALLBACK',
 	timer: 'TIMER',
 	'stop-offer': 'STOP_OFFER',
-	'online-consultant': 'ONLINE_CONSULTANT',
+	'ai-consultant': 'AI_CONSULTANT',
 	calculator: 'CALCULATOR'
 }
 
@@ -264,9 +264,9 @@ const toAdminSelection = (
 			return { type: 'timer', entity: details.entity, ...access }
 		case 'STOP_OFFER':
 			return { type: 'stop-offer', entity: details.entity, ...access }
-		case 'ONLINE_CONSULTANT':
+		case 'AI_CONSULTANT':
 			return {
-				type: 'online-consultant',
+				type: 'ai-consultant',
 				entity: details.entity,
 				...access
 			}
@@ -1222,11 +1222,11 @@ const renderWidgetEditor = ({
 					previewPortalTarget={previewPortalTarget}
 				/>
 			)
-		case 'online-consultant':
+		case 'ai-consultant':
 			return (
-				<OnlineConsultantSettingsModal
+				<AiConsultantSettingsModal
 					key={editorResetKey}
-					onlineConsultant={selection.entity}
+					aiConsultant={selection.entity}
 					canUseCustomButtonImage={canUseCustomButtonImage}
 					onClose={onClose}
 					onSaved={onSaved}
@@ -1242,7 +1242,7 @@ const renderWidgetEditor = ({
 									update: payload =>
 										adminWidgetsService
 											.update(
-												'ONLINE_CONSULTANT',
+												'AI_CONSULTANT',
 												selection.entity.id,
 												payload
 											)
@@ -1250,7 +1250,7 @@ const renderWidgetEditor = ({
 									uploadButtonImage: file =>
 										adminWidgetsService
 											.uploadButtonImage(
-												'ONLINE_CONSULTANT',
+												'AI_CONSULTANT',
 												selection.entity.id,
 												file
 											)

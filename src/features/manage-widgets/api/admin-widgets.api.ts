@@ -5,7 +5,7 @@ import type {
 	Calculator,
 	Callback,
 	CountdownTimer,
-	OnlineConsultant,
+	AiConsultant,
 	Quiz,
 	StopOffer,
 	Widget,
@@ -22,7 +22,7 @@ export type AdminWidgetType =
 	| 'CALLBACK'
 	| 'TIMER'
 	| 'STOP_OFFER'
-	| 'ONLINE_CONSULTANT'
+	| 'AI_CONSULTANT'
 	| 'CALCULATOR'
 export type AdminWidgetActiveFilter = 'true' | 'false'
 export type AdminWidgetPlanFilter = Plan | 'NONE'
@@ -71,7 +71,7 @@ export interface AdminWidgetEntityMap {
 	CALLBACK: Callback
 	TIMER: CountdownTimer
 	STOP_OFFER: StopOffer
-	ONLINE_CONSULTANT: OnlineConsultant
+	AI_CONSULTANT: AiConsultant
 	CALCULATOR: Calculator
 }
 

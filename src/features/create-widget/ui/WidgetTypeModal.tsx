@@ -251,7 +251,7 @@ const StopOfferIcon = () => (
 	</svg>
 )
 
-const OnlineConsultantIcon = () => (
+const AiConsultantIcon = () => (
 	<svg
 		width="72"
 		height="72"
@@ -369,11 +369,11 @@ const WIDGET_TYPES: WidgetType[] = [
 		available: true
 	},
 	{
-		id: 'online-consultant',
-		name: 'Онлайн-консультант',
+		id: 'ai-consultant',
+		name: 'AI-консультант',
 		description:
-			'Показывает быстрые кнопки для популярных вопросов и при необходимости собирает контакт.',
-		icon: <OnlineConsultantIcon />,
+			'Отвечает посетителям по вашей текстовой инструкции и честно сообщает, когда информации недостаточно.',
+		icon: <AiConsultantIcon />,
 		available: true
 	},
 	{

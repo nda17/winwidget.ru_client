@@ -57,7 +57,7 @@ const PREVIEW_OPTIONS: Array<{
 	{ value: 'quiz', label: 'Квиз' },
 	{ value: 'callback', label: 'Звонок' },
 	{ value: 'timer', label: 'Таймер' },
-	{ value: 'onlineConsultant', label: 'Онлайн-консультант' },
+	{ value: 'aiConsultant', label: 'AI-консультант' },
 	{ value: 'stopOffer', label: 'Стоп-оффер' },
 	{ value: 'calculator', label: 'Калькулятор' },
 	{ value: 'none', label: 'Без превью' }
@@ -1486,7 +1486,7 @@ const HomeContentEditor = ({
 								['quiz', 'Облако квиза'],
 								['callback', 'Облако звонка'],
 								['countdown', 'Облако таймера'],
-								['onlineConsultant', 'Облако онлайн-консультанта'],
+								['aiConsultant', 'Облако AI-консультанта'],
 								['stopOffer', 'Облако стоп-оффера'],
 								['calculator', 'Облако калькулятора']
 							] as const

@@ -1,0 +1,198 @@
+.overlay {
+	@apply fixed inset-0 z-[9999] flex items-end justify-end p-5 font-sans;
+	@apply bg-black/30 backdrop-blur-[2px];
+}
+
+.backdrop {
+	@apply absolute inset-0 cursor-default border-0 bg-transparent p-0;
+}
+
+.chat {
+	@apply relative z-[1] flex h-[560px] max-h-[calc(100svh-2.5rem)] w-[380px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-[22px] bg-white;
+	@apply shadow-[0_24px_70px_rgba(18,8,38,0.34)];
+}
+
+.header {
+	@apply flex min-h-[78px] shrink-0 items-center gap-3 bg-gradient-to-r from-[#4b1672] via-[#8e2b82] to-[#ef4e34] px-4 py-3 text-white;
+}
+
+.avatar {
+	@apply relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/20 text-lg font-extrabold ring-1 ring-white/30;
+}
+
+.operator {
+	@apply min-w-0 flex-1;
+}
+
+.operatorNameRow {
+	@apply flex flex-wrap items-center gap-2;
+}
+
+.operatorNameRow h2 {
+	@apply m-0 text-[17px] font-bold leading-tight text-white;
+}
+
+.operator p {
+	@apply m-0 mt-1 text-xs text-white/75;
+}
+
+.aiBadge {
+	@apply rounded-full border border-white/25 bg-white/15 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.08em] text-white;
+}
+
+.closeButton {
+	@apply flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-white/10 p-2 text-white transition-colors duration-200;
+}
+
+.closeButton:hover {
+	@apply bg-white/20;
+}
+
+.closeButton svg {
+	@apply h-5 w-5 fill-none [stroke:currentColor] [stroke-linecap:round] [stroke-width:1.8];
+}
+
+.messages {
+	@apply flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto bg-[#f7f5fa] px-3.5 py-4;
+}
+
+.demoNotice {
+	@apply mx-auto mb-1 mt-0 rounded-full bg-[#ece7f2] px-3 py-1 text-center text-[10px] font-semibold text-[#857b8e];
+}
+
+.eventMessage {
+	@apply mx-auto flex max-w-[90%] items-center justify-center gap-1.5 text-center text-[10px] leading-[1.35] text-[#9991a0];
+}
+
+.eventMessage span {
+	@apply h-1.5 w-1.5 shrink-0 rounded-full bg-[#c6bdcc];
+}
+
+.operatorMessageRow,
+.typingRow {
+	@apply flex items-end gap-2 self-start;
+}
+
+.visitorMessageRow {
+	@apply flex max-w-[84%] self-end;
+}
+
+.messageAvatar {
+	@apply flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#ef4e34] text-[10px] font-extrabold text-white;
+}
+
+.messageBody {
+	@apply max-w-[280px];
+}
+
+.messageAuthor {
+	@apply mb-1 block pl-1 text-[10px] font-semibold text-[#817589];
+}
+
+.messageBody p {
+	@apply m-0 whitespace-pre-wrap rounded-[16px_16px_16px_5px] bg-white px-3.5 py-2.5 text-[13px] leading-[1.45] text-[#302938] shadow-[0_3px_12px_rgba(37,22,50,0.08)];
+}
+
+.visitorMessageRow .messageBody p {
+	@apply rounded-[16px_16px_5px_16px] bg-[#7b3eb8] text-white shadow-[0_5px_14px_rgba(92,45,141,0.2)];
+}
+
+.typing {
+	@apply flex min-h-10 items-center gap-1 rounded-[15px_15px_15px_5px] bg-white px-3 py-2 shadow-[0_3px_12px_rgba(37,22,50,0.08)];
+}
+
+.typing span {
+	@apply h-1.5 w-1.5 animate-bounce rounded-full bg-[#9c90a5];
+}
+
+.typing span:nth-child(2) {
+	@apply [animation-delay:120ms];
+}
+
+.typing span:nth-child(3) {
+	@apply [animation-delay:240ms];
+}
+
+.typing b {
+	@apply ml-1 text-[10px] font-medium text-[#8b8191];
+}
+
+.quickQuestions {
+	@apply flex shrink-0 flex-wrap gap-1.5 border-t border-[#eee9f2] bg-white px-3 py-2.5;
+}
+
+.quickQuestions button {
+	@apply cursor-pointer rounded-full border border-[#d9c9e7] bg-[#faf8fc] px-2.5 py-1.5 text-[11px] font-semibold text-[#63318f] transition-colors duration-200;
+}
+
+.quickQuestions button:hover {
+	@apply border-[#aa78d2] bg-[#f3ebf9];
+}
+
+.composer {
+	@apply flex shrink-0 items-center gap-2 border-t border-[#eee9f2] bg-white px-3 py-3;
+}
+
+.composer input {
+	@apply h-11 min-w-0 flex-1 rounded-full border border-[#ddd4e4] bg-[#faf9fb] px-4 text-[13px] text-[#2e2734] outline-none transition-[border-color,box-shadow] duration-200;
+}
+
+.composer input:focus {
+	@apply border-[#9b58cc] shadow-[0_0_0_3px_rgba(155,88,204,0.12)];
+}
+
+.composer input:disabled {
+	@apply cursor-wait bg-[#f1eef3] text-[#958c9a];
+}
+
+.composer input::placeholder {
+	@apply text-[#a29aa7];
+}
+
+.composer button {
+	@apply flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-[#ef4e34] p-3 text-white transition-[opacity,transform] duration-200;
+	@apply shadow-[0_7px_18px_rgba(239,78,52,0.26)];
+}
+
+.composer button:hover:not(:disabled) {
+	@apply -translate-y-0.5;
+}
+
+.composer button:disabled {
+	@apply cursor-default opacity-35 shadow-none;
+}
+
+.composer button svg {
+	@apply h-5 w-5 fill-none [stroke:currentColor] [stroke-linecap:round] [stroke-linejoin:round] [stroke-width:1.7];
+}
+
+.footer {
+	@apply shrink-0 bg-white pb-2.5 text-center text-[10px] text-[#a097a6];
+}
+
+.footer a {
+	@apply font-semibold text-[#7b3eb8] no-underline;
+}
+
+@media (max-width: 520px) {
+	.overlay {
+		@apply items-end justify-center p-2;
+	}
+
+	.chat {
+		@apply h-[calc(100svh-1rem)] max-h-none w-full max-w-none rounded-[20px];
+		@apply pb-[max(0rem,env(safe-area-inset-bottom))];
+	}
+
+	.header {
+		@apply min-h-[72px] px-3.5;
+	}
+
+	.messages {
+		@apply px-3;
+	}
+
+	.messageBody p {
+		@apply text-[13px];
+	}
+}

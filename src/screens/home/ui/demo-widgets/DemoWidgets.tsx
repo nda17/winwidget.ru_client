@@ -5,7 +5,7 @@ import DemoWheel from '@/screens/home/ui/demo-wheel/DemoWheel'
 import DemoQuiz from '@/screens/home/ui/demo-quiz/DemoQuiz'
 import DemoCallback from '@/screens/home/ui/demo-callback/DemoCallback'
 import DemoCountdown from '@/screens/home/ui/demo-countdown/DemoCountdown'
-import DemoOnlineConsultant from '@/screens/home/ui/demo-online-consultant/DemoOnlineConsultant'
+import DemoAiConsultant from '@/screens/home/ui/demo-ai-consultant/DemoAiConsultant'
 import DemoStopOffer from '@/screens/home/ui/demo-stop-offer/DemoStopOffer'
 import DemoCalculator from '@/screens/home/ui/demo-calculator/DemoCalculator'
 import Image from 'next/image'
@@ -17,7 +17,7 @@ type ActiveDemo =
 	| 'quiz'
 	| 'callback'
 	| 'countdown'
-	| 'onlineConsultant'
+	| 'aiConsultant'
 	| 'stopOffer'
 	| 'calculator'
 
@@ -30,7 +30,7 @@ const DEMO_ORDER: ActiveDemo[] = [
 	'quiz',
 	'callback',
 	'countdown',
-	'onlineConsultant',
+	'aiConsultant',
 	'stopOffer',
 	'calculator'
 ]
@@ -51,7 +51,7 @@ const DemoWidgets = ({ content }: Props) => {
 	const [quizOpen, setQuizOpen] = useState(false)
 	const [callbackOpen, setCallbackOpen] = useState(false)
 	const [countdownOpen, setCountdownOpen] = useState(false)
-	const [onlineConsultantOpen, setOnlineConsultantOpen] = useState(false)
+	const [aiConsultantOpen, setAiConsultantOpen] = useState(false)
 	const [stopOfferOpen, setStopOfferOpen] = useState(false)
 	const [calculatorOpen, setCalculatorOpen] = useState(false)
 	const [bubbleVisible, setBubbleVisible] = useState(false)
@@ -117,8 +117,7 @@ const DemoWidgets = ({ content }: Props) => {
 		else if (activeDemo === 'quiz') setQuizOpen(true)
 		else if (activeDemo === 'callback') setCallbackOpen(true)
 		else if (activeDemo === 'countdown') setCountdownOpen(true)
-		else if (activeDemo === 'onlineConsultant')
-			setOnlineConsultantOpen(true)
+		else if (activeDemo === 'aiConsultant') setAiConsultantOpen(true)
 		else if (activeDemo === 'stopOffer') setStopOfferOpen(true)
 		else setCalculatorOpen(true)
 	}
@@ -176,14 +175,14 @@ const DemoWidgets = ({ content }: Props) => {
 			)
 		}
 
-		if (demo === 'onlineConsultant') {
+		if (demo === 'aiConsultant') {
 			return (
 				<Image
-					src="/images/tools/online-consultant-button.png"
+					src="/images/tools/ai-consultant-button.png"
 					alt=""
 					width={60}
 					height={60}
-					className={styles.floatIconOnlineConsultant}
+					className={styles.floatIconAiConsultant}
 					aria-hidden="true"
 				/>
 			)
@@ -251,8 +250,8 @@ const DemoWidgets = ({ content }: Props) => {
 									? 'Открыть демо обратного звонка'
 									: activeDemo === 'countdown'
 										? 'Открыть демо таймера обратного отсчёта'
-										: activeDemo === 'onlineConsultant'
-											? 'Открыть демо онлайн-консультанта'
+										: activeDemo === 'aiConsultant'
+											? 'Открыть демо AI-консультанта'
 											: activeDemo === 'stopOffer'
 												? 'Открыть демо стоп-оффера'
 												: 'Открыть демо калькулятора стоимости'
@@ -293,9 +292,9 @@ const DemoWidgets = ({ content }: Props) => {
 				open={countdownOpen}
 				onClose={() => setCountdownOpen(false)}
 			/>
-			<DemoOnlineConsultant
-				open={onlineConsultantOpen}
-				onClose={() => setOnlineConsultantOpen(false)}
+			<DemoAiConsultant
+				open={aiConsultantOpen}
+				onClose={() => setAiConsultantOpen(false)}
 			/>
 			<DemoStopOffer
 				open={stopOfferOpen}

@@ -9,7 +9,7 @@ const WIDGET_SETTINGS_TYPES: readonly WidgetSettingsType[] = [
 	'callback',
 	'timer',
 	'stop-offer',
-	'online-consultant',
+	'ai-consultant',
 	'calculator'
 ]
 

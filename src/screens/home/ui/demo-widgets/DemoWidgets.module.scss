@@ -156,9 +156,9 @@
 		drop-shadow(0 2px 8px rgba(0, 0, 0, 0.22));
 }
 
-/* Online consultant */
+/* AI consultant */
 
-.floatIconOnlineConsultant {
+.floatIconAiConsultant {
 	@apply block w-[60px] h-[60px] object-contain leading-none;
 	filter: drop-shadow(0 6px 24px rgba(239, 43, 23, 0.42))
 		drop-shadow(0 2px 8px rgba(0, 0, 0, 0.22));
@@ -217,7 +217,7 @@
 	.floatIconQuiz,
 	.floatIconCallback,
 	.floatIconTimer,
-	.floatIconOnlineConsultant,
+	.floatIconAiConsultant,
 	.floatIconStopOffer,
 	.floatIconCalculator {
 		@apply w-12 h-12;
@@ -238,7 +238,7 @@
 	.floatIconQuiz,
 	.floatIconCallback,
 	.floatIconTimer,
-	.floatIconOnlineConsultant,
+	.floatIconAiConsultant,
 	.floatIconStopOffer,
 	.floatIconCalculator {
 		@apply w-11 h-11;

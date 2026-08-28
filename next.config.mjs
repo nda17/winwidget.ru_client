@@ -34,8 +34,14 @@ const nextConfig = {
 			headers: widgetPreviewFrameHeaders
 		},
 		{
-			source: '/page-online-consultant/:path*',
-			headers: widgetPreviewFrameHeaders
+			source: '/page-ai-consultant/:path*',
+			headers: [
+				...widgetPreviewFrameHeaders,
+				{
+					key: 'X-Robots-Tag',
+					value: 'noindex, nofollow, noarchive'
+				}
+			]
 		},
 		{
 			source: '/page-calculator/:path*',

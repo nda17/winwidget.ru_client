@@ -36,10 +36,10 @@ const {
 
 const demoWidgetKeys = ['bubbleTexts', 'enabled']
 const bubbleTextKeys = [
+	'aiConsultant',
 	'calculator',
 	'callback',
 	'countdown',
-	'onlineConsultant',
 	'quiz',
 	'stopOffer',
 	'wheel'
@@ -52,6 +52,7 @@ test('legacy demo widget keys are removed from the normalized PATCH round trip',
 	}
 	legacyContent.demoWidgets.legacyMode = true
 	legacyContent.demoWidgets.bubbleTexts.legacyBubble = 'Legacy bubble'
+	legacyContent.tools.items[4].previewType = 'unsupportedPreview'
 
 	const normalized = normalizeHomePageContent(legacyContent)
 	const patchContent = {
@@ -71,6 +72,10 @@ test('legacy demo widget keys are removed from the normalized PATCH round trip',
 	assert.deepEqual(
 		Object.keys(structuredPatchContent.demoWidgets.bubbleTexts).sort(),
 		bubbleTextKeys
+	)
+	assert.equal(
+		structuredPatchContent.tools.items[4].previewType,
+		'aiConsultant'
 	)
 	assert.deepEqual(
 		normalizeHomePageContent(structuredPatchContent).demoWidgets,

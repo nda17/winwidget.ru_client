@@ -134,7 +134,13 @@ export type AdminUserOverviewWidgetType =
 	| 'CALLBACK'
 	| 'COUNTDOWN_TIMER'
 	| 'STOP_OFFER'
-	| 'ONLINE_CONSULTANT'
+	| 'AI_CONSULTANT'
+	| 'CALCULATOR'
+
+export type AdminUserOverviewLeadType = Exclude<
+	AdminUserOverviewWidgetType,
+	'AI_CONSULTANT'
+>
 
 export type AdminUserOverviewActivityRole = 'TARGET' | 'ADMIN'
 
@@ -160,6 +166,12 @@ export interface IAdminUserOverviewWidgetCount extends IAdminUserOverviewCount {
 	inactive: number
 }
 
+export interface IAdminUserOverviewLeadCount {
+	type: AdminUserOverviewLeadType
+	label: string
+	count: number
+}
+
 export interface IAdminUserOverviewWidget {
 	id: string
 	type: AdminUserOverviewWidgetType
@@ -173,7 +185,7 @@ export interface IAdminUserOverviewWidget {
 
 export interface IAdminUserOverviewLead {
 	id: string
-	type: AdminUserOverviewWidgetType
+	type: AdminUserOverviewLeadType
 	label: string
 	sourceName: string
 	contact: string | null
@@ -214,7 +226,7 @@ export interface IAdminUserOverview {
 	}
 	leads: {
 		total: number
-		byType: IAdminUserOverviewCount[]
+		byType: IAdminUserOverviewLeadCount[]
 		latest: IAdminUserOverviewLead[]
 	}
 	activity: {

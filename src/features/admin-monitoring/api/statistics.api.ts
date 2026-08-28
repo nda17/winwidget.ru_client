@@ -21,8 +21,13 @@ export type StatisticsWidgetType =
 	| 'callback'
 	| 'countdownTimer'
 	| 'stopOffer'
-	| 'onlineConsultant'
+	| 'aiConsultant'
 	| 'calculator'
+
+export type StatisticsLeadType = Exclude<
+	StatisticsWidgetType,
+	'aiConsultant'
+>
 
 export interface IStatisticsChartPoint {
 	label: string
@@ -41,7 +46,6 @@ export interface IStatisticsLeadDayPoint extends IStatisticsChartPoint {
 	callback: number
 	countdownTimer: number
 	stopOffer: number
-	onlineConsultant: number
 	calculator: number
 	total: number
 }
@@ -52,7 +56,7 @@ export interface IStatisticsCountPoint {
 }
 
 export interface IStatisticsLeadTypePoint extends IStatisticsCountPoint {
-	type: StatisticsWidgetType
+	type: StatisticsLeadType
 }
 
 export interface IStatisticsWidgetTypePoint {

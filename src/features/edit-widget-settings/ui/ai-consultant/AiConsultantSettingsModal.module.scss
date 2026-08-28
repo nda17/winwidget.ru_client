@@ -1,0 +1,61 @@
+.testChat {
+	@apply flex min-h-64 flex-col gap-3 rounded-2xl border border-[#e0d6f0] bg-[#f8f7fb] p-4;
+}
+
+.testEmpty {
+	@apply m-auto max-w-sm text-center text-sm leading-6 text-[#777];
+}
+
+.testMessage {
+	@apply max-w-[86%] rounded-2xl px-4 py-3 text-sm leading-6;
+}
+
+.testMessageUser {
+	@apply ml-auto bg-[#4705fb] text-white;
+}
+
+.testMessageAssistant {
+	@apply mr-auto border border-[#e0d6f0] bg-white text-[#1f2937];
+}
+
+.testMessageAuthor {
+	@apply mb-1 block text-[11px] font-bold text-current opacity-70;
+}
+
+.testOutcome {
+	@apply mt-2 block text-[10px] font-bold uppercase tracking-[0.08em] text-[#7b3fa0];
+}
+
+.testTyping {
+	@apply mr-auto rounded-2xl border border-[#e0d6f0] bg-white px-4 py-3 text-sm text-[#777];
+}
+
+.testForm {
+	@apply flex items-end gap-2;
+}
+
+.testInput {
+	@apply min-h-12 flex-1 resize-none;
+}
+
+.testActions {
+	@apply flex flex-wrap items-center justify-between gap-2;
+}
+
+.aiNotice {
+	@apply rounded-xl border border-[#ddd4ff] bg-[#f6f3ff] p-3 text-sm leading-6 text-[#514675];
+}
+
+.promptSecurityNotice {
+	@apply rounded-xl border border-[#f0c36d] bg-[#fff8e7] p-3 text-sm font-medium leading-6 text-[#704b00];
+}
+
+@media (max-width: 600px) {
+	.testMessage {
+		@apply max-w-[94%];
+	}
+
+	.testForm {
+		@apply flex-col items-stretch;
+	}
+}

@@ -35,7 +35,7 @@ const TYPE_LABELS: Record<AdminWidgetType, string> = {
 	CALLBACK: 'Обратный звонок',
 	TIMER: 'Таймер',
 	STOP_OFFER: 'Стоп-оффер',
-	ONLINE_CONSULTANT: 'Онлайн-консультант',
+	AI_CONSULTANT: 'AI-консультант',
 	CALCULATOR: 'Калькулятор'
 }
 
@@ -45,7 +45,7 @@ const SETTINGS_SLUG_BY_TYPE: Record<AdminWidgetType, string> = {
 	CALLBACK: 'callback',
 	TIMER: 'timer',
 	STOP_OFFER: 'stop-offer',
-	ONLINE_CONSULTANT: 'online-consultant',
+	AI_CONSULTANT: 'ai-consultant',
 	CALCULATOR: 'calculator'
 }
 
@@ -89,7 +89,7 @@ const TYPE_FILTER_OPTIONS: Array<{
 	{ value: 'CALLBACK', label: TYPE_LABELS.CALLBACK },
 	{ value: 'TIMER', label: TYPE_LABELS.TIMER },
 	{ value: 'STOP_OFFER', label: TYPE_LABELS.STOP_OFFER },
-	{ value: 'ONLINE_CONSULTANT', label: TYPE_LABELS.ONLINE_CONSULTANT },
+	{ value: 'AI_CONSULTANT', label: TYPE_LABELS.AI_CONSULTANT },
 	{ value: 'CALCULATOR', label: TYPE_LABELS.CALCULATOR }
 ]
 
@@ -251,9 +251,12 @@ const AdminWidgets: NextPage = () => {
 			queryClient.invalidateQueries({
 				queryKey: ['admin-widgets-monitoring']
 			})
-			toast.success('Виджет и связанные заявки удалены', {
-				id: context.toastId
-			})
+			toast.success(
+				response.type === 'AI_CONSULTANT'
+					? 'AI-консультант удалён'
+					: 'Виджет и связанные заявки удалены',
+				{ id: context.toastId }
+			)
 		},
 		onError: (error, _, context) => {
 			toast.error(errorCatch(error) || 'Не удалось удалить виджет', {
@@ -362,7 +365,11 @@ const AdminWidgets: NextPage = () => {
 			{deleteTarget && (
 				<ConfirmDialog
 					title="Удалить пользовательский виджет?"
-					message={`Тип: ${TYPE_LABELS[deleteTarget.type]}. Название: «${deleteTarget.name}». Владелец: ${formatDeleteOwner(deleteTarget)}. Виджет и все связанные с ним заявки будут удалены без возможности восстановления.`}
+					message={`Тип: ${TYPE_LABELS[deleteTarget.type]}. Название: «${deleteTarget.name}». Владелец: ${formatDeleteOwner(deleteTarget)}. ${
+						deleteTarget.type === 'AI_CONSULTANT'
+							? 'Виджет будет удалён без возможности восстановления.'
+							: 'Виджет и все связанные с ним заявки будут удалены без возможности восстановления.'
+					}`}
 					confirmLabel="Удалить виджет"
 					cancelLabel="Отмена"
 					confirmDisabled={isDeletePending(deleteTarget)}
@@ -378,7 +385,7 @@ const AdminWidgets: NextPage = () => {
 				title="Мониторинг и управление виджетами"
 				description="Показывает все виджеты пользователей, позволяет изменять их настройки и активность, а суперпользователям ADMIN и DEV — удалять виджеты."
 				risk="high"
-				riskText="Сохранённые настройки становятся черновиком и влияют на рабочий виджет только после публикации. Включение, отключение и удаление применяются сразу; удаление необратимо и также удаляет связанные заявки."
+				riskText="Сохранённые настройки становятся черновиком и влияют на рабочий виджет только после публикации. Включение, отключение и удаление применяются сразу; удаление необратимо и удаляет связанные заявки там, где они собираются."
 			/>
 
 			<form className={styles.filters} onSubmit={applyFilters}>
@@ -535,7 +542,9 @@ const AdminWidgets: NextPage = () => {
 											<div className={styles.cardRow}>
 												<span className={styles.cardLabel}>Заявки</span>
 												<span className={styles.cardValue}>
-													{item.leadCount}
+													{item.type === 'AI_CONSULTANT'
+														? 'Не собираются'
+														: item.leadCount}
 												</span>
 											</div>
 											<div className={styles.cardRow}>
@@ -543,7 +552,9 @@ const AdminWidgets: NextPage = () => {
 													Последняя заявка
 												</span>
 												<span className={styles.cardValue}>
-													{formatOptionalDateTime(item.lastLeadAt)}
+													{item.type === 'AI_CONSULTANT'
+														? '—'
+														: formatOptionalDateTime(item.lastLeadAt)}
 												</span>
 											</div>
 											<div className={styles.cardRow}>
@@ -645,9 +656,15 @@ const AdminWidgets: NextPage = () => {
 														</div>
 													</td>
 													<td>{renderStatus(item)}</td>
-													<td>{item.leadCount}</td>
 													<td>
-														{formatOptionalDateTime(item.lastLeadAt)}
+														{item.type === 'AI_CONSULTANT'
+															? 'Не собираются'
+															: item.leadCount}
+													</td>
+													<td>
+														{item.type === 'AI_CONSULTANT'
+															? '—'
+															: formatOptionalDateTime(item.lastLeadAt)}
 													</td>
 													<td>
 														<div className={styles.widgetCell}>

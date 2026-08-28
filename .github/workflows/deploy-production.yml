@@ -56,6 +56,9 @@ jobs:
       - name: Verify production auth settings contract
         run: node scripts/verify-auth-settings-contract.mjs
 
+      - name: Verify AI consultant contract
+        run: pnpm test:ai-consultant
+
       - name: Type check
         run: pnpm exec tsc --noEmit
 

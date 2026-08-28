@@ -76,25 +76,32 @@ const StopOfferPreview = () => (
 	</div>
 )
 
-const OnlineConsultantPreview = () => (
-	<div className={styles.onlineConsultantPreview}>
-		<div className={styles.onlineConsultantModal}>
-			<div className={styles.onlineConsultantTitle} />
-			<div className={styles.onlineConsultantText} />
-			<div className={styles.onlineConsultantGrid}>
-				<span />
+const AiConsultantPreview = () => (
+	<div className={styles.aiConsultantPreview}>
+		<div className={styles.aiConsultantModal}>
+			<div className={styles.aiConsultantHeader}>
+				<span className={styles.aiConsultantAvatar}>A</span>
+				<div>
+					<strong>Alex</strong>
+					<span>AI-оператор</span>
+				</div>
+			</div>
+			<p className={styles.aiConsultantEvent}>Alex присоединился к чату</p>
+			<p className={styles.aiConsultantMessage}>
+				Готов ответить на ваши вопросы
+			</p>
+			<div className={styles.aiConsultantTyping} aria-hidden="true">
 				<span />
 				<span />
 				<span />
 			</div>
-			<div className={styles.onlineConsultantAnswer} />
 		</div>
 		<Image
-			src="/images/tools/online-consultant-button.png"
-			alt="Превью кнопки онлайн-консультанта Winwidget"
+			src="/images/tools/ai-consultant-button.png"
+			alt="Превью кнопки AI-консультанта Winwidget"
 			width={320}
 			height={320}
-			className={styles.onlineConsultantButton}
+			className={styles.aiConsultantButton}
 			sizes="(max-width: 560px) 68px, 78px"
 		/>
 	</div>
@@ -144,8 +151,7 @@ const getPreview = (tool: HomePageToolItem) => {
 	if (tool.previewType === 'quiz') return <QuizPreview />
 	if (tool.previewType === 'callback') return <CallbackPreview />
 	if (tool.previewType === 'timer') return <TimerPreview />
-	if (tool.previewType === 'onlineConsultant')
-		return <OnlineConsultantPreview />
+	if (tool.previewType === 'aiConsultant') return <AiConsultantPreview />
 	if (tool.previewType === 'stopOffer') return <StopOfferPreview />
 	if (
 		tool.previewType === 'calculator' ||

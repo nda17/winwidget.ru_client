@@ -98,7 +98,7 @@ test('sandbox warms the widget origin, runtime and only required phone helpers',
 	)
 	assert.match(
 		previewSource,
-		/type === 'onlineConsultant'[\s\S]*?\? ''[\s\S]*?winwidget-phone\.js[\s\S]*?libphonenumber-min\.js/
+		/type === 'aiConsultant'[\s\S]*?\? ''[\s\S]*?winwidget-phone\.js[\s\S]*?libphonenumber-min\.js/
 	)
 })
 
@@ -124,10 +124,10 @@ test('every widget runtime maps to its exact script, host and visible surface', 
 			'#wso-overlay'
 		],
 		[
-			'onlineConsultant',
-			'online-consultant.js',
-			'online-consultant-widget-host',
-			'#woc-overlay.woc-overlay-open'
+			'aiConsultant',
+			'ai-consultant.js',
+			'ai-consultant-widget-host',
+			'#waic-overlay.waic-overlay-open'
 		],
 		[
 			'calculator',
@@ -155,6 +155,42 @@ test('every widget runtime maps to its exact script, host and visible surface', 
 		/supportsLauncherPreview = props\.type !== 'stopOffer'/
 	)
 	assert.match(previewSource, /\{supportsLauncherPreview && \(/)
+})
+
+test('AI consultant preview exposes only public config and complete JSON replies', () => {
+	const aiConfigBranch = previewSource.slice(
+		previewSource.indexOf("if (props.type === 'aiConsultant')"),
+		previewSource.indexOf(
+			"const dataType = getDataType(props.config.dataType, 'NONE')"
+		)
+	)
+	const aiMessageMock = previewSource.slice(
+		previewSource.indexOf("previewType === 'aiConsultant'"),
+		previewSource.indexOf("url.indexOf('/' + previewKey + '/lead')")
+	)
+
+	assert.ok(aiConfigBranch)
+	assert.match(aiConfigBranch, /operatorName:/)
+	assert.match(aiConfigBranch, /greeting:/)
+	assert.match(aiConfigBranch, /inactivityTimeoutMinutes:/)
+	assert.match(aiConfigBranch, /farewellMessage:/)
+	assert.match(aiConfigBranch, /turnstileSiteKey: 'preview-site-key'/)
+	assert.match(aiConfigBranch, /turnstileAction: 'ai-consultant-session'/)
+	assert.doesNotMatch(aiConfigBranch, /instructionsPrompt/)
+
+	assert.ok(aiMessageMock)
+	assert.match(previewSource, /window\.turnstile = \{/)
+	assert.match(previewSource, /preview-turnstile-token/)
+	assert.match(aiMessageMock, /\/api\/v1\/ai-consultant\/.*?\/session/)
+	assert.match(aiMessageMock, /sessionToken: 'preview-session-token'/)
+	assert.match(aiMessageMock, /\/api\/v1\/ai-consultant\/.*?\/messages/)
+	assert.match(aiMessageMock, /outcome: 'ANSWER'/)
+	assert.match(aiMessageMock, /reply:/)
+	assert.doesNotMatch(
+		aiMessageMock,
+		/ReadableStream|EventSource|text\/event-stream/
+	)
+	assert.doesNotMatch(previewSource, /winwidgetAiConsultantAutoOpen/)
 })
 
 test('responsive viewport height is independent from scaled iframe content', () => {
@@ -211,7 +247,7 @@ test('widget settings loading state uses shared structural skeletons', () => {
 		'callback',
 		'timer',
 		'stop-offer',
-		'online-consultant',
+		'ai-consultant',
 		'calculator'
 	]) {
 		assert.ok(widgetSettingsSource.includes(`'${type}'`))

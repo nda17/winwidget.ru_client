@@ -1,6 +1,5 @@
 export { default as CallbackLeads } from './ui/CallbackLeads'
 export { default as CountdownTimerLeads } from './ui/CountdownTimerLeads'
-export { default as OnlineConsultantLeads } from './ui/OnlineConsultantLeads'
 export { default as QuizLeads } from './ui/QuizLeads'
 export { default as StopOfferLeads } from './ui/StopOfferLeads'
 export { default as WidgetLeads } from './ui/WidgetLeads'
