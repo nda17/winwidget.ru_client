@@ -20,7 +20,6 @@ import {
 } from 'react'
 import toast from 'react-hot-toast'
 import ActionTooltip from '../shared/ActionTooltip'
-import DirectLinkQr from '../shared/DirectLinkQr'
 import useWidgetSettingsCloseGuard from '../shared/useWidgetSettingsCloseGuard'
 import {
 	findInvalidWidgetColor,
@@ -625,14 +624,7 @@ const AiConsultantSettingsModal = ({
 		toast.success('Тестовый чат очищен')
 	}
 
-	const publicSiteUrl = (
-		process.env.NEXT_PUBLIC_SITE_URL ||
-		(process.env.NEXT_PUBLIC_MODE === 'production'
-			? 'https://winwidget.ru'
-			: 'http://localhost:3000')
-	).replace(/\/$/, '')
 	const embedCode = `<script src="${WIDGETS_HOST}/widgets/ai-consultant.js" data-key="${aiConsultant.publicKey}" async></script>`
-	const previewUrl = `${publicSiteUrl}/page-ai-consultant/${aiConsultant.publicKey}`
 	const savedInstallDomain = (
 		JSON.parse(savedSnapshot) as { installDomain: string }
 	).installDomain
@@ -1282,27 +1274,47 @@ const AiConsultantSettingsModal = ({
 									Установка на сайт
 								</h3>
 								<div className={styles.field}>
-									<p className={styles.label}>Домен установки</p>
+									<label
+										className={styles.label}
+										htmlFor={`${titleId}-install-domain`}
+									>
+										Домен установки
+									</label>
 									<input
+										id={`${titleId}-install-domain`}
 										className={styles.input}
 										value={installDomain}
-										placeholder="example.com"
+										placeholder="site.ru"
 										onChange={event =>
 											setInstallDomain(event.target.value)
 										}
 									/>
 									<p className={styles.domainHint}>
 										Укажите точный hostname сайта, включая www или
-										поддомен. Без сохранённого домена виджет работает
-										только по прямой ссылке. Если на сайте настроен CSP,
-										разрешите {WIDGETS_HOST} в script-src, connect-src и
-										img-src, а домен вашей картинки кнопки — в img-src. Для
-										https://challenges.cloudflare.com разрешите script-src,
-										frame-src и connect-src. При style-src с nonce добавьте
-										тот же nonce в тег установки: виджет перенесёт его во
-										внутренние стили.
+										поддомен. Без сохранённого домена AI-консультант не
+										будет работать на сайте.
 									</p>
 								</div>
+								<details className={styles.optionalDetails}>
+									<summary className={styles.optionalSummary}>
+										Настройки CSP
+									</summary>
+									<div className={styles.optionalContent}>
+										<p className={styles.infoText}>
+											Если на сайте настроен CSP, разрешите {WIDGETS_HOST}{' '}
+											в script-src, connect-src и img-src, а домен своей
+											картинки кнопки — в img-src.
+										</p>
+										<p className={styles.infoText}>
+											Для https://challenges.cloudflare.com разрешите
+											script-src, frame-src и connect-src.
+										</p>
+										<p className={styles.infoText}>
+											При style-src с nonce добавьте тот же nonce в тег
+											установки: виджет перенесёт его во внутренние стили.
+										</p>
+									</div>
+								</details>
 								<div className={styles.field}>
 									<p className={styles.label}>Код виджета</p>
 									<textarea
@@ -1321,37 +1333,6 @@ const AiConsultantSettingsModal = ({
 										Скопировать код
 									</button>
 								</div>
-							</div>
-							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>
-									Прямая ссылка
-								</h3>
-								<input
-									className={styles.input}
-									readOnly
-									value={previewUrl}
-								/>
-								<a
-									className={styles.openLink}
-									href={previewUrl}
-									target="_blank"
-									rel="noopener noreferrer"
-								>
-									Открыть страницу
-								</a>
-								<button
-									type="button"
-									className={styles.copyBtn}
-									onClick={() =>
-										void handleCopy(previewUrl, 'Ссылка скопирована')
-									}
-								>
-									Скопировать ссылку
-								</button>
-								<DirectLinkQr
-									value={previewUrl}
-									downloadName={`winwidget-ai-consultant-${aiConsultant.publicKey}.png`}
-								/>
 							</div>
 						</div>
 					)}

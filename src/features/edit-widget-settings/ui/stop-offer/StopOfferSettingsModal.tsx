@@ -7,7 +7,6 @@ import { useMutation } from '@tanstack/react-query'
 import { useEffect, useId, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import ActionTooltip from '../shared/ActionTooltip'
-import DirectLinkQr from '../shared/DirectLinkQr'
 import {
 	findInvalidWidgetColor,
 	getWidgetColorPreview,
@@ -431,15 +430,8 @@ const StopOfferSettingsModal = ({
 		}
 	}
 
-	const publicSiteUrl = (
-		process.env.NEXT_PUBLIC_SITE_URL ||
-		(process.env.NEXT_PUBLIC_MODE === 'production'
-			? 'https://winwidget.ru'
-			: 'http://localhost:3000')
-	).replace(/\/$/, '')
 	const apiUrl = WIDGETS_HOST
 	const embedCode = `<script src="${apiUrl}/widgets/stop-offer.js" data-key="${stopOffer.publicKey}" async></script>`
-	const previewUrl = `${publicSiteUrl}/page-stop-offer/${stopOffer.publicKey}`
 	const savedInstallDomain = (
 		JSON.parse(savedSnapshot) as { installDomain: string }
 	).installDomain
@@ -1787,7 +1779,7 @@ const StopOfferSettingsModal = ({
 									/>
 									<p className={styles.domainHint}>
 										Без сохранённого домена стоп-оффер не появится на
-										сайте. Прямая ссылка работает без домена.
+										сайте.
 									</p>
 								</div>
 								<div className={styles.field}>
@@ -1810,45 +1802,6 @@ const StopOfferSettingsModal = ({
 									>
 										Скопировать код
 									</button>
-								</div>
-							</div>
-							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>
-									Прямая ссылка
-								</h3>
-								<div className={styles.field}>
-									<p className={styles.label}>Прямая ссылка:</p>
-									<p className={styles.hint}>
-										После публикации работает без установки кода и
-										сохранённого домена. Доступ зависит от активности
-										виджета, подписки и лимита заявок.
-									</p>
-									<input
-										className={styles.input}
-										value={previewUrl}
-										readOnly
-									/>
-									<a
-										className={styles.openLink}
-										href={previewUrl}
-										target="_blank"
-										rel="noopener noreferrer"
-									>
-										Открыть страницу
-									</a>
-									<button
-										type="button"
-										className={styles.copyBtn}
-										onClick={() =>
-											handleCopy(previewUrl, 'Ссылка скопирована')
-										}
-									>
-										Скопировать ссылку
-									</button>
-									<DirectLinkQr
-										value={previewUrl}
-										downloadName={`winwidget-stop-offer-${stopOffer.publicKey}.png`}
-									/>
 								</div>
 							</div>
 						</div>

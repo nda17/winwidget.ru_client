@@ -586,6 +586,11 @@ const CabinetWidgets = () => {
 					{allItems.length > 0 ? (
 						allItems.map(entry => {
 							const { kind, item } = entry
+							const supportsDirectLink =
+								kind === 'wheel' ||
+								kind === 'quiz' ||
+								kind === 'callback' ||
+								kind === 'calculator'
 							const lifecycle = item as typeof item & {
 								publishedVersion?: number
 								hasUnpublishedChanges?: boolean
@@ -639,12 +644,19 @@ const CabinetWidgets = () => {
 														className: styles.widgetStatusBlocked
 													}
 												: !item.installDomain.trim()
-													? {
-															label: 'Только по ссылке',
-															description:
-																'Виджет доступен по прямой ссылке. Для установки на сайт добавьте домен.',
-															className: styles.widgetStatusActive
-														}
+													? supportsDirectLink
+														? {
+																label: 'Только по ссылке',
+																description:
+																	'Виджет доступен по прямой ссылке. Для установки на сайт добавьте домен.',
+																className: styles.widgetStatusActive
+															}
+														: {
+																label: 'Домен не добавлен',
+																description:
+																	'Добавьте домен сайта, на котором будет работать виджет.',
+																className: styles.widgetStatusWarning
+															}
 													: {
 															label: 'Включён',
 															description:
@@ -663,20 +675,15 @@ const CabinetWidgets = () => {
 											}
 										: null
 
-							const pageUrl =
-								kind === 'wheel'
+							const pageUrl = supportsDirectLink
+								? kind === 'wheel'
 									? `${publicSiteUrl}/page-wheel/${item.publicKey}`
 									: kind === 'quiz'
 										? `${publicSiteUrl}/page-quiz/${item.publicKey}`
 										: kind === 'callback'
 											? `${publicSiteUrl}/page-callback/${item.publicKey}`
-											: kind === 'timer'
-												? `${publicSiteUrl}/page-timer/${item.publicKey}`
-												: kind === 'stop-offer'
-													? `${publicSiteUrl}/page-stop-offer/${item.publicKey}`
-													: kind === 'ai-consultant'
-														? `${publicSiteUrl}/page-ai-consultant/${item.publicKey}`
-														: `${publicSiteUrl}/page-calculator/${item.publicKey}`
+											: `${publicSiteUrl}/page-calculator/${item.publicKey}`
+								: null
 
 							const leadsUrl =
 								kind === 'wheel'
@@ -808,15 +815,17 @@ const CabinetWidgets = () => {
 									</div>
 
 									<div className={styles.actions}>
-										<a
-											href={pageUrl}
-											target="_blank"
-											rel="noopener noreferrer"
-											className={styles.actionBtn}
-											title="Открыть виджет по прямой ссылке"
-										>
-											<ExternalLinkIcon size={17} /> прямая ссылка
-										</a>
+										{pageUrl && (
+											<a
+												href={pageUrl}
+												target="_blank"
+												rel="noopener noreferrer"
+												className={styles.actionBtn}
+												title="Открыть виджет по прямой ссылке"
+											>
+												<ExternalLinkIcon size={17} /> прямая ссылка
+											</a>
+										)}
 
 										{leadsUrl && (
 											<a href={leadsUrl} className={styles.actionBtn}>

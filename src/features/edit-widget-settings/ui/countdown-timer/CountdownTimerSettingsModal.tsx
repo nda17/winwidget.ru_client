@@ -11,7 +11,6 @@ import Image from 'next/image'
 import { ChangeEvent, useEffect, useId, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import ActionTooltip from '../shared/ActionTooltip'
-import DirectLinkQr from '../shared/DirectLinkQr'
 import {
 	findInvalidWidgetColor,
 	getWidgetColorPreview,
@@ -530,14 +529,7 @@ const CountdownTimerSettingsModal = ({
 		}))
 
 	const apiUrl = WIDGETS_HOST
-	const publicSiteUrl = (
-		process.env.NEXT_PUBLIC_SITE_URL ||
-		(process.env.NEXT_PUBLIC_MODE === 'production'
-			? 'https://winwidget.ru'
-			: '')
-	).replace(/\/$/, '')
 	const embedCode = `<script src="${apiUrl}/widgets/timer.js" data-key="${timer.publicKey}" async></script>`
-	const previewUrl = `${publicSiteUrl}/page-timer/${timer.publicKey}`
 	const savedInstallDomain = (
 		JSON.parse(savedSnapshot) as { installDomain: string }
 	).installDomain
@@ -2345,8 +2337,7 @@ const CountdownTimerSettingsModal = ({
 									<p className={styles.domainHint}>
 										Указанный домен сайта и сайт, на который фактически
 										будет добавлен код виджета, должны совпадать, иначе
-										виджет не появится после добавления кода. Прямая ссылка
-										и QR-код работают без указания домена. Формат
+										виджет не появится после добавления кода. Формат
 										добавления домена: https://page.example.ru,
 										https://example.ru, www.example.ru, example.ru
 									</p>
@@ -2366,46 +2357,6 @@ const CountdownTimerSettingsModal = ({
 									>
 										Скопировать код
 									</button>
-								</div>
-							</div>
-							<div className={styles.settingsGroup}>
-								<h3 className={styles.settingsGroupTitle}>
-									Прямая ссылка
-								</h3>
-								<div className={styles.field}>
-									<div className={styles.directLink}>
-										<input
-											className={styles.input}
-											readOnly
-											value={previewUrl}
-										/>
-										<a
-											className={styles.openLink}
-											href={previewUrl}
-											target="_blank"
-											rel="noopener noreferrer"
-										>
-											Открыть
-										</a>
-									</div>
-									<button
-										type="button"
-										className={styles.copyBtn}
-										onClick={() =>
-											copyToClipboard(previewUrl, 'Ссылка скопирована')
-										}
-									>
-										Скопировать ссылку
-									</button>
-									<p className={styles.hint}>
-										После публикации работает без установки кода и
-										сохранённого домена. Доступ зависит от активности
-										виджета, подписки и лимита заявок.
-									</p>
-									<DirectLinkQr
-										value={previewUrl}
-										downloadName={`winwidget-timer-${timer.publicKey}.png`}
-									/>
 								</div>
 							</div>
 						</div>

@@ -1027,6 +1027,7 @@ ${helperPreloads}
 			var previewTurnstileOptions = null;
 
 			if (previewType === 'aiConsultant') {
+				window.__winwidgetPreviewDisableAutoFocus = true;
 				window.turnstile = {
 					render: function (_container, options) {
 						previewTurnstileOptions = options || {};
@@ -1583,7 +1584,13 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 		lastStableConfigRef.current
 	)
 	lastStableConfigRef.current = stableConfig
-	const serializedConfig = JSON.stringify(stableConfig)
+	const stablePreviewProps = {
+		...props,
+		config: stableConfig
+	} as WidgetLivePreviewProps
+	const serializedConfig = JSON.stringify(
+		buildPreviewPublicConfig(stablePreviewProps)
+	)
 	const previousSerializedConfigRef = useRef(serializedConfig)
 	const debouncedSerializedConfig = useDebounce(serializedConfig, 300)
 	const [previewRunId, setPreviewRunId] = useState(0)
@@ -1616,13 +1623,9 @@ const WidgetLivePreview = (props: WidgetLivePreviewProps) => {
 	const [previewLayout, setPreviewLayout] = useState(
 		DEFAULT_PREVIEW_LAYOUT
 	)
-	const previewProps = {
-		...props,
-		config: JSON.parse(debouncedSerializedConfig)
-	} as WidgetLivePreviewProps
 	const previewDocument = buildPreviewSandboxDocument(
 		props.type,
-		buildPreviewPublicConfig(previewProps),
+		JSON.parse(debouncedSerializedConfig) as object,
 		previewKey,
 		surface
 	)

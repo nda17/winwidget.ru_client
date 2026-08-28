@@ -180,6 +180,10 @@ test('AI consultant preview exposes only public config and complete JSON replies
 
 	assert.ok(aiMessageMock)
 	assert.match(previewSource, /window\.turnstile = \{/)
+	assert.match(
+		previewSource,
+		/window\.__winwidgetPreviewDisableAutoFocus = true/
+	)
 	assert.match(previewSource, /preview-turnstile-token/)
 	assert.match(aiMessageMock, /\/api\/v1\/ai-consultant\/.*?\/session/)
 	assert.match(aiMessageMock, /sessionToken: 'preview-session-token'/)
@@ -191,6 +195,24 @@ test('AI consultant preview exposes only public config and complete JSON replies
 		/ReadableStream|EventSource|text\/event-stream/
 	)
 	assert.doesNotMatch(previewSource, /winwidgetAiConsultantAutoOpen/)
+})
+
+test('preview identity depends only on public config', () => {
+	const previewSetup = previewSource.slice(
+		previewSource.indexOf('const WidgetLivePreview ='),
+		previewSource.indexOf('const cropStyle =')
+	)
+
+	assert.match(previewSetup, /stablePreviewProps/)
+	assert.match(
+		previewSetup,
+		/JSON\.stringify\(\s*buildPreviewPublicConfig\(stablePreviewProps\)\s*\)/
+	)
+	assert.doesNotMatch(previewSetup, /JSON\.stringify\(stableConfig\)/)
+	assert.match(
+		previewSetup,
+		/JSON\.parse\(debouncedSerializedConfig\) as object/
+	)
 })
 
 test('responsive viewport height is independent from scaled iframe content', () => {

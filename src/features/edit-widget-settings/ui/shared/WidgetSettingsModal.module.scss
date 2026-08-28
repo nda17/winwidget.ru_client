@@ -289,18 +289,6 @@ select.input {
 	@apply text-[#7b3fa0];
 }
 
-.directLink {
-	@apply flex gap-2;
-}
-
-.openLink {
-	@apply px-4 py-3 rounded-lg text-sm font-medium shrink-0 no-underline bg-[#f3eeff] text-[#7b3fa0] transition-[background] duration-200;
-}
-
-.openLink:hover {
-	@apply bg-[#e0d6f0];
-}
-
 .copyBtn {
 	@apply mt-1 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer border-none bg-[#f3eeff] text-[#7b3fa0] transition-[background] duration-200 self-start;
 }
@@ -473,14 +461,6 @@ select.input {
 
 	.colorRow > .input {
 		@apply w-auto min-w-0 flex-1;
-	}
-
-	.directLink {
-		@apply flex-col;
-	}
-
-	.openLink {
-		@apply text-center;
 	}
 
 	.copyBtn {

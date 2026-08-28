@@ -49,6 +49,20 @@ const [
 	readSource('src/screens/cabinet/ui/CabinetWidgets.tsx')
 ])
 
+const [
+	timerSettingsSource,
+	stopOfferSettingsSource,
+	experiencePanelSource
+] = await Promise.all([
+	readSource(
+		'src/features/edit-widget-settings/ui/countdown-timer/CountdownTimerSettingsModal.tsx'
+	),
+	readSource(
+		'src/features/edit-widget-settings/ui/stop-offer/StopOfferSettingsModal.tsx'
+	),
+	readSource('src/screens/widget-settings/ui/WidgetExperiencePanel.tsx')
+])
+
 test('AI consultant owner API uses the clean CRUD and saved-draft test contract', () => {
 	assert.match(apiSource, /['`]\/ai-consultants['`]/)
 	assert.match(apiSource, /`\/ai-consultants\/\$\{id\}\/test-message`/)
@@ -173,6 +187,31 @@ test('AI consultant is explicit AI and is independent from lead quota', () => {
 		cabinetWidgetsSource,
 		/kind !== 'ai-consultant' && isLeadLimitReached/
 	)
+})
+
+test('AI consultant, stop-offer and timer do not expose direct-link controls', () => {
+	for (const source of [
+		settingsSource,
+		stopOfferSettingsSource,
+		timerSettingsSource
+	]) {
+		assert.doesNotMatch(source, /DirectLinkQr|previewUrl|Прямая ссылка/)
+	}
+
+	const directLinkPredicate = cabinetWidgetsSource.slice(
+		cabinetWidgetsSource.indexOf('const supportsDirectLink ='),
+		cabinetWidgetsSource.indexOf('const lifecycle =')
+	)
+	assert.match(directLinkPredicate, /kind === 'wheel'/)
+	assert.match(directLinkPredicate, /kind === 'quiz'/)
+	assert.match(directLinkPredicate, /kind === 'callback'/)
+	assert.match(directLinkPredicate, /kind === 'calculator'/)
+	assert.doesNotMatch(
+		directLinkPredicate,
+		/kind === 'timer'|kind === 'stop-offer'|kind === 'ai-consultant'/
+	)
+	assert.match(cabinetWidgetsSource, /\{pageUrl && \(/)
+	assert.doesNotMatch(experiencePanelSource, /сайте и по прямой ссылке/)
 })
 
 test('legacy owner modules and dedicated lead screen are deleted', async () => {

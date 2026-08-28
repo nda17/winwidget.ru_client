@@ -379,7 +379,7 @@ const WidgetExperiencePanel = ({
 
 					<div className={styles.primaryActions}>
 						<ActionTooltip
-							content="Публикует сохранённый черновик — после этого новые настройки появятся на сайте и по прямой ссылке."
+							content="Публикует сохранённый черновик — после этого новые настройки станут доступны посетителям."
 							disabled={publishDisabled}
 							disabledContent={publishDisabledReason}
 							placement="bottom"
