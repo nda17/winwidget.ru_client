@@ -12,10 +12,16 @@ import type {
 	TelegramDatabaseBackupTarget
 } from '@/features/manage-telegram-bot'
 import {
+	DATABASE_RESTORE_RECOVERY_ACTIONS,
 	DATABASE_RESTORE_TARGETS,
 	devToolsService,
 	type DatabaseRestoreJob,
 	type DatabaseRestoreJobStatus,
+	type DatabaseRestorePermit,
+	type DatabaseRestoreRecoveryAction,
+	type DatabaseRestoreRecoveryActionStatus,
+	type DatabaseRestoreRecoveryActionType,
+	type DatabaseRestoresSettings,
 	type DatabaseRestoreTarget,
 	type DatabaseRestoreTargetSettings
 } from '@/features/run-admin-task'
@@ -124,6 +130,25 @@ const DATABASE_RESTORE_JOB_STATUS_LABELS: Record<
 	SUCCEEDED: 'Завершён',
 	FAILED: 'Ошибка',
 	RECOVERY_REQUIRED: 'Требуется ручное восстановление'
+}
+const DATABASE_RESTORE_RECOVERY_ACTION_LABELS: Record<
+	DatabaseRestoreRecoveryActionType,
+	string
+> = {
+	VERIFY_AS_IS: 'Проверить текущее состояние',
+	ROLL_BACK_SAFETY: 'Вернуть safety backup',
+	ROLL_FORWARD_SOURCE: 'Повторить source restore'
+}
+const DATABASE_RESTORE_RECOVERY_STATUS_LABELS: Record<
+	DatabaseRestoreRecoveryActionStatus,
+	string
+> = {
+	PENDING_APPROVAL: 'Ожидает второго DEV',
+	APPROVED: 'Одобрено и поставлено в очередь',
+	PROCESSING: 'Выполняется',
+	RESOLVED: 'Разрешено',
+	BLOCKED: 'Заблокировано',
+	EXPIRED: 'Истекло'
 }
 
 const isAmbiguousDatabaseRestoreRequestError = (error: unknown) =>
@@ -264,6 +289,21 @@ const formatFileSize = (value: number) => {
 	return `${(value / 1024 / 1024).toFixed(1)} МБ`
 }
 
+const calculateFileSha256 = async (file: File) => {
+	if (!globalThis.crypto?.subtle) {
+		throw new Error('Web Crypto SHA-256 недоступен в этом браузере')
+	}
+
+	const digest = await globalThis.crypto.subtle.digest(
+		'SHA-256',
+		await file.arrayBuffer()
+	)
+
+	return Array.from(new Uint8Array(digest), byte =>
+		byte.toString(16).padStart(2, '0')
+	).join('')
+}
+
 const getDatabaseBackupJobBadgeClass = (
 	status: TelegramDatabaseBackupJobStatus
 ) => {
@@ -280,6 +320,16 @@ const getDatabaseRestoreJobBadgeClass = (
 	if (status === 'SUCCEEDED') return styles.badgeOk
 	if (status === 'CANCELLED') return styles.badgeNeutral
 	if (status === 'FAILED' || status === 'RECOVERY_REQUIRED') {
+		return styles.badgeError
+	}
+	return styles.badgeProgress
+}
+
+const getDatabaseRestoreRecoveryBadgeClass = (
+	status: DatabaseRestoreRecoveryActionStatus
+) => {
+	if (status === 'RESOLVED') return styles.badgeOk
+	if (status === 'BLOCKED' || status === 'EXPIRED') {
 		return styles.badgeError
 	}
 	return styles.badgeProgress
@@ -1008,11 +1058,23 @@ const DatabaseRestorePanel = ({
 	const [restoreTarget, setRestoreTarget] =
 		useState<DatabaseRestoreTarget>('notification-delivery')
 	const [restoreFile, setRestoreFile] = useState<File | null>(null)
+	const [restoreFileSha256, setRestoreFileSha256] = useState<
+		string | null
+	>(null)
+	const [isRestoreFileHashing, setIsRestoreFileHashing] = useState(false)
 	const [restoreConfirmation, setRestoreConfirmation] = useState('')
+	const [createdPermit, setCreatedPermit] =
+		useState<DatabaseRestorePermit | null>(null)
+	const [permitApprovalId, setPermitApprovalId] = useState('')
+	const [recoveryAction, setRecoveryAction] =
+		useState<DatabaseRestoreRecoveryActionType>('VERIFY_AS_IS')
+	const [restoreJobLookupId, setRestoreJobLookupId] = useState('')
 	const [restoreJobMarker, setRestoreJobMarker] =
 		useState<DatabaseRestoreMarker | null>(null)
 	const restoreFileInput = useRef<HTMLInputElement | null>(null)
+	const restoreFileHashRequest = useRef(0)
 	const notifiedRestoreJob = useRef<string | null>(null)
+	const notifiedRecoveryAction = useRef<string | null>(null)
 	const databaseRestoreStorageKey = userId
 		? `${DATABASE_RESTORE_STORAGE_KEY_PREFIX}:${userId}`
 		: null
@@ -1020,7 +1082,8 @@ const DatabaseRestorePanel = ({
 	const databaseRestoreSettings = useQuery({
 		queryKey: RESTORE_SETTINGS_QUERY_KEY,
 		queryFn: devToolsService.getDatabaseRestoresSettings,
-		enabled: isDev
+		enabled: Boolean(userId),
+		refetchInterval: 10_000
 	})
 	const trackDatabaseRestoreJob = useCallback(
 		async (job: DatabaseRestoreJob) => {
@@ -1056,12 +1119,36 @@ const DatabaseRestorePanel = ({
 				restoreJobMarker!.jobId,
 				signal
 			),
-		enabled: isDev && Boolean(restoreJobMarker?.jobId),
+		enabled: Boolean(userId && restoreJobMarker?.jobId),
 		refetchInterval: query => {
 			const job = query.state.data
+			if (job?.status === 'RECOVERY_REQUIRED' && !job.recoveryResolvedAt) {
+				return DATABASE_RESTORE_JOB_POLL_INTERVAL_MS
+			}
 			return job && TERMINAL_DATABASE_RESTORE_JOB_STATUSES.has(job.status)
 				? false
 				: DATABASE_RESTORE_JOB_POLL_INTERVAL_MS
+		}
+	})
+
+	const databaseRestorePermitMutation = useMutation({
+		mutationFn: devToolsService.createDatabaseRestorePermit,
+		onSuccess: permit => {
+			setCreatedPermit(permit)
+			setPermitApprovalId(permit.permitId)
+		}
+	})
+
+	const databaseRestorePermitApprovalMutation = useMutation({
+		mutationFn: devToolsService.approveDatabaseRestorePermit,
+		onSuccess: permit => {
+			setCreatedPermit(current =>
+				current?.permitId === permit.permitId ? permit : current
+			)
+			queryClient.setQueryData<DatabaseRestoresSettings>(
+				RESTORE_SETTINGS_QUERY_KEY,
+				current => (current ? { ...current, approved: permit } : current)
+			)
 		}
 	})
 
@@ -1075,14 +1162,11 @@ const DatabaseRestorePanel = ({
 			target: DatabaseRestoreTarget
 			file: File
 			confirmation: string
-			requestId?: string
+			requestId: string
 		}) => {
 			const request = async () => {
 				const assertExactJob = (job: DatabaseRestoreJob) => {
-					if (
-						requestId &&
-						(job.jobId !== requestId || job.target !== target)
-					) {
+					if (job.jobId !== requestId || job.target !== target) {
 						throw new Error(
 							'Сервер вернул задание, не соответствующее одобренному восстановлению'
 						)
@@ -1091,7 +1175,6 @@ const DatabaseRestorePanel = ({
 					return job
 				}
 				const getExactJob = async () => {
-					if (!requestId) return null
 					const job = await devToolsService
 						.getDatabaseRestoreJob(requestId)
 						.catch(() => null)
@@ -1114,10 +1197,7 @@ const DatabaseRestorePanel = ({
 				try {
 					job = await publish()
 				} catch (error) {
-					if (
-						!requestId ||
-						!isAmbiguousDatabaseRestoreRequestError(error)
-					) {
+					if (!isAmbiguousDatabaseRestoreRequestError(error)) {
 						throw error
 					}
 					const exactJob = await getExactJob()
@@ -1125,7 +1205,7 @@ const DatabaseRestorePanel = ({
 					job = exactJob
 				}
 
-				if (!requestId || job.publicationConfirmed) return job
+				if (job.publicationConfirmed) return job
 
 				try {
 					const retriedJob = await publish()
@@ -1149,13 +1229,13 @@ const DatabaseRestorePanel = ({
 		onSuccess: async job => {
 			await trackDatabaseRestoreJob(job)
 			setRestoreFile(null)
+			setRestoreFileSha256(null)
 			setRestoreConfirmation('')
 			if (restoreFileInput.current) {
 				restoreFileInput.current.value = ''
 			}
 		},
 		onError: (error, variables) => {
-			if (!variables.requestId) return
 			const status = isAxiosError(error)
 				? error.response?.status
 				: undefined
@@ -1202,6 +1282,53 @@ const DatabaseRestorePanel = ({
 		}
 	})
 
+	const updateRecoveryAction = (action: DatabaseRestoreRecoveryAction) => {
+		queryClient.setQueryData<DatabaseRestoreJob>(
+			['admin-database-restore-job', action.jobId],
+			current => {
+				if (!current) return current
+				const exists = current.recoveryActions.some(
+					item => item.actionId === action.actionId
+				)
+				return {
+					...current,
+					recoveryActions: exists
+						? current.recoveryActions.map(item =>
+								item.actionId === action.actionId ? action : item
+							)
+						: [action, ...current.recoveryActions]
+				}
+			}
+		)
+	}
+
+	const databaseRestoreRecoveryMutation = useMutation({
+		mutationFn: ({
+			jobId,
+			action
+		}: {
+			jobId: string
+			action: DatabaseRestoreRecoveryActionType
+		}) =>
+			devToolsService.createDatabaseRestoreRecoveryAction(jobId, action),
+		onSuccess: updateRecoveryAction
+	})
+
+	const databaseRestoreRecoveryApprovalMutation = useMutation({
+		mutationFn: ({
+			jobId,
+			actionId
+		}: {
+			jobId: string
+			actionId: string
+		}) =>
+			devToolsService.approveDatabaseRestoreRecoveryAction(
+				jobId,
+				actionId
+			),
+		onSuccess: updateRecoveryAction
+	})
+
 	useEffect(() => {
 		const marker = getDatabaseRestoreMarker(databaseRestoreStorageKey)
 		setRestoreJobMarker(marker)
@@ -1220,6 +1347,7 @@ const DatabaseRestorePanel = ({
 
 			setRestoreTarget(approvedTarget)
 			setRestoreFile(null)
+			setRestoreFileSha256(null)
 			setRestoreConfirmation('')
 			if (restoreFileInput.current) restoreFileInput.current.value = ''
 			return
@@ -1249,6 +1377,25 @@ const DatabaseRestorePanel = ({
 	}, [databaseRestoreStorageKey])
 
 	useEffect(() => {
+		const job = databaseRestoreJob.data
+		if (!job || restoreJobMarker?.target === job.target) return
+		const exactMarker: DatabaseRestoreMarker = {
+			jobId: job.jobId,
+			target: job.target,
+			recoveryStartedAt: restoreJobMarker?.recoveryStartedAt ?? null
+		}
+		setRestoreJobMarker(exactMarker)
+		if (databaseRestoreStorageKey) {
+			saveDatabaseRestoreMarker(databaseRestoreStorageKey, exactMarker)
+		}
+	}, [
+		databaseRestoreJob.data,
+		databaseRestoreStorageKey,
+		restoreJobMarker?.recoveryStartedAt,
+		restoreJobMarker?.target
+	])
+
+	useEffect(() => {
 		const marker = restoreJobMarker
 		const status = isAxiosError(databaseRestoreJob.error)
 			? databaseRestoreJob.error.response?.status
@@ -1259,9 +1406,9 @@ const DatabaseRestorePanel = ({
 		const publicationGraceActive =
 			status === 404 &&
 			(databaseRestoreMutation.isPending ||
-				Number.isNaN(recoveryStartedAt) ||
-				Date.now() - recoveryStartedAt <
-					DATABASE_RESTORE_PUBLICATION_GRACE_MS)
+				(!Number.isNaN(recoveryStartedAt) &&
+					Date.now() - recoveryStartedAt <
+						DATABASE_RESTORE_PUBLICATION_GRACE_MS))
 		if (
 			!marker ||
 			!databaseRestoreJob.isError ||
@@ -1269,25 +1416,6 @@ const DatabaseRestorePanel = ({
 			databaseRestoreJob.data?.jobId === marker.jobId ||
 			publicationGraceActive
 		) {
-			if (
-				marker &&
-				status === 404 &&
-				!databaseRestoreMutation.isPending &&
-				databaseRestoreJob.data?.jobId !== marker.jobId &&
-				Number.isNaN(recoveryStartedAt)
-			) {
-				const recoveryMarker = {
-					...marker,
-					recoveryStartedAt: new Date().toISOString()
-				}
-				setRestoreJobMarker(recoveryMarker)
-				if (databaseRestoreStorageKey) {
-					saveDatabaseRestoreMarker(
-						databaseRestoreStorageKey,
-						recoveryMarker
-					)
-				}
-			}
 			return
 		}
 
@@ -1355,55 +1483,35 @@ const DatabaseRestorePanel = ({
 		databaseRestoreStorageKey
 	])
 
+	useEffect(() => {
+		const action = databaseRestoreJob.data?.recoveryActions[0]
+		if (
+			!action ||
+			!['RESOLVED', 'BLOCKED', 'EXPIRED'].includes(action.status)
+		) {
+			return
+		}
+		const notificationKey = `${action.actionId}:${action.status}`
+		if (notifiedRecoveryAction.current === notificationKey) return
+		notifiedRecoveryAction.current = notificationKey
+
+		if (action.status === 'RESOLVED') {
+			toast.success(
+				`Recovery ${DATABASE_RESTORE_RECOVERY_ACTION_LABELS[action.action]} завершён; writer fence проверен и снят.`
+			)
+			return
+		}
+		toast.error(
+			`Recovery ${DATABASE_RESTORE_RECOVERY_ACTION_LABELS[action.action]}: ${DATABASE_RESTORE_RECOVERY_STATUS_LABELS[action.status]}${action.error ? ` — ${action.error}` : ''}`,
+			{ duration: 15000 }
+		)
+	}, [databaseRestoreJob.data?.recoveryActions])
+
 	if (isUserLoading) {
 		return (
 			<div className={styles.card}>
 				<SkeletonLoader count={1} className="h-[52px]" />
 				<SkeletonLoader count={1} className="h-[52px]" />
-			</div>
-		)
-	}
-
-	if (!isDev) {
-		return (
-			<div
-				className={`${styles.card} ${styles.lockedCard}`}
-				aria-disabled="true"
-			>
-				<div className={styles.lockedContent} aria-hidden="true">
-					<div>
-						<p className={styles.label}>Восстановление БД из backup</p>
-						<p className={styles.hint}>
-							Изолированный worker восстанавливает БД выбранного
-							микросервиса и проверяет результат до снятия защитной
-							блокировки.
-						</p>
-					</div>
-					<div className={styles.restoreGrid}>
-						<select className={styles.select} disabled>
-							<option>БД микросервиса</option>
-						</select>
-						<label className={styles.fileInputLabel}>
-							<span>Файл .dump</span>
-							<input type="file" accept=".dump" disabled />
-						</label>
-						<input
-							className={styles.input}
-							placeholder="Контрольная фраза"
-							disabled
-						/>
-						<button type="button" className={styles.dangerBtn} disabled>
-							Поставить в очередь
-						</button>
-					</div>
-				</div>
-				<div className={styles.lockedOverlay}>
-					<span className={styles.lockedBadge}>Только для DEV</span>
-					<AdminTooltip
-						title="Восстановление заблокировано"
-						description="Read-only сведения о backup доступны ADMIN, но восстановление любой БД разрешено только пользователям с ролью DEV. Backend проверяет это ограничение отдельно."
-					/>
-				</div>
 			</div>
 		)
 	}
@@ -1434,6 +1542,13 @@ const DatabaseRestorePanel = ({
 		target => target.id === restoreTarget
 	)
 	const restoreJob = databaseRestoreJob.data
+	const hasActiveRecoveryAction = Boolean(
+		restoreJob?.recoveryActions.some(action =>
+			['PENDING_APPROVAL', 'APPROVED', 'PROCESSING'].includes(
+				action.status
+			)
+		)
+	)
 	const restoreJobErrorStatus = isAxiosError(databaseRestoreJob.error)
 		? databaseRestoreJob.error.response?.status
 		: undefined
@@ -1469,10 +1584,16 @@ const DatabaseRestorePanel = ({
 	const canRetryRestorePublication = Boolean(
 		isRestorePublicationUnconfirmed &&
 		restoreApproval?.jobId === restoreJobMarker?.jobId &&
-		restoreApproval.target === restoreJobMarker?.target
+		restoreApproval.target === restoreJobMarker?.target &&
+		restoreApproval.requestedById === userId
 	)
-	const isRestoreStartAllowed =
-		isRestoreEnabled || canRetryRestorePublication
+	const isRestorePermitOwner = Boolean(
+		restoreApproval && restoreApproval.requestedById === userId
+	)
+	const isRestoreStartAllowed = Boolean(
+		(isRestoreEnabled && restoreApproval && isRestorePermitOwner) ||
+		canRetryRestorePublication
+	)
 	const allowedFileExtension =
 		databaseRestoreSettings.data.allowedFileExtension
 	const maxFileSizeBytes = databaseRestoreSettings.data.maxFileSizeBytes
@@ -1491,15 +1612,157 @@ const DatabaseRestorePanel = ({
 
 		setRestoreTarget(target)
 		setRestoreFile(null)
+		setRestoreFileSha256(null)
 		setRestoreConfirmation('')
 		if (restoreFileInput.current) restoreFileInput.current.value = ''
 	}
 
+	const handleRestoreFileChange = async (
+		event: ChangeEvent<HTMLInputElement>
+	) => {
+		const file = event.target.files?.[0] ?? null
+		const request = restoreFileHashRequest.current + 1
+		restoreFileHashRequest.current = request
+		setRestoreFile(file)
+		setRestoreFileSha256(null)
+		setCreatedPermit(null)
+		setIsRestoreFileHashing(false)
+
+		if (!file) {
+			return
+		}
+		if (!file.name.toLowerCase().endsWith(allowedFileExtension)) {
+			toast.error(`Допустим только файл ${allowedFileExtension}`)
+			return
+		}
+		if (file.size > maxFileSizeBytes) {
+			toast.error(
+				`Файл превышает допустимый размер ${formatFileSize(maxFileSizeBytes)}`
+			)
+			return
+		}
+
+		setIsRestoreFileHashing(true)
+		try {
+			const sha256 = await calculateFileSha256(file)
+			if (restoreFileHashRequest.current !== request) return
+			setRestoreFileSha256(sha256)
+			toast.success('SHA-256 backup рассчитан в браузере')
+		} catch (error) {
+			if (restoreFileHashRequest.current !== request) return
+			toast.error(`Не удалось рассчитать SHA-256: ${errorCatch(error)}`)
+		} finally {
+			if (restoreFileHashRequest.current === request) {
+				setIsRestoreFileHashing(false)
+			}
+		}
+	}
+
+	const handleCreateRestorePermit = () => {
+		if (!isDev) return
+		if (!isRestoreEnabled) {
+			toast.error('Создание one-shot permit отключено release-gate')
+			return
+		}
+		if (restoreApproval) {
+			toast.error(
+				'Сначала используйте или закройте активный one-shot permit'
+			)
+			return
+		}
+		if (!restoreFile || !restoreFileSha256 || isRestoreFileHashing) {
+			toast.error('Выберите backup и дождитесь расчёта SHA-256')
+			return
+		}
+		if (!selectedTargetSettings) {
+			toast.error('Выберите целевую БД')
+			return
+		}
+
+		const promise = databaseRestorePermitMutation.mutateAsync({
+			target: restoreTarget,
+			sourceSha256: restoreFileSha256,
+			expectedServicesSha: databaseRestoreSettings.data.currentServicesSha
+		})
+		void toast.promise(promise, {
+			loading: 'Создаём one-shot permit...',
+			success:
+				'Permit создан. Передайте его ID второму DEV для независимого подтверждения.',
+			error: error => `Не удалось создать permit: ${errorCatch(error)}`
+		})
+	}
+
+	const handleApproveRestorePermit = () => {
+		if (!isDev) return
+		const permitId = permitApprovalId.trim()
+		if (!permitId) {
+			toast.error('Введите ID permit от первого DEV')
+			return
+		}
+		if (
+			createdPermit?.permitId === permitId &&
+			createdPermit.requestedById === userId
+		) {
+			toast.error('Permit должен подтвердить другой DEV')
+			return
+		}
+
+		const promise =
+			databaseRestorePermitApprovalMutation.mutateAsync(permitId)
+		void toast.promise(promise, {
+			loading: 'Подтверждаем exact permit...',
+			success: 'Permit подтверждён вторым DEV',
+			error: error => `Не удалось подтвердить permit: ${errorCatch(error)}`
+		})
+	}
+
+	const handleCopyPermitId = async () => {
+		if (!createdPermit) return
+		try {
+			await navigator.clipboard.writeText(createdPermit.permitId)
+			toast.success('ID permit скопирован')
+		} catch (error) {
+			toast.error(`Не удалось скопировать ID: ${errorCatch(error)}`)
+		}
+	}
+
+	const handleLookupRestoreJob = () => {
+		const jobId = restoreJobLookupId.trim().toLowerCase()
+		if (!UUID_PATTERN.test(jobId)) {
+			toast.error('Введите корректный UUID задания восстановления')
+			return
+		}
+		const marker: DatabaseRestoreMarker = {
+			jobId,
+			target:
+				restoreApproval?.jobId === jobId
+					? restoreApproval.target
+					: restoreTarget,
+			recoveryStartedAt: null
+		}
+		notifiedRestoreJob.current = null
+		notifiedRecoveryAction.current = null
+		setRestoreJobMarker(marker)
+		if (databaseRestoreStorageKey) {
+			saveDatabaseRestoreMarker(databaseRestoreStorageKey, marker)
+		}
+		toast.success('Запрашиваем read-only статус задания')
+	}
+
 	const handleRestoreDatabaseBackup = () => {
+		if (!isDev) return
 		if (!isRestoreStartAllowed) {
 			toast.error(
-				'Production-восстановление отключено до отдельного согласования и полного rehearsal.'
+				'Нужен активный one-shot permit, созданный текущим DEV и подтверждённый другим DEV.'
 			)
+			return
+		}
+		if (!restoreApproval || restoreApproval.status !== 'APPROVED') {
+			toast.error('One-shot permit не подтверждён')
+			return
+		}
+		if (!isRestorePermitOwner) {
+			toast.error('Запустить restore может только DEV, создавший permit')
 			return
 		}
 		if (!selectedTargetSettings) {
@@ -1526,6 +1789,10 @@ const DatabaseRestorePanel = ({
 			toast.error(`Выберите файл backup ${allowedFileExtension}`)
 			return
 		}
+		if (!restoreFileSha256 || isRestoreFileHashing) {
+			toast.error('Дождитесь расчёта SHA-256 выбранного backup')
+			return
+		}
 		if (!restoreFile.name.toLowerCase().endsWith(allowedFileExtension)) {
 			toast.error(`Допустим только файл ${allowedFileExtension}`)
 			return
@@ -1534,6 +1801,24 @@ const DatabaseRestorePanel = ({
 			toast.error(
 				`Файл превышает допустимый размер ${formatFileSize(maxFileSizeBytes)}`
 			)
+			return
+		}
+		if (restoreFileSha256 !== restoreApproval.sourceSha256) {
+			toast.error('SHA-256 файла не совпадает с exact permit')
+			return
+		}
+		if (
+			restoreApproval.expectedServicesSha !==
+			databaseRestoreSettings.data.currentServicesSha
+		) {
+			toast.error('Версия Operations изменилась после выдачи permit')
+			return
+		}
+		if (
+			restoreApproval.migrationManifestSha !==
+			selectedTargetSettings.migrationManifestSha
+		) {
+			toast.error('Migration manifest изменился после выдачи permit')
 			return
 		}
 		if (
@@ -1545,18 +1830,16 @@ const DatabaseRestorePanel = ({
 			return
 		}
 
-		const requestId = restoreApproval?.jobId
-		if (requestId) {
-			const requestMarker: DatabaseRestoreMarker = {
-				jobId: requestId,
-				target: restoreTarget,
-				recoveryStartedAt: null
-			}
-			notifiedRestoreJob.current = null
-			setRestoreJobMarker(requestMarker)
-			if (databaseRestoreStorageKey) {
-				saveDatabaseRestoreMarker(databaseRestoreStorageKey, requestMarker)
-			}
+		const requestId = restoreApproval.jobId
+		const requestMarker: DatabaseRestoreMarker = {
+			jobId: requestId,
+			target: restoreTarget,
+			recoveryStartedAt: null
+		}
+		notifiedRestoreJob.current = null
+		setRestoreJobMarker(requestMarker)
+		if (databaseRestoreStorageKey) {
+			saveDatabaseRestoreMarker(databaseRestoreStorageKey, requestMarker)
 		}
 		const promise = databaseRestoreMutation.mutateAsync({
 			target: restoreTarget,
@@ -1569,12 +1852,63 @@ const DatabaseRestorePanel = ({
 			loading: `Загружаем backup БД ${selectedTargetSettings.label}...`,
 			success: `Восстановление БД ${selectedTargetSettings.label} поставлено в очередь`,
 			error: error =>
-				requestId &&
 				isAxiosError(error) &&
 				(error.response?.status === undefined ||
 					error.response.status >= 500)
 					? 'Ответ не подтверждён; интерфейс продолжает точную проверку по requestId.'
 					: `Ошибка запуска восстановления: ${errorCatch(error)}`
+		})
+	}
+
+	const handleCreateRecoveryAction = () => {
+		if (!isDev || !restoreJob) return
+		if (
+			restoreJob.status !== 'RECOVERY_REQUIRED' ||
+			restoreJob.recoveryResolvedAt
+		) {
+			toast.error('Это задание не требует нового recovery action')
+			return
+		}
+		if (!restoreJob.terminalReceipt) {
+			toast.error('Recovery невозможен без подписанного terminal receipt')
+			return
+		}
+
+		const promise = databaseRestoreRecoveryMutation.mutateAsync({
+			jobId: restoreJob.jobId,
+			action: recoveryAction
+		})
+		void toast.promise(promise, {
+			loading: 'Создаём recovery action...',
+			success:
+				'Recovery action создан. Выполнение начнётся только после подтверждения другим DEV.',
+			error: error =>
+				`Не удалось создать recovery action: ${errorCatch(error)}`
+		})
+	}
+
+	const handleApproveRecoveryAction = (
+		action: DatabaseRestoreRecoveryAction
+	) => {
+		if (!isDev || !restoreJob) return
+		if (action.status !== 'PENDING_APPROVAL') {
+			toast.error('Recovery action уже обработан')
+			return
+		}
+		if (action.requestedById === userId) {
+			toast.error('Recovery action должен подтвердить другой DEV')
+			return
+		}
+
+		const promise = databaseRestoreRecoveryApprovalMutation.mutateAsync({
+			jobId: restoreJob.jobId,
+			actionId: action.actionId
+		})
+		void toast.promise(promise, {
+			loading: 'Подтверждаем recovery action...',
+			success: 'Recovery action подтверждён и поставлен в durable очередь',
+			error: error =>
+				`Не удалось подтвердить recovery action: ${errorCatch(error)}`
 		})
 	}
 
@@ -1588,6 +1922,10 @@ const DatabaseRestorePanel = ({
 		clearDatabaseRestoreMarker(databaseRestoreStorageKey, restoreJob.jobId)
 		setRestoreJobMarker(null)
 		if (restoreJob.status === 'RECOVERY_REQUIRED') {
+			if (restoreJob.recoveryResolvedAt) {
+				toast.success('Разрешённое recovery-задание скрыто')
+				return
+			}
 			toast.error(
 				'Предупреждение скрыто только в интерфейсе. Неопределённый исход restore и сохранённые artifacts этим действием не разрешаются.',
 				{ duration: 10000 }
@@ -1599,6 +1937,7 @@ const DatabaseRestorePanel = ({
 
 	const handleCancelRestoreJob = () => {
 		if (
+			!isDev ||
 			!restoreJob?.canCancel ||
 			restoreJob.cancellationRequested ||
 			databaseRestoreCancelMutation.isPending
@@ -1629,11 +1968,43 @@ const DatabaseRestorePanel = ({
 					сохраняется в статусе задания.
 				</p>
 			</div>
+
+			<div className={styles.restoreContractGrid}>
+				<div>
+					<p className={styles.statusLabel}>Release-gate</p>
+					<span
+						className={`${styles.badge} ${isRestoreEnabled ? styles.badgeOk : styles.badgeNeutral}`}
+					>
+						{isRestoreEnabled ? 'Включён' : 'Отключён'}
+					</span>
+				</div>
+				<div>
+					<p className={styles.statusLabel}>Services revision</p>
+					<code className={styles.hashValue}>
+						{databaseRestoreSettings.data.currentServicesSha}
+					</code>
+				</div>
+				<div>
+					<p className={styles.statusLabel}>Авторизация</p>
+					<p className={styles.statusValue}>Два разных DEV</p>
+				</div>
+			</div>
+
+			<div className={styles.restoreManifestList}>
+				{databaseRestoreSettings.data.targets.map(target => (
+					<div key={target.id}>
+						<p className={styles.statusLabel}>{target.label}</p>
+						<code className={styles.hashValue}>
+							{target.migrationManifestSha}
+						</code>
+					</div>
+				))}
+			</div>
+
 			{!isRestoreEnabled && !canRetryRestorePublication && (
 				<p className={styles.restoreError} role="alert">
 					Запуск новых восстановлений отключён release-gate. Read-only
-					статус уже созданного задания и безопасная отмена до
-					destructive-фазы остаются доступны.
+					контракт и статус уже созданного задания остаются доступны.
 				</p>
 			)}
 			{canRetryRestorePublication && (
@@ -1644,106 +2015,288 @@ const DatabaseRestorePanel = ({
 				</p>
 			)}
 			{restoreApproval && (
-				<p className={styles.restoreApproval} role="status">
-					Разовый production-допуск: БД{' '}
-					<b>
-						{getDatabaseRestoreTargetLabel(
-							restoreApproval.target,
-							databaseRestoreSettings.data.targets
-						)}
-					</b>
-					, jobId <b>{restoreApproval.jobId}</b>, действует до{' '}
-					<b>{formatRestoreJobDate(restoreApproval.expiresAt)}</b>.
-					Остальные целевые БД заблокированы этим допуском.
-				</p>
+				<div className={styles.restoreApproval} role="status">
+					<p>
+						Разовый production-допуск: БД{' '}
+						<b>
+							{getDatabaseRestoreTargetLabel(
+								restoreApproval.target,
+								databaseRestoreSettings.data.targets
+							)}
+						</b>
+						, действует до{' '}
+						<b>{formatRestoreJobDate(restoreApproval.expiresAt)}</b>.
+					</p>
+					<div className={styles.exactBindingGrid}>
+						<div>
+							<p className={styles.statusLabel}>jobId</p>
+							<code className={styles.hashValue}>
+								{restoreApproval.jobId}
+							</code>
+						</div>
+						<div>
+							<p className={styles.statusLabel}>Source SHA-256</p>
+							<code className={styles.hashValue}>
+								{restoreApproval.sourceSha256}
+							</code>
+						</div>
+						<div>
+							<p className={styles.statusLabel}>Migration manifest</p>
+							<code className={styles.hashValue}>
+								{restoreApproval.migrationManifestSha}
+							</code>
+						</div>
+					</div>
+					{isDev && !isRestorePermitOwner && (
+						<p className={styles.hint}>
+							Этот permit виден read-only. Загрузить dump может только DEV,
+							который создал permit.
+						</p>
+					)}
+				</div>
 			)}
 
-			<div className={styles.restoreGrid}>
-				<label className={styles.fieldLabel}>
-					<span>Целевая БД</span>
-					<select
-						className={styles.select}
-						value={restoreTarget}
-						onChange={handleRestoreTargetChange}
-						disabled={
-							databaseRestoreMutation.isPending ||
-							!isRestoreStartAllowed ||
-							Boolean(restoreApproval) ||
-							isRestoreJobActive ||
-							isRestoreBlockedByRecovery
-						}
-					>
-						{databaseRestoreSettings.data.targets.map(target => (
-							<option
-								key={target.id}
-								value={target.id}
-								disabled={Boolean(
-									restoreApproval && target.id !== restoreApproval.target
-								)}
+			{isDev ? (
+				<div className={styles.restoreMutationPanel}>
+					<div>
+						<p className={styles.label}>1. Exact permit</p>
+						<p className={styles.hint}>
+							Первый DEV выбирает target и dump. SHA-256 вычисляется
+							локально и привязывается к текущей ревизии и migration
+							manifest.
+						</p>
+					</div>
+					<div className={styles.permitGrid}>
+						<label className={styles.fieldLabel}>
+							<span>Целевая БД</span>
+							<select
+								className={styles.select}
+								value={restoreTarget}
+								onChange={handleRestoreTargetChange}
+								disabled={
+									databaseRestorePermitMutation.isPending ||
+									databaseRestoreMutation.isPending ||
+									Boolean(restoreApproval) ||
+									isRestoreJobActive ||
+									isRestoreBlockedByRecovery
+								}
 							>
-								{target.label}
-							</option>
-						))}
-					</select>
-				</label>
-				<label className={styles.fileInputLabel}>
-					<span>Файл {allowedFileExtension}</span>
-					<input
-						ref={restoreFileInput}
-						type="file"
-						accept={allowedFileExtension}
-						onChange={event =>
-							setRestoreFile(event.target.files?.[0] ?? null)
-						}
-						disabled={
-							databaseRestoreMutation.isPending ||
-							!isRestoreStartAllowed ||
-							!isRestoreTargetApproved ||
-							isRestoreJobActive ||
-							isRestoreBlockedByRecovery
-						}
-					/>
-				</label>
-				<label className={styles.fieldLabel}>
-					<span>Контрольная фраза</span>
-					<input
-						className={styles.input}
-						value={restoreConfirmation}
-						onChange={event => setRestoreConfirmation(event.target.value)}
-						placeholder={selectedTargetSettings?.confirmation}
-						disabled={
-							databaseRestoreMutation.isPending ||
-							!isRestoreStartAllowed ||
-							!isRestoreTargetApproved ||
-							isRestoreJobActive ||
-							isRestoreBlockedByRecovery
-						}
-					/>
-				</label>
-				<button
-					type="button"
-					className={styles.dangerBtn}
-					onClick={handleRestoreDatabaseBackup}
-					disabled={
-						databaseRestoreMutation.isPending ||
-						!isRestoreStartAllowed ||
-						!isRestoreTargetApproved ||
-						isRestoreJobActive ||
-						isRestoreBlockedByRecovery
-					}
-				>
-					{canRetryRestorePublication
-						? 'Подтвердить публикацию повторно'
-						: 'Поставить в очередь'}
-				</button>
-			</div>
+								{databaseRestoreSettings.data.targets.map(target => (
+									<option key={target.id} value={target.id}>
+										{target.label}
+									</option>
+								))}
+							</select>
+						</label>
+						<label className={styles.fileInputLabel}>
+							<span>Файл {allowedFileExtension}</span>
+							<input
+								ref={restoreFileInput}
+								type="file"
+								accept={allowedFileExtension}
+								onChange={handleRestoreFileChange}
+								disabled={
+									databaseRestorePermitMutation.isPending ||
+									databaseRestoreMutation.isPending ||
+									Boolean(restoreApproval && !isRestorePermitOwner) ||
+									isRestoreJobActive ||
+									isRestoreBlockedByRecovery
+								}
+							/>
+						</label>
+						<button
+							type="button"
+							className={styles.actionBtn}
+							onClick={handleCreateRestorePermit}
+							disabled={
+								databaseRestorePermitMutation.isPending ||
+								!isRestoreEnabled ||
+								Boolean(restoreApproval) ||
+								!restoreFileSha256 ||
+								isRestoreFileHashing
+							}
+						>
+							{databaseRestorePermitMutation.isPending
+								? 'Создаём...'
+								: 'Создать permit'}
+						</button>
+					</div>
+					<p className={styles.hint}>
+						Максимальный размер: {formatFileSize(maxFileSizeBytes)}.
+						{isRestoreFileHashing && ' Вычисляем SHA-256...'}
+						{restoreFile && ` Выбран файл ${restoreFile.name}.`}
+					</p>
+					{restoreFileSha256 && (
+						<code className={styles.hashValue}>{restoreFileSha256}</code>
+					)}
 
-			<p className={styles.hint}>
-				Для БД <b>{selectedTargetSettings?.label}</b> введите:{' '}
-				<b>{selectedTargetSettings?.confirmation}</b>. Максимальный размер:{' '}
-				{formatFileSize(maxFileSizeBytes)}
-				{restoreFile ? `; выбран файл ${restoreFile.name}` : ''}.
-			</p>
+					{createdPermit && (
+						<div className={styles.pendingPermit} role="status">
+							<div>
+								<p className={styles.statusLabel}>Permit ID</p>
+								<code className={styles.hashValue}>
+									{createdPermit.permitId}
+								</code>
+							</div>
+							<p className={styles.hint}>
+								Статус: <b>{createdPermit.status}</b>; действует до{' '}
+								<b>{formatRestoreJobDate(createdPermit.expiresAt)}</b>.
+							</p>
+							<button
+								type="button"
+								className={styles.secondaryBtn}
+								onClick={() => void handleCopyPermitId()}
+							>
+								Скопировать ID для второго DEV
+							</button>
+						</div>
+					)}
+
+					<div>
+						<p className={styles.label}>2. Независимое подтверждение</p>
+						<p className={styles.hint}>
+							Второй DEV вставляет полученный ID. Backend определяет
+							пользователя из текущей сессии и запрещает self-approval.
+						</p>
+					</div>
+					<div className={styles.approvalGrid}>
+						<label className={styles.fieldLabel}>
+							<span>ID permit</span>
+							<input
+								className={styles.input}
+								value={permitApprovalId}
+								onChange={event => setPermitApprovalId(event.target.value)}
+								placeholder="UUID от первого DEV"
+								disabled={
+									databaseRestorePermitApprovalMutation.isPending ||
+									Boolean(restoreApproval)
+								}
+							/>
+						</label>
+						<button
+							type="button"
+							className={styles.actionBtn}
+							onClick={handleApproveRestorePermit}
+							disabled={
+								databaseRestorePermitApprovalMutation.isPending ||
+								Boolean(restoreApproval) ||
+								!permitApprovalId.trim()
+							}
+						>
+							{databaseRestorePermitApprovalMutation.isPending
+								? 'Подтверждаем...'
+								: 'Подтвердить permit'}
+						</button>
+					</div>
+
+					<div>
+						<p className={styles.label}>3. Запуск exact restore</p>
+						<p className={styles.hint}>
+							Запуск доступен только первому DEV для того же target, файла,
+							services revision и migration manifest.
+						</p>
+					</div>
+					<div className={styles.restoreExecutionGrid}>
+						<label className={styles.fieldLabel}>
+							<span>Контрольная фраза</span>
+							<input
+								className={styles.input}
+								value={restoreConfirmation}
+								onChange={event =>
+									setRestoreConfirmation(event.target.value)
+								}
+								placeholder={selectedTargetSettings?.confirmation}
+								disabled={
+									databaseRestoreMutation.isPending ||
+									!isRestoreStartAllowed ||
+									!isRestoreTargetApproved ||
+									isRestoreJobActive ||
+									isRestoreBlockedByRecovery
+								}
+							/>
+						</label>
+						<button
+							type="button"
+							className={styles.dangerBtn}
+							onClick={handleRestoreDatabaseBackup}
+							disabled={
+								databaseRestoreMutation.isPending ||
+								!isRestoreStartAllowed ||
+								!isRestoreTargetApproved ||
+								!restoreFileSha256 ||
+								isRestoreFileHashing ||
+								isRestoreJobActive ||
+								isRestoreBlockedByRecovery
+							}
+						>
+							{canRetryRestorePublication
+								? 'Подтвердить публикацию повторно'
+								: 'Поставить в очередь'}
+						</button>
+					</div>
+					<p className={styles.hint}>
+						Для БД <b>{selectedTargetSettings?.label}</b> введите:{' '}
+						<b>{selectedTargetSettings?.confirmation}</b>.
+					</p>
+				</div>
+			) : (
+				<div
+					className={`${styles.restoreMutationPanel} ${styles.lockedCard}`}
+					aria-disabled="true"
+				>
+					<div className={styles.lockedContent} aria-hidden="true">
+						<p className={styles.label}>DEV-only действия</p>
+						<div className={styles.permitGrid}>
+							<select className={styles.select} disabled>
+								<option>БД микросервиса</option>
+							</select>
+							<label className={styles.fileInputLabel}>
+								<span>Файл .dump</span>
+								<input type="file" accept=".dump" disabled />
+							</label>
+							<button type="button" className={styles.dangerBtn} disabled>
+								Создать permit
+							</button>
+						</div>
+					</div>
+					<div className={styles.lockedOverlay}>
+						<span className={styles.lockedBadge}>Только для DEV</span>
+						<AdminTooltip
+							title="Изменяющие действия заблокированы"
+							description="ADMIN видит exact read-only контракт, но создание и подтверждение permit, загрузка dump, отмена и recovery-действия разрешены только DEV. Backend проверяет права отдельно."
+						/>
+					</div>
+				</div>
+			)}
+
+			<div className={styles.restoreLookupPanel}>
+				<div>
+					<p className={styles.label}>Read-only статус задания</p>
+					<p className={styles.hint}>
+						ADMIN и DEV могут открыть exact job по UUID. Это действие не
+						меняет БД и не запускает worker.
+					</p>
+				</div>
+				<div className={styles.approvalGrid}>
+					<label className={styles.fieldLabel}>
+						<span>Job ID</span>
+						<input
+							className={styles.input}
+							value={restoreJobLookupId}
+							onChange={event => setRestoreJobLookupId(event.target.value)}
+							placeholder="UUID задания"
+						/>
+					</label>
+					<button
+						type="button"
+						className={styles.secondaryBtn}
+						onClick={handleLookupRestoreJob}
+						disabled={!restoreJobLookupId.trim()}
+					>
+						Показать статус
+					</button>
+				</div>
+			</div>
 			{restoreJobMarker && (
 				<div className={styles.restoreStatus} aria-live="polite">
 					<div className={styles.restoreStatusHeader}>
@@ -1758,9 +2311,11 @@ const DatabaseRestorePanel = ({
 						</div>
 						{restoreJob && (
 							<span
-								className={`${styles.badge} ${getDatabaseRestoreJobBadgeClass(restoreJob.status)}`}
+								className={`${styles.badge} ${restoreJob.recoveryResolvedAt ? styles.badgeOk : getDatabaseRestoreJobBadgeClass(restoreJob.status)}`}
 							>
-								{DATABASE_RESTORE_JOB_STATUS_LABELS[restoreJob.status]}
+								{restoreJob.recoveryResolvedAt
+									? 'Recovery разрешён'
+									: DATABASE_RESTORE_JOB_STATUS_LABELS[restoreJob.status]}
 							</span>
 						)}
 					</div>
@@ -1794,11 +2349,207 @@ const DatabaseRestorePanel = ({
 								</p>
 							)}
 							{restoreJob.status === 'RECOVERY_REQUIRED' && (
-								<div className={styles.recoveryWarning} role="alert">
-									<strong>Критическое состояние.</strong> Restore начал
-									изменять целевую БД, но terminal outcome не доказан.
-									Source и safety backup сохранены. Не запускайте restore
-									повторно без проверки production runbook.
+								<div className={styles.recoveryPanel}>
+									<div
+										className={
+											restoreJob.recoveryResolvedAt
+												? styles.recoveryResolved
+												: styles.recoveryWarning
+										}
+										role={
+											restoreJob.recoveryResolvedAt ? 'status' : 'alert'
+										}
+									>
+										<strong>
+											{restoreJob.recoveryResolvedAt
+												? 'Recovery завершён.'
+												: 'Критическое состояние.'}
+										</strong>{' '}
+										{restoreJob.recoveryResolvedAt
+											? 'Exact-проверки пройдены, writer fence безопасно снят, resolution receipt подписан.'
+											: 'Terminal outcome исходного restore не доказан. Выберите ровно один recovery action; выполнение начнётся только после подтверждения другим DEV.'}
+									</div>
+
+									{restoreJob.terminalReceipt && (
+										<div className={styles.receiptGrid}>
+											<div>
+												<p className={styles.statusLabel}>
+													Terminal receipt
+												</p>
+												<code className={styles.hashValue}>
+													{restoreJob.terminalReceipt.payloadSha256}
+												</code>
+											</div>
+											<div>
+												<p className={styles.statusLabel}>Safety backup</p>
+												<code className={styles.hashValue}>
+													{restoreJob.terminalReceipt.safetyBackupSha256 ??
+														'не создан'}
+												</code>
+											</div>
+											<div>
+												<p className={styles.statusLabel}>Signature key</p>
+												<code className={styles.hashValue}>
+													{restoreJob.terminalReceipt.signatureKeyId}
+												</code>
+											</div>
+										</div>
+									)}
+
+									{restoreJob.recoveryActions.map(action => (
+										<div
+											key={action.actionId}
+											className={styles.recoveryActionCard}
+										>
+											<div className={styles.restoreStatusHeader}>
+												<div>
+													<p className={styles.statusLabel}>
+														Recovery action
+													</p>
+													<p className={styles.statusValue}>
+														{
+															DATABASE_RESTORE_RECOVERY_ACTION_LABELS[
+																action.action
+															]
+														}
+													</p>
+												</div>
+												<span
+													className={`${styles.badge} ${getDatabaseRestoreRecoveryBadgeClass(action.status)}`}
+												>
+													{
+														DATABASE_RESTORE_RECOVERY_STATUS_LABELS[
+															action.status
+														]
+													}
+												</span>
+											</div>
+											<div className={styles.recoveryMetaGrid}>
+												<p>
+													Фаза: <b>{action.phase ?? '—'}</b>
+												</p>
+												<p>
+													Попытки: <b>{action.attempts}</b>
+												</p>
+												<p>
+													Writer fence:{' '}
+													<b>
+														{action.writerFenceReleasedAt
+															? 'снят'
+															: action.writerFenceAppliedAt
+																? 'активен'
+																: 'не применён'}
+													</b>
+												</p>
+											</div>
+											<code className={styles.hashValue}>
+												{action.actionId}
+											</code>
+											{action.error && (
+												<p className={styles.restoreError}>
+													{action.error}
+												</p>
+											)}
+											{isDev &&
+												action.status === 'PENDING_APPROVAL' &&
+												action.requestedById !== userId && (
+													<button
+														type="button"
+														className={styles.dangerBtn}
+														onClick={() =>
+															handleApproveRecoveryAction(action)
+														}
+														disabled={
+															databaseRestoreRecoveryApprovalMutation.isPending
+														}
+													>
+														Подтвердить вторым DEV
+													</button>
+												)}
+											{isDev &&
+												action.status === 'PENDING_APPROVAL' &&
+												action.requestedById === userId && (
+													<p className={styles.hint}>
+														Ожидается подтверждение другого DEV.
+													</p>
+												)}
+										</div>
+									))}
+
+									{restoreJob.recoveryResolutionReceipt && (
+										<div className={styles.resolutionReceipt}>
+											<p className={styles.label}>Resolution receipt</p>
+											<code className={styles.hashValue}>
+												{
+													restoreJob.recoveryResolutionReceipt
+														.payloadSha256
+												}
+											</code>
+											<p className={styles.hint}>
+												Разрешено:{' '}
+												{formatRestoreJobDate(
+													restoreJob.recoveryResolvedAt
+												)}
+												; artifacts хранятся до{' '}
+												{formatRestoreJobDate(
+													restoreJob.artifactRetainUntil
+												)}
+												.
+											</p>
+										</div>
+									)}
+
+									{!restoreJob.recoveryResolvedAt &&
+										(isDev ? (
+											<div className={styles.recoveryMutationGrid}>
+												<label className={styles.fieldLabel}>
+													<span>Новый recovery action</span>
+													<select
+														className={styles.select}
+														value={recoveryAction}
+														onChange={event =>
+															setRecoveryAction(
+																event.target
+																	.value as DatabaseRestoreRecoveryActionType
+															)
+														}
+														disabled={
+															hasActiveRecoveryAction ||
+															databaseRestoreRecoveryMutation.isPending
+														}
+													>
+														{DATABASE_RESTORE_RECOVERY_ACTIONS.map(
+															action => (
+																<option key={action} value={action}>
+																	{
+																		DATABASE_RESTORE_RECOVERY_ACTION_LABELS[
+																			action
+																		]
+																	}
+																</option>
+															)
+														)}
+													</select>
+												</label>
+												<button
+													type="button"
+													className={styles.dangerBtn}
+													onClick={handleCreateRecoveryAction}
+													disabled={
+														hasActiveRecoveryAction ||
+														databaseRestoreRecoveryMutation.isPending ||
+														!restoreJob.terminalReceipt
+													}
+												>
+													Создать recovery action
+												</button>
+											</div>
+										) : (
+											<p className={styles.hint}>
+												Recovery-действия доступны только DEV; ADMIN видит
+												их статус read-only.
+											</p>
+										))}
 								</div>
 							)}
 							{restoreJob.cancellationRequested &&
@@ -1814,7 +2565,8 @@ const DatabaseRestorePanel = ({
 									обязательной записи в Журнал событий.
 								</p>
 							)}
-							{restoreJob.canCancel &&
+							{isDev &&
+								restoreJob.canCancel &&
 								!restoreJob.cancellationRequested && (
 									<button
 										type="button"
@@ -1836,7 +2588,9 @@ const DatabaseRestorePanel = ({
 									onClick={handleClearRestoreJob}
 								>
 									{restoreJob.status === 'RECOVERY_REQUIRED'
-										? 'Подтвердить предупреждение и скрыть'
+										? restoreJob.recoveryResolvedAt
+											? 'Скрыть разрешённое recovery-задание'
+											: 'Подтвердить предупреждение и скрыть'
 										: 'Скрыть завершённое задание'}
 								</button>
 							)}

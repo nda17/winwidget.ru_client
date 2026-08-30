@@ -1,6 +1,6 @@
 import { axiosInterceptorsRequest } from '@/shared/api'
 import type {
-	AiConsultantMessageRequest,
+	AiConsultantTestMessageRequest,
 	AiConsultantMessageResponse,
 	AiConsultantConfig,
 	AiConsultantsResponse
@@ -55,7 +55,7 @@ const aiConsultantService = {
 
 	async testMessage(
 		id: string,
-		payload: AiConsultantMessageRequest
+		payload: AiConsultantTestMessageRequest
 	): Promise<AiConsultantMessageResponse> {
 		const { data } =
 			await axiosInterceptorsRequest.post<AiConsultantMessageResponse>(

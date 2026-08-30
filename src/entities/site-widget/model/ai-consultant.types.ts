@@ -51,11 +51,12 @@ export interface AiConsultantMessage {
 	content: string
 }
 
-export interface AiConsultantMessageRequest {
+export interface AiConsultantTestMessageRequest {
 	requestId: string
 	sessionId: string
 	message: string
 	history?: AiConsultantMessage[]
+	aiCloudflareDisclosureAcknowledged: true
 }
 
 export interface AiConsultantMessageResponse {

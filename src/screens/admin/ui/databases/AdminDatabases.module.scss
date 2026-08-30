@@ -86,16 +86,71 @@
 	@apply cursor-not-allowed opacity-50;
 }
 
-.restoreGrid {
-	@apply grid grid-cols-[repeat(3,minmax(0,1fr))_auto] items-end gap-3;
+.restoreContractGrid {
+	@apply grid grid-cols-3 gap-3;
 
-	@media (max-width: 900px) {
-		@apply grid-cols-2;
+	@media (max-width: 760px) {
+		@apply grid-cols-1;
 	}
+}
+
+.restoreContractGrid > div,
+.restoreManifestList > div,
+.exactBindingGrid > div {
+	@apply min-w-0 rounded-lg border border-[#efe8fb] bg-[#faf8ff] p-3;
+}
+
+.restoreManifestList {
+	@apply grid grid-cols-2 gap-3;
+
+	@media (max-width: 760px) {
+		@apply grid-cols-1;
+	}
+}
+
+.hashValue {
+	@apply mt-1 block break-all font-mono text-[0.72rem] leading-relaxed text-[#505a67];
+}
+
+.restoreApproval {
+	@apply flex flex-col gap-3 rounded-lg border border-[#c4a8e8] bg-[#f8f5ff] px-4 py-3 text-sm leading-relaxed text-[#4d2765];
+}
+
+.exactBindingGrid {
+	@apply grid grid-cols-3 gap-3;
+
+	@media (max-width: 760px) {
+		@apply grid-cols-1;
+	}
+}
+
+.restoreMutationPanel {
+	@apply flex flex-col gap-4 rounded-xl border border-[#efe8fb] bg-[#fcfaff] p-4;
+}
+
+.permitGrid {
+	@apply grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_auto] items-end gap-3;
+
+	@media (max-width: 760px) {
+		@apply grid-cols-1;
+	}
+}
+
+.approvalGrid,
+.restoreExecutionGrid {
+	@apply grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3;
 
 	@media (max-width: 640px) {
 		@apply grid-cols-1;
 	}
+}
+
+.pendingPermit {
+	@apply flex flex-col gap-3 rounded-lg border border-[#d7c4ee] bg-white p-3;
+}
+
+.restoreLookupPanel {
+	@apply flex flex-col gap-3 rounded-xl border border-[#e0d6f0] bg-white p-4;
 }
 
 .fieldLabel,
@@ -175,6 +230,47 @@
 
 .recoveryWarning {
 	@apply rounded-lg border-2 border-[#b42318] bg-[#fff1f0] px-4 py-3 text-sm leading-relaxed text-[#8f1d14];
+}
+
+.recoveryPanel {
+	@apply flex flex-col gap-4;
+}
+
+.recoveryResolved {
+	@apply rounded-lg border-2 border-[#168044] bg-[#eefaf3] px-4 py-3 text-sm leading-relaxed text-[#126a39];
+}
+
+.receiptGrid {
+	@apply grid grid-cols-3 gap-3;
+
+	@media (max-width: 760px) {
+		@apply grid-cols-1;
+	}
+}
+
+.receiptGrid > div {
+	@apply min-w-0 rounded-lg border border-[#efe8fb] bg-white p-3;
+}
+
+.recoveryActionCard,
+.resolutionReceipt {
+	@apply flex flex-col gap-3 rounded-lg border border-[#d7c4ee] bg-white p-4;
+}
+
+.recoveryMetaGrid {
+	@apply grid grid-cols-3 gap-3 text-xs text-[#505a67];
+
+	@media (max-width: 760px) {
+		@apply grid-cols-1;
+	}
+}
+
+.recoveryMutationGrid {
+	@apply grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3;
+
+	@media (max-width: 640px) {
+		@apply grid-cols-1;
+	}
 }
 
 .secondaryBtn {

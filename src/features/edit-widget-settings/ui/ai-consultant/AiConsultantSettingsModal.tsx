@@ -179,6 +179,8 @@ const AiConsultantSettingsModal = ({
 		useState<EditableTab | null>(null)
 	const [testInput, setTestInput] = useState('')
 	const [testMessages, setTestMessages] = useState<TestMessage[]>([])
+	const [testDisclosureAcknowledged, setTestDisclosureAcknowledged] =
+		useState(false)
 	const draftRevisionRef = useRef(aiConsultant.draftRevision)
 	const testSessionIdRef = useRef('')
 
@@ -306,6 +308,7 @@ const AiConsultantSettingsModal = ({
 			sessionId: string
 			message: string
 			history: AiConsultantMessage[]
+			aiCloudflareDisclosureAcknowledged: true
 		}) => aiConsultantService.testMessage(aiConsultant.id, variables),
 		onMutate: () => toast.loading('AI готовит тестовый ответ...'),
 		onSuccess: (response, _, toastId) => {
@@ -615,6 +618,12 @@ const AiConsultantSettingsModal = ({
 			setTab('ai')
 			return
 		}
+		if (!testDisclosureAcknowledged) {
+			toast.error(
+				'Подтвердите передачу тестовых данных в Cloudflare Workers AI'
+			)
+			return
+		}
 
 		if (!testSessionIdRef.current) {
 			testSessionIdRef.current = createUuidV4()
@@ -631,7 +640,8 @@ const AiConsultantSettingsModal = ({
 			requestId: createUuidV4(),
 			sessionId: testSessionIdRef.current,
 			message,
-			history
+			history,
+			aiCloudflareDisclosureAcknowledged: true
 		})
 	}
 
@@ -1207,8 +1217,10 @@ const AiConsultantSettingsModal = ({
 					{tab === 'test' && (
 						<div className={styles.fields}>
 							<div className={testStyles.aiNotice}>
-								Тест использует сохранённый черновик. Сообщения этого теста
-								не сохраняются и не публикуются.
+								Тест использует сохранённый черновик. WinWidget не
+								сохраняет и не публикует сообщения этого теста, но передаёт
+								их Cloudflare Workers AI для формирования и проверки
+								ответа.
 							</div>
 							<div className={styles.settingsGroup}>
 								<div className={testStyles.testActions}>
@@ -1266,6 +1278,30 @@ const AiConsultantSettingsModal = ({
 									className={testStyles.testForm}
 									onSubmit={handleTestSubmit}
 								>
+									<label className={testStyles.testDisclosure}>
+										<input
+											type="checkbox"
+											checked={testDisclosureAcknowledged}
+											onChange={event =>
+												setTestDisclosureAcknowledged(event.target.checked)
+											}
+											disabled={testMutation.isPending}
+										/>
+										<span>
+											Я понимаю, что тестовый вопрос, до 12 сообщений
+											контекста и сохранённые бизнес-инструкции будут
+											переданы Cloudflare Workers AI. Я не буду указывать
+											специальные категории, биометрические или избыточные
+											персональные данные.{' '}
+											<a
+												href="/legal-documentation/personal-policy"
+												target="_blank"
+												rel="noreferrer"
+											>
+												Политика обработки данных
+											</a>
+										</span>
+									</label>
 									<textarea
 										className={`${styles.textarea} ${testStyles.testInput}`}
 										value={testInput}

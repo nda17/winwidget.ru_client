@@ -73,6 +73,7 @@ test('AI consultant owner API uses the clean CRUD and saved-draft test contract'
 	assert.match(modelSource, /aiConsultants: AiConsultant\[\]/)
 	assert.match(modelSource, /requestId: string/)
 	assert.match(modelSource, /sessionId: string/)
+	assert.match(modelSource, /aiCloudflareDisclosureAcknowledged: true/)
 	assert.match(modelSource, /outcome: AiConsultantOutcome/)
 	assert.doesNotMatch(apiSource, /\/online-consultants|\/lead/)
 	assert.doesNotMatch(
@@ -116,6 +117,13 @@ test('AI consultant settings keep the agreed defaults and save before testing', 
 		/testSessionIdRef\.current = createUuidV4\(\)/
 	)
 	assert.match(settingsSource, /requestId: createUuidV4\(\)/)
+	assert.match(settingsSource, /aiCloudflareDisclosureAcknowledged: true/)
+	assert.match(
+		settingsSource,
+		/Подтвердите передачу тестовых данных в Cloudflare Workers AI/
+	)
+	assert.match(settingsSource, /до 12 сообщений/)
+	assert.match(settingsSource, /специальные категории, биометрические/)
 	assert.match(settingsSource, /aiConsultantService\.testMessage/)
 	assert.match(settingsSource, /history: AiConsultantMessage\[\]/)
 	assert.doesNotMatch(

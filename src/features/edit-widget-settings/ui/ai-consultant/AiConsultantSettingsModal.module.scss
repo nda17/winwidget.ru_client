@@ -31,7 +31,19 @@
 }
 
 .testForm {
-	@apply flex items-end gap-2;
+	@apply flex flex-wrap items-end gap-2;
+}
+
+.testDisclosure {
+	@apply flex w-full cursor-pointer items-start gap-2 rounded-xl border border-[#ddd4ff] bg-[#f6f3ff] p-3 text-xs leading-5 text-[#514675];
+}
+
+.testDisclosure input {
+	@apply mt-1 shrink-0;
+}
+
+.testDisclosure a {
+	@apply font-semibold text-[#4705fb] underline underline-offset-2;
 }
 
 .testInput {
