@@ -414,9 +414,7 @@ const buildPreviewPublicConfig = (props: WidgetLivePreviewProps) => {
 				'Я не дождался ответа. Если у вас появятся вопросы, напишите снова — я обязательно помогу.',
 			inputPlaceholder:
 				props.config.inputPlaceholder || 'Задайте вопрос...',
-			privacyUrl:
-				props.config.privacyUrl ||
-				'https://winwidget.ru/legal-documentation/consent-processing',
+			privacyUrl: props.config.privacyUrl || '',
 			developInfoActive:
 				props.config.developInfoActive !== false && !props.isHardPlan,
 			turnstileSiteKey: 'preview-site-key',

@@ -46,8 +46,6 @@ const DEFAULT_GREETING =
 	'Здравствуйте! Я Alex, AI-оператор.\nГотов помочь и ответить на ваши вопросы о товарах, услугах и условиях компании.'
 const DEFAULT_FAREWELL =
 	'Я не дождался ответа. Если у вас появятся вопросы, напишите снова — я обязательно помогу.'
-const DEFAULT_PRIVACY_URL =
-	'https://winwidget.ru/legal-documentation/consent-processing'
 
 const TABS: { id: Tab; label: string }[] = [
 	{ id: 'main', label: 'Основные' },
@@ -95,16 +93,32 @@ const getDefaultConfig = (): AiConsultantConfig => ({
 	inactivityTimeoutMinutes: 10,
 	farewellMessage: DEFAULT_FAREWELL,
 	inputPlaceholder: 'Задайте вопрос...',
-	privacyUrl: DEFAULT_PRIVACY_URL,
+	privacyUrl: '',
 	developInfoActive: true
 })
 
-const isValidHttpUrl = (value: string) => {
+const privacyUrlValidationError = (value: string): string | null => {
 	try {
 		const url = new URL(value)
-		return url.protocol === 'http:' || url.protocol === 'https:'
+		if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+			return 'Укажите полную ссылку на политику с http:// или https://'
+		}
+		if (url.username || url.password) {
+			return 'Ссылка на политику не должна содержать логин или пароль'
+		}
+		const hostname = url.hostname
+			.toLowerCase()
+			.replace(/^www\./, '')
+			.replace(/\.+$/, '')
+		if (
+			hostname === 'winwidget.ru' ||
+			hostname.endsWith('.winwidget.ru')
+		) {
+			return 'Укажите собственную политику владельца сайта вне домена winwidget.ru'
+		}
+		return null
 	} catch {
-		return false
+		return 'Укажите полную ссылку на политику с http:// или https://'
 	}
 }
 
@@ -448,11 +462,14 @@ const AiConsultantSettingsModal = ({
 			})
 			return false
 		}
-		if (!isValidHttpUrl(cfg.privacyUrl.trim())) {
+		const privacyUrlError = privacyUrlValidationError(
+			cfg.privacyUrl.trim()
+		)
+		if (privacyUrlError) {
 			reportValidationIssue({
 				tab: 'dialogue',
 				fieldId: `${titleId}-privacyUrl`,
-				message: 'Укажите полную ссылку на политику с http:// или https://'
+				message: privacyUrlError
 			})
 			return false
 		}
@@ -1163,9 +1180,10 @@ const AiConsultantSettingsModal = ({
 									/>
 									{fieldError(`${titleId}-privacyUrl`)}
 									<p className={styles.hint}>
-										Посетитель увидит предупреждение не отправлять
-										персональные данные и ссылку на эту политику рядом с
-										полем вопроса.
+										Укажите политику владельца сайта. Она должна
+										раскрывать, что вопрос и контекст диалога
+										обрабатываются Cloudflare Workers AI, а проверка
+										посетителя — Cloudflare Turnstile.
 									</p>
 								</div>
 								<label className={styles.checkRow}>

@@ -82,7 +82,15 @@ test('AI consultant settings keep the agreed defaults and save before testing', 
 	assert.match(settingsSource, /AI-оператор/)
 	assert.match(settingsSource, /inactivityTimeoutMinutes: 10/)
 	assert.match(settingsSource, /instructionsPrompt: ''/)
-	assert.match(settingsSource, /privacyUrl: DEFAULT_PRIVACY_URL/)
+	assert.match(settingsSource, /privacyUrl: ''/)
+	assert.doesNotMatch(settingsSource, /DEFAULT_PRIVACY_URL/)
+	assert.match(settingsSource, /url\.username \|\| url\.password/)
+	assert.match(settingsSource, /hostname === 'winwidget\.ru'/)
+	assert.match(settingsSource, /hostname\.endsWith\('\.winwidget\.ru'\)/)
+	assert.match(
+		settingsSource,
+		/собственную политику владельца сайта вне домена winwidget\.ru/
+	)
 	assert.match(settingsSource, /Ссылка на политику конфиденциальности/)
 	assert.match(settingsSource, /Укажите точный hostname сайта/)
 	assert.match(settingsSource, /challenges\.cloudflare\.com/)
