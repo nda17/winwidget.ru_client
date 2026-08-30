@@ -5,11 +5,9 @@ export const DATABASE_RESTORE_TARGETS = [
 	'campaigns',
 	'reporting',
 	'widgets',
-	'billing',
 	'identity',
 	'platform',
-	'support',
-	'operations'
+	'support'
 ] as const
 
 export type DatabaseRestoreTarget =
@@ -21,7 +19,7 @@ export type DatabaseRestoreJobStatus =
 	| 'CANCELLED'
 	| 'SUCCEEDED'
 	| 'FAILED'
-	| 'FAILED_FENCED'
+	| 'RECOVERY_REQUIRED'
 
 export interface DatabaseRestoreTargetSettings {
 	id: DatabaseRestoreTarget

@@ -112,7 +112,7 @@ const TERMINAL_DATABASE_RESTORE_JOB_STATUSES: ReadonlySet<DatabaseRestoreJobStat
 		'CANCELLED',
 		'SUCCEEDED',
 		'FAILED',
-		'FAILED_FENCED'
+		'RECOVERY_REQUIRED'
 	])
 const DATABASE_RESTORE_JOB_STATUS_LABELS: Record<
 	DatabaseRestoreJobStatus,
@@ -123,7 +123,7 @@ const DATABASE_RESTORE_JOB_STATUS_LABELS: Record<
 	CANCELLED: 'Отменено до блокировки БД',
 	SUCCEEDED: 'Завершён',
 	FAILED: 'Ошибка',
-	FAILED_FENCED: 'Ошибка — БД заблокирована'
+	RECOVERY_REQUIRED: 'Требуется ручное восстановление'
 }
 
 const isAmbiguousDatabaseRestoreRequestError = (error: unknown) =>
@@ -279,7 +279,7 @@ const getDatabaseRestoreJobBadgeClass = (
 ) => {
 	if (status === 'SUCCEEDED') return styles.badgeOk
 	if (status === 'CANCELLED') return styles.badgeNeutral
-	if (status === 'FAILED' || status === 'FAILED_FENCED') {
+	if (status === 'FAILED' || status === 'RECOVERY_REQUIRED') {
 		return styles.badgeError
 	}
 	return styles.badgeProgress
@@ -1318,7 +1318,7 @@ const DatabaseRestorePanel = ({
 		}
 
 		notifiedRestoreJob.current = job.jobId
-		if (job.status !== 'FAILED_FENCED') {
+		if (job.status !== 'RECOVERY_REQUIRED') {
 			clearDatabaseRestoreMarker(databaseRestoreStorageKey, job.jobId)
 		}
 		const targetLabel = getDatabaseRestoreTargetLabel(
@@ -1338,9 +1338,9 @@ const DatabaseRestorePanel = ({
 			return
 		}
 
-		if (job.status === 'FAILED_FENCED') {
+		if (job.status === 'RECOVERY_REQUIRED') {
 			toast.error(
-				`КРИТИЧНО: восстановление БД ${targetLabel} завершилось с ошибкой после блокировки подключений. БД оставлена ограждённой; не запускайте сервис вручную и следуйте production runbook.`,
+				`КРИТИЧНО: исход восстановления БД ${targetLabel} после начала изменений требует ручной проверки. Source и safety backup сохранены; не повторяйте restore автоматически и следуйте production runbook.`,
 				{ duration: 15000 }
 			)
 			return
@@ -1460,7 +1460,8 @@ const DatabaseRestorePanel = ({
 			!TERMINAL_DATABASE_RESTORE_JOB_STATUSES.has(restoreJob.status)) &&
 		!isRestorePublicationUnconfirmed
 	)
-	const isRestoreBlockedByFence = restoreJob?.status === 'FAILED_FENCED'
+	const isRestoreBlockedByRecovery =
+		restoreJob?.status === 'RECOVERY_REQUIRED'
 	const isRestoreEnabled = databaseRestoreSettings.data.enabled
 	const restoreApproval = databaseRestoreSettings.data.approved
 	const isRestoreTargetApproved =
@@ -1515,9 +1516,9 @@ const DatabaseRestorePanel = ({
 			toast.error('Дождитесь завершения текущего восстановления')
 			return
 		}
-		if (isRestoreBlockedByFence) {
+		if (isRestoreBlockedByRecovery) {
 			toast.error(
-				'Сначала проверьте состояние ограждённой БД по production runbook и подтвердите критическое предупреждение.'
+				'Сначала проверьте целевую БД и сохранённые artifacts по production runbook, затем подтвердите критическое предупреждение.'
 			)
 			return
 		}
@@ -1586,9 +1587,9 @@ const DatabaseRestorePanel = ({
 		}
 		clearDatabaseRestoreMarker(databaseRestoreStorageKey, restoreJob.jobId)
 		setRestoreJobMarker(null)
-		if (restoreJob.status === 'FAILED_FENCED') {
+		if (restoreJob.status === 'RECOVERY_REQUIRED') {
 			toast.error(
-				'Предупреждение скрыто только в интерфейсе. Защитная блокировка БД этим действием не снимается.',
+				'Предупреждение скрыто только в интерфейсе. Неопределённый исход restore и сохранённые artifacts этим действием не разрешаются.',
 				{ duration: 10000 }
 			)
 			return
@@ -1669,7 +1670,7 @@ const DatabaseRestorePanel = ({
 							!isRestoreStartAllowed ||
 							Boolean(restoreApproval) ||
 							isRestoreJobActive ||
-							isRestoreBlockedByFence
+							isRestoreBlockedByRecovery
 						}
 					>
 						{databaseRestoreSettings.data.targets.map(target => (
@@ -1699,7 +1700,7 @@ const DatabaseRestorePanel = ({
 							!isRestoreStartAllowed ||
 							!isRestoreTargetApproved ||
 							isRestoreJobActive ||
-							isRestoreBlockedByFence
+							isRestoreBlockedByRecovery
 						}
 					/>
 				</label>
@@ -1715,7 +1716,7 @@ const DatabaseRestorePanel = ({
 							!isRestoreStartAllowed ||
 							!isRestoreTargetApproved ||
 							isRestoreJobActive ||
-							isRestoreBlockedByFence
+							isRestoreBlockedByRecovery
 						}
 					/>
 				</label>
@@ -1728,7 +1729,7 @@ const DatabaseRestorePanel = ({
 						!isRestoreStartAllowed ||
 						!isRestoreTargetApproved ||
 						isRestoreJobActive ||
-						isRestoreBlockedByFence
+						isRestoreBlockedByRecovery
 					}
 				>
 					{canRetryRestorePublication
@@ -1792,12 +1793,12 @@ const DatabaseRestorePanel = ({
 									{restoreJob.error.code}: {restoreJob.error.message}
 								</p>
 							)}
-							{restoreJob.status === 'FAILED_FENCED' && (
-								<div className={styles.fencedWarning} role="alert">
-									<strong>Критическое состояние.</strong> Подключения к БД
-									оставлены заблокированными после ошибки. Не запускайте
-									сервис вручную и не повторяйте восстановление без
-									проверки production runbook.
+							{restoreJob.status === 'RECOVERY_REQUIRED' && (
+								<div className={styles.recoveryWarning} role="alert">
+									<strong>Критическое состояние.</strong> Restore начал
+									изменять целевую БД, но terminal outcome не доказан.
+									Source и safety backup сохранены. Не запускайте restore
+									повторно без проверки production runbook.
 								</div>
 							)}
 							{restoreJob.cancellationRequested &&
@@ -1834,7 +1835,7 @@ const DatabaseRestorePanel = ({
 									className={styles.secondaryBtn}
 									onClick={handleClearRestoreJob}
 								>
-									{restoreJob.status === 'FAILED_FENCED'
+									{restoreJob.status === 'RECOVERY_REQUIRED'
 										? 'Подтвердить предупреждение и скрыть'
 										: 'Скрыть завершённое задание'}
 								</button>
