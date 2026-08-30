@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - prod
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crm-client-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      HUSKY: 0
+      NEXT_PUBLIC_MODE: production
+      NEXT_PUBLIC_APP_URL: https://crm.winwidget.ru
+      NEXT_PUBLIC_API_URL: https://api.winwidget.ru/api/v1
+      APP_REVISION: ${{ github.sha }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit production dependencies
+        run: pnpm audit --prod --audit-level=high
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm typecheck
+
+      - name: Build application
+        run: pnpm build
+
+      - name: Build local container image
+        run: >-
+          docker build
+          --build-arg APP_REVISION=${{ github.sha }}
+          --build-arg NEXT_PUBLIC_MODE=production
+          --build-arg NEXT_PUBLIC_APP_URL=https://crm.winwidget.ru
+          --build-arg NEXT_PUBLIC_API_URL=https://api.winwidget.ru/api/v1
+          --tag winwidget-crm-client:ci-${{ github.sha }}
+          .

@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+	* {
+		@apply box-border;
+	}
+
+	html,
+	body {
+		@apply min-h-full;
+	}
+
+	body {
+		@apply m-0 bg-slate-100 font-sans text-slate-950 antialiased;
+	}
+
+	button,
+	input,
+	select,
+	textarea {
+		@apply font-sans;
+	}
+}
