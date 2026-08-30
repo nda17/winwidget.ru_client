@@ -7,17 +7,25 @@ export const metadata: Metadata = {
 }
 
 async function fetchContent(): Promise<string> {
-	try {
-		const res = await fetch(
-			`${process.env.NEXT_PUBLIC_API_URL}/legal-pages/consent-processing`,
-			{ next: { revalidate: 60 } }
-		)
-		if (!res.ok) return ''
-		const data = await res.json()
-		return data?.content ?? ''
-	} catch {
-		return ''
+	const res = await fetch(
+		`${process.env.NEXT_PUBLIC_API_URL}/legal-pages/consent-processing`,
+		{ cache: 'no-store' }
+	)
+	if (!res.ok) {
+		throw new Error('Consent document is temporarily unavailable')
 	}
+	const data: unknown = await res.json()
+	const content =
+		typeof data === 'object' &&
+		data !== null &&
+		'content' in data &&
+		typeof data.content === 'string'
+			? data.content.trim()
+			: ''
+	if (!content) {
+		throw new Error('Consent document content is empty')
+	}
+	return content
 }
 
 const ConsentProcessingPage = async () => {

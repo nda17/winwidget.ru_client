@@ -7,17 +7,25 @@ export const metadata: Metadata = {
 }
 
 async function fetchContent(): Promise<string> {
-	try {
-		const res = await fetch(
-			`${process.env.NEXT_PUBLIC_API_URL}/legal-pages/personal-policy`,
-			{ next: { revalidate: 60 } }
-		)
-		if (!res.ok) return ''
-		const data = await res.json()
-		return data?.content ?? ''
-	} catch {
-		return ''
+	const res = await fetch(
+		`${process.env.NEXT_PUBLIC_API_URL}/legal-pages/personal-policy`,
+		{ cache: 'no-store' }
+	)
+	if (!res.ok) {
+		throw new Error('Personal policy is temporarily unavailable')
 	}
+	const data: unknown = await res.json()
+	const content =
+		typeof data === 'object' &&
+		data !== null &&
+		'content' in data &&
+		typeof data.content === 'string'
+			? data.content.trim()
+			: ''
+	if (!content) {
+		throw new Error('Personal policy content is empty')
+	}
+	return content
 }
 
 const PersonalPolicyPage = async () => {

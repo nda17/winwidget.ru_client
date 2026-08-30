@@ -1183,7 +1183,9 @@ const AiConsultantSettingsModal = ({
 										Укажите политику владельца сайта. Она должна
 										раскрывать, что вопрос и контекст диалога
 										обрабатываются Cloudflare Workers AI, а проверка
-										посетителя — Cloudflare Turnstile.
+										посетителя — Cloudflare Turnstile. Перед проверкой
+										WinWidget потребует от посетителя отдельное явное
+										согласие неизменяемой редакции.
 									</p>
 								</div>
 								<label className={styles.checkRow}>

@@ -52,7 +52,9 @@ const [
 const [
 	timerSettingsSource,
 	stopOfferSettingsSource,
-	experiencePanelSource
+	experiencePanelSource,
+	personalPolicySource,
+	consentPolicySource
 ] = await Promise.all([
 	readSource(
 		'src/features/edit-widget-settings/ui/countdown-timer/CountdownTimerSettingsModal.tsx'
@@ -60,7 +62,9 @@ const [
 	readSource(
 		'src/features/edit-widget-settings/ui/stop-offer/StopOfferSettingsModal.tsx'
 	),
-	readSource('src/screens/widget-settings/ui/WidgetExperiencePanel.tsx')
+	readSource('src/screens/widget-settings/ui/WidgetExperiencePanel.tsx'),
+	readSource('src/app/legal-documentation/personal-policy/page.tsx'),
+	readSource('src/app/legal-documentation/consent-processing/page.tsx')
 ])
 
 test('AI consultant owner API uses the clean CRUD and saved-draft test contract', () => {
@@ -118,6 +122,15 @@ test('AI consultant settings keep the agreed defaults and save before testing', 
 		settingsSource,
 		/\b(leads?|quickActions|contact|integrations)\b/i
 	)
+})
+
+test('AI legal pages are uncached and fail closed without published content', () => {
+	for (const source of [personalPolicySource, consentPolicySource]) {
+		assert.match(source, /cache: 'no-store'/)
+		assert.doesNotMatch(source, /revalidate:/)
+		assert.doesNotMatch(source, /return ''/)
+		assert.match(source, /throw new Error/)
+	}
 })
 
 test('public preview omits the owner prompt and does not assume streaming', () => {
