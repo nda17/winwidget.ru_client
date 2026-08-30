@@ -2003,8 +2003,10 @@ const DatabaseRestorePanel = ({
 
 			{!isRestoreEnabled && !canRetryRestorePublication && (
 				<p className={styles.restoreError} role="alert">
-					Запуск новых восстановлений отключён release-gate. Read-only
-					контракт и статус уже созданного задания остаются доступны.
+					Запуск новых восстановлений отключён release-gate до внедрения
+					подписанного provenance для service-owned backup либо отдельного
+					least-privileged restore-пользователя. Read-only контракт и
+					статус уже созданного задания остаются доступны.
 				</p>
 			)}
 			{canRetryRestorePublication && (
@@ -2649,7 +2651,7 @@ const AdminDatabases: NextPage = () => {
 				title="Backup и восстановление PostgreSQL"
 				description={
 					isDev
-						? 'Здесь можно отдельно поставить backup каждой БД в очередь и восстановить БД выбранного микросервиса из PostgreSQL .dump.'
+						? 'Здесь можно отдельно поставить backup каждой БД в очередь и контролировать подготовленный, но выключенный release-gate восстановления из PostgreSQL .dump.'
 						: 'Здесь можно отдельно поставить backup каждой базы PostgreSQL в очередь и следить за их выполнением.'
 				}
 				risk={isDev ? 'high' : 'medium'}
