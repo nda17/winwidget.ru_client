@@ -21,13 +21,25 @@ winwidget.ru_client
 winwidget.ru_client_crm
   frontend WinWidget CRM
 
-winwidget.ru_services/apps/crm
-  будущий автономный CRM backend
+winwidget.ru_services/apps/crm-access
+  CRM-роли, seats, teams и access projections
+
+winwidget.ru_services/apps/crm-intake
+  Inbox, источники, imports и acceptance process
+
+winwidget.ru_services/apps/crm-customers
+  контакты, компании, dedup/merge и PII lifecycle
+
+winwidget.ru_services/apps/crm-sales
+  сделки, воронки, задачи, сценарии и timeline
 ```
 
 Нахождение CRM backend в сервисном монорепозитории не означает общий runtime:
-он будет владеть собственной PostgreSQL, миграциями, ролями, health-check,
-image и release lifecycle.
+каждое приложение `apps/crm-*` будет владеть собственной PostgreSQL, Prisma
+schema, миграциями, ролями, Outbox, health-check, image и release lifecycle.
+Вложенная папка `apps/crm`, общая CRM-БД и shared domain runtime не создаются.
+После MVP новыми bounded contexts при подтверждённом спросе могут стать
+`apps/crm-automation` и `apps/crm-communications`.
 
 ## Стек
 
@@ -127,6 +139,25 @@ src/shared    API client, config, UI kit и общие библиотеки
 Стили пишутся через Tailwind `@apply`. Новые формы, списки и select должны
 следовать общим frontend-паттернам WinWidget; пагинация всегда серверная.
 
+## Дизайн-направление
+
+CRM сохраняет фирменную основу WinWidget: логотип, оранжевый акцент,
+типографику, язык иконок, формы, кнопки, модальные окна, toast и радиусы. Сам
+интерфейс проектируется как отдельное рабочее приложение, а не копия главной
+страницы или кабинета Widgets:
+
+- постоянный sidebar и компактная верхняя панель;
+- плотные таблицы, Kanban, очереди задач и карточки сделок;
+- drawer/split-view для быстрых действий без потери контекста;
+- responsive web с приоритетом ежедневной desktop-работы менеджера;
+- доступные loading, empty, error, read-only и permission states.
+
+На первом этапе CRM UI kit остаётся в этом репозитории, чтобы frontend имел
+независимые build и release lifecycle. Общие стабильные tokens и компоненты
+можно позже вынести в версионированный package; runtime-import из основного
+frontend не используется. Текущий bootstrap-экран не является финальным
+дизайном CRM.
+
 ## CI
 
 Локально подготовлен только quality workflow:
@@ -147,7 +178,9 @@ Workflow не содержит SSH, production secrets, Compose или VPS deplo
 реализовать:
 
 - Workspace/membership и CRM entitlement;
-- точный Gateway prefix `/api/v1/crm`;
+- единый Gateway prefix `/api/v1/crm/**` с точной маршрутизацией групп ресурсов
+  на `crm-access`, `crm-intake`, `crm-customers`, `crm-sales` и существующий
+  Reporting;
 - CORS origin для локального `http://localhost:3001` и production
   `https://crm.winwidget.ru`;
 - безопасный общий auth flow между `winwidget.ru` и `crm.winwidget.ru`;
