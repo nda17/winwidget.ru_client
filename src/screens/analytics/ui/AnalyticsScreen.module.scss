@@ -1,0 +1,106 @@
+.screen {
+	@apply flex flex-col gap-6;
+}
+
+.metricGrid {
+	@apply grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-4;
+}
+
+.metricCard {
+	@apply flex min-h-40 flex-col rounded-panel border border-crm-border bg-crm-surface p-5 shadow-panel;
+
+	> strong {
+		@apply mt-5 text-4xl font-bold tracking-tight text-crm-text;
+	}
+
+	> small {
+		@apply mt-auto pt-4 text-xs text-crm-muted;
+	}
+}
+
+.metricHeader {
+	@apply flex min-w-0 flex-col items-start gap-3 2xl:flex-row 2xl:justify-between;
+
+	> span {
+		@apply text-sm font-semibold leading-5 text-crm-muted;
+	}
+}
+
+.dashboardGrid {
+	@apply grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.85fr)];
+}
+
+.panel,
+.statePanel {
+	@apply overflow-hidden rounded-panel border border-crm-border bg-crm-surface shadow-panel;
+}
+
+.panelHeader {
+	@apply flex flex-col gap-4 border-b border-crm-border px-5 py-5 sm:flex-row sm:items-center sm:justify-between lg:px-6;
+}
+
+.panelTitle {
+	@apply text-lg font-bold text-crm-text;
+}
+
+.panelDescription {
+	@apply mt-1 text-sm text-crm-muted;
+}
+
+.funnel {
+	@apply flex flex-col gap-5 p-5 lg:p-6;
+}
+
+.funnelRow {
+	@apply grid grid-cols-[minmax(8rem,0.8fr)_minmax(10rem,2fr)_auto] items-center gap-4;
+
+	> small {
+		@apply text-right text-xs font-medium text-crm-muted;
+	}
+}
+
+.funnelLabel {
+	@apply flex items-center justify-between gap-3 text-sm text-crm-muted;
+
+	strong {
+		@apply text-crm-text;
+	}
+}
+
+.funnelTrack {
+	@apply h-3 overflow-hidden rounded-full bg-primary/10;
+
+	span {
+		@apply block h-full rounded-full bg-brand-gradient;
+	}
+}
+
+.funnelWidthFull {
+	@apply w-full;
+}
+
+.funnelWidthThreeQuarters {
+	@apply w-3/4;
+}
+
+.funnelWidthFortySix {
+	@apply w-[46%];
+}
+
+.funnelWidthTwentyNine {
+	@apply w-[29%];
+}
+
+.stateColumn {
+	@apply grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-1;
+}
+
+@media (max-width: 639px) {
+	.funnelRow {
+		@apply grid-cols-1 gap-2;
+
+		> small {
+			@apply text-left;
+		}
+	}
+}

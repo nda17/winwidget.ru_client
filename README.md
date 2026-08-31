@@ -5,9 +5,15 @@
 
 ## Текущий статус
 
-Сейчас это только локальный технический bootstrap:
+Сейчас реализован локальный contract-neutral frontend-фундамент:
 
-- продуктовые CRM-экраны и API-контракты ещё не реализованы;
+- фирменные design tokens и базовый UI kit;
+- адаптивный `AppShell` с sidebar, topbar и мобильной навигацией;
+- каркасы разделов «Входящие», «Сделки», «Задачи», «Контакты»,
+  «Аналитика» и «Настройки»;
+- переиспользуемые таблица, readonly Kanban, drawer и поля форм;
+- loading, empty, error, read-only и permission-denied состояния;
+- только синтетические локальные fixtures без API, persistence и финальных DTO;
 - авторизация и общий вход с `winwidget.ru` ещё не подключены;
 - production deploy, VPS, DNS, TLS и Nginx не настроены;
 - push и production-релиз из этой ветки не выполняются.
@@ -96,7 +102,7 @@ pnpm dev
 
 ```bash
 pnpm dev           # локальный сервер на 3001
-pnpm build         # production Next.js build
+pnpm build         # production Next.js build через webpack
 pnpm start         # запуск готовой production-сборки
 pnpm lint          # ESLint и accessibility rules
 pnpm typecheck     # строгая TypeScript-проверка
@@ -127,14 +133,19 @@ docker run --rm -p 3001:3000 winwidget-crm-client:local
 
 ```text
 src/app       Next.js routes, layouts и providers
-src/screens   композиция будущих CRM-экранов
+src/screens   композиция contract-neutral CRM-экранов и локальные fixtures
 src/features  пользовательские CRM-действия
 src/entities  workspace, contact, deal, task и другие доменные модели
-src/shared    API client, config, UI kit и общие библиотеки
+src/shared    UI kit и общие библиотеки
+src/widgets   AppShell и крупные самостоятельные UI-блоки
 ```
 
-Сейчас существует только `src/app`. Остальные слои появляются вместе с первым
-вертикальным продуктовым срезом.
+Слои `features` и `entities` намеренно не созданы: они появятся вместе с первым
+согласованным API-контрактом и вертикальным продуктовым срезом.
+
+Текущее направление зависимостей: `app → screens/widgets → shared`. Срезы
+экспортируют публичный API через `index.ts`; обратные и cross-slice импорты не
+используются.
 
 Стили пишутся через Tailwind `@apply`. Новые формы, списки и select должны
 следовать общим frontend-паттернам WinWidget; пагинация всегда серверная.
@@ -210,10 +221,10 @@ dev_X.Y.Z/fix/short-description
 dev_X.Y.Z/chore/short-description
 ```
 
-Текущая bootstrap-ветка:
+Текущая ветка UI-фундамента:
 
 ```text
-dev_2.5.0/chore/bootstrap-crm-client
+dev_2.6.0/feature/crm-app-shell
 ```
 
 Production branch, deploy contract и release workflow будут добавлены только

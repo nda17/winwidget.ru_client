@@ -1,0 +1,75 @@
+.screen {
+	@apply flex flex-col gap-6;
+}
+
+.panel {
+	@apply overflow-hidden rounded-panel border border-crm-border bg-crm-surface shadow-panel;
+}
+
+.panelHeader {
+	@apply flex flex-col gap-4 border-b border-crm-border px-5 py-5 sm:flex-row sm:items-center sm:justify-between lg:px-6;
+}
+
+.panelTitle {
+	@apply text-lg font-bold text-crm-text;
+}
+
+.panelDescription {
+	@apply mt-1 text-sm text-crm-muted;
+}
+
+.leadButton {
+	@apply flex min-w-[18rem] items-center gap-3 rounded-lg text-left transition-colors hover:text-primary;
+}
+
+.avatar {
+	@apply flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-xs font-bold text-primary;
+}
+
+.leadCopy {
+	@apply flex min-w-0 flex-col gap-1;
+
+	strong {
+		@apply text-sm font-semibold text-crm-text;
+	}
+
+	span {
+		@apply max-w-[22rem] truncate text-xs text-crm-muted;
+	}
+}
+
+.drawerContent {
+	@apply flex flex-col gap-5;
+}
+
+.drawerStatusRow {
+	@apply flex items-center justify-between gap-3 text-sm text-crm-muted;
+}
+
+.details {
+	@apply grid grid-cols-1 gap-3 sm:grid-cols-2;
+
+	div {
+		@apply rounded-xl border border-crm-border bg-crm-surface-muted p-4;
+	}
+
+	dt {
+		@apply text-xs font-semibold uppercase tracking-wide text-crm-muted;
+	}
+
+	dd {
+		@apply mt-2 break-words text-sm font-medium text-crm-text;
+	}
+}
+
+.messageCard {
+	@apply rounded-xl border border-crm-border bg-crm-surface-muted p-4;
+
+	span {
+		@apply text-xs font-semibold uppercase tracking-wide text-crm-muted;
+	}
+
+	p {
+		@apply mt-2 text-sm leading-6 text-crm-text;
+	}
+}

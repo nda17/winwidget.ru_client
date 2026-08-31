@@ -1,0 +1,23 @@
+.header {
+	@apply flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between;
+}
+
+.copy {
+	@apply min-w-0;
+}
+
+.eyebrow {
+	@apply mb-1 text-xs font-bold uppercase tracking-[0.1em] text-primary;
+}
+
+.title {
+	@apply text-2xl font-bold tracking-tight text-crm-text sm:text-3xl;
+}
+
+.description {
+	@apply mt-2 max-w-3xl text-sm leading-6 text-crm-muted;
+}
+
+.actions {
+	@apply flex shrink-0 flex-wrap items-center gap-2 sm:justify-end;
+}

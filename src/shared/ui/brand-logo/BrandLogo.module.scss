@@ -1,0 +1,35 @@
+.logo {
+	@apply inline-flex items-center gap-3 text-crm-text no-underline;
+}
+
+.logo:focus-visible {
+	@apply rounded-xl outline-none ring-2 ring-primary/40 ring-offset-2;
+}
+
+.mark {
+	@apply h-9 w-9 shrink-0 fill-primary;
+}
+
+.mark path {
+	@apply fill-white;
+}
+
+.wordmark {
+	@apply inline-flex items-center gap-2 text-base font-bold tracking-tight;
+}
+
+.product {
+	@apply rounded-md bg-accent/15 px-2 py-1 text-xs font-bold uppercase tracking-[0.08em] text-crm-warning;
+}
+
+.compact {
+	@apply gap-0;
+}
+
+.compactWordmark {
+	@apply hidden;
+}
+
+.srOnly {
+	@apply sr-only;
+}
