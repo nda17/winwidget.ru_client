@@ -61,6 +61,12 @@ const DATABASE_BACKUP_JOB_POLL_INTERVAL_MS = 2500
 const DATABASE_BACKUP_HISTORY_LIMIT = 20
 const DATABASE_RESTORE_JOB_POLL_INTERVAL_MS = 2500
 const DATABASE_RESTORE_PUBLICATION_GRACE_MS = 5 * 60 * 1000
+const DATABASE_BACKUP_PROVENANCE_MAX_FILE_SIZE_BYTES = 16_384
+const DATABASE_BACKUP_PROVENANCE_FILE_EXTENSION = '.provenance.json'
+const DATABASE_BACKUP_PROVENANCE_DOMAIN =
+	'winwidget.operations.database-backup-provenance.v1'
+const SHA256_PATTERN = /^[0-9a-f]{64}$/
+const PROVENANCE_KEY_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,79}$/
 const DATABASE_BACKUP_STORAGE_KEY_PREFIX =
 	'winwidget:admin:database-backup:active'
 const DATABASE_RESTORE_STORAGE_KEY_PREFIX =
@@ -164,6 +170,18 @@ interface DatabaseRestoreMarker {
 interface DatabaseBackupActiveMarker {
 	idempotencyKey: string | null
 	jobId: string | null
+}
+
+interface SelectedDatabaseBackupProvenance {
+	raw: string
+	fileName: string
+	envelopeSha256: string
+	keyId: string
+	backupJobId: string
+	target: DatabaseRestoreTarget
+	artifactSha256: string
+	artifactFileName: string
+	artifactFileSize: number
 }
 
 const getDatabaseBackupMarker = (
@@ -302,6 +320,129 @@ const calculateFileSha256 = async (file: File) => {
 	return Array.from(new Uint8Array(digest), byte =>
 		byte.toString(16).padStart(2, '0')
 	).join('')
+}
+
+const parseDatabaseBackupProvenance = (
+	raw: string,
+	fileName: string
+): SelectedDatabaseBackupProvenance => {
+	let value: unknown
+	try {
+		value = JSON.parse(raw) as unknown
+	} catch {
+		throw new Error('Sidecar не является корректным JSON')
+	}
+
+	if (!value || typeof value !== 'object' || Array.isArray(value)) {
+		throw new Error('Некорректный корневой объект provenance sidecar')
+	}
+	const signed = value as Record<string, unknown>
+	const envelope = signed.envelope
+	if (
+		!envelope ||
+		typeof envelope !== 'object' ||
+		Array.isArray(envelope)
+	) {
+		throw new Error('В sidecar отсутствует envelope')
+	}
+	const envelopeRecord = envelope as Record<string, unknown>
+	const evidence = envelopeRecord.evidence
+	if (
+		!evidence ||
+		typeof evidence !== 'object' ||
+		Array.isArray(evidence)
+	) {
+		throw new Error('В sidecar отсутствует envelope.evidence')
+	}
+	const evidenceRecord = evidence as Record<string, unknown>
+	if (
+		envelopeRecord.domain !== DATABASE_BACKUP_PROVENANCE_DOMAIN ||
+		envelopeRecord.schemaVersion !== 1 ||
+		envelopeRecord.signatureAlgorithm !== 'Ed25519'
+	) {
+		throw new Error(
+			'Sidecar использует неподдерживаемый provenance-контракт'
+		)
+	}
+	if (
+		typeof signed.envelopeSha256 !== 'string' ||
+		!SHA256_PATTERN.test(signed.envelopeSha256)
+	) {
+		throw new Error('В sidecar отсутствует корректный envelope SHA-256')
+	}
+	if (
+		typeof envelopeRecord.keyId !== 'string' ||
+		!PROVENANCE_KEY_ID_PATTERN.test(envelopeRecord.keyId)
+	) {
+		throw new Error('В sidecar отсутствует корректный provenance key ID')
+	}
+	if (
+		typeof signed.signatureEd25519Base64 !== 'string' ||
+		!signed.signatureEd25519Base64
+	) {
+		throw new Error('В sidecar отсутствует Ed25519-подпись')
+	}
+	if (
+		typeof evidenceRecord.backupJobId !== 'string' ||
+		!UUID_PATTERN.test(evidenceRecord.backupJobId)
+	) {
+		throw new Error('В sidecar отсутствует корректный backup job ID')
+	}
+	if (!isDatabaseRestoreTarget(evidenceRecord.target)) {
+		throw new Error('В sidecar указана неподдерживаемая целевая БД')
+	}
+	if (
+		typeof evidenceRecord.artifactSha256 !== 'string' ||
+		!SHA256_PATTERN.test(evidenceRecord.artifactSha256)
+	) {
+		throw new Error('В sidecar отсутствует корректный SHA-256 backup')
+	}
+	if (
+		typeof evidenceRecord.fileName !== 'string' ||
+		!evidenceRecord.fileName
+	) {
+		throw new Error('В sidecar отсутствует имя backup')
+	}
+	if (
+		!Number.isSafeInteger(evidenceRecord.fileSize) ||
+		Number(evidenceRecord.fileSize) <= 0
+	) {
+		throw new Error('В sidecar отсутствует корректный размер backup')
+	}
+
+	return {
+		raw,
+		fileName,
+		envelopeSha256: signed.envelopeSha256,
+		keyId: envelopeRecord.keyId,
+		backupJobId: evidenceRecord.backupJobId.toLowerCase(),
+		target: evidenceRecord.target,
+		artifactSha256: evidenceRecord.artifactSha256,
+		artifactFileName: evidenceRecord.fileName,
+		artifactFileSize: Number(evidenceRecord.fileSize)
+	}
+}
+
+const assertDatabaseBackupProvenanceMatches = (
+	provenance: SelectedDatabaseBackupProvenance,
+	target: DatabaseRestoreTarget,
+	backup: File,
+	backupSha256: string
+) => {
+	if (provenance.target !== target) {
+		throw new Error(
+			'Target в provenance sidecar не совпадает с выбранной БД'
+		)
+	}
+	if (provenance.artifactSha256 !== backupSha256) {
+		throw new Error('SHA-256 в provenance sidecar не совпадает с backup')
+	}
+	if (provenance.artifactFileName !== backup.name) {
+		throw new Error('Имя файла в provenance sidecar не совпадает с backup')
+	}
+	if (provenance.artifactFileSize !== backup.size) {
+		throw new Error('Размер в provenance sidecar не совпадает с backup')
+	}
 }
 
 const getDatabaseBackupJobBadgeClass = (
@@ -1062,6 +1203,8 @@ const DatabaseRestorePanel = ({
 		string | null
 	>(null)
 	const [isRestoreFileHashing, setIsRestoreFileHashing] = useState(false)
+	const [restoreBackupProvenance, setRestoreBackupProvenance] =
+		useState<SelectedDatabaseBackupProvenance | null>(null)
 	const [restoreConfirmation, setRestoreConfirmation] = useState('')
 	const [createdPermit, setCreatedPermit] =
 		useState<DatabaseRestorePermit | null>(null)
@@ -1072,12 +1215,19 @@ const DatabaseRestorePanel = ({
 	const [restoreJobMarker, setRestoreJobMarker] =
 		useState<DatabaseRestoreMarker | null>(null)
 	const restoreFileInput = useRef<HTMLInputElement | null>(null)
+	const restoreProvenanceInput = useRef<HTMLInputElement | null>(null)
 	const restoreFileHashRequest = useRef(0)
 	const notifiedRestoreJob = useRef<string | null>(null)
 	const notifiedRecoveryAction = useRef<string | null>(null)
 	const databaseRestoreStorageKey = userId
 		? `${DATABASE_RESTORE_STORAGE_KEY_PREFIX}:${userId}`
 		: null
+	const resetRestoreBackupProvenance = useCallback(() => {
+		setRestoreBackupProvenance(null)
+		if (restoreProvenanceInput.current) {
+			restoreProvenanceInput.current.value = ''
+		}
+	}, [])
 
 	const databaseRestoreSettings = useQuery({
 		queryKey: RESTORE_SETTINGS_QUERY_KEY,
@@ -1230,6 +1380,7 @@ const DatabaseRestorePanel = ({
 			await trackDatabaseRestoreJob(job)
 			setRestoreFile(null)
 			setRestoreFileSha256(null)
+			resetRestoreBackupProvenance()
 			setRestoreConfirmation('')
 			if (restoreFileInput.current) {
 				restoreFileInput.current.value = ''
@@ -1348,6 +1499,7 @@ const DatabaseRestorePanel = ({
 			setRestoreTarget(approvedTarget)
 			setRestoreFile(null)
 			setRestoreFileSha256(null)
+			resetRestoreBackupProvenance()
 			setRestoreConfirmation('')
 			if (restoreFileInput.current) restoreFileInput.current.value = ''
 			return
@@ -1355,9 +1507,15 @@ const DatabaseRestorePanel = ({
 		if (targets.some(target => target.id === restoreTarget)) return
 
 		setRestoreTarget(targets[0].id)
+		setRestoreFile(null)
+		setRestoreFileSha256(null)
+		resetRestoreBackupProvenance()
+		setRestoreConfirmation('')
+		if (restoreFileInput.current) restoreFileInput.current.value = ''
 	}, [
 		databaseRestoreSettings.data?.approved?.target,
 		databaseRestoreSettings.data?.targets,
+		resetRestoreBackupProvenance,
 		restoreTarget
 	])
 
@@ -1613,6 +1771,7 @@ const DatabaseRestorePanel = ({
 		setRestoreTarget(target)
 		setRestoreFile(null)
 		setRestoreFileSha256(null)
+		resetRestoreBackupProvenance()
 		setRestoreConfirmation('')
 		if (restoreFileInput.current) restoreFileInput.current.value = ''
 	}
@@ -1625,6 +1784,7 @@ const DatabaseRestorePanel = ({
 		restoreFileHashRequest.current = request
 		setRestoreFile(file)
 		setRestoreFileSha256(null)
+		resetRestoreBackupProvenance()
 		setCreatedPermit(null)
 		setIsRestoreFileHashing(false)
 
@@ -1658,6 +1818,60 @@ const DatabaseRestorePanel = ({
 		}
 	}
 
+	const handleRestoreProvenanceChange = async (
+		event: ChangeEvent<HTMLInputElement>
+	) => {
+		const input = event.currentTarget
+		const file = input.files?.[0] ?? null
+		setRestoreBackupProvenance(null)
+
+		if (!file) return
+		if (!restoreFile || !restoreFileSha256 || isRestoreFileHashing) {
+			input.value = ''
+			toast.error('Сначала выберите backup и дождитесь расчёта SHA-256')
+			return
+		}
+		if (
+			!file.name
+				.toLowerCase()
+				.endsWith(DATABASE_BACKUP_PROVENANCE_FILE_EXTENSION)
+		) {
+			input.value = ''
+			toast.error(
+				`Допустим только sidecar ${DATABASE_BACKUP_PROVENANCE_FILE_EXTENSION}`
+			)
+			return
+		}
+		if (
+			file.size <= 0 ||
+			file.size > DATABASE_BACKUP_PROVENANCE_MAX_FILE_SIZE_BYTES
+		) {
+			input.value = ''
+			toast.error(
+				'Размер provenance sidecar должен быть от 1 байта до 16 КБ'
+			)
+			return
+		}
+
+		try {
+			const raw = new TextDecoder('utf-8', { fatal: true }).decode(
+				await file.arrayBuffer()
+			)
+			const provenance = parseDatabaseBackupProvenance(raw, file.name)
+			assertDatabaseBackupProvenanceMatches(
+				provenance,
+				restoreTarget,
+				restoreFile,
+				restoreFileSha256
+			)
+			setRestoreBackupProvenance(provenance)
+			toast.success('Provenance sidecar совпадает с выбранным backup')
+		} catch (error) {
+			input.value = ''
+			toast.error(`Sidecar отклонён: ${errorCatch(error)}`)
+		}
+	}
+
 	const handleCreateRestorePermit = () => {
 		if (!isDev) return
 		if (!isRestoreEnabled) {
@@ -1674,15 +1888,34 @@ const DatabaseRestorePanel = ({
 			toast.error('Выберите backup и дождитесь расчёта SHA-256')
 			return
 		}
+		if (!restoreBackupProvenance) {
+			toast.error(
+				'Выберите подписанный provenance sidecar для этого backup'
+			)
+			return
+		}
 		if (!selectedTargetSettings) {
 			toast.error('Выберите целевую БД')
+			return
+		}
+
+		try {
+			assertDatabaseBackupProvenanceMatches(
+				restoreBackupProvenance,
+				restoreTarget,
+				restoreFile,
+				restoreFileSha256
+			)
+		} catch (error) {
+			toast.error(errorCatch(error))
 			return
 		}
 
 		const promise = databaseRestorePermitMutation.mutateAsync({
 			target: restoreTarget,
 			sourceSha256: restoreFileSha256,
-			expectedServicesSha: databaseRestoreSettings.data.currentServicesSha
+			expectedServicesSha: databaseRestoreSettings.data.currentServicesSha,
+			backupProvenance: restoreBackupProvenance.raw
 		})
 		void toast.promise(promise, {
 			loading: 'Создаём one-shot permit...',
@@ -1793,6 +2026,12 @@ const DatabaseRestorePanel = ({
 			toast.error('Дождитесь расчёта SHA-256 выбранного backup')
 			return
 		}
+		if (!restoreBackupProvenance) {
+			toast.error(
+				'Выберите подписанный provenance sidecar для этого backup'
+			)
+			return
+		}
 		if (!restoreFile.name.toLowerCase().endsWith(allowedFileExtension)) {
 			toast.error(`Допустим только файл ${allowedFileExtension}`)
 			return
@@ -1805,6 +2044,42 @@ const DatabaseRestorePanel = ({
 		}
 		if (restoreFileSha256 !== restoreApproval.sourceSha256) {
 			toast.error('SHA-256 файла не совпадает с exact permit')
+			return
+		}
+		try {
+			assertDatabaseBackupProvenanceMatches(
+				restoreBackupProvenance,
+				restoreTarget,
+				restoreFile,
+				restoreFileSha256
+			)
+		} catch (error) {
+			toast.error(errorCatch(error))
+			return
+		}
+		if (restoreFile.size !== restoreApproval.sourceSize) {
+			toast.error('Размер backup не совпадает с exact permit')
+			return
+		}
+		if (
+			restoreBackupProvenance.backupJobId !==
+			restoreApproval.sourceBackupJobId
+		) {
+			toast.error('Backup job ID sidecar не совпадает с exact permit')
+			return
+		}
+		if (
+			restoreBackupProvenance.envelopeSha256 !==
+			restoreApproval.backupProvenanceEnvelopeSha256
+		) {
+			toast.error('Envelope SHA-256 sidecar не совпадает с exact permit')
+			return
+		}
+		if (
+			restoreBackupProvenance.keyId !==
+			restoreApproval.backupProvenanceKeyId
+		) {
+			toast.error('Provenance key ID не совпадает с exact permit')
 			return
 		}
 		if (
@@ -2003,17 +2278,17 @@ const DatabaseRestorePanel = ({
 
 			{!isRestoreEnabled && !canRetryRestorePublication && (
 				<p className={styles.restoreError} role="alert">
-					Запуск новых восстановлений отключён release-gate до внедрения
-					подписанного provenance для service-owned backup либо отдельного
-					least-privileged restore-пользователя. Read-only контракт и
-					статус уже созданного задания остаются доступны.
+					Запуск новых восстановлений отключён release-gate до завершения
+					production rehearsal и явного включения worker. Read-only
+					контракт и статус уже созданного задания остаются доступны.
 				</p>
 			)}
 			{canRetryRestorePublication && (
 				<p className={styles.restoreApproval} role="status">
 					Manifest задания сохранён, но публикация ещё не подтверждена.
-					Повторно выберите тот же backup и отправьте его с тем же jobId;
-					worker не начнёт восстановление до подписанного подтверждения.
+					Повторно выберите тот же backup и его provenance sidecar, затем
+					отправьте файл с тем же jobId; worker не начнёт восстановление до
+					подписанного подтверждения.
 				</p>
 			)}
 			{restoreApproval && (
@@ -2043,6 +2318,30 @@ const DatabaseRestorePanel = ({
 							</code>
 						</div>
 						<div>
+							<p className={styles.statusLabel}>Source size</p>
+							<p className={styles.statusValue}>
+								{formatFileSize(restoreApproval.sourceSize)}
+							</p>
+						</div>
+						<div>
+							<p className={styles.statusLabel}>Backup job ID</p>
+							<code className={styles.hashValue}>
+								{restoreApproval.sourceBackupJobId}
+							</code>
+						</div>
+						<div>
+							<p className={styles.statusLabel}>Provenance key</p>
+							<code className={styles.hashValue}>
+								{restoreApproval.backupProvenanceKeyId}
+							</code>
+						</div>
+						<div>
+							<p className={styles.statusLabel}>Provenance envelope</p>
+							<code className={styles.hashValue}>
+								{restoreApproval.backupProvenanceEnvelopeSha256}
+							</code>
+						</div>
+						<div>
 							<p className={styles.statusLabel}>Migration manifest</p>
 							<code className={styles.hashValue}>
 								{restoreApproval.migrationManifestSha}
@@ -2063,8 +2362,9 @@ const DatabaseRestorePanel = ({
 					<div>
 						<p className={styles.label}>1. Exact permit</p>
 						<p className={styles.hint}>
-							Первый DEV выбирает target и dump. SHA-256 вычисляется
-							локально и привязывается к текущей ревизии и migration
+							Первый DEV выбирает target, dump и полученный вместе с ним
+							подписанный sidecar. SHA-256 вычисляется локально; backend
+							проверяет Ed25519-подпись и exact binding к migration
 							manifest.
 						</p>
 					</div>
@@ -2106,6 +2406,26 @@ const DatabaseRestorePanel = ({
 								}
 							/>
 						</label>
+						<label className={styles.fileInputLabel}>
+							<span>
+								Sidecar {DATABASE_BACKUP_PROVENANCE_FILE_EXTENSION}
+							</span>
+							<input
+								ref={restoreProvenanceInput}
+								type="file"
+								accept={DATABASE_BACKUP_PROVENANCE_FILE_EXTENSION}
+								onChange={handleRestoreProvenanceChange}
+								disabled={
+									databaseRestorePermitMutation.isPending ||
+									databaseRestoreMutation.isPending ||
+									!restoreFileSha256 ||
+									isRestoreFileHashing ||
+									Boolean(restoreApproval && !isRestorePermitOwner) ||
+									isRestoreJobActive ||
+									isRestoreBlockedByRecovery
+								}
+							/>
+						</label>
 						<button
 							type="button"
 							className={styles.actionBtn}
@@ -2115,7 +2435,8 @@ const DatabaseRestorePanel = ({
 								!isRestoreEnabled ||
 								Boolean(restoreApproval) ||
 								!restoreFileSha256 ||
-								isRestoreFileHashing
+								isRestoreFileHashing ||
+								!restoreBackupProvenance
 							}
 						>
 							{databaseRestorePermitMutation.isPending
@@ -2127,9 +2448,33 @@ const DatabaseRestorePanel = ({
 						Максимальный размер: {formatFileSize(maxFileSizeBytes)}.
 						{isRestoreFileHashing && ' Вычисляем SHA-256...'}
 						{restoreFile && ` Выбран файл ${restoreFile.name}.`}
+						{restoreBackupProvenance &&
+							` Sidecar ${restoreBackupProvenance.fileName} совпадает.`}
 					</p>
 					{restoreFileSha256 && (
 						<code className={styles.hashValue}>{restoreFileSha256}</code>
+					)}
+					{restoreBackupProvenance && (
+						<div className={styles.exactBindingGrid}>
+							<div>
+								<p className={styles.statusLabel}>Backup job ID</p>
+								<code className={styles.hashValue}>
+									{restoreBackupProvenance.backupJobId}
+								</code>
+							</div>
+							<div>
+								<p className={styles.statusLabel}>Provenance key</p>
+								<code className={styles.hashValue}>
+									{restoreBackupProvenance.keyId}
+								</code>
+							</div>
+							<div>
+								<p className={styles.statusLabel}>Envelope SHA-256</p>
+								<code className={styles.hashValue}>
+									{restoreBackupProvenance.envelopeSha256}
+								</code>
+							</div>
+						</div>
 					)}
 
 					{createdPermit && (
@@ -2195,7 +2540,7 @@ const DatabaseRestorePanel = ({
 						<p className={styles.label}>3. Запуск exact restore</p>
 						<p className={styles.hint}>
 							Запуск доступен только первому DEV для того же target, файла,
-							services revision и migration manifest.
+							provenance sidecar, services revision и migration manifest.
 						</p>
 					</div>
 					<div className={styles.restoreExecutionGrid}>
@@ -2227,6 +2572,7 @@ const DatabaseRestorePanel = ({
 								!isRestoreTargetApproved ||
 								!restoreFileSha256 ||
 								isRestoreFileHashing ||
+								!restoreBackupProvenance ||
 								isRestoreJobActive ||
 								isRestoreBlockedByRecovery
 							}
@@ -2255,6 +2601,10 @@ const DatabaseRestorePanel = ({
 							<label className={styles.fileInputLabel}>
 								<span>Файл .dump</span>
 								<input type="file" accept=".dump" disabled />
+							</label>
+							<label className={styles.fileInputLabel}>
+								<span>Sidecar .provenance.json</span>
+								<input type="file" accept=".provenance.json" disabled />
 							</label>
 							<button type="button" className={styles.dangerBtn} disabled>
 								Создать permit
@@ -2345,6 +2695,26 @@ const DatabaseRestorePanel = ({
 									</p>
 								</div>
 							</div>
+							<div className={styles.exactBindingGrid}>
+								<div>
+									<p className={styles.statusLabel}>Backup job ID</p>
+									<code className={styles.hashValue}>
+										{restoreJob.sourceBackupJobId}
+									</code>
+								</div>
+								<div>
+									<p className={styles.statusLabel}>Provenance key</p>
+									<code className={styles.hashValue}>
+										{restoreJob.backupProvenanceKeyId}
+									</code>
+								</div>
+								<div>
+									<p className={styles.statusLabel}>Provenance envelope</p>
+									<code className={styles.hashValue}>
+										{restoreJob.backupProvenanceEnvelopeSha256}
+									</code>
+								</div>
+							</div>
 							{restoreJob.error && (
 								<p className={styles.restoreError}>
 									{restoreJob.error.code}: {restoreJob.error.message}
@@ -2387,6 +2757,42 @@ const DatabaseRestorePanel = ({
 												<code className={styles.hashValue}>
 													{restoreJob.terminalReceipt.safetyBackupSha256 ??
 														'не создан'}
+												</code>
+											</div>
+											<div>
+												<p className={styles.statusLabel}>Source size</p>
+												<p className={styles.statusValue}>
+													{formatFileSize(
+														restoreJob.terminalReceipt.sourceSize
+													)}
+												</p>
+											</div>
+											<div>
+												<p className={styles.statusLabel}>Backup job ID</p>
+												<code className={styles.hashValue}>
+													{restoreJob.terminalReceipt.sourceBackupJobId}
+												</code>
+											</div>
+											<div>
+												<p className={styles.statusLabel}>
+													Provenance key
+												</p>
+												<code className={styles.hashValue}>
+													{
+														restoreJob.terminalReceipt
+															.backupProvenanceKeyId
+													}
+												</code>
+											</div>
+											<div>
+												<p className={styles.statusLabel}>
+													Provenance envelope
+												</p>
+												<code className={styles.hashValue}>
+													{
+														restoreJob.terminalReceipt
+															.backupProvenanceEnvelopeSha256
+													}
 												</code>
 											</div>
 											<div>

@@ -66,6 +66,10 @@ export interface DatabaseRestorePermit {
 	target: DatabaseRestoreTarget
 	jobId: string
 	sourceSha256: string
+	sourceSize: number
+	sourceBackupJobId: string
+	backupProvenanceEnvelopeSha256: string
+	backupProvenanceKeyId: string
 	expectedServicesSha: string
 	migrationManifestSha: string
 	status: DatabaseRestorePermitStatus
@@ -90,6 +94,7 @@ export interface CreateDatabaseRestorePermitInput {
 	target: DatabaseRestoreTarget
 	sourceSha256: string
 	expectedServicesSha: string
+	backupProvenance: string
 }
 
 export interface DatabaseRestoreJobError {
@@ -101,6 +106,10 @@ export interface DatabaseRestoreTerminalReceipt {
 	terminalStatus: DatabaseRestoreJobStatus
 	phase: string | null
 	sourceSha256: string
+	sourceSize: number
+	sourceBackupJobId: string
+	backupProvenanceEnvelopeSha256: string
+	backupProvenanceKeyId: string
 	safetyBackupSha256: string | null
 	expectedServicesSha: string
 	migrationManifestSha: string
@@ -166,6 +175,9 @@ export interface DatabaseRestoreJob {
 	originalFileName: string
 	fileSize: number
 	sha256: string
+	sourceBackupJobId: string
+	backupProvenanceEnvelopeSha256: string
+	backupProvenanceKeyId: string
 	requestedAt: string
 	startedAt: string | null
 	finishedAt: string | null
