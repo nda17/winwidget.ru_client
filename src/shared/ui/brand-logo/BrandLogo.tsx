@@ -22,12 +22,9 @@ const LogoContent = ({ compact }: Pick<BrandLogoProps, 'compact'>) => {
 					compact && styles.compactWordmark
 				)}
 			>
-				<span>WinWidget</span>
-				<span className={styles.product}>CRM</span>
+				WinCRM
 			</span>
-			{compact ? (
-				<span className={styles.srOnly}>WinWidget CRM</span>
-			) : null}
+			{compact ? <span className={styles.srOnly}>WinCRM</span> : null}
 		</>
 	)
 }
@@ -45,11 +42,7 @@ export const BrandLogo = ({
 
 	if (href) {
 		return (
-			<Link
-				href={href}
-				className={logoClassName}
-				aria-label="WinWidget CRM"
-			>
+			<Link href={href} className={logoClassName} aria-label="WinCRM">
 				<LogoContent compact={compact} />
 			</Link>
 		)

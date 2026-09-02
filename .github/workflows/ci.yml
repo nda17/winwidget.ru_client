@@ -64,5 +64,5 @@ jobs:
           --build-arg NEXT_PUBLIC_MODE=production
           --build-arg NEXT_PUBLIC_APP_URL=https://crm.winwidget.ru
           --build-arg NEXT_PUBLIC_API_URL=https://api.winwidget.ru/api/v1
-          --tag winwidget-crm-client:ci-${{ github.sha }}
+          --tag wincrm-client:ci-${{ github.sha }}
           .

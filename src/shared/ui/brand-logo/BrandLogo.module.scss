@@ -15,11 +15,7 @@
 }
 
 .wordmark {
-	@apply inline-flex items-center gap-2 text-base font-bold tracking-tight;
-}
-
-.product {
-	@apply rounded-md bg-accent/15 px-2 py-1 text-xs font-bold uppercase tracking-[0.08em] text-crm-warning;
+	@apply inline-flex items-center text-base font-bold tracking-tight;
 }
 
 .compact {

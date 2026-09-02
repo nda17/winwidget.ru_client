@@ -6,8 +6,8 @@ import type { PropsWithChildren } from 'react'
 export const metadata: Metadata = {
 	metadataBase: new URL('https://crm.winwidget.ru'),
 	title: {
-		default: 'WinWidget CRM',
-		template: '%s — WinWidget CRM'
+		default: 'WinCRM',
+		template: '%s — WinCRM'
 	},
 	description: 'CRM для управления обращениями, сделками и задачами.',
 	robots: {

@@ -1,6 +1,6 @@
-# WinWidget CRM Client
+# WinCRM Client
 
-Отдельный frontend продукта **WinWidget CRM**. Репозиторий предназначен для
+Отдельный frontend продукта **WinCRM**. Репозиторий предназначен для
 интерфейса `crm.winwidget.ru` и не содержит код основного сайта или Widgets.
 
 ## Текущий статус
@@ -25,7 +25,7 @@ winwidget.ru_client
   основной сайт, кабинет Widgets и админка
 
 winwidget.ru_client_crm
-  frontend WinWidget CRM
+  frontend WinCRM
 
 winwidget.ru_services/apps/crm-access
   CRM-роли, seats, teams и access projections
@@ -119,8 +119,8 @@ Dockerfile является основой для воспроизводимой
 Production Compose и deploy workflow намеренно отсутствуют.
 
 ```bash
-docker build -t winwidget-crm-client:local .
-docker run --rm -p 3001:3000 winwidget-crm-client:local
+docker build -t wincrm-client:local .
+docker run --rm -p 3001:3000 wincrm-client:local
 ```
 
 После проверки локальный контейнер и образ нужно удалить согласно правилам
