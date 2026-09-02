@@ -13,10 +13,20 @@
   «Аналитика» и «Настройки»;
 - переиспользуемые таблица, readonly Kanban, drawer и поля форм;
 - loading, empty, error, read-only и permission-denied состояния;
-- только синтетические локальные fixtures без API, persistence и финальных DTO;
-- авторизация и общий вход с `winwidget.ru` ещё не подключены;
+- CRM-доменные демонстрационные экраны по-прежнему используют только
+  синтетические локальные fixtures без persistence и финальных DTO;
+- frontend entry/session gate через существующий Identity refresh contract:
+  рабочее пространство не рендерится до проверки, `401` переводит на общий
+  вход, а сетевые и серверные ошибки остаются на retry-экране;
+- полный возврат после входа с `winwidget.ru`, production CORS и защита от
+  одновременной ротации refresh token между поддоменами ещё не подключены;
+- после успешной сессии отдельный fail-closed access gate проверяет реальный
+  `/crm/access/bootstrap`: только `ACTIVE` открывает рабочий интерфейс;
+- пятидневный Trial запускается только явной кнопкой владельца через
+  идемпотентный `/crm/access/trial`, а onboarding показывает только реальный
+  versioned-каталог `/crm/templates` без фиктивной установки;
 - production deploy, VPS, DNS, TLS и Nginx не настроены;
-- push и production-релиз из этой ветки не выполняются.
+- CI этой ветки выполняет только quality gates и не выпускает production-релиз.
 
 Каноническая граница проекта:
 
@@ -88,12 +98,13 @@ pnpm dev
 `.env.example` содержит только безопасные локальные значения и имена
 переменных:
 
-| Переменная            | Назначение                            |
-| --------------------- | ------------------------------------- |
-| `NEXT_PUBLIC_MODE`    | режим публичной frontend-конфигурации |
-| `NEXT_PUBLIC_APP_URL` | origin CRM frontend                   |
-| `NEXT_PUBLIC_API_URL` | публичный prefix API Gateway          |
-| `APP_REVISION`        | безопасный идентификатор сборки       |
+| Переменная                 | Назначение                              |
+| -------------------------- | --------------------------------------- |
+| `NEXT_PUBLIC_MODE`         | режим публичной frontend-конфигурации   |
+| `NEXT_PUBLIC_APP_URL`      | точный origin CRM frontend              |
+| `NEXT_PUBLIC_MAIN_APP_URL` | точный origin основного сайта и auth UI |
+| `NEXT_PUBLIC_API_URL`      | публичный prefix API Gateway            |
+| `APP_REVISION`             | безопасный идентификатор сборки         |
 
 Секреты, приватные ключи, database URL и service credentials нельзя хранить в
 этом frontend-репозитории или передавать через `NEXT_PUBLIC_*`.
@@ -105,6 +116,7 @@ pnpm dev           # локальный сервер на 3001
 pnpm build         # production Next.js build через webpack
 pnpm start         # запуск готовой production-сборки
 pnpm lint          # ESLint и accessibility rules
+pnpm test          # unit/component tests через Vitest
 pnpm typecheck     # строгая TypeScript-проверка
 pnpm format        # форматирование исходников и конфигурации
 pnpm format:check  # проверка форматирования без записи
@@ -140,12 +152,13 @@ src/shared    UI kit и общие библиотеки
 src/widgets   AppShell и крупные самостоятельные UI-блоки
 ```
 
-Слои `features` и `entities` намеренно не созданы: они появятся вместе с первым
-согласованным API-контрактом и вертикальным продуктовым срезом.
+В `entities` находятся строгие runtime parsers сессии, CRM access и каталога
+шаблонов. В `features` изолированы session bootstrap и CRM access gate. DTO
+остальных CRM-разделов заранее не создаются.
 
-Текущее направление зависимостей: `app → screens/widgets → shared`. Срезы
-экспортируют публичный API через `index.ts`; обратные и cross-slice импорты не
-используются.
+Текущее направление зависимостей:
+`app → screens/features/widgets → entities/shared`. Срезы экспортируют публичный
+API через `index.ts`; обратные и cross-slice импорты не используются.
 
 Стили пишутся через Tailwind `@apply`. Новые формы, списки и select должны
 следовать общим frontend-паттернам WinWidget; пагинация всегда серверная.
@@ -185,20 +198,34 @@ Workflow не содержит SSH, production secrets, Compose или VPS deplo
 
 ## Будущие integration gates
 
-До подключения реальных CRM endpoint необходимо отдельно согласовать и
+До подключения остальных CRM endpoint необходимо отдельно согласовать и
 реализовать:
 
-- Workspace/membership и CRM entitlement;
+- установку выбранного шаблона и последующие onboarding-команды;
 - единый Gateway prefix `/api/v1/crm/**` с точной маршрутизацией групп ресурсов
   на `crm-access`, `crm-intake`, `crm-customers`, `crm-sales` и существующий
   Reporting;
 - CORS origin для локального `http://localhost:3001` и production
   `https://crm.winwidget.ru`;
-- безопасный общий auth flow между `winwidget.ru` и `crm.winwidget.ru`;
+- приём валидированного `returnUrl` всеми способами входа на `winwidget.ru`;
 - защиту от concurrent refresh race между вкладками и поддоменами;
 - tenant-scoped React Query keys вида
   `['crm', workspaceId, resource, filters]`;
 - fail-closed permissions и cross-workspace negative tests.
+
+Текущий frontend gate вызывает `POST /api/v1/auth/refresh` с credentials и
+хранит полученный access token только в памяти вкладки. Он считает
+пользователя незалогиненным исключительно при HTTP `401`. Ответы `403`, `404`,
+`429`, `5xx`, сетевые ошибки и некорректное тело не подменяются состоянием «нет
+подписки»: пользователь видит безопасный retry-экран. Рабочий `AppShell` и его
+дочерние компоненты до успешной проверки не монтируются.
+
+После аутентификации access gate отправляет Bearer token в
+`GET /crm/access/bootstrap`. При нескольких membership workspace выбирается
+только из полученного списка. Явный `NOT_ACTIVATED` допускает ручной
+`POST /crm/access/trial` со стабильным `commandId` и совпадающим
+`Idempotency-Key`. `ONBOARDING`, `GRACE`, `READ_ONLY`, `EXPIRED`, `CANCELLED` и
+`SUSPENDED` не пропускают пользователя в `AppShell`.
 
 ## Совместимость
 

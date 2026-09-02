@@ -21,6 +21,7 @@ jobs:
       HUSKY: 0
       NEXT_PUBLIC_MODE: production
       NEXT_PUBLIC_APP_URL: https://crm.winwidget.ru
+      NEXT_PUBLIC_MAIN_APP_URL: https://winwidget.ru
       NEXT_PUBLIC_API_URL: https://api.winwidget.ru/api/v1
       APP_REVISION: ${{ github.sha }}
 
@@ -54,6 +55,9 @@ jobs:
       - name: Type check
         run: pnpm typecheck
 
+      - name: Test
+        run: pnpm test
+
       - name: Build application
         run: pnpm build
 
@@ -63,6 +67,7 @@ jobs:
           --build-arg APP_REVISION=${{ github.sha }}
           --build-arg NEXT_PUBLIC_MODE=production
           --build-arg NEXT_PUBLIC_APP_URL=https://crm.winwidget.ru
+          --build-arg NEXT_PUBLIC_MAIN_APP_URL=https://winwidget.ru
           --build-arg NEXT_PUBLIC_API_URL=https://api.winwidget.ru/api/v1
           --tag wincrm-client:ci-${{ github.sha }}
           .
