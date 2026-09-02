@@ -7,6 +7,7 @@ import clsx from 'clsx'
 import { NextPage } from 'next'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import toast from 'react-hot-toast'
 
 const MenuItem: NextPage<{ item: IMenuItem }> = ({ item }) => {
 	const pathname = usePathname()
@@ -25,16 +26,35 @@ const MenuItem: NextPage<{ item: IMenuItem }> = ({ item }) => {
 	return (
 		<li
 			className={clsx([styles.wrapper], {
-				[styles.active]: pathname === item.link
+				[styles.active]: !item.disabled && pathname === item.link
 			})}
 		>
 			<Link
 				href={item.link}
-				className={clsx(styles['link-button'])}
-				onClick={closeMenu}
+				className={clsx(styles['link-button'], {
+					[styles.disabled]: item.disabled
+				})}
+				aria-disabled={item.disabled || undefined}
+				aria-label={
+					item.disabled && item.tooltip
+						? `${item.title} — ${item.tooltip}`
+						: undefined
+				}
+				title={item.disabled ? item.tooltip : undefined}
+				onClick={event => {
+					if (item.disabled) {
+						event.preventDefault()
+						toast(item.tooltip || 'Раздел пока недоступен')
+						return
+					}
+					closeMenu()
+				}}
 			>
 				<AppIcon name={item.icon} />
 				{item.title}
+				{item.disabled && item.tooltip && (
+					<span className={styles.tooltip}>{item.tooltip}</span>
+				)}
 			</Link>
 		</li>
 	)

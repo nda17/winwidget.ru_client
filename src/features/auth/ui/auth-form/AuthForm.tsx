@@ -4,6 +4,7 @@ import { IAuthFormProps } from '@/features/auth/ui/auth-form/auth-form.interface
 import AuthToggle from '@/features/auth/ui/auth-form/auth-toggle/AuthToggle'
 import SocialMediaButtons from '@/features/auth/ui/auth-form/social-media-buttons/SocialMediaButtons'
 import useAuthForm from '@/features/auth/model/useAuthForm'
+import useAuthReturnUrl from '@/features/auth/model/useAuthReturnUrl'
 import FieldEmail from '@/shared/ui/form-elements/auth-page/field-email/FieldEmail'
 import FieldPassword from '@/shared/ui/form-elements/auth-page/field-password/FieldPassword'
 import FieldPhone from '@/shared/ui/form-elements/auth-page/field-phone/FieldPhone'
@@ -19,7 +20,12 @@ import clsx from 'clsx'
 import { NextPage } from 'next'
 import { Controller } from 'react-hook-form'
 
-const AuthForm: NextPage<IAuthFormProps> = ({ isLogin, authMessage }) => {
+const AuthForm: NextPage<IAuthFormProps> = ({
+	isLogin,
+	authMessage,
+	authReturnUrl: initialAuthReturnUrl
+}) => {
+	const authReturnUrl = useAuthReturnUrl(initialAuthReturnUrl)
 	const {
 		handleSubmit,
 		isLoading,
@@ -42,7 +48,7 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin, authMessage }) => {
 		resetEmailCodeStep,
 		resetPhoneCodeStep,
 		resetTelegramAuthStep
-	} = useAuthForm(isLogin, authMessage)
+	} = useAuthForm(isLogin, authMessage, authReturnUrl)
 
 	return (
 		<form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
@@ -251,6 +257,7 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin, authMessage }) => {
 				<SocialMediaButtons
 					onTelegramAuthStart={startTelegramAuth}
 					isTelegramAuthLoading={isTelegramAuthLoading}
+					authReturnUrl={authReturnUrl}
 				/>
 				{isTelegramAuthRequested && (
 					<div className={styles['telegram-auth-box']}>
@@ -286,7 +293,7 @@ const AuthForm: NextPage<IAuthFormProps> = ({ isLogin, authMessage }) => {
 				)}
 			</div>
 
-			<AuthToggle isLogin={isLogin} />
+			<AuthToggle isLogin={isLogin} authReturnUrl={authReturnUrl} />
 		</form>
 	)
 }

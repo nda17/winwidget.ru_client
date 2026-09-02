@@ -1,4 +1,5 @@
 import { RestorePassword } from '@/screens/auth'
+import { parseAuthReturnUrlParam } from '@/shared/lib/auth-return-url'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -6,8 +7,20 @@ export const metadata: Metadata = {
 	description: 'Восстановление доступа к аккаунту Winwidget'
 }
 
-const RestorePasswordPage = async () => {
-	return <RestorePassword />
+interface IRestorePasswordPageProps {
+	searchParams?: {
+		returnUrl?: string | string[]
+	}
+}
+
+const RestorePasswordPage = async ({
+	searchParams
+}: IRestorePasswordPageProps) => {
+	const parsedAuthReturnUrl = parseAuthReturnUrlParam(
+		searchParams?.returnUrl
+	)
+
+	return <RestorePassword authReturnUrl={parsedAuthReturnUrl ?? null} />
 }
 
 export default RestorePasswordPage

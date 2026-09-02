@@ -1,10 +1,17 @@
 import { PUBLIC_PAGES } from '@/shared/config/pages/public.config'
+import { withAuthReturnUrl } from '@/shared/lib/auth-return-url'
 import styles from '@/screens/auth/ui/login/SignIn.module.scss'
 import { RestorePasswordForm } from '@/features/auth'
 import Link from 'next/link'
 import { NextPage } from 'next'
 
-const RestorePassword: NextPage = () => {
+interface IRestorePasswordProps {
+	authReturnUrl?: string | null
+}
+
+const RestorePassword: NextPage<IRestorePasswordProps> = ({
+	authReturnUrl
+}) => {
 	return (
 		<section
 			className={styles.wrapper}
@@ -17,9 +24,12 @@ const RestorePassword: NextPage = () => {
 				<p className={styles.subtitle}>
 					Укажите email или телефон, и мы отправим дальнейшие инструкции.
 				</p>
-				<RestorePasswordForm />
+				<RestorePasswordForm authReturnUrl={authReturnUrl} />
 				<div className={styles['auth-actions']}>
-					<Link href={PUBLIC_PAGES.LOGIN} className={styles['auth-link']}>
+					<Link
+						href={withAuthReturnUrl(PUBLIC_PAGES.LOGIN, authReturnUrl)}
+						className={styles['auth-link']}
+					>
 						Назад
 					</Link>
 				</div>

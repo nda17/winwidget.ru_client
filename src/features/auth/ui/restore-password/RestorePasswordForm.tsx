@@ -1,13 +1,21 @@
 'use client'
 import styles from '@/features/auth/ui/AuthForm.module.scss'
 import useRestorePasswordForm from '@/features/auth/model/useRestorePasswordForm'
+import useAuthReturnUrl from '@/features/auth/model/useAuthReturnUrl'
 import FieldEmail from '@/shared/ui/form-elements/auth-page/field-email/FieldEmail'
 import FieldPhone from '@/shared/ui/form-elements/auth-page/field-phone/FieldPhone'
 import { validEmail, validPhone } from '@/shared/regex'
 import clsx from 'clsx'
 import { NextPage } from 'next'
 
-const RestorePasswordForm: NextPage = () => {
+interface IRestorePasswordFormProps {
+	authReturnUrl?: string | null
+}
+
+const RestorePasswordForm: NextPage<IRestorePasswordFormProps> = ({
+	authReturnUrl: initialAuthReturnUrl
+}) => {
+	const authReturnUrl = useAuthReturnUrl(initialAuthReturnUrl)
 	const {
 		handleSubmit,
 		isLoading,
@@ -19,7 +27,7 @@ const RestorePasswordForm: NextPage = () => {
 		setAuthMethod,
 		phoneInputRef,
 		phoneMask
-	} = useRestorePasswordForm()
+	} = useRestorePasswordForm(authReturnUrl)
 
 	return (
 		<form

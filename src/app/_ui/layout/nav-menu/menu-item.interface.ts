@@ -4,4 +4,6 @@ export interface IMenuItem {
 	icon: AppIconName
 	title: string
 	link: string
+	disabled?: boolean
+	tooltip?: string
 }

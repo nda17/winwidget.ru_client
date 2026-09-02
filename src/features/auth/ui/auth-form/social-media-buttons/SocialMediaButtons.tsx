@@ -3,6 +3,10 @@ import { API_URL } from '@/shared/config/api.config'
 import AppIcon from '@/shared/ui/icons/AppIcon'
 import SkeletonLoader from '@/shared/ui/skeleton-loader/SkeletonLoader'
 import { authSettingsService } from '@/features/auth/api/auth.api'
+import {
+	clearAuthReturnIntent,
+	saveAuthReturnIntent
+} from '@/shared/lib/auth-return-url'
 import { useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 
@@ -12,11 +16,13 @@ const SOCIAL_AUTH_SKELETON_ITEMS = [0, 1]
 interface SocialMediaButtonsProps {
 	onTelegramAuthStart: () => void
 	isTelegramAuthLoading?: boolean
+	authReturnUrl?: string | null
 }
 
 const SocialMediaButtons = ({
 	onTelegramAuthStart,
-	isTelegramAuthLoading = false
+	isTelegramAuthLoading = false,
+	authReturnUrl
 }: SocialMediaButtonsProps) => {
 	const { data: authSettings, isPending: isAuthSettingsPending } =
 		useQuery({
@@ -36,6 +42,12 @@ const SocialMediaButtons = ({
 		githubAuthEnabled
 
 	const handleSocialAuth = (path: string) => {
+		if (authReturnUrl) {
+			saveAuthReturnIntent(window.sessionStorage, authReturnUrl)
+		} else {
+			clearAuthReturnIntent(window.sessionStorage)
+		}
+
 		const referrerId =
 			typeof window !== 'undefined'
 				? window.localStorage

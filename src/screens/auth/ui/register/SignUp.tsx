@@ -2,7 +2,11 @@ import { AuthForm } from '@/features/auth'
 import styles from '@/screens/auth/ui/register/SignUp.module.scss'
 import { NextPage } from 'next'
 
-const SignUp: NextPage = () => {
+interface ISignUpProps {
+	authReturnUrl?: string | null
+}
+
+const SignUp: NextPage<ISignUpProps> = ({ authReturnUrl }) => {
 	return (
 		<section className={styles.wrapper} aria-labelledby="sign-up-title">
 			<div className={styles.form}>
@@ -13,7 +17,7 @@ const SignUp: NextPage = () => {
 					Создайте аккаунт и настройте удобный способ входа для работы с
 					сервисом.
 				</p>
-				<AuthForm isLogin={false} />
+				<AuthForm isLogin={false} authReturnUrl={authReturnUrl} />
 			</div>
 		</section>
 	)

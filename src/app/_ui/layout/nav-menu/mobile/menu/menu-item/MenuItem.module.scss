@@ -13,6 +13,18 @@
 	}
 }
 
+.wrapper .disabled {
+	@apply cursor-not-allowed opacity-60;
+
+	&:hover {
+		@apply border-transparent bg-transparent text-[#444];
+	}
+}
+
+.tooltip {
+	@apply ml-auto rounded-full bg-[#f3e8ff] px-2 py-0.5 text-[11px] font-semibold text-[#7e22ce];
+}
+
 .active {
 	.link-button {
 		@apply border-[#c21b84]/[0.28] text-[#470b58] font-semibold;

@@ -9,8 +9,9 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { FieldErrors, SubmitHandler, useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
+import { withAuthReturnUrl } from '@/shared/lib/auth-return-url'
 
-const useRestorePasswordForm = () => {
+const useRestorePasswordForm = (authReturnUrl?: string | null) => {
 	const { register, handleSubmit, reset, formState, setValue } =
 		useForm<IRestorePassword>({
 			mode: 'onChange'
@@ -44,7 +45,7 @@ const useRestorePasswordForm = () => {
 							: 'Временный пароль отправлен на вашу почту'
 					)
 					reset()
-					router.replace('/login')
+					router.replace(withAuthReturnUrl('/login', authReturnUrl))
 				})
 			},
 			onError(error) {

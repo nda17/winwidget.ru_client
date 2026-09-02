@@ -7,6 +7,13 @@ export const staticMenu: IMenu = {
 			icon: 'home',
 			link: PUBLIC_PAGES.HOME,
 			title: 'Главная'
+		},
+		{
+			icon: 'dashboard',
+			link: '#0',
+			title: 'CRM',
+			disabled: true,
+			tooltip: 'Скоро'
 		}
 	]
 }

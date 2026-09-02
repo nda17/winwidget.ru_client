@@ -21,6 +21,10 @@ import {
 } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
+import {
+	clearAuthReturnIntent,
+	getSafeAuthReturnUrl
+} from '@/shared/lib/auth-return-url'
 
 const PENDING_EMAIL_REGISTRATION_STORAGE_KEY = 'pendingEmailRegistration'
 const AFFILIATE_REFERRER_STORAGE_KEY = 'affiliateReferrerId'
@@ -94,7 +98,11 @@ const clearAffiliateReferrerId = () => {
 	window.localStorage.removeItem(AFFILIATE_REFERRER_STORAGE_KEY)
 }
 
-const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
+const useAuthForm = (
+	isLogin: boolean,
+	initialAuthMessage = '',
+	authReturnUrl?: string | null
+) => {
 	const { previousRoute } = useNavigationContext()
 	const setAuth = useAuthStore(state => state.setAuth)
 	const setAuthResolved = useAuthStore(state => state.setAuthResolved)
@@ -130,6 +138,25 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 		typeof setInterval
 	> | null>(null)
 	const telegramAuthToastRef = useRef<string | null>(null)
+	const loginDestination =
+		previousRoute && whiteListRedirect.includes(previousRoute)
+			? previousRoute
+			: PUBLIC_PAGES.HOME
+
+	const navigateAfterAuth = (fallback: string) => {
+		const safeReturnUrl = getSafeAuthReturnUrl(authReturnUrl)
+
+		if (typeof window !== 'undefined') {
+			clearAuthReturnIntent(window.sessionStorage)
+
+			if (safeReturnUrl) {
+				window.location.replace(safeReturnUrl)
+				return
+			}
+		}
+
+		router.replace(fallback)
+	}
 
 	const clearEmailCodeStep = useCallback(() => {
 		clearPendingEmailRegistrationState()
@@ -198,11 +225,7 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 				setAuthResolved(true)
 				toast.success('Успешный вход в аккаунт')
 				reset()
-				router.replace(
-					previousRoute && whiteListRedirect.includes(previousRoute)
-						? previousRoute
-						: PUBLIC_PAGES.HOME
-				)
+				navigateAfterAuth(loginDestination)
 				queryClient.invalidateQueries({ queryKey: ['get-profile'] })
 			})
 		},
@@ -267,7 +290,7 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 				setAuthResolved(true)
 				toast.success('Email подтвержден. Регистрация завершена')
 				reset()
-				router.replace('/cabinet')
+				navigateAfterAuth(PUBLIC_PAGES.CABINET)
 				queryClient.invalidateQueries({ queryKey: ['get-profile'] })
 			})
 		},
@@ -352,7 +375,7 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 				reset()
 				setIsPhoneCodeRequested(false)
 				queryClient.invalidateQueries({ queryKey: ['get-profile'] })
-				router.replace('/cabinet')
+				navigateAfterAuth(PUBLIC_PAGES.CABINET)
 			})
 		},
 		onError(error) {
@@ -385,11 +408,7 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 					setAuthResolved(true)
 					toast.success('Успешный вход в аккаунт')
 					reset()
-					router.replace(
-						previousRoute && whiteListRedirect.includes(previousRoute)
-							? previousRoute
-							: PUBLIC_PAGES.HOME
-					)
+					navigateAfterAuth(loginDestination)
 					queryClient.invalidateQueries({ queryKey: ['get-profile'] })
 				})
 			},
@@ -432,11 +451,7 @@ const useAuthForm = (isLogin: boolean, initialAuthMessage = '') => {
 			clearAffiliateReferrerId()
 			toast.success('Успешный вход через Telegram', { id: toastId })
 			reset()
-			router.replace(
-				previousRoute && whiteListRedirect.includes(previousRoute)
-					? previousRoute
-					: PUBLIC_PAGES.HOME
-			)
+			navigateAfterAuth(isLogin ? loginDestination : PUBLIC_PAGES.CABINET)
 			queryClient.invalidateQueries({ queryKey: ['get-profile'] })
 		})
 	}

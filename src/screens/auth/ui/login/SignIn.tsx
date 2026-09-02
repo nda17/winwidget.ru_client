@@ -4,9 +4,13 @@ import { NextPage } from 'next'
 
 interface ISignInProps {
 	authMessage?: string
+	authReturnUrl?: string | null
 }
 
-const SignIn: NextPage<ISignInProps> = ({ authMessage }) => {
+const SignIn: NextPage<ISignInProps> = ({
+	authMessage,
+	authReturnUrl
+}) => {
 	return (
 		<section className={styles.wrapper} aria-labelledby="sign-in-title">
 			<div className={styles.form}>
@@ -16,7 +20,11 @@ const SignIn: NextPage<ISignInProps> = ({ authMessage }) => {
 				<p className={styles.subtitle}>
 					Войдите в личный кабинет и управляйте виджетами в одной панели.
 				</p>
-				<AuthForm isLogin authMessage={authMessage} />
+				<AuthForm
+					isLogin
+					authMessage={authMessage}
+					authReturnUrl={authReturnUrl}
+				/>
 			</div>
 		</section>
 	)

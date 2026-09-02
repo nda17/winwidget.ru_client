@@ -7,6 +7,10 @@ import { NextPage } from 'next'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import toast from 'react-hot-toast'
+import {
+	clearAuthReturnIntent,
+	readAuthReturnIntent
+} from '@/shared/lib/auth-return-url'
 
 const AFFILIATE_REFERRER_STORAGE_KEY = 'affiliateReferrerId'
 const SOCIAL_AUTH_TOAST_ID = 'social-auth'
@@ -20,6 +24,7 @@ const SocialAuthPage: NextPage = () => {
 		const toastId = toast.loading('Загрузка...', {
 			id: SOCIAL_AUTH_TOAST_ID
 		})
+		const authReturnUrl = readAuthReturnIntent(window.sessionStorage)
 
 		authService
 			.getNewTokens()
@@ -28,7 +33,14 @@ const SocialAuthPage: NextPage = () => {
 				setAuth(true)
 				setAuthResolved(true)
 				toast.dismiss(toastId)
-				router.replace('/')
+				clearAuthReturnIntent(window.sessionStorage)
+
+				if (authReturnUrl) {
+					window.location.replace(authReturnUrl)
+					return
+				}
+
+				router.replace(PUBLIC_PAGES.HOME)
 			})
 			.catch(() => {
 				clearBrowserSession({ redirectToLogin: false })
