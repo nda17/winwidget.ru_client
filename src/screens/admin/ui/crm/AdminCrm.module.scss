@@ -171,24 +171,91 @@
 	@apply rounded-lg border border-[#f1dfb8] bg-[#fffaf0] px-4 py-3 text-[0.78rem] leading-[1.5] text-[#856422];
 }
 
-.lockedContent {
-	@apply pointer-events-none grid select-none grid-cols-[1fr_1fr_auto] items-end gap-3 opacity-55 blur-[1px];
+.pricingSkeleton {
+	@apply h-[260px];
+}
+
+.pricingSummary {
+	@apply grid grid-cols-2 gap-3;
+
+	> div {
+		@apply rounded-lg border border-[#efe8fb] bg-[#faf8ff] p-3;
+	}
+
+	dt {
+		@apply text-[0.76rem] leading-[1.45] text-[#796e80];
+	}
+
+	dd {
+		@apply mt-1 text-base font-semibold text-[#57266f];
+	}
 
 	@media (max-width: 760px) {
 		@apply grid-cols-1;
 	}
 }
 
-.lockedField {
-	@apply flex flex-col gap-1.5 text-[0.76rem] font-medium text-[#6f6278];
+.pricingEditor {
+	@apply flex flex-col gap-4 border-t border-[#e8e0ef] pt-4;
 
-	input {
-		@apply h-[42px] rounded-lg border border-[#ddd2e8] bg-[#f7f4fa] px-3 text-sm text-[#766a7d];
+	form {
+		@apply flex flex-col gap-4;
 	}
 }
 
-.lockedButton {
-	@apply h-[42px] cursor-not-allowed rounded-lg bg-[#6b2d8f] px-5 text-sm font-semibold text-white;
+.pricingFields,
+.pricingFieldsLocked {
+	@apply grid min-w-0 grid-cols-2 gap-3 border-0 p-0;
+
+	@media (max-width: 760px) {
+		@apply grid-cols-1;
+	}
+}
+
+.pricingFieldsLocked,
+.pricingActionsLocked {
+	@apply pointer-events-none select-none opacity-55 blur-[1px];
+}
+
+.pricingField {
+	@apply flex flex-col gap-1.5 text-[0.76rem] font-medium text-[#6f6278];
+
+	input {
+		@apply h-[42px] min-w-0 rounded-lg border border-[#ddd2e8] bg-white px-3 text-sm text-[#51405d] outline-none transition-colors;
+
+		&:focus-visible {
+			@apply border-[#8b44b6] ring-2 ring-[#8b44b6]/20;
+		}
+
+		&:disabled {
+			@apply cursor-not-allowed bg-[#f7f4fa] text-[#766a7d];
+		}
+	}
+}
+
+.pricingActions,
+.pricingActionsLocked {
+	@apply flex flex-wrap gap-3;
+}
+
+.saveButton {
+	@apply min-h-[42px] cursor-pointer rounded-lg bg-[#6b2d8f] px-5 py-2 text-sm font-semibold text-white transition-opacity;
+
+	&:hover {
+		@apply opacity-90;
+	}
+
+	&:disabled {
+		@apply cursor-not-allowed opacity-50;
+	}
+
+	@media (max-width: 560px) {
+		@apply w-full;
+	}
+}
+
+.srOnly {
+	@apply sr-only;
 }
 
 .accessNote {

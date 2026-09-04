@@ -7,13 +7,13 @@ import {
 } from '@/features/admin-crm'
 import AdminNavigation from '@/screens/admin/ui/common/admin-navigation/AdminNavigation'
 import AdminSectionHeading from '@/screens/admin/ui/common/admin-section-heading/AdminSectionHeading'
-import AdminTooltip from '@/screens/admin/ui/common/admin-tooltip/AdminTooltip'
 import Heading from '@/shared/ui/heading/Heading'
 import SkeletonLoader from '@/shared/ui/skeleton-loader/SkeletonLoader'
 import { useQuery } from '@tanstack/react-query'
 import { NextPage } from 'next'
 import toast from 'react-hot-toast'
 import styles from './AdminCrm.module.scss'
+import CrmPricingSettings from './CrmPricingSettings'
 
 const CRM_SERVICES = [
 	{
@@ -71,8 +71,8 @@ const AdminCrm: NextPage = () => {
 				text="WinCRM"
 				title="Глобальные настройки WinCRM"
 				description="Операторский экран продукта. Клиентские воронки, контакты и сделки здесь не хранятся и управляются только на crm.winwidget.ru."
-				risk="low"
-				riskText="Текущая версия только читает публичный каталог шаблонов и показывает зафиксированные продуктовые решения."
+				risk="medium"
+				riskText="ADMIN просматривает тариф и каталог. DEV может создать новую версию цен и лимитов с записью в Журнал событий."
 			/>
 
 			<div className={styles.summaryGrid}>
@@ -96,6 +96,8 @@ const AdminCrm: NextPage = () => {
 					</p>
 				</article>
 			</div>
+
+			<CrmPricingSettings />
 
 			<div className={styles.section}>
 				<div className={styles.sectionHeader}>
@@ -125,7 +127,8 @@ const AdminCrm: NextPage = () => {
 						<p className={styles.sectionHint}>
 							Версионированный каталог{' '}
 							<code className={styles.inlineCode}>crm-sales</code>;
-							опубликованная версия не изменяется задним числом
+							опубликованная версия не изменяется задним числом. Новые
+							версии публикуются через Git/CI
 						</p>
 					</div>
 					<button
@@ -186,41 +189,6 @@ const AdminCrm: NextPage = () => {
 						</div>
 					</>
 				)}
-			</div>
-
-			<div className={styles.section}>
-				<div className={styles.lockedHeading}>
-					<div>
-						<p className={styles.sectionTitle}>Управление продуктом</p>
-						<p className={styles.sectionHint}>
-							Будущие изменяющие действия — только для DEV
-						</p>
-					</div>
-					<AdminTooltip
-						title="Управление ещё не включено"
-						description="Тарифы WinCRM будут согласованы отдельно. Trial policy и feature flags появятся только вместе с backend-правами и записью в Журнал событий. Версии шаблонов MVP публикуются через Git/CI."
-						risk="high"
-						riskText="Нельзя включать UI-запись раньше серверного RBAC, валидации, аудита и стратегии обратной совместимости."
-					/>
-				</div>
-				<div className={styles.lockedContent} aria-disabled="true">
-					<label className={styles.lockedField}>
-						<span>Длительность Trial</span>
-						<input value="5 дней" readOnly disabled />
-					</label>
-					<label className={styles.lockedField}>
-						<span>Публикация каталога</span>
-						<input value="Новая версия через Git/CI" readOnly disabled />
-					</label>
-					<button type="button" disabled className={styles.lockedButton}>
-						Сохранить настройки
-					</button>
-				</div>
-				<p className={styles.accessNote}>
-					ADMIN: просмотр. DEV: просмотр; изменение появится после
-					серверного RBAC и аудита. Данные клиентов WinCRM в эту админку не
-					копируются.
-				</p>
 			</div>
 		</section>
 	)
