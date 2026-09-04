@@ -15,6 +15,7 @@ const STAGE_STATES = ['OPEN', 'WON', 'LOST'] as const
 const MAX_TEMPLATES = 100
 const MAX_STAGES = 100
 const MAX_TAGS = 50
+const MAX_TEMPLATE_VERSION = 32767
 
 const isPositiveInteger = (value: unknown): value is number =>
 	typeof value === 'number' && Number.isSafeInteger(value) && value > 0
@@ -61,6 +62,7 @@ const parseTemplate = (value: unknown): PipelineTemplate | null => {
 		!isNonEmptyString(value.key, 64) ||
 		!KEY_PATTERN.test(value.key) ||
 		!isPositiveInteger(value.version) ||
+		value.version > MAX_TEMPLATE_VERSION ||
 		!isNonEmptyString(value.name, 200) ||
 		!isNonEmptyString(value.description, 2000) ||
 		typeof value.isBlank !== 'boolean' ||

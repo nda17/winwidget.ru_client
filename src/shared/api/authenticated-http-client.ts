@@ -5,6 +5,8 @@ const ACCESS_TOKEN_PATTERN = /^[^\s,]{1,16384}$/
 
 export type AuthenticatedApiErrorKind =
 	| 'unauthorized'
+	| 'forbidden'
+	| 'notFound'
 	| 'conflict'
 	| 'temporary'
 
@@ -25,6 +27,7 @@ interface AuthenticatedRequest {
 	params?: Record<string, string>
 	data?: unknown
 	headers?: Record<string, string>
+	mapError?: (error: unknown) => AuthenticatedApiError | undefined
 }
 
 export const authenticatedRequest = async ({
@@ -33,7 +36,8 @@ export const authenticatedRequest = async ({
 	url,
 	params,
 	data,
-	headers
+	headers,
+	mapError
 }: AuthenticatedRequest): Promise<unknown> => {
 	if (!ACCESS_TOKEN_PATTERN.test(accessToken)) {
 		throw new AuthenticatedApiError(
@@ -59,11 +63,20 @@ export const authenticatedRequest = async ({
 		if (error instanceof AuthenticatedApiError) {
 			throw error
 		}
+		const mappedError = mapError?.(error)
+		if (mappedError) throw mappedError
 
 		if (axios.isAxiosError(error) && error.response?.status === 401) {
 			throw new AuthenticatedApiError(
 				'unauthorized',
 				'Сессия больше не действует.'
+			)
+		}
+
+		if (axios.isAxiosError(error) && error.response?.status === 403) {
+			throw new AuthenticatedApiError(
+				'forbidden',
+				'Недостаточно прав для выполнения команды.'
 			)
 		}
 

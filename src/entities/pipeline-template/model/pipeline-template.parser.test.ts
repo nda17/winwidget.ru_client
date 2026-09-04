@@ -25,7 +25,7 @@ describe('parsePipelineTemplateCatalog', () => {
 		expect(parsePipelineTemplateCatalog(value)).toEqual(value)
 	})
 
-	it('rejects unknown catalog fields and non-positive versions', () => {
+	it('rejects unknown fields and versions outside the database contract', () => {
 		expect(
 			parsePipelineTemplateCatalog({
 				schemaVersion: 1,
@@ -38,6 +38,42 @@ describe('parsePipelineTemplateCatalog', () => {
 				schemaVersion: 1,
 				catalogRevision: 1,
 				templates: [{ key: 'x', version: 0 }]
+			})
+		).toBeNull()
+		expect(
+			parsePipelineTemplateCatalog({
+				schemaVersion: 1,
+				catalogRevision: 1,
+				templates: [
+					{
+						key: 'sales',
+						version: 32768,
+						name: 'Продажи',
+						description: 'Базовая воронка',
+						industryTags: ['general'],
+						isBlank: false,
+						stages: [
+							{
+								key: 'new',
+								name: 'Новая',
+								order: 1,
+								state: 'OPEN'
+							},
+							{
+								key: 'won',
+								name: 'Успех',
+								order: 2,
+								state: 'WON'
+							},
+							{
+								key: 'lost',
+								name: 'Отказ',
+								order: 3,
+								state: 'LOST'
+							}
+						]
+					}
+				]
 			})
 		).toBeNull()
 	})

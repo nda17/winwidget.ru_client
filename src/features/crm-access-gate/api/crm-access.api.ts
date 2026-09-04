@@ -9,9 +9,33 @@ import {
 	type PipelineTemplateCatalog
 } from '@/entities/pipeline-template'
 import {
+	AuthenticatedApiError,
 	authenticatedRequest,
 	invalidContractError
 } from '@/shared/api/authenticated-http-client'
+import { isRecord } from '@/shared/lib/contract'
+import axios from 'axios'
+
+import { parseCrmTemplateInstallationResponse } from '../model/crm-template-installation.parser'
+import type {
+	CrmTemplateInstallationResponse,
+	InstallCrmTemplateCommand
+} from '../model/crm-template-installation.types'
+
+const mapTemplateInstallationError = (error: unknown) => {
+	if (
+		axios.isAxiosError(error) &&
+		error.response?.status === 404 &&
+		isRecord(error.response.data) &&
+		error.response.data.code === 'crm_template_version_not_found'
+	) {
+		return new AuthenticatedApiError(
+			'notFound',
+			'Запрошенная версия шаблона не найдена.'
+		)
+	}
+	return undefined
+}
 
 export const getCrmAccessBootstrap = async (
 	accessToken: string,
@@ -53,6 +77,23 @@ export const getPipelineTemplates = async (
 		url: '/crm/templates'
 	})
 	const parsed = parsePipelineTemplateCatalog(response)
+	if (!parsed) throw invalidContractError()
+	return parsed
+}
+
+export const installCrmTemplate = async (
+	accessToken: string,
+	command: InstallCrmTemplateCommand
+): Promise<CrmTemplateInstallationResponse> => {
+	const response = await authenticatedRequest({
+		accessToken,
+		method: 'POST',
+		url: '/crm/access/onboarding/template',
+		headers: { 'Idempotency-Key': command.commandId },
+		data: { schemaVersion: 1, ...command },
+		mapError: mapTemplateInstallationError
+	})
+	const parsed = parseCrmTemplateInstallationResponse(response, command)
 	if (!parsed) throw invalidContractError()
 	return parsed
 }

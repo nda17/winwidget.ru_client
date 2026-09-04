@@ -7,33 +7,3 @@
 .form {
 	@apply mt-6 flex flex-col gap-4;
 }
-.actions {
-	@apply flex flex-wrap gap-3;
-}
-.catalog {
-	@apply mt-6 grid gap-4 sm:grid-cols-2;
-}
-.card {
-	@apply rounded-xl border border-slate-200 bg-slate-50 p-5;
-}
-.cardTitle {
-	@apply text-base font-semibold text-slate-950;
-}
-.version {
-	@apply mt-1 text-xs font-medium uppercase tracking-wide text-indigo-600;
-}
-.description {
-	@apply mt-3 text-sm leading-6 text-slate-600;
-}
-.tags {
-	@apply mt-4 flex flex-wrap gap-2;
-}
-.tag {
-	@apply rounded-full bg-white px-2.5 py-1 text-xs text-slate-600 ring-1 ring-slate-200;
-}
-.stages {
-	@apply mt-4 text-sm text-slate-700;
-}
-.note {
-	@apply mt-6 rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-900;
-}

@@ -9,100 +9,36 @@ import type { PropsWithChildren } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 
-import type { CrmResolvedAccessResponse } from '@/entities/crm-access'
 import { useSessionStore } from '@/entities/session'
 import { AuthenticatedApiError } from '@/shared/api/authenticated-http-client'
 import { Button, ScreenState, SelectField } from '@/shared/ui'
 
 import {
 	activateCrmTrial,
-	getCrmAccessBootstrap,
-	getPipelineTemplates
+	getCrmAccessBootstrap
 } from '../api/crm-access.api'
-import {
-	crmAccessQueryKey,
-	pipelineTemplatesQueryKey
-} from '../model/crm-access.queries'
+import { crmAccessQueryKey } from '../model/crm-access.queries'
 import styles from './AccessGate.module.scss'
+import { CrmOnboarding } from './onboarding/CrmOnboarding'
 
-const RetryState = ({ onRetry }: { onRetry: () => void }) => (
+const RetryState = ({
+	onRetry,
+	isRetrying = false
+}: {
+	onRetry: () => void
+	isRetrying?: boolean
+}) => (
 	<ScreenState
 		variant="error"
 		title="CRM временно недоступна"
 		description="Не удалось безопасно подтвердить доступ. Рабочая область останется закрыта."
-		action={<Button onClick={onRetry}>Повторить</Button>}
+		action={
+			<Button onClick={onRetry} isLoading={isRetrying}>
+				Повторить
+			</Button>
+		}
 	/>
 )
-
-const Onboarding = ({ access }: { access: CrmResolvedAccessResponse }) => {
-	const session = useSessionStore(state => state.session)
-	const setAnonymous = useSessionStore(state => state.setAnonymous)
-	const templates = useQuery({
-		queryKey: pipelineTemplatesQueryKey(
-			session?.userId ?? '',
-			access.selectedWorkspaceId
-		),
-		queryFn: () => getPipelineTemplates(session!.accessToken),
-		enabled: Boolean(session),
-		retry: false
-	})
-
-	useEffect(() => {
-		if (
-			templates.error instanceof AuthenticatedApiError &&
-			templates.error.kind === 'unauthorized'
-		)
-			setAnonymous()
-	}, [setAnonymous, templates.error])
-
-	if (templates.isPending)
-		return <ScreenState variant="loading" title="Загружаем шаблоны CRM" />
-	if (templates.isError)
-		return (
-			<RetryState
-				onRetry={() => {
-					toast('Повторяем загрузку каталога')
-					void templates.refetch()
-				}}
-			/>
-		)
-
-	return (
-		<div className={styles.panel}>
-			<h1>Настройка WinCRM</h1>
-			<p>
-				Выберите подходящий процесс после появления серверного контракта
-				установки. Сейчас каталог доступен только для просмотра.
-			</p>
-			<div className={styles.catalog}>
-				{templates.data.templates.map(template => (
-					<article
-						className={styles.card}
-						key={`${template.key}:${template.version}`}
-					>
-						<h2 className={styles.cardTitle}>{template.name}</h2>
-						<p className={styles.version}>Версия {template.version}</p>
-						<p className={styles.description}>{template.description}</p>
-						<div className={styles.tags}>
-							{template.industryTags.map(tag => (
-								<span className={styles.tag} key={tag}>
-									{tag}
-								</span>
-							))}
-						</div>
-						<p className={styles.stages}>
-							Этапы: {template.stages.map(stage => stage.name).join(' → ')}
-						</p>
-					</article>
-				))}
-			</div>
-			<p className={styles.note}>
-				Установка шаблона пока недоступна: выбор не сохраняется и рабочая
-				область остаётся закрыта.
-			</p>
-		</div>
-	)
-}
 
 const blockedCopy = {
 	GRACE: [
@@ -171,24 +107,27 @@ export const AccessGate = ({ children }: PropsWithChildren) => {
 			else {
 				if (
 					error instanceof AuthenticatedApiError &&
-					error.kind === 'conflict'
-				)
+					(error.kind === 'conflict' || error.kind === 'forbidden')
+				) {
 					commandIdRef.current = undefined
+					void access.refetch()
+				}
 				toast.error('Не удалось запустить бесплатный период')
 			}
 		}
 	})
 
-	if (!session || access.isPending || access.isFetching)
+	if (!session || access.isPending)
 		return (
 			<div className={styles.gate}>
 				<ScreenState variant="loading" title="Проверяем доступ к WinCRM" />
 			</div>
 		)
-	if (access.isError)
+	if (access.isError && !access.data)
 		return (
 			<div className={styles.gate}>
 				<RetryState
+					isRetrying={access.isFetching}
 					onRetry={() => {
 						toast('Повторяем проверку доступа')
 						void access.refetch()
@@ -198,6 +137,18 @@ export const AccessGate = ({ children }: PropsWithChildren) => {
 		)
 
 	const data = access.data
+	if (access.isError && data.state !== 'ONBOARDING')
+		return (
+			<div className={styles.gate}>
+				<RetryState
+					isRetrying={access.isFetching}
+					onRetry={() => {
+						toast('Повторяем проверку доступа')
+						void access.refetch()
+					}}
+				/>
+			</div>
+		)
 	if (data.state === 'WORKSPACE_SELECTION_REQUIRED') {
 		const selected = choice || data.workspaces[0]?.workspaceId || ''
 		return (
@@ -209,6 +160,7 @@ export const AccessGate = ({ children }: PropsWithChildren) => {
 						onSubmit={event => {
 							event.preventDefault()
 							if (
+								access.isFetching ||
 								!data.workspaces.some(
 									item => item.workspaceId === selected
 								)
@@ -230,18 +182,40 @@ export const AccessGate = ({ children }: PropsWithChildren) => {
 								</option>
 							))}
 						</SelectField>
-						<Button type="submit">Продолжить</Button>
+						<Button type="submit" isLoading={access.isFetching}>
+							Продолжить
+						</Button>
 					</form>
 				</div>
 			</div>
 		)
 	}
 
-	if (data.state === 'ACTIVE') return children
+	if (data.state === 'ACTIVE')
+		return access.isFetching ? (
+			<div className={styles.gate}>
+				<ScreenState
+					variant="loading"
+					title="Подтверждаем доступ к WinCRM"
+				/>
+			</div>
+		) : (
+			children
+		)
 	if (data.state === 'ONBOARDING')
 		return (
 			<div className={styles.gate}>
-				<Onboarding access={data} />
+				<CrmOnboarding
+					access={data}
+					accessRevalidating={access.isFetching}
+					accessValidationFailed={access.isError}
+					onInstalled={result => {
+						queryClient.setQueryData(accessKey, result.access)
+					}}
+					onRevalidateAccess={() => {
+						void access.refetch()
+					}}
+				/>
 			</div>
 		)
 	if (data.state === 'NOT_ACTIVATED')
@@ -259,9 +233,12 @@ export const AccessGate = ({ children }: PropsWithChildren) => {
 					}
 					action={
 						<Button
-							disabled={data.membership.role !== 'OWNER'}
-							isLoading={trial.isPending}
+							disabled={
+								data.membership.role !== 'OWNER' || access.isFetching
+							}
+							isLoading={trial.isPending || access.isFetching}
 							onClick={() => {
+								if (access.isFetching) return
 								commandIdRef.current ??= crypto.randomUUID()
 								trial.mutate({
 									workspaceId: data.selectedWorkspaceId,
@@ -288,6 +265,7 @@ export const AccessGate = ({ children }: PropsWithChildren) => {
 				action={
 					<Button
 						variant="secondary"
+						isLoading={access.isFetching}
 						onClick={() => {
 							toast('Обновляем состояние доступа')
 							void access.refetch()

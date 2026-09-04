@@ -5,7 +5,8 @@ import { getPublicHttpClient } from '@/shared/api/http-client'
 import {
 	activateCrmTrial,
 	getCrmAccessBootstrap,
-	getPipelineTemplates
+	getPipelineTemplates,
+	installCrmTemplate
 } from './crm-access.api'
 
 vi.mock('@/shared/api/http-client', () => ({
@@ -24,6 +25,38 @@ const resolved = {
 	entitlementStatus: 'NOT_ACTIVATED',
 	entitlement: null,
 	access: null
+}
+const installationCommand = {
+	commandId,
+	workspaceId,
+	templateKey: 'appointment-services',
+	templateVersion: 1
+}
+const activeAccess = {
+	...resolved,
+	state: 'ACTIVE',
+	entitlementStatus: 'ACTIVE',
+	entitlement: {
+		id: '44444444-4444-4444-8444-444444444444',
+		workspaceId,
+		planCode: 'TRIAL',
+		seatLimit: 1,
+		trialStartedAt: '2026-09-04T00:00:00.000Z',
+		effectiveFrom: '2026-09-04T00:00:00.000Z',
+		effectiveUntil: '2026-09-09T00:00:00.000Z',
+		aggregateVersion: '1',
+		sourceSequence: '1'
+	},
+	access: { lifecycle: 'ACTIVE' }
+}
+const installationResponse = {
+	schemaVersion: 1,
+	installation: {
+		...installationCommand,
+		pipelineId: '55555555-5555-4555-8555-555555555555',
+		templateFingerprint: 'a'.repeat(64)
+	},
+	access: activeAccess
 }
 
 describe('crm access api', () => {
@@ -89,6 +122,41 @@ describe('crm access api', () => {
 		})
 	})
 
+	it('installs the exact template revision with one idempotency key', async () => {
+		request.mockResolvedValue({ data: installationResponse })
+
+		await expect(
+			installCrmTemplate('token', installationCommand)
+		).resolves.toEqual(installationResponse)
+		expect(request).toHaveBeenCalledWith(
+			expect.objectContaining({
+				method: 'POST',
+				url: '/crm/access/onboarding/template',
+				data: { schemaVersion: 1, ...installationCommand },
+				headers: {
+					'Idempotency-Key': commandId,
+					Authorization: 'Bearer token'
+				}
+			})
+		)
+	})
+
+	it('rejects an installation response for a different template revision', async () => {
+		request.mockResolvedValue({
+			data: {
+				...installationResponse,
+				installation: {
+					...installationResponse.installation,
+					templateVersion: 2
+				}
+			}
+		})
+
+		await expect(
+			installCrmTemplate('token', installationCommand)
+		).rejects.toMatchObject({ kind: 'temporary' })
+	})
+
 	it('keeps an idempotency conflict distinct from a temporary failure', async () => {
 		request.mockRejectedValue({
 			isAxiosError: true,
@@ -97,5 +165,33 @@ describe('crm access api', () => {
 		await expect(
 			activateCrmTrial('token', { workspaceId, commandId })
 		).rejects.toMatchObject({ kind: 'conflict' })
+	})
+
+	it('recognizes only the exact missing-template error as definitive', async () => {
+		request.mockRejectedValue({
+			isAxiosError: true,
+			response: {
+				status: 404,
+				data: { code: 'crm_template_version_not_found' }
+			}
+		})
+
+		await expect(
+			installCrmTemplate('token', installationCommand)
+		).rejects.toMatchObject({ kind: 'notFound' })
+	})
+
+	it.each([
+		[403, 'forbidden'],
+		[404, 'temporary']
+	] as const)('keeps HTTP %s distinct as %s', async (status, kind) => {
+		request.mockRejectedValue({
+			isAxiosError: true,
+			response: { status }
+		})
+
+		await expect(
+			installCrmTemplate('token', installationCommand)
+		).rejects.toMatchObject({ kind })
 	})
 })
