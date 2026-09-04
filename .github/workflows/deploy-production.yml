@@ -59,6 +59,9 @@ jobs:
       - name: Verify AI consultant contract
         run: pnpm test:ai-consultant
 
+      - name: Verify WinCRM admin contract
+        run: pnpm test:admin-crm
+
       - name: Type check
         run: pnpm exec tsc --noEmit
 

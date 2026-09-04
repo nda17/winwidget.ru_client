@@ -14,6 +14,7 @@ class AdminPages {
 	TARIFFS = '/admin/tariffs'
 	BACKLOG = '/admin/backlog'
 	SUBSCRIPTIONS = '/admin/subscriptions'
+	CRM = '/admin/crm'
 	SYSTEM = '/admin/system'
 	MESSAGING = '/admin/messaging'
 	DATABASES = '/admin/databases'

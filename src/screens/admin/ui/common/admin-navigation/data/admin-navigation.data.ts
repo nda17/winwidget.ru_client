@@ -20,6 +20,10 @@ export const navItems: INavItem[] = [
 		link: ADMIN_PAGES.WIDGETS
 	},
 	{
+		title: 'WinCRM',
+		link: ADMIN_PAGES.CRM
+	},
+	{
 		title: 'Предупреждения',
 		link: ADMIN_PAGES.ALERTS
 	},

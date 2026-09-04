@@ -12,6 +12,7 @@
 		"test:payment-auth": "node --test scripts/payment-auth-guard.test.mjs",
 		"test:auth-return": "node --test scripts/auth-return-url.test.mjs",
 		"test:admin-payments-resolution": "node --test scripts/admin-payments-resolution.test.mjs",
+		"test:admin-crm": "node --test scripts/admin-crm-contract.test.mjs",
 		"test:ai-consultant": "node --test scripts/ai-consultant-contract.test.mjs",
 		"test:widget-preview": "node --test scripts/widget-live-preview.test.mjs",
 		"format": "prettier --write --no-error-on-unmatched-pattern \"src/**/*.{ts,tsx,scss}\" \"*.{js,mjs,ts,json}\"",

@@ -1,0 +1,257 @@
+'use client'
+
+import { useAuthStore } from '@/entities/user'
+import {
+	adminCrmService,
+	type CrmPipelineTemplate
+} from '@/features/admin-crm'
+import AdminNavigation from '@/screens/admin/ui/common/admin-navigation/AdminNavigation'
+import AdminSectionHeading from '@/screens/admin/ui/common/admin-section-heading/AdminSectionHeading'
+import AdminTooltip from '@/screens/admin/ui/common/admin-tooltip/AdminTooltip'
+import Heading from '@/shared/ui/heading/Heading'
+import SkeletonLoader from '@/shared/ui/skeleton-loader/SkeletonLoader'
+import { useQuery } from '@tanstack/react-query'
+import { NextPage } from 'next'
+import toast from 'react-hot-toast'
+import styles from './AdminCrm.module.scss'
+
+const CRM_SERVICES = [
+	{
+		name: 'crm-access',
+		responsibility: 'доступ, membership-проекция и onboarding'
+	},
+	{
+		name: 'crm-intake',
+		responsibility: 'источники заявок, Inbox и импорт'
+	},
+	{
+		name: 'crm-customers',
+		responsibility: 'контакты, компании, deduplication и PII'
+	},
+	{
+		name: 'crm-sales',
+		responsibility: 'воронки, сделки, задачи и timeline'
+	}
+] as const
+
+const stageStateLabel = {
+	OPEN: 'Рабочий этап',
+	WON: 'Успех',
+	LOST: 'Отказ'
+} as const
+
+const AdminCrm: NextPage = () => {
+	const auth = useAuthStore(state => state.auth)
+	const isAuthResolved = useAuthStore(state => state.isAuthResolved)
+	const { data, isLoading, isError, isFetching, refetch } = useQuery({
+		queryKey: ['admin-crm-template-catalog'],
+		queryFn: adminCrmService.getTemplateCatalog,
+		enabled: isAuthResolved && auth,
+		staleTime: 60_000,
+		retry: 1
+	})
+
+	const refreshCatalog = async () => {
+		const toastId = toast.loading('Обновляем каталог WinCRM...')
+		const result = await refetch()
+
+		if (result.isError) {
+			toast.error('Не удалось обновить каталог WinCRM', { id: toastId })
+			return
+		}
+
+		toast.success('Каталог WinCRM обновлён', { id: toastId })
+	}
+
+	return (
+		<section className={styles.wrapper}>
+			<Heading text="Панель администратора" />
+			<AdminNavigation />
+			<AdminSectionHeading
+				text="WinCRM"
+				title="Глобальные настройки WinCRM"
+				description="Операторский экран продукта. Клиентские воронки, контакты и сделки здесь не хранятся и управляются только на crm.winwidget.ru."
+				risk="low"
+				riskText="Текущая версия только читает публичный каталог шаблонов и показывает зафиксированные продуктовые решения."
+			/>
+
+			<div className={styles.summaryGrid}>
+				<article className={styles.summaryCard}>
+					<p className={styles.eyebrow}>Продукт</p>
+					<p className={styles.summaryValue}>WinCRM</p>
+					<p className={styles.summaryHint}>crm.winwidget.ru</p>
+				</article>
+				<article className={styles.summaryCard}>
+					<p className={styles.eyebrow}>Бесплатный период</p>
+					<p className={styles.summaryValue}>5 дней</p>
+					<p className={styles.summaryHint}>
+						Только после явного нажатия «Попробовать бесплатно»
+					</p>
+				</article>
+				<article className={styles.summaryCard}>
+					<p className={styles.eyebrow}>Архитектура MVP</p>
+					<p className={styles.summaryValue}>4 сервиса</p>
+					<p className={styles.summaryHint}>
+						Независимые приложения и отдельное владение данными
+					</p>
+				</article>
+			</div>
+
+			<div className={styles.section}>
+				<div className={styles.sectionHeader}>
+					<div>
+						<p className={styles.sectionTitle}>Границы сервисов</p>
+						<p className={styles.sectionHint}>
+							CRM не использует общий монолит или общую базу данных
+						</p>
+					</div>
+				</div>
+				<div className={styles.serviceGrid}>
+					{CRM_SERVICES.map(service => (
+						<article key={service.name} className={styles.serviceCard}>
+							<code className={styles.serviceName}>{service.name}</code>
+							<p className={styles.serviceDescription}>
+								{service.responsibility}
+							</p>
+						</article>
+					))}
+				</div>
+			</div>
+
+			<div className={styles.section}>
+				<div className={styles.sectionHeader}>
+					<div>
+						<p className={styles.sectionTitle}>Шаблоны процессов</p>
+						<p className={styles.sectionHint}>
+							Версионированный каталог{' '}
+							<code className={styles.inlineCode}>crm-sales</code>;
+							опубликованная версия не изменяется задним числом
+						</p>
+					</div>
+					<button
+						type="button"
+						className={styles.refreshButton}
+						disabled={!isAuthResolved || !auth || isFetching}
+						onClick={refreshCatalog}
+					>
+						{isFetching ? 'Обновляем...' : 'Обновить'}
+					</button>
+				</div>
+
+				{!isAuthResolved || !auth || isLoading ? (
+					<div className={styles.templateGrid}>
+						<SkeletonLoader
+							count={1}
+							className={styles.templateSkeleton}
+						/>
+						<SkeletonLoader
+							count={1}
+							className={styles.templateSkeleton}
+						/>
+						<SkeletonLoader
+							count={1}
+							className={styles.templateSkeleton}
+						/>
+					</div>
+				) : !data ? (
+					<div className={styles.errorState} role="alert">
+						<p className={styles.errorTitle}>Каталог пока недоступен</p>
+						<p className={styles.errorText}>
+							Публичный маршрут ещё не подключён или{' '}
+							<code className={styles.inlineCode}>crm-sales</code> временно
+							не отвечает. Повторная загрузка безопасна и ничего не
+							изменяет.
+						</p>
+					</div>
+				) : (
+					<>
+						{isError ? (
+							<div className={styles.staleState} role="status">
+								Показана последняя загруженная ревизия. Фоновое обновление
+								каталога не удалось.
+							</div>
+						) : null}
+						<div className={styles.catalogMeta}>
+							<span>Схема v{data.schemaVersion}</span>
+							<span>Ревизия {data.catalogRevision}</span>
+							<span>Шаблонов: {data.templates.length}</span>
+						</div>
+						<div className={styles.templateGrid}>
+							{data.templates.map(template => (
+								<TemplateCard
+									key={`${template.key}@${template.version}`}
+									template={template}
+								/>
+							))}
+						</div>
+					</>
+				)}
+			</div>
+
+			<div className={styles.section}>
+				<div className={styles.lockedHeading}>
+					<div>
+						<p className={styles.sectionTitle}>Управление продуктом</p>
+						<p className={styles.sectionHint}>
+							Будущие изменяющие действия — только для DEV
+						</p>
+					</div>
+					<AdminTooltip
+						title="Управление ещё не включено"
+						description="Тарифы WinCRM будут согласованы отдельно. Trial policy и feature flags появятся только вместе с backend-правами и записью в Журнал событий. Версии шаблонов MVP публикуются через Git/CI."
+						risk="high"
+						riskText="Нельзя включать UI-запись раньше серверного RBAC, валидации, аудита и стратегии обратной совместимости."
+					/>
+				</div>
+				<div className={styles.lockedContent} aria-disabled="true">
+					<label className={styles.lockedField}>
+						<span>Длительность Trial</span>
+						<input value="5 дней" readOnly disabled />
+					</label>
+					<label className={styles.lockedField}>
+						<span>Публикация каталога</span>
+						<input value="Новая версия через Git/CI" readOnly disabled />
+					</label>
+					<button type="button" disabled className={styles.lockedButton}>
+						Сохранить настройки
+					</button>
+				</div>
+				<p className={styles.accessNote}>
+					ADMIN: просмотр. DEV: просмотр; изменение появится после
+					серверного RBAC и аудита. Данные клиентов WinCRM в эту админку не
+					копируются.
+				</p>
+			</div>
+		</section>
+	)
+}
+
+const TemplateCard = ({ template }: { template: CrmPipelineTemplate }) => (
+	<article className={styles.templateCard}>
+		<div className={styles.templateHeader}>
+			<div>
+				<p className={styles.templateName}>{template.name}</p>
+				<code className={styles.templateKey}>
+					{template.key}@{template.version}
+				</code>
+			</div>
+			{template.isBlank && (
+				<span className={styles.blankBadge}>Пустой</span>
+			)}
+		</div>
+		<p className={styles.templateDescription}>{template.description}</p>
+		<div className={styles.stageList}>
+			{template.stages.map(stage => (
+				<span
+					key={stage.key}
+					className={styles[`stage_${stage.state.toLowerCase()}`]}
+					title={stageStateLabel[stage.state]}
+				>
+					{stage.order}. {stage.name}
+				</span>
+			))}
+		</div>
+	</article>
+)
+
+export default AdminCrm
