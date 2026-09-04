@@ -24,7 +24,9 @@ const activeAccess = {
 		id: '55555555-5555-4555-8555-555555555555',
 		workspaceId,
 		planCode: 'TRIAL',
-		seatLimit: 1,
+		seatLimit: 5,
+		policyVersion: 1,
+		graceUntil: '2026-09-12T00:00:00.000Z',
 		trialStartedAt: '2026-09-04T00:00:00.000Z',
 		effectiveFrom: '2026-09-04T00:00:00.000Z',
 		effectiveUntil: '2026-09-09T00:00:00.000Z',
@@ -51,6 +53,20 @@ describe('parseCrmTemplateInstallationResponse', () => {
 		expect(
 			parseCrmTemplateInstallationResponse(response, command)
 		).toEqual(response)
+	})
+
+	it('accepts installation completed during GRACE', () => {
+		const graceResponse = {
+			...response,
+			access: {
+				...activeAccess,
+				state: 'GRACE',
+				entitlementStatus: 'GRACE'
+			}
+		}
+		expect(
+			parseCrmTemplateInstallationResponse(graceResponse, command)
+		).toEqual(graceResponse)
 	})
 
 	it.each([

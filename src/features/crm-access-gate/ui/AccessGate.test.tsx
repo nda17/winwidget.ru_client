@@ -12,6 +12,12 @@ import toast from 'react-hot-toast'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useSessionStore } from '@/entities/session'
+import { useCrmWorkspaceAccess } from '@/entities/crm-access'
+import { ContactsScreen } from '@/screens/contacts'
+import { DealsScreen } from '@/screens/deals'
+import { InboxScreen } from '@/screens/inbox'
+import { TasksScreen } from '@/screens/tasks'
+import { CrmAppShell } from '@/widgets/crm-app-shell'
 import { AuthenticatedApiError } from '@/shared/api/authenticated-http-client'
 
 import {
@@ -32,6 +38,7 @@ vi.mock('../api/crm-access.api', () => ({
 	getPipelineTemplates: vi.fn(),
 	installCrmTemplate: vi.fn()
 }))
+vi.mock('next/navigation', () => ({ usePathname: () => '/inbox' }))
 vi.mock('react-hot-toast', () => ({
 	default: Object.assign(vi.fn(), {
 		loading: vi.fn(() => 'install-toast'),
@@ -52,7 +59,9 @@ const entitlement = {
 	id: '44444444-4444-4444-8444-444444444444',
 	workspaceId,
 	planCode: 'TRIAL',
-	seatLimit: 1,
+	seatLimit: 5,
+	policyVersion: 1,
+	graceUntil: '2026-09-12T00:00:00.000Z',
 	trialStartedAt: '2026-09-04T00:00:00.000Z',
 	effectiveFrom: '2026-09-04T00:00:00.000Z',
 	effectiveUntil: '2026-09-09T00:00:00.000Z',
@@ -123,9 +132,34 @@ const Wrapper = ({ children }: PropsWithChildren) => (
 	</QueryClientProvider>
 )
 
+const WorkspacePermissions = () => {
+	const { state, canWrite, canExport } = useCrmWorkspaceAccess()
+	return (
+		<div>
+			<span>{state} workspace content</span>
+			<button disabled={!canWrite}>Сохранить</button>
+			<button disabled={!canExport}>Экспорт</button>
+		</div>
+	)
+}
+
 describe('AccessGate', () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
+		Object.defineProperties(HTMLDialogElement.prototype, {
+			showModal: {
+				configurable: true,
+				value: function (this: HTMLDialogElement) {
+					this.open = true
+				}
+			},
+			close: {
+				configurable: true,
+				value: function (this: HTMLDialogElement) {
+					this.open = false
+				}
+			}
+		})
 		queryClient = new QueryClient({
 			defaultOptions: {
 				queries: { retry: false },
@@ -142,10 +176,12 @@ describe('AccessGate', () => {
 
 	afterEach(() => {
 		cleanup()
+		Reflect.deleteProperty(HTMLDialogElement.prototype, 'showModal')
+		Reflect.deleteProperty(HTMLDialogElement.prototype, 'close')
 		queryClient.clear()
 	})
 
-	it('renders children only for ACTIVE', async () => {
+	it('renders confirmed ACTIVE content', async () => {
 		vi.mocked(getCrmAccessBootstrap).mockResolvedValue({
 			...base,
 			state: 'ACTIVE',
@@ -160,6 +196,209 @@ describe('AccessGate', () => {
 			{ wrapper: Wrapper }
 		)
 		expect(await screen.findByText('workspace content')).toBeTruthy()
+	})
+
+	it.each(['ACTIVE', 'GRACE'] as const)(
+		'opens a writable %s workspace',
+		async state => {
+			vi.mocked(getCrmAccessBootstrap).mockResolvedValue({
+				...activeAccess,
+				state,
+				entitlementStatus: state
+			})
+			render(
+				<AccessGate>
+					<WorkspacePermissions />
+				</AccessGate>,
+				{ wrapper: Wrapper }
+			)
+			expect(
+				await screen.findByText(`${state} workspace content`)
+			).toBeTruthy()
+			expect(
+				screen.getByRole('button', { name: 'Сохранить' })
+			).toHaveProperty('disabled', false)
+			expect(
+				screen.getByRole('button', { name: 'Экспорт' })
+			).toHaveProperty('disabled', false)
+			expect(activateCrmTrial).not.toHaveBeenCalled()
+		}
+	)
+
+	it('opens read-only data and owner export while disabling mutations', async () => {
+		vi.mocked(getCrmAccessBootstrap).mockResolvedValue({
+			...activeAccess,
+			state: 'READ_ONLY',
+			entitlementStatus: 'READ_ONLY'
+		})
+		render(
+			<AccessGate>
+				<WorkspacePermissions />
+			</AccessGate>,
+			{ wrapper: Wrapper }
+		)
+		expect(
+			await screen.findByText('READ_ONLY workspace content')
+		).toBeTruthy()
+		expect(
+			screen.getByRole('button', { name: 'Сохранить' })
+		).toHaveProperty('disabled', true)
+		expect(screen.getByRole('button', { name: 'Экспорт' })).toHaveProperty(
+			'disabled',
+			false
+		)
+	})
+
+	it('shows the GRACE deadline while keeping the workspace available', async () => {
+		vi.mocked(getCrmAccessBootstrap).mockResolvedValue({
+			...activeAccess,
+			state: 'GRACE',
+			entitlementStatus: 'GRACE'
+		})
+		render(
+			<AccessGate>
+				<CrmAppShell>
+					<div>workspace data</div>
+				</CrmAppShell>
+			</AccessGate>,
+			{ wrapper: Wrapper }
+		)
+		expect(
+			await screen.findByText('Дополнительные 3 дня доступа')
+		).toBeTruthy()
+		expect(screen.getByText('workspace data')).toBeTruthy()
+		expect(document.querySelector('time')?.dateTime).toBe(
+			entitlement.graceUntil
+		)
+	})
+
+	it('shows a persistent read-only notice without hiding workspace data', async () => {
+		vi.mocked(getCrmAccessBootstrap).mockResolvedValue({
+			...activeAccess,
+			state: 'READ_ONLY',
+			entitlementStatus: 'READ_ONLY'
+		})
+		render(
+			<AccessGate>
+				<CrmAppShell>
+					<div>workspace data</div>
+				</CrmAppShell>
+			</AccessGate>,
+			{ wrapper: Wrapper }
+		)
+		expect(
+			await screen.findByText('WinCRM доступна только для чтения')
+		).toBeTruthy()
+		expect(screen.getByText('workspace data')).toBeTruthy()
+	})
+
+	it('does not infer export rights for a workspace member', async () => {
+		vi.mocked(getCrmAccessBootstrap).mockResolvedValue({
+			...activeAccess,
+			membership: { membershipId, role: 'MEMBER' },
+			workspaces: [{ workspaceId, membershipId, role: 'MEMBER' }]
+		})
+		render(
+			<AccessGate>
+				<WorkspacePermissions />
+			</AccessGate>,
+			{ wrapper: Wrapper }
+		)
+		await screen.findByText('ACTIVE workspace content')
+		expect(screen.getByRole('button', { name: 'Экспорт' })).toHaveProperty(
+			'disabled',
+			true
+		)
+	})
+
+	it('keeps GRACE onboarding available without automatically installing a template', async () => {
+		vi.mocked(getCrmAccessBootstrap).mockResolvedValue({
+			...onboardingAccess,
+			entitlementStatus: 'GRACE'
+		})
+		vi.mocked(getPipelineTemplates).mockResolvedValue(catalog)
+		render(
+			<AccessGate>
+				<div>hidden</div>
+			</AccessGate>,
+			{ wrapper: Wrapper }
+		)
+		expect(await screen.findByText('Настройка WinCRM')).toBeTruthy()
+		expect(screen.queryByText('hidden')).toBeNull()
+		expect(activateCrmTrial).not.toHaveBeenCalled()
+		expect(installCrmTemplate).not.toHaveBeenCalled()
+	})
+
+	it('keeps unfinished read-only onboarding closed', async () => {
+		vi.mocked(getCrmAccessBootstrap).mockResolvedValue({
+			...onboardingAccess,
+			state: 'READ_ONLY',
+			entitlementStatus: 'READ_ONLY'
+		})
+		render(
+			<AccessGate>
+				<div>hidden</div>
+			</AccessGate>,
+			{ wrapper: Wrapper }
+		)
+		expect(
+			await screen.findByText('Доступ только для чтения')
+		).toBeTruthy()
+		expect(screen.queryByText('hidden')).toBeNull()
+	})
+
+	it('keeps read-only prototype records viewable and all record mutations disabled', async () => {
+		vi.mocked(getCrmAccessBootstrap).mockResolvedValue({
+			...activeAccess,
+			state: 'READ_ONLY',
+			entitlementStatus: 'READ_ONLY'
+		})
+		render(
+			<AccessGate>
+				<ContactsScreen />
+				<DealsScreen />
+				<InboxScreen />
+				<TasksScreen />
+			</AccessGate>,
+			{ wrapper: Wrapper }
+		)
+		for (const name of ['Новый контакт', 'Новая сделка', 'Новая задача']) {
+			expect(await screen.findByRole('button', { name })).toHaveProperty(
+				'disabled',
+				true
+			)
+		}
+		for (const button of screen.getAllByRole('button', {
+			name: 'Выполнено'
+		})) {
+			expect(button).toHaveProperty('disabled', true)
+		}
+		const contactTable = screen.getByRole('table', {
+			name: 'Демонстрационная таблица контактов'
+		})
+		fireEvent.click(contactTable.querySelector('button')!)
+		expect(screen.getByRole('textbox', { name: 'Имя' })).toHaveProperty(
+			'readOnly',
+			true
+		)
+		expect(
+			screen.getByRole('button', { name: 'Проверить макет' })
+		).toHaveProperty('disabled', true)
+		fireEvent.click(screen.getByRole('button', { name: 'Закрыть' }))
+		fireEvent.click(
+			screen.getAllByRole('button', { name: /^Открыть сделку/ })[0]
+		)
+		expect(
+			screen.getByRole('button', { name: 'Взял в работу' })
+		).toHaveProperty('disabled', true)
+		fireEvent.click(screen.getByRole('button', { name: 'Закрыть' }))
+		const inboxTable = screen.getByRole('table', {
+			name: 'Демонстрационный список входящих обращений'
+		})
+		fireEvent.click(inboxTable.querySelector('button')!)
+		expect(
+			screen.getByRole('button', { name: 'Принять в работу' })
+		).toHaveProperty('disabled', true)
 	})
 
 	it('revalidates access before reopening a workspace for a new session', async () => {
@@ -214,34 +453,42 @@ describe('AccessGate', () => {
 		expect(await screen.findByText('workspace content')).toBeTruthy()
 	})
 
-	it('closes cached ACTIVE content when background access validation fails', async () => {
-		vi.mocked(getCrmAccessBootstrap)
-			.mockResolvedValueOnce(activeAccess)
-			.mockRejectedValueOnce(new Error('access unavailable'))
-			.mockResolvedValueOnce(activeAccess)
-		render(
-			<AccessGate>
-				<div>workspace content</div>
-			</AccessGate>,
-			{ wrapper: Wrapper }
-		)
-		expect(await screen.findByText('workspace content')).toBeTruthy()
+	it.each(['ACTIVE', 'GRACE', 'READ_ONLY'] as const)(
+		'closes cached %s content when background access validation fails',
+		async state => {
+			const resolvedAccess = {
+				...activeAccess,
+				state,
+				entitlementStatus: state
+			}
+			vi.mocked(getCrmAccessBootstrap)
+				.mockResolvedValueOnce(resolvedAccess)
+				.mockRejectedValueOnce(new Error('access unavailable'))
+				.mockResolvedValueOnce(resolvedAccess)
+			render(
+				<AccessGate>
+					<div>workspace content</div>
+				</AccessGate>,
+				{ wrapper: Wrapper }
+			)
+			expect(await screen.findByText('workspace content')).toBeTruthy()
 
-		act(() => {
-			void queryClient.invalidateQueries({
-				queryKey: crmAccessQueryKey('user-1', 1)
+			act(() => {
+				void queryClient.invalidateQueries({
+					queryKey: crmAccessQueryKey('user-1', 1)
+				})
 			})
-		})
 
-		expect(
-			await screen.findByRole('heading', {
-				name: 'CRM временно недоступна'
-			})
-		).toBeTruthy()
-		expect(screen.queryByText('workspace content')).toBeNull()
-		fireEvent.click(screen.getByRole('button', { name: 'Повторить' }))
-		expect(await screen.findByText('workspace content')).toBeTruthy()
-	})
+			expect(
+				await screen.findByRole('heading', {
+					name: 'CRM временно недоступна'
+				})
+			).toBeTruthy()
+			expect(screen.queryByText('workspace content')).toBeNull()
+			fireEvent.click(screen.getByRole('button', { name: 'Повторить' }))
+			expect(await screen.findByText('workspace content')).toBeTruthy()
+		}
+	)
 
 	it('never starts trial automatically and reuses command id after a failed attempt', async () => {
 		vi.mocked(getCrmAccessBootstrap).mockResolvedValue({

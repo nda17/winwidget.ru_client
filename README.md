@@ -21,10 +21,13 @@
 - полный возврат после входа с `winwidget.ru`, production CORS и защита от
   одновременной ротации refresh token между поддоменами ещё не подключены;
 - после успешной сессии отдельный fail-closed access gate проверяет реальный
-  `/crm/access/bootstrap`: только `ACTIVE` открывает рабочий интерфейс;
+  `/crm/access/bootstrap`: `ACTIVE` и `GRACE` открывают настроенный workspace
+  для работы; `READ_ONLY` сохраняет просмотр и доступный по роли экспорт,
+  отключая изменение данных;
 - пятидневный Trial запускается только явной кнопкой владельца через
   идемпотентный `/crm/access/trial`, а onboarding показывает только реальный
-  versioned-каталог `/crm/templates` без фиктивной установки;
+  versioned-каталог `/crm/templates` и устанавливает точную выбранную версию
+  через идемпотентный `/crm/access/onboarding/template`;
 - production deploy, VPS, DNS, TLS и Nginx не настроены;
 - CI этой ветки выполняет только quality gates и не выпускает production-релиз.
 
@@ -201,7 +204,7 @@ Workflow не содержит SSH, production secrets, Compose или VPS deplo
 До подключения остальных CRM endpoint необходимо отдельно согласовать и
 реализовать:
 
-- установку выбранного шаблона и последующие onboarding-команды;
+- последующие onboarding-команды после установки выбранного шаблона;
 - единый Gateway prefix `/api/v1/crm/**` с точной маршрутизацией групп ресурсов
   на `crm-access`, `crm-intake`, `crm-customers`, `crm-sales` и существующий
   Reporting;
@@ -224,8 +227,27 @@ Workflow не содержит SSH, production secrets, Compose или VPS deplo
 `GET /crm/access/bootstrap`. При нескольких membership workspace выбирается
 только из полученного списка. Явный `NOT_ACTIVATED` допускает ручной
 `POST /crm/access/trial` со стабильным `commandId` и совпадающим
-`Idempotency-Key`. `ONBOARDING`, `GRACE`, `READ_ONLY`, `EXPIRED`, `CANCELLED` и
-`SUSPENDED` не пропускают пользователя в `AppShell`.
+`Idempotency-Key`. `ONBOARDING` показывает настройку, в том числе при `GRACE`.
+`ACTIVE` и `GRACE` открывают `AppShell` только после завершённого onboarding;
+в `GRACE` отображается льготный срок из серверного `graceUntil`.
+`READ_ONLY` открывает уже настроенную рабочую область, блокируя создание,
+изменение и принятие обращений. `EXPIRED`, `CANCELLED`, `SUSPENDED` и
+незавершённый read-only onboarding остаются закрытыми. При повторной проверке
+доступа workspace скрыт до успешного подтверждения; ошибка не открывает
+устаревшие данные из query cache.
+
+FSD-entity `@/entities/crm-access` экспортирует `useCrmWorkspaceAccess()`:
+`workspaceId`, `state`, `membership`, `entitlement`, `canWrite`, `isReadOnly`,
+`canExport`. Provider монтируется только подтверждённым `AccessGate`.
+`canWrite` отражает состояние подписки для UI; каждый backend endpoint
+независимо проверяет права CRM и доступ к конкретной записи. До подключения
+детализированного контракта CRM-ролей `canExport` разрешён только OWNER.
+
+Exact-контракт entitlement включает обязательные nullable `policyVersion` и
+`graceUntil`. Legacy `null/null` сохраняется без назначения новой политики;
+для новой политики требуется положительная целая версия, не менее двух
+мест и корректный `graceUntil` после `effectiveUntil`. Уже начатый Trial
+не изменяется вслед за настройками коммерческой политики в админке.
 
 ## Совместимость
 

@@ -1,5 +1,6 @@
 'use client'
 
+import { useCrmWorkspaceAccess } from '@/entities/crm-access'
 import {
 	AppIcon,
 	Button,
@@ -22,6 +23,7 @@ import toast from 'react-hot-toast'
 import styles from './ContactsScreen.module.scss'
 
 const ContactsScreen = () => {
+	const { canWrite } = useCrmWorkspaceAccess()
 	const [selectedContact, setSelectedContact] =
 		useState<ContactViewModel | null>(null)
 	const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -76,6 +78,7 @@ const ContactsScreen = () => {
 
 	const handleDemoSubmit = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault()
+		if (!canWrite) return
 		toast.success('Демо-режим: контакт не сохранён')
 	}
 
@@ -92,6 +95,7 @@ const ContactsScreen = () => {
 				description="Таблица и форма демонстрируют будущую работу с клиентской базой без сохранения и автоматического поиска дублей."
 				actions={
 					<Button
+						disabled={!canWrite}
 						leadingIcon={<AppIcon name="plus" size={18} />}
 						onClick={() => setIsCreateOpen(true)}
 					>
@@ -141,7 +145,11 @@ const ContactsScreen = () => {
 						<Button variant="secondary" onClick={closeDrawer}>
 							Закрыть
 						</Button>
-						<Button type="submit" form="demo-contact-form">
+						<Button
+							type="submit"
+							form="demo-contact-form"
+							disabled={!canWrite}
+						>
 							Проверить макет
 						</Button>
 					</>
@@ -155,6 +163,7 @@ const ContactsScreen = () => {
 						onSubmit={handleDemoSubmit}
 					>
 						<TextField
+							readOnly={!canWrite}
 							label="Имя"
 							name="name"
 							defaultValue={selectedContact?.name}
@@ -162,18 +171,21 @@ const ContactsScreen = () => {
 							required
 						/>
 						<TextField
+							readOnly={!canWrite}
 							label="Компания"
 							name="company"
 							defaultValue={selectedContact?.company}
 							placeholder="Название компании"
 						/>
 						<TextField
+							readOnly={!canWrite}
 							label="Телефон"
 							name="phone"
 							defaultValue={selectedContact?.phone}
 							placeholder="+7 (900) 000-00-00"
 						/>
 						<TextField
+							readOnly={!canWrite}
 							label="Email"
 							name="email"
 							type="email"
@@ -181,6 +193,7 @@ const ContactsScreen = () => {
 							placeholder="name@example.test"
 						/>
 						<SelectField
+							disabled={!canWrite}
 							label="Источник"
 							name="source"
 							defaultValue="manual"

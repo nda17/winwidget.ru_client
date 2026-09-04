@@ -43,6 +43,8 @@ export interface CrmEntitlementDetails {
 	workspaceId: string
 	planCode: string
 	seatLimit: number | null
+	policyVersion: number | null
+	graceUntil: string | null
 	trialStartedAt: string | null
 	effectiveFrom: string
 	effectiveUntil: string

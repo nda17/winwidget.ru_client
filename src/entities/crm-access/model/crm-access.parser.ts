@@ -103,6 +103,8 @@ const parseEntitlement = (
 			'workspaceId',
 			'planCode',
 			'seatLimit',
+			'policyVersion',
+			'graceUntil',
 			'trialStartedAt',
 			'effectiveFrom',
 			'effectiveUntil',
@@ -121,6 +123,17 @@ const parseEntitlement = (
 			(typeof value.seatLimit !== 'number' ||
 				!Number.isSafeInteger(value.seatLimit) ||
 				value.seatLimit <= 0)) ||
+		(value.policyVersion !== null &&
+			(typeof value.policyVersion !== 'number' ||
+				!Number.isSafeInteger(value.policyVersion) ||
+				value.policyVersion <= 0)) ||
+		(value.graceUntil !== null && !isIsoDate(value.graceUntil)) ||
+		(value.policyVersion === null
+			? value.graceUntil !== null
+			: !isIsoDate(value.graceUntil) ||
+				Date.parse(value.graceUntil) <= Date.parse(value.effectiveUntil) ||
+				typeof value.seatLimit !== 'number' ||
+				value.seatLimit < 2) ||
 		(value.trialStartedAt !== null && !isIsoDate(value.trialStartedAt)) ||
 		(value.planCode === 'TRIAL' && !isIsoDate(value.trialStartedAt)) ||
 		(isIsoDate(value.trialStartedAt) &&
@@ -134,6 +147,8 @@ const parseEntitlement = (
 		workspaceId,
 		planCode: value.planCode,
 		seatLimit: value.seatLimit,
+		policyVersion: value.policyVersion,
+		graceUntil: value.graceUntil,
 		trialStartedAt: value.trialStartedAt,
 		effectiveFrom: value.effectiveFrom,
 		effectiveUntil: value.effectiveUntil,
@@ -158,7 +173,11 @@ const isStateConsistent = (
 		return false
 	}
 
-	if (entitlementStatus !== 'ACTIVE') {
+	if (access?.lifecycle === 'SUSPENDED') {
+		return state === 'SUSPENDED'
+	}
+
+	if (entitlementStatus !== 'ACTIVE' && entitlementStatus !== 'GRACE') {
 		return state === entitlementStatus
 	}
 
@@ -166,12 +185,11 @@ const isStateConsistent = (
 		return access === null || access.lifecycle === 'ONBOARDING'
 	}
 
-	return (
-		(state === 'ACTIVE' ||
-			state === 'READ_ONLY' ||
-			state === 'SUSPENDED') &&
-		access?.lifecycle === state
-	)
+	if (access?.lifecycle === 'READ_ONLY') {
+		return state === 'READ_ONLY'
+	}
+
+	return state === entitlementStatus && access?.lifecycle === 'ACTIVE'
 }
 
 const parseResolvedAccess = (

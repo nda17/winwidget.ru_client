@@ -1,5 +1,6 @@
 'use client'
 
+import { useCrmWorkspaceAccess } from '@/entities/crm-access'
 import {
 	AppIcon,
 	Button,
@@ -26,6 +27,7 @@ const statusTone: Record<InboxLeadViewModel['status'], StatusBadgeTone> = {
 }
 
 const InboxScreen = () => {
+	const { canWrite } = useCrmWorkspaceAccess()
 	const [selectedLead, setSelectedLead] =
 		useState<InboxLeadViewModel | null>(null)
 
@@ -76,6 +78,7 @@ const InboxScreen = () => {
 	]
 
 	const handleDemoAccept = () => {
+		if (!canWrite) return
 		toast('Демо-режим: принятие обращения пока не сохраняется')
 	}
 
@@ -131,7 +134,9 @@ const InboxScreen = () => {
 						>
 							Закрыть
 						</Button>
-						<Button onClick={handleDemoAccept}>Принять в работу</Button>
+						<Button onClick={handleDemoAccept} disabled={!canWrite}>
+							Принять в работу
+						</Button>
 					</>
 				}
 			>

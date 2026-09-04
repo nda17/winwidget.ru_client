@@ -5,7 +5,14 @@ import {
 	CRM_NAVIGATION,
 	type CrmNavigationItem
 } from '@/widgets/crm-app-shell/model/crm-navigation'
-import { AppIcon, BrandLogo, Drawer, StatusBadge } from '@/shared/ui'
+import { useCrmWorkspaceAccess } from '@/entities/crm-access'
+import {
+	AppIcon,
+	BrandLogo,
+	Drawer,
+	ReadOnlyBanner,
+	StatusBadge
+} from '@/shared/ui'
 import clsx from 'clsx'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -93,6 +100,7 @@ const CrmMobileNavigation = () => {
 const CrmAppShell = ({ children }: PropsWithChildren) => {
 	const pathname = usePathname()
 	const [searchQuery, setSearchQuery] = useState('')
+	const access = useCrmWorkspaceAccess()
 
 	const handleSearch = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault()
@@ -164,6 +172,38 @@ const CrmAppShell = ({ children }: PropsWithChildren) => {
 					className={styles.content}
 					tabIndex={-1}
 				>
+					{access.state === 'GRACE' ? (
+						<ReadOnlyBanner
+							tone="warning"
+							title="Дополнительные 3 дня доступа"
+							description={
+								<>
+									Бесплатный период завершён. Вы можете продолжать работу
+									{access.entitlement.graceUntil ? (
+										<>
+											{' '}
+											до{' '}
+											<time dateTime={access.entitlement.graceUntil}>
+												{new Intl.DateTimeFormat('ru-RU', {
+													dateStyle: 'long',
+													timeStyle: 'short'
+												}).format(new Date(access.entitlement.graceUntil))}
+											</time>
+										</>
+									) : (
+										' в течение льготного периода'
+									)}
+									. Затем CRM останется доступна для просмотра и экспорта.
+								</>
+							}
+						/>
+					) : null}
+					{access.isReadOnly ? (
+						<ReadOnlyBanner
+							title="WinCRM доступна только для чтения"
+							description="Данные сохранены. Просмотр доступен, а экспорт — пользователям с соответствующими правами. Для изменений и приёма новых заявок продлите доступ."
+						/>
+					) : null}
 					{children}
 				</main>
 			</div>

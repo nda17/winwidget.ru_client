@@ -66,16 +66,16 @@ export const parseCrmTemplateInstallationResponse = (
 	)
 	if (
 		!access ||
-		access.state !== 'ACTIVE' ||
-		access.entitlementStatus !== 'ACTIVE' ||
+		(access.state !== 'ACTIVE' && access.state !== 'GRACE') ||
+		access.entitlementStatus !== access.state ||
 		access.access?.lifecycle !== 'ACTIVE'
 	) {
 		return null
 	}
 	const activeAccess = {
 		...access,
-		state: 'ACTIVE' as const,
-		entitlementStatus: 'ACTIVE' as const,
+		state: access.state,
+		entitlementStatus: access.state,
 		access: { lifecycle: 'ACTIVE' as const }
 	}
 

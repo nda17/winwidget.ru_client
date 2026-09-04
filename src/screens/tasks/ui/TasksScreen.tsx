@@ -1,5 +1,6 @@
 'use client'
 
+import { useCrmWorkspaceAccess } from '@/entities/crm-access'
 import {
 	AppIcon,
 	Button,
@@ -24,7 +25,9 @@ const statusTone: Record<TaskViewModel['status'], StatusBadgeTone> = {
 	Запланировано: 'info'
 }
 
-const columns: readonly DataTableColumn<TaskViewModel>[] = [
+const getColumns = (
+	canWrite: boolean
+): readonly DataTableColumn<TaskViewModel>[] => [
 	{
 		id: 'task',
 		header: 'Задача',
@@ -63,6 +66,7 @@ const columns: readonly DataTableColumn<TaskViewModel>[] = [
 		align: 'right',
 		render: task => (
 			<Button
+				disabled={!canWrite}
 				variant="ghost"
 				size="sm"
 				onClick={() =>
@@ -76,6 +80,7 @@ const columns: readonly DataTableColumn<TaskViewModel>[] = [
 ]
 
 const TasksScreen = () => {
+	const { canWrite } = useCrmWorkspaceAccess()
 	return (
 		<div className={styles.screen}>
 			<PageHeader
@@ -84,6 +89,7 @@ const TasksScreen = () => {
 				description="Рабочая очередь менеджера: просроченные, сегодняшние и ближайшие действия."
 				actions={
 					<Button
+						disabled={!canWrite}
 						leadingIcon={<AppIcon name="plus" size={18} />}
 						onClick={() =>
 							toast('Демо-режим: создание задач пока не сохраняется')
@@ -108,7 +114,7 @@ const TasksScreen = () => {
 				</div>
 				<DataTable
 					caption="Демонстрационный список задач"
-					columns={columns}
+					columns={getColumns(canWrite)}
 					rows={tasks}
 					getRowKey={task => task.id}
 					embedded

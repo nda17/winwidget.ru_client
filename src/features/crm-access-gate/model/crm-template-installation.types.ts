@@ -17,8 +17,8 @@ export interface CrmTemplateInstallation {
 }
 
 export type CrmActiveAccessResponse = CrmResolvedAccessResponse & {
-	state: 'ACTIVE'
-	entitlementStatus: 'ACTIVE'
+	state: 'ACTIVE' | 'GRACE'
+	entitlementStatus: 'ACTIVE' | 'GRACE'
 	access: { lifecycle: 'ACTIVE' }
 }
 

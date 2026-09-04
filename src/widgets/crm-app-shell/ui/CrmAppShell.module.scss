@@ -75,7 +75,7 @@
 }
 
 .content {
-	@apply min-w-0 p-4 outline-none sm:p-6 xl:p-8;
+	@apply flex min-w-0 flex-col gap-6 p-4 outline-none sm:p-6 xl:p-8;
 }
 
 .content:focus-visible {

@@ -9,6 +9,10 @@ import type { PropsWithChildren } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 
+import {
+	canOpenCrmWorkspace,
+	CrmWorkspaceAccessProvider
+} from '@/entities/crm-access'
 import { useSessionStore } from '@/entities/session'
 import { AuthenticatedApiError } from '@/shared/api/authenticated-http-client'
 import { Button, ScreenState, SelectField } from '@/shared/ui'
@@ -42,12 +46,12 @@ const RetryState = ({
 
 const blockedCopy = {
 	GRACE: [
-		'Доступ в льготном периоде',
-		'Коммерческая политика для этого состояния ещё не зафиксирована. Рабочая область закрыта.'
+		'Настройка WinCRM не завершена',
+		'Не удалось подтвердить готовность рабочего пространства. Обновите статус.'
 	],
 	READ_ONLY: [
 		'Доступ только для чтения',
-		'Рабочая область закрыта до согласования разрешённых read-only сценариев.'
+		'Период редактирования завершён до настройки CRM. Данные сохраняются; завершить настройку можно после продления доступа.'
 	],
 	EXPIRED: [
 		'Доступ завершён',
@@ -191,7 +195,7 @@ export const AccessGate = ({ children }: PropsWithChildren) => {
 		)
 	}
 
-	if (data.state === 'ACTIVE')
+	if (canOpenCrmWorkspace(data))
 		return access.isFetching ? (
 			<div className={styles.gate}>
 				<ScreenState
@@ -200,7 +204,9 @@ export const AccessGate = ({ children }: PropsWithChildren) => {
 				/>
 			</div>
 		) : (
-			children
+			<CrmWorkspaceAccessProvider access={data}>
+				{children}
+			</CrmWorkspaceAccessProvider>
 		)
 	if (data.state === 'ONBOARDING')
 		return (
@@ -255,7 +261,13 @@ export const AccessGate = ({ children }: PropsWithChildren) => {
 			</div>
 		)
 
-	const copy = blockedCopy[data.state]
+	const copy =
+		data.state === 'ACTIVE'
+			? [
+					'Не удалось подтвердить готовность WinCRM',
+					'Обновите состояние доступа.'
+				]
+			: blockedCopy[data.state]
 	return (
 		<div className={styles.gate}>
 			<ScreenState

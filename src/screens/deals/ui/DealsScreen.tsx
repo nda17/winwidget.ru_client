@@ -1,5 +1,6 @@
 'use client'
 
+import { useCrmWorkspaceAccess } from '@/entities/crm-access'
 import {
 	AppIcon,
 	Button,
@@ -39,6 +40,7 @@ const priorityLabel: Record<DealCardViewModel['priority'], string> = {
 }
 
 const DealsScreen = () => {
+	const { canWrite } = useCrmWorkspaceAccess()
 	const [selectedDeal, setSelectedDeal] =
 		useState<DealCardViewModel | null>(null)
 	const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -53,6 +55,7 @@ const DealsScreen = () => {
 
 	const handleDemoSubmit = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault()
+		if (!canWrite) return
 		toast.success('Демо-режим: форма проверена, данные не сохранены')
 	}
 
@@ -64,6 +67,7 @@ const DealsScreen = () => {
 				description="Статический канбан демонстрирует плотность карточек и будущий рабочий процесс без перемещения и сохранения."
 				actions={
 					<Button
+						disabled={!canWrite}
 						leadingIcon={<AppIcon name="plus" size={18} />}
 						onClick={() => setIsCreateOpen(true)}
 					>
@@ -127,6 +131,7 @@ const DealsScreen = () => {
 							Закрыть
 						</Button>
 						<Button
+							disabled={!canWrite}
 							onClick={() =>
 								toast('Демо-режим: действие пока не сохраняется')
 							}
@@ -170,7 +175,7 @@ const DealsScreen = () => {
 				title="Новая сделка"
 				description="Поля являются UX-макетом и не определяют структуру сохраняемых данных."
 				footer={
-					<Button type="submit" form="demo-deal-form">
+					<Button type="submit" form="demo-deal-form" disabled={!canWrite}>
 						Проверить макет
 					</Button>
 				}
@@ -182,36 +187,46 @@ const DealsScreen = () => {
 						onSubmit={handleDemoSubmit}
 					>
 						<TextField
+							readOnly={!canWrite}
 							label="Название"
 							name="title"
 							placeholder="Например, пилот для отдела продаж"
 							required
 						/>
 						<TextField
+							readOnly={!canWrite}
 							label="Контакт"
 							name="contact"
 							placeholder="Синтетический контакт"
 						/>
 						<div className={styles.formGrid}>
 							<SelectField
+								disabled={!canWrite}
 								label="Воронка"
 								name="pipeline"
 								defaultValue="main"
 							>
 								<option value="main">Основная · demo</option>
 							</SelectField>
-							<SelectField label="Этап" name="stage" defaultValue="new">
+							<SelectField
+								label="Этап"
+								name="stage"
+								defaultValue="new"
+								disabled={!canWrite}
+							>
 								<option value="new">Новые</option>
 								<option value="work">В работе</option>
 							</SelectField>
 						</div>
 						<TextField
+							readOnly={!canWrite}
 							label="Сумма"
 							name="amount"
 							inputMode="numeric"
 							placeholder="0 ₽"
 						/>
 						<TextareaField
+							readOnly={!canWrite}
 							label="Комментарий"
 							name="comment"
 							placeholder="Контекст для первого действия"
