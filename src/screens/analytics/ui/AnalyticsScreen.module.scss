@@ -1,106 +1,59 @@
 .screen {
-	@apply flex flex-col gap-6;
+	@apply flex min-w-0 flex-col gap-6;
+}
+
+.reportScope {
+	@apply flex flex-wrap items-center justify-between gap-3 text-sm text-crm-muted;
 }
 
 .metricGrid {
-	@apply grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-4;
+	@apply grid grid-cols-1 gap-4 md:grid-cols-3;
 }
 
 .metricCard {
-	@apply flex min-h-40 flex-col rounded-panel border border-crm-border bg-crm-surface p-5 shadow-panel;
+	@apply flex min-w-0 flex-col items-start rounded-panel border border-crm-border bg-crm-surface p-5 shadow-panel lg:p-6;
 
 	> strong {
-		@apply mt-5 text-4xl font-bold tracking-tight text-crm-text;
+		@apply mt-6 max-w-full break-words text-4xl font-bold tracking-tight text-crm-text;
 	}
 
 	> small {
-		@apply mt-auto pt-4 text-xs text-crm-muted;
+		@apply mt-2 text-xs leading-5 text-crm-muted;
 	}
 }
 
-.metricHeader {
-	@apply flex min-w-0 flex-col items-start gap-3 2xl:flex-row 2xl:justify-between;
+.metricCaption {
+	@apply mt-1 text-xs text-crm-muted;
+}
 
-	> span {
-		@apply text-sm font-semibold leading-5 text-crm-muted;
+.metricAmount {
+	@apply mt-6 w-full break-words border-t border-crm-border pt-4 text-xl font-semibold text-crm-text;
+}
+
+.summaryPanel {
+	@apply flex flex-col justify-between gap-6 rounded-panel border border-primary/15 bg-primary/5 p-5 sm:flex-row sm:items-center lg:p-6;
+
+	h2 {
+		@apply text-lg font-bold text-crm-text;
+	}
+
+	p {
+		@apply mt-2 max-w-xl text-sm leading-6 text-crm-muted;
 	}
 }
 
-.dashboardGrid {
-	@apply grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.85fr)];
-}
-
-.panel,
-.statePanel {
-	@apply overflow-hidden rounded-panel border border-crm-border bg-crm-surface shadow-panel;
-}
-
-.panelHeader {
-	@apply flex flex-col gap-4 border-b border-crm-border px-5 py-5 sm:flex-row sm:items-center sm:justify-between lg:px-6;
-}
-
-.panelTitle {
-	@apply text-lg font-bold text-crm-text;
-}
-
-.panelDescription {
-	@apply mt-1 text-sm text-crm-muted;
-}
-
-.funnel {
-	@apply flex flex-col gap-5 p-5 lg:p-6;
-}
-
-.funnelRow {
-	@apply grid grid-cols-[minmax(8rem,0.8fr)_minmax(10rem,2fr)_auto] items-center gap-4;
-
-	> small {
-		@apply text-right text-xs font-medium text-crm-muted;
-	}
-}
-
-.funnelLabel {
-	@apply flex items-center justify-between gap-3 text-sm text-crm-muted;
+.summaryValue {
+	@apply flex shrink-0 flex-col gap-2 sm:items-end;
 
 	strong {
-		@apply text-crm-text;
+		@apply text-4xl font-bold tracking-tight text-primary;
 	}
-}
-
-.funnelTrack {
-	@apply h-3 overflow-hidden rounded-full bg-primary/10;
 
 	span {
-		@apply block h-full rounded-full bg-brand-gradient;
+		@apply text-xs text-crm-muted;
 	}
 }
 
-.funnelWidthFull {
-	@apply w-full;
-}
-
-.funnelWidthThreeQuarters {
-	@apply w-3/4;
-}
-
-.funnelWidthFortySix {
-	@apply w-[46%];
-}
-
-.funnelWidthTwentyNine {
-	@apply w-[29%];
-}
-
-.stateColumn {
-	@apply grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-1;
-}
-
-@media (max-width: 639px) {
-	.funnelRow {
-		@apply grid-cols-1 gap-2;
-
-		> small {
-			@apply text-left;
-		}
-	}
+.footnote {
+	@apply text-xs leading-5 text-crm-muted;
 }
