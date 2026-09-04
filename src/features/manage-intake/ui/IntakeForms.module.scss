@@ -1,0 +1,48 @@
+.form {
+	@apply flex flex-col gap-5;
+}
+.row {
+	@apply grid grid-cols-1 gap-4 sm:grid-cols-2;
+}
+.actions {
+	@apply flex flex-wrap items-center justify-end gap-3;
+}
+.notice {
+	@apply rounded-xl border border-crm-border bg-crm-surface-muted p-4 text-sm leading-relaxed text-crm-muted;
+}
+.error {
+	@apply rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700;
+}
+.details {
+	@apply grid gap-4 text-sm;
+}
+.details > div {
+	@apply grid gap-1;
+}
+.details dt {
+	@apply font-medium text-crm-muted;
+}
+.details dd {
+	@apply whitespace-pre-wrap break-words text-crm-text;
+}
+.secret {
+	@apply block overflow-x-auto rounded-lg border border-crm-border bg-crm-surface-muted p-3 font-mono text-sm text-crm-text;
+}
+.history {
+	@apply flex flex-col gap-3 border-t border-crm-border pt-5;
+}
+.history h3 {
+	@apply font-bold text-crm-text;
+}
+.history ol {
+	@apply flex flex-col gap-3;
+}
+.history li {
+	@apply rounded-lg border border-crm-border p-3 text-sm text-crm-muted;
+}
+.history strong {
+	@apply block font-semibold text-crm-text;
+}
+.credential {
+	@apply flex flex-col gap-4;
+}

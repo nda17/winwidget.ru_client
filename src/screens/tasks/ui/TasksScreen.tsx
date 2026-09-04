@@ -1,140 +1,215 @@
 'use client'
 
-import { useCrmWorkspaceAccess } from '@/entities/crm-access'
+import { listSalesTasks, type SalesTask } from '@/entities/sales'
 import {
-	AppIcon,
+	CompleteTaskDrawer,
+	salesDate,
+	useSalesSession
+} from '@/features/manage-sales'
+import {
 	Button,
 	DataTable,
 	PageHeader,
+	ReadOnlyBanner,
 	ScreenState,
 	StatusBadge,
-	type DataTableColumn,
-	type StatusBadgeTone
+	TextField,
+	type DataTableColumn
 } from '@/shared/ui'
-import {
-	tasks,
-	type TaskViewModel
-} from '@/screens/tasks/model/tasks.fixtures'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState, type FormEvent } from 'react'
 import toast from 'react-hot-toast'
-
 import styles from './TasksScreen.module.scss'
 
-const statusTone: Record<TaskViewModel['status'], StatusBadgeTone> = {
-	Просрочено: 'danger',
-	Сегодня: 'warning',
-	Запланировано: 'info'
-}
-
-const getColumns = (
-	canWrite: boolean
-): readonly DataTableColumn<TaskViewModel>[] => [
-	{
-		id: 'task',
-		header: 'Задача',
-		render: task => (
-			<div className={styles.taskCopy}>
-				<strong>{task.title}</strong>
-				<span>{task.deal}</span>
-			</div>
-		)
-	},
-	{
-		id: 'contact',
-		header: 'Контакт',
-		render: task => task.contact
-	},
-	{
-		id: 'due',
-		header: 'Срок',
-		render: task => (
-			<div className={styles.dueCell}>
-				<StatusBadge tone={statusTone[task.status]}>
-					{task.status}
-				</StatusBadge>
-				<span>{task.dueLabel}</span>
-			</div>
-		)
-	},
-	{
-		id: 'owner',
-		header: 'Ответственный',
-		render: task => task.owner
-	},
-	{
-		id: 'action',
-		header: <span className={styles.visuallyHidden}>Действие</span>,
-		align: 'right',
-		render: task => (
-			<Button
-				disabled={!canWrite}
-				variant="ghost"
-				size="sm"
-				onClick={() =>
-					toast(`Демо-режим: задача «${task.title}» не изменена`)
-				}
-			>
-				Выполнено
-			</Button>
-		)
-	}
-]
-
 const TasksScreen = () => {
-	const { canWrite } = useCrmWorkspaceAccess()
+	const context = useSalesSession()
+	const queryClient = useQueryClient()
+	const [page, setPage] = useState(1)
+	const [searchInput, setSearchInput] = useState('')
+	const [search, setSearch] = useState('')
+	const [selected, setSelected] = useState<SalesTask | null>(null)
+	const tasks = useQuery({
+		queryKey: ['sales', 'tasks', ...context.key, page, search],
+		enabled: context.canRead && !!context.session,
+		queryFn: () =>
+			listSalesTasks(
+				context.session!.accessToken,
+				context.workspace.workspaceId,
+				page,
+				20,
+				search
+			),
+		retry: false,
+		gcTime: 0
+	})
+	const reload = async () => {
+		const [auth, list] = await Promise.all([
+			context.permissions.refetch(),
+			tasks.refetch()
+		])
+		if (auth.isError || list.isError)
+			toast.error('Не удалось обновить список')
+		else toast.success('Список обновлён')
+	}
+	const submit = (event: FormEvent) => {
+		event.preventDefault()
+		setPage(1)
+		setSearch(searchInput.trim())
+	}
+	const columns: DataTableColumn<SalesTask>[] = [
+		{
+			id: 'title',
+			header: 'Действие',
+			render: task => (
+				<strong className={styles.title}>{task.title}</strong>
+			)
+		},
+		{
+			id: 'due',
+			header: 'Срок',
+			render: task => (
+				<div className={styles.copy}>
+					<span>{salesDate(task.dueAt)}</span>
+					<StatusBadge
+						tone={Date.parse(task.dueAt) < Date.now() ? 'danger' : 'info'}
+					>
+						{Date.parse(task.dueAt) < Date.now()
+							? 'Просрочено'
+							: 'Запланировано'}
+					</StatusBadge>
+				</div>
+			)
+		},
+		{
+			id: 'owner',
+			header: 'Ответственный',
+			render: task =>
+				task.assignedToSubject === context.permissions.data?.subject
+					? 'Вы'
+					: task.assignedToSubject
+		},
+		{
+			id: 'action',
+			header: 'Результат',
+			render: task => (
+				<Button
+					size="sm"
+					disabled={!context.canWrite || tasks.isFetching}
+					onClick={() => setSelected(task)}
+				>
+					Завершить действие
+				</Button>
+			)
+		}
+	]
 	return (
 		<div className={styles.screen}>
 			<PageHeader
 				eyebrow="Следующие действия"
 				title="Задачи"
-				description="Рабочая очередь менеджера: просроченные, сегодняшние и ближайшие действия."
+				description="Ближайшие и просроченные действия по открытым сделкам. После завершения запланируйте следующий шаг."
 				actions={
-					<Button
-						disabled={!canWrite}
-						leadingIcon={<AppIcon name="plus" size={18} />}
-						onClick={() =>
-							toast('Демо-режим: создание задач пока не сохраняется')
-						}
-					>
-						Новая задача
+					<Button variant="secondary" onClick={() => void reload()}>
+						Обновить
 					</Button>
 				}
 			/>
-
-			<section className={styles.panel} aria-labelledby="tasks-list-title">
-				<div className={styles.panelHeader}>
-					<div>
-						<h2 id="tasks-list-title" className={styles.panelTitle}>
-							Приоритет на сегодня
-						</h2>
-						<p className={styles.panelDescription}>
-							Сортировка и пагинация появятся на серверной стороне.
-						</p>
-					</div>
-					<StatusBadge tone="warning">1 просрочена</StatusBadge>
-				</div>
-				<DataTable
-					caption="Демонстрационный список задач"
-					columns={getColumns(canWrite)}
-					rows={tasks}
-					getRowKey={task => task.id}
-					embedded
-				/>
-			</section>
-
-			<section
-				className={styles.emptyPanel}
-				aria-labelledby="unscheduled-title"
-			>
-				<h2 id="unscheduled-title" className={styles.visuallyHidden}>
-					Задачи без срока
-				</h2>
+			{context.permissions.isError ? (
 				<ScreenState
-					variant="empty"
-					title="Задач без срока нет"
-					description="Пустое состояние остаётся полезным и подсказывает, что очередь обработана."
-					compact
+					variant="error"
+					description="Не удалось проверить права. Список скрыт до успешной проверки."
+					action={
+						<Button onClick={() => void context.permissions.refetch()}>
+							Повторить
+						</Button>
+					}
 				/>
-			</section>
+			) : context.permissions.isPending ? (
+				<ScreenState variant="loading" />
+			) : !context.canRead ? (
+				<ScreenState
+					variant="permission"
+					description="Ваша роль не даёт доступа к задачам сотрудников."
+				/>
+			) : (
+				<>
+					{!context.workspace.canWrite ||
+					context.permissions.data?.state === 'READ_ONLY' ? (
+						<ReadOnlyBanner description="Задачи доступны для просмотра. Для изменений нужна действующая подписка." />
+					) : null}
+					<form className={styles.filters} onSubmit={submit}>
+						<TextField
+							label="Найти действие"
+							value={searchInput}
+							onChange={event => setSearchInput(event.target.value)}
+							maxLength={200}
+						/>
+						<Button type="submit" variant="secondary">
+							Найти
+						</Button>
+					</form>
+					{tasks.isError ? (
+						<ScreenState
+							variant="error"
+							action={
+								<Button onClick={() => void reload()}>Повторить</Button>
+							}
+						/>
+					) : tasks.isPending ? (
+						<ScreenState variant="loading" />
+					) : !tasks.data?.items.length ? (
+						<ScreenState
+							variant="empty"
+							title="Открытых действий нет"
+							description="Действия создаются вместе со сделками и при переходе на следующий этап."
+						/>
+					) : (
+						<DataTable
+							caption="Актуальные следующие действия"
+							columns={columns}
+							rows={tasks.data.items}
+							getRowKey={task => task.id}
+						/>
+					)}
+					{tasks.data && !tasks.isError ? (
+						<div className={styles.pagination}>
+							<span>
+								Всего {tasks.data.total} · страница {page}
+							</span>
+							<div className={styles.actions}>
+								<Button
+									variant="secondary"
+									size="sm"
+									disabled={page === 1 || tasks.isFetching}
+									onClick={() => setPage(value => value - 1)}
+								>
+									Назад
+								</Button>
+								<Button
+									variant="secondary"
+									size="sm"
+									disabled={
+										page * 20 >= tasks.data.total || tasks.isFetching
+									}
+									onClick={() => setPage(value => value + 1)}
+								>
+									Далее
+								</Button>
+							</div>
+						</div>
+					) : null}
+				</>
+			)}
+			{selected ? (
+				<CompleteTaskDrawer
+					key={`${context.key.join(':')}:${selected.id}`}
+					task={selected}
+					onClose={() => setSelected(null)}
+					onSaved={() => {
+						void queryClient.invalidateQueries({ queryKey: ['sales'] })
+					}}
+				/>
+			) : null}
 		</div>
 	)
 }

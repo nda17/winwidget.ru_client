@@ -1,240 +1,332 @@
 'use client'
 
-import { useCrmWorkspaceAccess } from '@/entities/crm-access'
+import {
+	listSalesDeals,
+	listSalesPipelines,
+	type SalesDeal
+} from '@/entities/sales'
+import {
+	CreateDealDrawer,
+	DealDetailsDrawer,
+	salesDate,
+	salesMoney,
+	useSalesSession
+} from '@/features/manage-sales'
 import {
 	AppIcon,
 	Button,
-	Drawer,
-	KanbanBoard,
+	DataTable,
 	PageHeader,
+	ReadOnlyBanner,
+	ScreenState,
 	SelectField,
 	StatusBadge,
 	TextField,
-	TextareaField,
-	type KanbanColumn,
-	type StatusBadgeTone
+	type DataTableColumn
 } from '@/shared/ui'
-import {
-	dealColumns,
-	type DealCardViewModel
-} from '@/screens/deals/model/deals.fixtures'
-import type { FormEvent } from 'react'
-import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState, type FormEvent } from 'react'
 import toast from 'react-hot-toast'
-
 import styles from './DealsScreen.module.scss'
 
-const priorityTone: Record<
-	DealCardViewModel['priority'],
-	StatusBadgeTone
-> = {
-	normal: 'neutral',
-	attention: 'warning',
-	overdue: 'danger'
-}
-
-const priorityLabel: Record<DealCardViewModel['priority'], string> = {
-	normal: 'По плану',
-	attention: 'Сегодня',
-	overdue: 'Просрочено'
-}
-
 const DealsScreen = () => {
-	const { canWrite } = useCrmWorkspaceAccess()
-	const [selectedDeal, setSelectedDeal] =
-		useState<DealCardViewModel | null>(null)
-	const [isCreateOpen, setIsCreateOpen] = useState(false)
-
-	const kanbanColumns: readonly KanbanColumn<DealCardViewModel>[] =
-		dealColumns.map(column => ({
-			id: column.id,
-			title: column.title,
-			items: column.items,
-			meta: column.summary
-		}))
-
-	const handleDemoSubmit = (event: FormEvent<HTMLFormElement>) => {
-		event.preventDefault()
-		if (!canWrite) return
-		toast.success('Демо-режим: форма проверена, данные не сохранены')
+	const context = useSalesSession()
+	const queryClient = useQueryClient()
+	const [page, setPage] = useState(1)
+	const [searchInput, setSearchInput] = useState('')
+	const [search, setSearch] = useState('')
+	const [pipelineId, setPipelineId] = useState('')
+	const [status, setStatus] = useState('')
+	const [selected, setSelected] = useState<string | null>(null)
+	const [createOpen, setCreateOpen] = useState(false)
+	const pipelines = useQuery({
+		queryKey: ['sales', 'pipelines', ...context.key],
+		enabled: context.canRead && !!context.session,
+		queryFn: () =>
+			listSalesPipelines(
+				context.session!.accessToken,
+				context.workspace.workspaceId
+			),
+		retry: false,
+		gcTime: 0
+	})
+	const deals = useQuery({
+		queryKey: [
+			'sales',
+			'deals',
+			...context.key,
+			page,
+			search,
+			pipelineId,
+			status
+		],
+		enabled: context.canRead && !!context.session,
+		queryFn: () =>
+			listSalesDeals(
+				context.session!.accessToken,
+				context.workspace.workspaceId,
+				page,
+				20,
+				search,
+				pipelineId,
+				status
+			),
+		retry: false,
+		gcTime: 0
+	})
+	const reload = async () => {
+		const result = await Promise.all([
+			context.permissions.refetch(),
+			pipelines.refetch(),
+			deals.refetch()
+		])
+		if (result.every(item => !item.isError))
+			toast.success('Данные обновлены')
+		else toast.error('Не удалось обновить данные')
 	}
-
+	const saved = () => {
+		void queryClient.invalidateQueries({ queryKey: ['sales'] })
+	}
+	const submitSearch = (event: FormEvent) => {
+		event.preventDefault()
+		setSearch(searchInput.trim())
+		setPage(1)
+	}
+	const columns: DataTableColumn<SalesDeal>[] = [
+		{
+			id: 'deal',
+			header: 'Сделка / клиент',
+			render: deal => (
+				<button
+					type="button"
+					className={styles.record}
+					onClick={() => setSelected(deal.id)}
+				>
+					<strong>{deal.title}</strong>
+					<span>{deal.contactName}</span>
+				</button>
+			)
+		},
+		{
+			id: 'stage',
+			header: 'Этап',
+			render: deal => (
+				<StatusBadge
+					tone={
+						deal.status === 'WON'
+							? 'success'
+							: deal.status === 'LOST'
+								? 'danger'
+								: 'info'
+					}
+				>
+					{pipelines.data
+						?.find(item => item.id === deal.pipelineId)
+						?.stages.find(item => item.id === deal.stageId)?.name ||
+						{ OPEN: 'В работе', WON: 'Успешно', LOST: 'Отказ' }[
+							deal.status
+						]}
+				</StatusBadge>
+			)
+		},
+		{
+			id: 'amount',
+			header: 'Сумма',
+			render: deal => salesMoney(deal.amountMinor),
+			align: 'right'
+		},
+		{
+			id: 'next',
+			header: 'Следующее действие',
+			render: deal =>
+				deal.nextTask ? (
+					<div className={styles.copy}>
+						<strong>{deal.nextTask.title}</strong>
+						<span>{salesDate(deal.nextTask.dueAt)}</span>
+						{Date.parse(deal.nextTask.dueAt) < Date.now() ? (
+							<StatusBadge tone="danger">Просрочено</StatusBadge>
+						) : null}
+					</div>
+				) : (
+					<span className={styles.muted}>Сделка закрыта</span>
+				)
+		}
+	]
 	return (
 		<div className={styles.screen}>
 			<PageHeader
 				eyebrow="Продажи"
 				title="Сделки"
-				description="Статический канбан демонстрирует плотность карточек и будущий рабочий процесс без перемещения и сохранения."
+				description="Клиенты, этапы продаж и следующее действие по каждой открытой сделке."
 				actions={
-					<Button
-						disabled={!canWrite}
-						leadingIcon={<AppIcon name="plus" size={18} />}
-						onClick={() => setIsCreateOpen(true)}
-					>
-						Новая сделка
-					</Button>
-				}
-			/>
-
-			<div className={styles.prototypeNote}>
-				<AppIcon name="lock" size={18} />
-				<span>
-					Перемещение карточек отключено: в локальном прототипе изменения
-					не сохраняются.
-				</span>
-			</div>
-
-			<KanbanBoard
-				ariaLabel="Демонстрационная воронка сделок"
-				columns={kanbanColumns}
-				getItemKey={deal => deal.id}
-				renderItem={(deal, column) => (
-					<button
-						type="button"
-						className={styles.dealCard}
-						onClick={() => setSelectedDeal(deal)}
-						aria-label={`Открыть сделку «${deal.title}» на этапе «${String(column.title)}»`}
-					>
-						<span className={styles.cardTopline}>
-							<StatusBadge tone={priorityTone[deal.priority]}>
-								{priorityLabel[deal.priority]}
-							</StatusBadge>
-							<strong>{deal.amount}</strong>
-						</span>
-						<span className={styles.cardTitle}>{deal.title}</span>
-						<span className={styles.cardContact}>
-							{deal.contact} · {deal.company}
-						</span>
-						<span className={styles.nextAction}>
-							<AppIcon name="clock" size={16} />
-							<span>
-								{deal.nextAction}
-								<small>{deal.dueLabel}</small>
-							</span>
-						</span>
-						<span className={styles.owner}>{deal.owner}</span>
-					</button>
-				)}
-			/>
-
-			<Drawer
-				isOpen={selectedDeal !== null}
-				onClose={() => setSelectedDeal(null)}
-				title={selectedDeal?.title ?? 'Сделка'}
-				description="Карточка сделки только для чтения на синтетических данных."
-				footer={
 					<>
 						<Button
 							variant="secondary"
-							onClick={() => setSelectedDeal(null)}
+							onClick={() => void reload()}
+							leadingIcon={<AppIcon name="refresh" size={18} />}
 						>
-							Закрыть
+							Обновить
 						</Button>
 						<Button
-							disabled={!canWrite}
-							onClick={() =>
-								toast('Демо-режим: действие пока не сохраняется')
+							disabled={
+								!context.canWrite ||
+								pipelines.isError ||
+								pipelines.isFetching ||
+								!pipelines.data?.length
 							}
+							onClick={() => setCreateOpen(true)}
+							leadingIcon={<AppIcon name="plus" size={18} />}
 						>
-							Взял в работу
+							Новая сделка
 						</Button>
 					</>
 				}
-			>
-				{selectedDeal ? (
-					<div className={styles.drawerContent}>
-						<div className={styles.dealSummary}>
-							<span>Сумма</span>
-							<strong>{selectedDeal.amount}</strong>
-						</div>
-						<dl className={styles.details}>
-							<div>
-								<dt>Контакт</dt>
-								<dd>{selectedDeal.contact}</dd>
-							</div>
-							<div>
-								<dt>Компания</dt>
-								<dd>{selectedDeal.company}</dd>
-							</div>
-							<div>
-								<dt>Следующий шаг</dt>
-								<dd>{selectedDeal.nextAction}</dd>
-							</div>
-							<div>
-								<dt>Срок</dt>
-								<dd>{selectedDeal.dueLabel}</dd>
-							</div>
-						</dl>
-					</div>
-				) : null}
-			</Drawer>
-
-			<Drawer
-				isOpen={isCreateOpen}
-				onClose={() => setIsCreateOpen(false)}
-				title="Новая сделка"
-				description="Поля являются UX-макетом и не определяют структуру сохраняемых данных."
-				footer={
-					<Button type="submit" form="demo-deal-form" disabled={!canWrite}>
-						Проверить макет
-					</Button>
-				}
-			>
-				{isCreateOpen ? (
-					<form
-						id="demo-deal-form"
-						className={styles.form}
-						onSubmit={handleDemoSubmit}
-					>
+			/>
+			{context.permissions.isError ? (
+				<ScreenState
+					variant="error"
+					description="Не удалось проверить права. Данные скрыты до успешной проверки."
+					action={
+						<Button onClick={() => void context.permissions.refetch()}>
+							Повторить
+						</Button>
+					}
+				/>
+			) : context.permissions.isPending ? (
+				<ScreenState variant="loading" />
+			) : !context.canRead ? (
+				<ScreenState
+					variant="permission"
+					description="Ваша роль не даёт доступа к карточкам сделок. Аналитика доступна в отдельном разделе."
+				/>
+			) : (
+				<>
+					{!context.workspace.canWrite ||
+					context.permissions.data?.state === 'READ_ONLY' ? (
+						<ReadOnlyBanner description="Вы можете просматривать сделки и историю. Изменения возобновятся после активации подписки." />
+					) : null}
+					<form className={styles.filters} onSubmit={submitSearch}>
 						<TextField
-							readOnly={!canWrite}
-							label="Название"
-							name="title"
-							placeholder="Например, пилот для отдела продаж"
-							required
+							label="Поиск по сделке или клиенту"
+							value={searchInput}
+							onChange={event => setSearchInput(event.target.value)}
+							maxLength={200}
 						/>
-						<TextField
-							readOnly={!canWrite}
-							label="Контакт"
-							name="contact"
-							placeholder="Синтетический контакт"
-						/>
-						<div className={styles.formGrid}>
-							<SelectField
-								disabled={!canWrite}
-								label="Воронка"
-								name="pipeline"
-								defaultValue="main"
-							>
-								<option value="main">Основная · demo</option>
-							</SelectField>
-							<SelectField
-								label="Этап"
-								name="stage"
-								defaultValue="new"
-								disabled={!canWrite}
-							>
-								<option value="new">Новые</option>
-								<option value="work">В работе</option>
-							</SelectField>
-						</div>
-						<TextField
-							readOnly={!canWrite}
-							label="Сумма"
-							name="amount"
-							inputMode="numeric"
-							placeholder="0 ₽"
-						/>
-						<TextareaField
-							readOnly={!canWrite}
-							label="Комментарий"
-							name="comment"
-							placeholder="Контекст для первого действия"
-							rows={4}
-						/>
+						<SelectField
+							label="Воронка"
+							value={pipelineId}
+							onChange={event => {
+								setPipelineId(event.target.value)
+								setPage(1)
+							}}
+							disabled={pipelines.isError || pipelines.isFetching}
+						>
+							<option value="">Все воронки</option>
+							{pipelines.data?.map(item => (
+								<option key={item.id} value={item.id}>
+									{item.name}
+								</option>
+							))}
+						</SelectField>
+						<SelectField
+							label="Статус"
+							value={status}
+							onChange={event => {
+								setStatus(event.target.value)
+								setPage(1)
+							}}
+						>
+							<option value="">Все статусы</option>
+							<option value="OPEN">В работе</option>
+							<option value="WON">Успешно</option>
+							<option value="LOST">Отказ</option>
+						</SelectField>
+						<Button type="submit" variant="secondary">
+							Найти
+						</Button>
 					</form>
-				) : null}
-			</Drawer>
+					{deals.isError || pipelines.isError ? (
+						<ScreenState
+							variant="error"
+							description="Не удалось загрузить актуальные сделки и этапы."
+							action={
+								<Button onClick={() => void reload()}>Повторить</Button>
+							}
+						/>
+					) : deals.isPending || pipelines.isPending ? (
+						<ScreenState variant="loading" />
+					) : !deals.data?.items.length ? (
+						<ScreenState
+							variant="empty"
+							title={
+								search || status || pipelineId
+									? 'Подходящих сделок нет'
+									: 'Создайте первую сделку'
+							}
+							description="Выберите контакт, сумму и первое действие — и начните работу с клиентом."
+							action={
+								<Button
+									disabled={!context.canWrite || !pipelines.data?.length}
+									onClick={() => setCreateOpen(true)}
+								>
+									Новая сделка
+								</Button>
+							}
+						/>
+					) : (
+						<DataTable
+							caption="Сделки компании"
+							rows={deals.data.items}
+							columns={columns}
+							getRowKey={deal => deal.id}
+						/>
+					)}
+					{deals.data && !deals.isError ? (
+						<div className={styles.pagination}>
+							<span>
+								Всего {deals.data.total} · страница {page}
+							</span>
+							<div className={styles.actions}>
+								<Button
+									variant="secondary"
+									size="sm"
+									disabled={page === 1 || deals.isFetching}
+									onClick={() => setPage(value => value - 1)}
+								>
+									Назад
+								</Button>
+								<Button
+									variant="secondary"
+									size="sm"
+									disabled={
+										page * 20 >= deals.data.total || deals.isFetching
+									}
+									onClick={() => setPage(value => value + 1)}
+								>
+									Далее
+								</Button>
+							</div>
+						</div>
+					) : null}
+				</>
+			)}
+			{createOpen && pipelines.data ? (
+				<CreateDealDrawer
+					key={context.key.join(':')}
+					pipelines={pipelines.data}
+					onClose={() => setCreateOpen(false)}
+					onSaved={saved}
+				/>
+			) : null}
+			{selected ? (
+				<DealDetailsDrawer
+					key={`${context.key.join(':')}:${selected}`}
+					id={selected}
+					pipelines={pipelines.isError ? [] : pipelines.data || []}
+					onClose={() => setSelected(null)}
+					onSaved={saved}
+				/>
+			) : null}
 		</div>
 	)
 }

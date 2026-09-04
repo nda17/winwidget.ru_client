@@ -1,44 +1,18 @@
 .screen {
-	@apply flex flex-col gap-6;
+	@apply flex min-w-0 flex-col gap-6;
 }
-
-.panel,
-.emptyPanel {
-	@apply overflow-hidden rounded-panel border border-crm-border bg-crm-surface shadow-panel;
+.filters {
+	@apply flex flex-wrap items-end gap-3 rounded-2xl border border-crm-border bg-crm-surface p-4;
 }
-
-.panelHeader {
-	@apply flex flex-col gap-4 border-b border-crm-border px-5 py-5 sm:flex-row sm:items-center sm:justify-between lg:px-6;
+.title {
+	@apply font-semibold text-crm-text;
 }
-
-.panelTitle {
-	@apply text-lg font-bold text-crm-text;
+.copy {
+	@apply flex flex-col items-start gap-2 text-sm;
 }
-
-.panelDescription {
-	@apply mt-1 text-sm text-crm-muted;
+.pagination {
+	@apply flex flex-wrap items-center justify-between gap-3 text-sm text-crm-muted;
 }
-
-.taskCopy {
-	@apply flex min-w-[16rem] flex-col gap-1;
-
-	strong {
-		@apply text-sm font-semibold text-crm-text;
-	}
-
-	span {
-		@apply text-xs text-crm-muted;
-	}
-}
-
-.dueCell {
-	@apply flex min-w-[9rem] flex-col items-start gap-2;
-
-	span:last-child {
-		@apply text-xs text-crm-muted;
-	}
-}
-
-.visuallyHidden {
-	@apply sr-only;
+.actions {
+	@apply flex items-center gap-2;
 }

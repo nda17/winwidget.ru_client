@@ -150,6 +150,8 @@ export const useCrmPermissions = (
 		retry: false,
 		staleTime: 0,
 		gcTime: 0,
-		refetchOnWindowFocus: 'always',
+		// Match the app policy: returning to the tab must not destroy an open form.
+		// Domain endpoints still authorize every request independently.
+		refetchOnWindowFocus: false,
 		refetchOnReconnect: 'always'
 	})

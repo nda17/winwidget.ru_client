@@ -1,180 +1,299 @@
 'use client'
 
-import { useCrmWorkspaceAccess } from '@/entities/crm-access'
+import {
+	listInbox,
+	type InboxEntry,
+	type InboxStatus
+} from '@/entities/intake'
+import {
+	InboxEditor,
+	SourcesPanel,
+	useIntakeAccess
+} from '@/features/manage-intake'
+import { AuthenticatedApiError } from '@/shared/api/authenticated-http-client'
 import {
 	AppIcon,
 	Button,
 	DataTable,
-	Drawer,
 	PageHeader,
+	ScreenState,
+	SelectField,
 	StatusBadge,
-	type DataTableColumn,
-	type StatusBadgeTone
+	TextField,
+	type DataTableColumn
 } from '@/shared/ui'
-import {
-	inboxLeads,
-	type InboxLeadViewModel
-} from '@/screens/inbox/model/inbox.fixtures'
-import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState, type FormEvent } from 'react'
 import toast from 'react-hot-toast'
-
 import styles from './InboxScreen.module.scss'
 
-const statusTone: Record<InboxLeadViewModel['status'], StatusBadgeTone> = {
-	Новый: 'info',
-	Проверить: 'warning',
-	Спам: 'danger'
+const statusName = {
+	NEW: 'Новое',
+	ACCEPTED: 'Принято',
+	REJECTED: 'Отклонено'
 }
-
 const InboxScreen = () => {
-	const { canWrite } = useCrmWorkspaceAccess()
-	const [selectedLead, setSelectedLead] =
-		useState<InboxLeadViewModel | null>(null)
-
-	const columns: readonly DataTableColumn<InboxLeadViewModel>[] = [
+	const access = useIntakeAccess()
+	const client = useQueryClient()
+	const [tab, setTab] = useState<'inbox' | 'sources'>('inbox')
+	const [searchDraft, setSearchDraft] = useState('')
+	const [search, setSearch] = useState('')
+	const [status, setStatus] = useState<InboxStatus | ''>('NEW')
+	const [page, setPage] = useState(1)
+	const [selected, setSelected] = useState<{ id?: string } | null>(null)
+	const query = useQuery({
+		queryKey: [
+			'crm-inbox',
+			access.workspaceId,
+			access.session?.userId,
+			access.revision,
+			page,
+			search,
+			status
+		],
+		enabled: tab === 'inbox' && access.canRead && !!access.session,
+		queryFn: () =>
+			listInbox(
+				access.session!.accessToken,
+				access.workspaceId,
+				page,
+				25,
+				search,
+				status
+			),
+		retry: false,
+		gcTime: 0,
+		refetchOnWindowFocus: false
+	})
+	const denied =
+		query.error instanceof AuthenticatedApiError &&
+		['unauthorized', 'forbidden'].includes(query.error.kind)
+	const columns: DataTableColumn<InboxEntry>[] = [
 		{
-			id: 'lead',
+			id: 'title',
 			header: 'Обращение',
-			render: lead => (
+			render: entry => (
 				<button
 					type="button"
-					className={styles.leadButton}
-					onClick={() => setSelectedLead(lead)}
+					className={styles.entryButton}
+					onClick={() => setSelected({ id: entry.id })}
 				>
-					<span className={styles.avatar} aria-hidden="true">
-						{lead.initials}
-					</span>
-					<span className={styles.leadCopy}>
-						<strong>{lead.name}</strong>
-						<span>{lead.context}</span>
-					</span>
+					<strong>{entry.title}</strong>
+					<span>{entry.name}</span>
 				</button>
 			)
 		},
 		{
-			id: 'source',
+			id: 'contact',
+			header: 'Контакт',
+			render: entry => (
+				<div className={styles.contact}>
+					<span>{entry.phone ?? '—'}</span>
+					<span>{entry.email ?? '—'}</span>
+				</div>
+			)
+		},
+		{
+			id: 'origin',
 			header: 'Источник',
-			render: lead => lead.source
-		},
-		{
-			id: 'receivedAt',
-			header: 'Получено',
-			render: lead => lead.receivedAt
-		},
-		{
-			id: 'responsible',
-			header: 'Ответственный',
-			render: lead => lead.responsible
+			render: entry => (entry.origin === 'MANUAL' ? 'Вручную' : 'API')
 		},
 		{
 			id: 'status',
 			header: 'Статус',
-			render: lead => (
-				<StatusBadge tone={statusTone[lead.status]}>
-					{lead.status}
+			render: entry => (
+				<StatusBadge
+					tone={
+						entry.status === 'NEW'
+							? 'accent'
+							: entry.status === 'ACCEPTED'
+								? 'success'
+								: 'neutral'
+					}
+				>
+					{statusName[entry.status]}
 				</StatusBadge>
 			)
+		},
+		{
+			id: 'received',
+			header: 'Получено',
+			render: entry => new Date(entry.receivedAt).toLocaleString('ru-RU')
 		}
 	]
-
-	const handleDemoAccept = () => {
-		if (!canWrite) return
-		toast('Демо-режим: принятие обращения пока не сохраняется')
+	const searchSubmit = (event: FormEvent) => {
+		event.preventDefault()
+		setPage(1)
+		setSearch(searchDraft.trim())
+		toast('Поиск применён')
 	}
-
+	const onSaved = () => {
+		void client.invalidateQueries({
+			queryKey: ['crm-inbox', access.workspaceId]
+		})
+		void client.invalidateQueries({
+			queryKey: ['crm-intake-history', access.workspaceId]
+		})
+	}
 	return (
 		<div className={styles.screen}>
 			<PageHeader
-				eyebrow="Рабочая очередь"
+				eyebrow="Обработка обращений"
 				title="Входящие"
-				description="Новые обращения из подключённых источников. Сейчас показаны только синтетические данные интерфейса."
+				description="Ручные и внешние обращения вашего рабочего пространства. Проверяйте детали и историю, прежде чем продолжить работу с клиентом."
 				actions={
 					<Button
-						variant="secondary"
-						leadingIcon={<AppIcon name="filter" size={18} />}
-						onClick={() => toast('Фильтры и пагинация пока не подключены')}
+						disabled={!access.canWrite || denied || tab !== 'inbox'}
+						leadingIcon={<AppIcon name="plus" size={18} />}
+						onClick={() => setSelected({})}
 					>
-						Фильтры
+						Новое обращение
 					</Button>
 				}
 			/>
-
-			<section className={styles.panel} aria-labelledby="inbox-list-title">
-				<div className={styles.panelHeader}>
-					<div>
-						<h2 id="inbox-list-title" className={styles.panelTitle}>
-							Новые и непроверенные
-						</h2>
-						<p className={styles.panelDescription}>
-							{inboxLeads.length} демонстрационных обращения
-						</p>
-					</div>
-					<StatusBadge tone="accent">Демо-данные</StatusBadge>
-				</div>
-
-				<DataTable
-					caption="Демонстрационный список входящих обращений"
-					columns={columns}
-					rows={inboxLeads}
-					getRowKey={lead => lead.id}
-					embedded
-				/>
-			</section>
-
-			<Drawer
-				isOpen={selectedLead !== null}
-				onClose={() => setSelectedLead(null)}
-				title={selectedLead?.name ?? 'Обращение'}
-				description="Карточка построена на локальных демо-данных и ничего не сохраняет."
-				footer={
-					<>
-						<Button
-							variant="secondary"
-							onClick={() => setSelectedLead(null)}
-						>
-							Закрыть
-						</Button>
-						<Button onClick={handleDemoAccept} disabled={!canWrite}>
-							Принять в работу
-						</Button>
-					</>
-				}
+			<div
+				className={styles.tabs}
+				role="group"
+				aria-label="Обращения и интеграции"
 			>
-				{selectedLead ? (
-					<div className={styles.drawerContent}>
-						<div className={styles.drawerStatusRow}>
-							<StatusBadge tone={statusTone[selectedLead.status]}>
-								{selectedLead.status}
-							</StatusBadge>
-							<span>{selectedLead.receivedAt}</span>
-						</div>
-						<dl className={styles.details}>
-							<div>
-								<dt>Источник</dt>
-								<dd>{selectedLead.source}</dd>
-							</div>
-							<div>
-								<dt>Телефон</dt>
-								<dd>{selectedLead.phone}</dd>
-							</div>
-							<div>
-								<dt>Email</dt>
-								<dd>{selectedLead.email}</dd>
-							</div>
-							<div>
-								<dt>Ответственный</dt>
-								<dd>{selectedLead.responsible}</dd>
-							</div>
-						</dl>
-						<div className={styles.messageCard}>
-							<span>Комментарий обращения</span>
-							<p>{selectedLead.message}</p>
-						</div>
+				<Button
+					variant={tab === 'inbox' ? 'primary' : 'secondary'}
+					aria-pressed={tab === 'inbox'}
+					onClick={() => setTab('inbox')}
+				>
+					Обращения
+				</Button>
+				<Button
+					variant={tab === 'sources' ? 'primary' : 'secondary'}
+					aria-pressed={tab === 'sources'}
+					onClick={() => setTab('sources')}
+				>
+					API-источники
+				</Button>
+			</div>
+			{tab === 'sources' ? (
+				<SourcesPanel
+					key={`${access.workspaceId}:${access.session?.userId}`}
+					access={access}
+				/>
+			) : !access.permissions.isSuccess ? (
+				<ScreenState
+					variant={access.permissions.isError ? 'error' : 'loading'}
+					description={access.permissions.error?.message}
+					action={
+						access.permissions.isError ? (
+							<Button onClick={() => void access.permissions.refetch()}>
+								Повторить проверку доступа
+							</Button>
+						) : undefined
+					}
+				/>
+			) : !access.canRead ? (
+				<ScreenState
+					variant="permission"
+					description="Ваша CRM-роль не предоставляет доступ к обращениям."
+				/>
+			) : denied ? (
+				<ScreenState
+					variant="permission"
+					description="Доступ к обращениям больше не подтверждён."
+				/>
+			) : (
+				<section
+					className={styles.panel}
+					aria-label="Список входящих обращений"
+				>
+					<div className={styles.panelHeader}>
+						<h2 className={styles.panelTitle}>Обращения</h2>
+						<form className={styles.search} onSubmit={searchSubmit}>
+							<TextField
+								label="Поиск обращений"
+								labelHidden
+								placeholder="Тема, имя, телефон, email"
+								maxLength={200}
+								value={searchDraft}
+								onChange={event => setSearchDraft(event.target.value)}
+							/>
+							<SelectField
+								label="Статус обращения"
+								labelHidden
+								value={status}
+								onChange={event => {
+									setStatus(event.target.value as InboxStatus | '')
+									setPage(1)
+									toast('Фильтр статуса применён')
+								}}
+							>
+								<option value="">Все статусы</option>
+								<option value="NEW">Новые</option>
+								<option value="ACCEPTED">Принятые</option>
+								<option value="REJECTED">Отклонённые</option>
+							</SelectField>
+							<Button variant="secondary" type="submit">
+								Найти
+							</Button>
+						</form>
 					</div>
-				) : null}
-			</Drawer>
+					{query.isError ? (
+						<ScreenState
+							variant="error"
+							description={query.error.message}
+							action={
+								<Button onClick={() => void query.refetch()}>
+									Повторить
+								</Button>
+							}
+						/>
+					) : query.isPending || query.isFetching ? (
+						<ScreenState variant="loading" />
+					) : (
+						<>
+							<DataTable
+								caption="Входящие обращения выбранного рабочего пространства"
+								columns={columns}
+								rows={query.data.items}
+								getRowKey={entry => entry.id}
+								embedded
+								emptyMessage={
+									search
+										? 'По вашему запросу ничего не найдено'
+										: 'Обращений с выбранным статусом пока нет'
+								}
+							/>
+							<div className={styles.pagination}>
+								<span>Всего: {query.data.total}</span>
+								<Button
+									variant="secondary"
+									disabled={page === 1}
+									onClick={() => setPage(value => value - 1)}
+								>
+									Назад
+								</Button>
+								<span>
+									{page} / {Math.max(1, Math.ceil(query.data.total / 25))}
+								</span>
+								<Button
+									variant="secondary"
+									disabled={page * 25 >= query.data.total}
+									onClick={() => setPage(value => value + 1)}
+								>
+									Далее
+								</Button>
+							</div>
+						</>
+					)}
+				</section>
+			)}
+			{selected && access.session ? (
+				<InboxEditor
+					key={`${access.workspaceId}:${access.session?.userId}:${selected.id ?? 'new'}`}
+					access={access}
+					id={selected.id}
+					onClose={() => setSelected(null)}
+					onSaved={onSaved}
+				/>
+			) : null}
 		</div>
 	)
 }
-
 export default InboxScreen
