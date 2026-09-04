@@ -34,6 +34,13 @@ const mapTemplateInstallationError = (error: unknown) => {
 			'Запрошенная версия шаблона не найдена.'
 		)
 	}
+	// A route/deployment 404 is not proof that the versioned command was rejected.
+	if (axios.isAxiosError(error) && error.response?.status === 404) {
+		return new AuthenticatedApiError(
+			'temporary',
+			'Сервис установки шаблонов временно недоступен.'
+		)
+	}
 	return undefined
 }
 

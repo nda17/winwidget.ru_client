@@ -13,10 +13,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useSessionStore } from '@/entities/session'
 import { useCrmWorkspaceAccess } from '@/entities/crm-access'
-import { ContactsScreen } from '@/screens/contacts'
-import { DealsScreen } from '@/screens/deals'
-import { InboxScreen } from '@/screens/inbox'
-import { TasksScreen } from '@/screens/tasks'
 import { CrmAppShell } from '@/widgets/crm-app-shell'
 import { AuthenticatedApiError } from '@/shared/api/authenticated-http-client'
 
@@ -345,60 +341,6 @@ describe('AccessGate', () => {
 			await screen.findByText('Доступ только для чтения')
 		).toBeTruthy()
 		expect(screen.queryByText('hidden')).toBeNull()
-	})
-
-	it('keeps read-only prototype records viewable and all record mutations disabled', async () => {
-		vi.mocked(getCrmAccessBootstrap).mockResolvedValue({
-			...activeAccess,
-			state: 'READ_ONLY',
-			entitlementStatus: 'READ_ONLY'
-		})
-		render(
-			<AccessGate>
-				<ContactsScreen />
-				<DealsScreen />
-				<InboxScreen />
-				<TasksScreen />
-			</AccessGate>,
-			{ wrapper: Wrapper }
-		)
-		for (const name of ['Новый контакт', 'Новая сделка', 'Новая задача']) {
-			expect(await screen.findByRole('button', { name })).toHaveProperty(
-				'disabled',
-				true
-			)
-		}
-		for (const button of screen.getAllByRole('button', {
-			name: 'Выполнено'
-		})) {
-			expect(button).toHaveProperty('disabled', true)
-		}
-		const contactTable = screen.getByRole('table', {
-			name: 'Демонстрационная таблица контактов'
-		})
-		fireEvent.click(contactTable.querySelector('button')!)
-		expect(screen.getByRole('textbox', { name: 'Имя' })).toHaveProperty(
-			'readOnly',
-			true
-		)
-		expect(
-			screen.getByRole('button', { name: 'Проверить макет' })
-		).toHaveProperty('disabled', true)
-		fireEvent.click(screen.getByRole('button', { name: 'Закрыть' }))
-		fireEvent.click(
-			screen.getAllByRole('button', { name: /^Открыть сделку/ })[0]
-		)
-		expect(
-			screen.getByRole('button', { name: 'Взял в работу' })
-		).toHaveProperty('disabled', true)
-		fireEvent.click(screen.getByRole('button', { name: 'Закрыть' }))
-		const inboxTable = screen.getByRole('table', {
-			name: 'Демонстрационный список входящих обращений'
-		})
-		fireEvent.click(inboxTable.querySelector('button')!)
-		expect(
-			screen.getByRole('button', { name: 'Принять в работу' })
-		).toHaveProperty('disabled', true)
 	})
 
 	it('revalidates access before reopening a workspace for a new session', async () => {

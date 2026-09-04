@@ -1,209 +1,350 @@
 'use client'
 
-import { useCrmWorkspaceAccess } from '@/entities/crm-access'
+import {
+	useCrmPermissions,
+	useCrmWorkspaceAccess
+} from '@/entities/crm-access'
+import {
+	listCustomers,
+	type Customer,
+	type CustomerKind
+} from '@/entities/customer'
+import { useSessionStore } from '@/entities/session'
+import { CustomerEditor } from '@/features/edit-customer'
+import { AuthenticatedApiError } from '@/shared/api/authenticated-http-client'
 import {
 	AppIcon,
 	Button,
 	DataTable,
-	Drawer,
 	PageHeader,
-	SelectField,
-	StatusBadge,
+	ScreenState,
 	TextField,
 	type DataTableColumn
 } from '@/shared/ui'
-import {
-	contacts,
-	type ContactViewModel
-} from '@/screens/contacts/model/contacts.fixtures'
-import type { FormEvent } from 'react'
-import { useState } from 'react'
-import toast from 'react-hot-toast'
-
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState, type FormEvent } from 'react'
 import styles from './ContactsScreen.module.scss'
 
 const ContactsScreen = () => {
-	const { canWrite } = useCrmWorkspaceAccess()
-	const [selectedContact, setSelectedContact] =
-		useState<ContactViewModel | null>(null)
-	const [isCreateOpen, setIsCreateOpen] = useState(false)
-	const isDrawerOpen = selectedContact !== null || isCreateOpen
-
-	const columns: readonly DataTableColumn<ContactViewModel>[] = [
+	const { workspaceId, canWrite: subscriptionCanWrite } =
+		useCrmWorkspaceAccess()
+	const session = useSessionStore(state => state.session)
+	const revision = useSessionStore(state => state.sessionRevision)
+	const permissions = useCrmPermissions(workspaceId, session, revision)
+	const confirmed = permissions.isSuccess && !permissions.isFetching
+	const canRead =
+		confirmed && permissions.data.permissions.includes('customers:read')
+	const canWrite =
+		canRead &&
+		subscriptionCanWrite &&
+		permissions.data!.permissions.includes('customers:write')
+	const [kind, setKind] = useState<CustomerKind>('contacts')
+	const [searchDraft, setSearchDraft] = useState('')
+	const [search, setSearch] = useState('')
+	const [page, setPage] = useState(1)
+	const [selected, setSelected] = useState<{
+		id?: string
+		kind: CustomerKind
+	} | null>(null)
+	const queryClient = useQueryClient()
+	const records = useQuery({
+		queryKey: [
+			'crm-customers',
+			workspaceId,
+			session?.userId,
+			revision,
+			kind,
+			search,
+			page
+		],
+		enabled: canRead && !!session,
+		queryFn: () =>
+			listCustomers(
+				session!.accessToken,
+				kind,
+				workspaceId,
+				page,
+				25,
+				search
+			),
+		retry: false,
+		gcTime: 0,
+		staleTime: 0
+	})
+	const permissionError =
+		records.error instanceof AuthenticatedApiError &&
+		['unauthorized', 'forbidden'].includes(records.error.kind)
+	const canDisplay = canRead && !records.isError
+	const rows = canDisplay ? (records.data?.items ?? []) : []
+	const columns: readonly DataTableColumn<Customer>[] = [
 		{
-			id: 'contact',
-			header: 'Контакт',
-			render: contact => (
+			id: 'name',
+			header: kind === 'contacts' ? 'Контакт' : 'Компания',
+			render: item => (
 				<button
 					type="button"
 					className={styles.contactButton}
-					onClick={() => setSelectedContact(contact)}
+					onClick={() => setSelected({ id: item.id, kind })}
 				>
 					<span className={styles.avatar} aria-hidden="true">
-						{contact.initials}
+						{item.name
+							.split(/\s+/)
+							.slice(0, 2)
+							.map(word => word[0])
+							.join('')
+							.toUpperCase()}
 					</span>
 					<span className={styles.contactCopy}>
-						<strong>{contact.name}</strong>
-						<span>{contact.company}</span>
+						<strong>{item.name}</strong>
+						<span>
+							{item.kind === 'contacts'
+								? item.companyId
+									? 'Связан с компанией'
+									: 'Частное лицо'
+								: item.inn
+									? `ИНН ${item.inn}`
+									: 'ИНН не указан'}
+						</span>
 					</span>
 				</button>
 			)
 		},
 		{
-			id: 'phone',
-			header: 'Телефон',
-			render: contact => contact.phone
+			id: 'primary',
+			header: kind === 'contacts' ? 'Телефон' : 'Сайт',
+			render: item =>
+				item.kind === 'contacts'
+					? (item.phone ?? '—')
+					: (item.website ?? '—')
 		},
 		{
-			id: 'email',
-			header: 'Email',
-			render: contact => contact.email
+			id: 'secondary',
+			header: kind === 'contacts' ? 'Email' : 'Заметки',
+			render: item =>
+				item.kind === 'contacts' ? (
+					(item.email ?? '—')
+				) : (
+					<span className={styles.notes}>{item.notes ?? '—'}</span>
+				)
 		},
 		{
-			id: 'deals',
-			header: 'Открытые сделки',
-			align: 'center',
-			render: contact => (
-				<StatusBadge tone={contact.openDeals > 1 ? 'accent' : 'neutral'}>
-					{contact.openDeals}
-				</StatusBadge>
-			)
-		},
-		{
-			id: 'activity',
-			header: 'Последняя активность',
-			render: contact => contact.lastActivity
+			id: 'updated',
+			header: 'Обновлено',
+			render: item => new Date(item.updatedAt).toLocaleDateString('ru-RU')
 		}
 	]
-
-	const handleDemoSubmit = (event: FormEvent<HTMLFormElement>) => {
+	const applySearch = (event: FormEvent) => {
 		event.preventDefault()
-		if (!canWrite) return
-		toast.success('Демо-режим: контакт не сохранён')
+		setSearch(searchDraft.trim())
+		setPage(1)
 	}
-
-	const closeDrawer = () => {
-		setSelectedContact(null)
-		setIsCreateOpen(false)
+	const switchKind = (next: CustomerKind) => {
+		setKind(next)
+		setPage(1)
+		setSearch('')
+		setSearchDraft('')
+		setSelected(null)
 	}
-
+	const totalPages = Math.max(
+		1,
+		Math.ceil((records.data?.total ?? 0) / 25)
+	)
 	return (
 		<div className={styles.screen}>
 			<PageHeader
 				eyebrow="Клиентская база"
-				title="Контакты"
-				description="Таблица и форма демонстрируют будущую работу с клиентской базой без сохранения и автоматического поиска дублей."
+				title="Контакты и компании"
+				description="Вся информация о клиентах — в одном месте. Добавляйте контакты, связывайте их с компаниями и сохраняйте важные детали."
 				actions={
 					<Button
-						disabled={!canWrite}
+						disabled={!canWrite || permissionError}
 						leadingIcon={<AppIcon name="plus" size={18} />}
-						onClick={() => setIsCreateOpen(true)}
+						onClick={() => setSelected({ kind })}
 					>
-						Новый контакт
+						{kind === 'contacts' ? 'Новый контакт' : 'Новая компания'}
 					</Button>
 				}
 			/>
-
-			<section
-				className={styles.panel}
-				aria-labelledby="contacts-list-title"
+			<div
+				className={styles.tabs}
+				role="group"
+				aria-label="Раздел клиентской базы"
 			>
-				<div className={styles.panelHeader}>
-					<div>
-						<h2 id="contacts-list-title" className={styles.panelTitle}>
-							Все контакты
-						</h2>
-						<p className={styles.panelDescription}>
-							Телефоны и email являются заведомо синтетическими.
-						</p>
-					</div>
-					<Button
-						variant="secondary"
-						size="sm"
-						leadingIcon={<AppIcon name="filter" size={16} />}
-						onClick={() => toast('Фильтры пока не подключены к данным')}
-					>
-						Фильтры
-					</Button>
-				</div>
-				<DataTable
-					caption="Демонстрационная таблица контактов"
-					columns={columns}
-					rows={contacts}
-					getRowKey={contact => contact.id}
-					embedded
+				<Button
+					variant={kind === 'contacts' ? 'primary' : 'secondary'}
+					aria-pressed={kind === 'contacts'}
+					onClick={() => switchKind('contacts')}
+				>
+					Контакты
+				</Button>
+				<Button
+					variant={kind === 'companies' ? 'primary' : 'secondary'}
+					aria-pressed={kind === 'companies'}
+					onClick={() => switchKind('companies')}
+				>
+					Компании
+				</Button>
+			</div>
+			{!confirmed ? (
+				<ScreenState
+					variant={permissions.isError ? 'error' : 'loading'}
+					description={permissions.error?.message}
+					action={
+						permissions.isError ? (
+							<Button onClick={() => void permissions.refetch()}>
+								Повторить
+							</Button>
+						) : undefined
+					}
 				/>
-			</section>
-
-			<Drawer
-				isOpen={isDrawerOpen}
-				onClose={closeDrawer}
-				title={selectedContact ? selectedContact.name : 'Новый контакт'}
-				description="Форма является UX-прототипом и не сохраняет изменения."
-				footer={
-					<>
-						<Button variant="secondary" onClick={closeDrawer}>
-							Закрыть
-						</Button>
-						<Button
-							type="submit"
-							form="demo-contact-form"
-							disabled={!canWrite}
-						>
-							Проверить макет
-						</Button>
-					</>
-				}
-			>
-				{isDrawerOpen ? (
-					<form
-						key={selectedContact?.id ?? 'new-contact'}
-						id="demo-contact-form"
-						className={styles.form}
-						onSubmit={handleDemoSubmit}
-					>
-						<TextField
-							readOnly={!canWrite}
-							label="Имя"
-							name="name"
-							defaultValue={selectedContact?.name}
-							placeholder="Синтетический контакт"
-							required
+			) : !canRead || permissionError ? (
+				<ScreenState
+					variant="permission"
+					description="Ваша CRM-роль не предоставляет доступ к клиентской базе."
+				/>
+			) : (
+				<section
+					className={styles.panel}
+					aria-label={
+						kind === 'contacts' ? 'Список контактов' : 'Список компаний'
+					}
+				>
+					<div className={styles.panelHeader}>
+						<div>
+							<h2 className={styles.panelTitle}>
+								{kind === 'contacts' ? 'Все контакты' : 'Все компании'}
+							</h2>
+							<p className={styles.panelDescription}>
+								{records.isError
+									? 'Не удалось обновить список'
+									: records.isPending
+										? 'Загружаем клиентскую базу'
+										: `Найдено записей: ${records.data?.total ?? 0}`}
+							</p>
+						</div>
+						<form className={styles.search} onSubmit={applySearch}>
+							<TextField
+								label="Поиск клиентов"
+								labelHidden
+								placeholder={
+									kind === 'contacts'
+										? 'Имя, телефон или email'
+										: 'Название или ИНН'
+								}
+								type="search"
+								maxLength={200}
+								value={searchDraft}
+								onChange={event => setSearchDraft(event.target.value)}
+							/>
+							<Button type="submit" variant="secondary" size="sm">
+								Найти
+							</Button>
+						</form>
+					</div>
+					{records.isError ? (
+						<ScreenState
+							variant="error"
+							description={records.error.message}
+							action={
+								<Button
+									variant="secondary"
+									onClick={() => void records.refetch()}
+								>
+									Повторить
+								</Button>
+							}
 						/>
-						<TextField
-							readOnly={!canWrite}
-							label="Компания"
-							name="company"
-							defaultValue={selectedContact?.company}
-							placeholder="Название компании"
+					) : records.isPending || records.isFetching ? (
+						<ScreenState variant="loading" compact />
+					) : rows.length ? (
+						<DataTable
+							caption={
+								kind === 'contacts'
+									? 'Контакты вашей команды'
+									: 'Компании вашей команды'
+							}
+							columns={columns}
+							rows={rows}
+							getRowKey={item => item.id}
+							embedded
 						/>
-						<TextField
-							readOnly={!canWrite}
-							label="Телефон"
-							name="phone"
-							defaultValue={selectedContact?.phone}
-							placeholder="+7 (900) 000-00-00"
+					) : (
+						<ScreenState
+							variant="empty"
+							title={
+								search
+									? 'Ничего не найдено'
+									: page > 1
+										? 'На этой странице нет записей'
+										: kind === 'contacts'
+											? 'Добавьте первого клиента'
+											: 'Добавьте первую компанию'
+							}
+							description={
+								search
+									? 'Попробуйте изменить поисковый запрос.'
+									: page > 1
+										? 'Перейдите на предыдущую страницу.'
+										: 'Записи появятся здесь после добавления.'
+							}
+							action={
+								canWrite && !search && page === 1 ? (
+									<Button onClick={() => setSelected({ kind })}>
+										{kind === 'contacts'
+											? 'Добавить контакт'
+											: 'Добавить компанию'}
+									</Button>
+								) : undefined
+							}
 						/>
-						<TextField
-							readOnly={!canWrite}
-							label="Email"
-							name="email"
-							type="email"
-							defaultValue={selectedContact?.email}
-							placeholder="name@example.test"
-						/>
-						<SelectField
-							disabled={!canWrite}
-							label="Источник"
-							name="source"
-							defaultValue="manual"
-						>
-							<option value="manual">Создан вручную · demo</option>
-							<option value="inbox">Входящее обращение · demo</option>
-						</SelectField>
-					</form>
-				) : null}
-			</Drawer>
+					)}
+					<div className={styles.pagination}>
+						<span>
+							Страница {page} из {totalPages}
+						</span>
+						<div className={styles.tabs}>
+							<Button
+								size="sm"
+								variant="secondary"
+								disabled={page === 1 || records.isFetching}
+								onClick={() => setPage(current => current - 1)}
+							>
+								Назад
+							</Button>
+							<Button
+								size="sm"
+								variant="secondary"
+								disabled={
+									page >= totalPages ||
+									records.isFetching ||
+									records.isError
+								}
+								onClick={() => setPage(current => current + 1)}
+							>
+								Далее
+							</Button>
+						</div>
+					</div>
+				</section>
+			)}
+			{selected && canRead && !permissionError ? (
+				<CustomerEditor
+					key={`${workspaceId}:${session?.userId}:${revision}:${selected.kind}:${selected.id ?? 'new'}`}
+					workspaceId={workspaceId}
+					kind={selected.kind}
+					id={selected.id}
+					canWrite={canWrite}
+					onClose={() => setSelected(null)}
+					onSaved={() => {
+						void queryClient.invalidateQueries({
+							queryKey: ['crm-customers', workspaceId]
+						})
+						void queryClient.invalidateQueries({
+							queryKey: ['crm-company-picker', workspaceId]
+						})
+					}}
+				/>
+			) : null}
 		</div>
 	)
 }

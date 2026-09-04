@@ -8,6 +8,7 @@ export type AuthenticatedApiErrorKind =
 	| 'forbidden'
 	| 'notFound'
 	| 'conflict'
+	| 'validation'
 	| 'temporary'
 
 export class AuthenticatedApiError extends Error {
@@ -22,7 +23,7 @@ export class AuthenticatedApiError extends Error {
 
 interface AuthenticatedRequest {
 	accessToken: string
-	method: 'GET' | 'POST'
+	method: 'GET' | 'POST' | 'PUT'
 	url: string
 	params?: Record<string, string>
 	data?: unknown
@@ -84,6 +85,19 @@ export const authenticatedRequest = async ({
 			throw new AuthenticatedApiError(
 				'conflict',
 				'Команда конфликтует с ранее обработанным запросом.'
+			)
+		}
+
+		if (axios.isAxiosError(error) && error.response?.status === 404) {
+			throw new AuthenticatedApiError(
+				'notFound',
+				'Запись не найдена или недоступна.'
+			)
+		}
+		if (axios.isAxiosError(error) && error.response?.status === 400) {
+			throw new AuthenticatedApiError(
+				'validation',
+				'Проверьте заполненные поля и повторите попытку.'
 			)
 		}
 

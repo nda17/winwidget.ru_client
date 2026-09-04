@@ -38,6 +38,15 @@
 	}
 }
 
-.form {
-	@apply flex flex-col gap-5;
+.tabs {
+	@apply flex flex-wrap items-center gap-2;
+}
+.search {
+	@apply grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:max-w-sm;
+}
+.pagination {
+	@apply flex flex-wrap items-center justify-between gap-3 border-t border-crm-border px-5 py-4 text-sm text-crm-muted;
+}
+.notes {
+	@apply block max-w-xs truncate;
 }
