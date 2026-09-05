@@ -47,31 +47,27 @@
 }
 
 .topbar {
-	@apply sticky top-0 z-30 flex min-h-16 flex-wrap items-center gap-3 border-b border-crm-border bg-crm-surface/95 px-4 py-3 backdrop-blur sm:flex-nowrap sm:px-6;
+	@apply sticky top-0 z-30 flex min-h-16 flex-wrap items-center gap-3 border-b border-crm-border bg-crm-surface/95 px-4 py-3 backdrop-blur sm:px-6;
 }
 
 .mobileMenuButton {
 	@apply flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-crm-border bg-crm-surface text-primary transition-colors hover:border-crm-border-strong hover:bg-crm-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 lg:hidden;
 }
 
-.searchForm {
-	@apply order-3 flex min-w-0 basis-full items-center rounded-xl border border-crm-border bg-crm-surface-muted p-1 transition-colors focus-within:border-crm-border-strong focus-within:ring-2 focus-within:ring-primary/20 sm:order-none sm:mx-auto sm:max-w-2xl sm:basis-auto sm:flex-1;
+.sectionContext {
+	@apply flex min-w-0 flex-1 flex-col gap-0.5;
 }
 
-.searchInput {
-	@apply min-w-0 flex-1 appearance-none bg-transparent px-3 py-2 text-sm text-crm-text outline-none placeholder:text-crm-muted;
+.productName {
+	@apply text-xs font-medium text-crm-muted;
 }
 
-.searchInput::-webkit-search-cancel-button {
-	@apply appearance-none;
+.sectionName {
+	@apply break-words text-sm font-semibold text-crm-text;
 }
 
-.searchButton {
-	@apply flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
-}
-
-.prototypeBadge {
-	@apply ml-auto shrink-0 sm:ml-0;
+.accessContext {
+	@apply flex max-w-full basis-full flex-wrap items-center gap-2 border-t border-crm-border pt-3 sm:ml-auto sm:basis-auto sm:border-0 sm:pt-0;
 }
 
 .content {
@@ -88,8 +84,4 @@
 
 .mobileCaption {
 	@apply mt-auto rounded-xl border border-crm-border bg-crm-surface-muted px-3 py-3 text-xs leading-5 text-crm-muted;
-}
-
-.visuallyHidden {
-	@apply sr-only;
 }

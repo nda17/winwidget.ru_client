@@ -16,7 +16,7 @@ import {
 import clsx from 'clsx'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { type FormEvent, type PropsWithChildren, useState } from 'react'
+import { type PropsWithChildren, useState } from 'react'
 import toast from 'react-hot-toast'
 
 interface CrmNavigationProps {
@@ -47,7 +47,22 @@ const CrmNavigation = ({ ariaLabel, onNavigate }: CrmNavigationProps) => {
 									isActive && styles.navigationLinkActive
 								)}
 								aria-current={isActive ? 'page' : undefined}
-								onClick={onNavigate}
+								onClick={event => {
+									if (
+										event.defaultPrevented ||
+										event.button !== 0 ||
+										event.metaKey ||
+										event.ctrlKey ||
+										event.shiftKey ||
+										event.altKey
+									)
+										return
+									onNavigate?.()
+									if (!isActive)
+										toast(`Переход в раздел «${item.label}»`, {
+											id: 'crm-navigation'
+										})
+								}}
 							>
 								<span className={styles.navigationIcon}>
 									<AppIcon name={item.icon} size={20} />
@@ -89,7 +104,7 @@ const CrmMobileNavigation = () => {
 						onNavigate={() => setIsOpen(false)}
 					/>
 					<p className={styles.mobileCaption}>
-						Интерфейс работает на локальных демо-данных
+						WinCRM · рабочее пространство
 					</p>
 				</div>
 			</Drawer>
@@ -99,19 +114,20 @@ const CrmMobileNavigation = () => {
 
 const CrmAppShell = ({ children }: PropsWithChildren) => {
 	const pathname = usePathname()
-	const [searchQuery, setSearchQuery] = useState('')
 	const access = useCrmWorkspaceAccess()
-
-	const handleSearch = (event: FormEvent<HTMLFormElement>) => {
-		event.preventDefault()
-
-		if (!searchQuery.trim()) {
-			toast.error('Введите запрос для поиска')
-			return
-		}
-
-		toast('Демо-режим: поиск пока не подключён к данным')
-	}
+	const section =
+		CRM_NAVIGATION.find(item => isNavigationItemActive(pathname, item))
+			?.label ?? 'Рабочее пространство'
+	const accessLabel =
+		access.state === 'READ_ONLY'
+			? 'Только чтение'
+			: access.state === 'GRACE'
+				? 'Льготный период'
+				: 'Доступ активен'
+	const membershipLabel =
+		access.membership.role === 'OWNER'
+			? 'Владелец пространства'
+			: 'Участник пространства'
 
 	return (
 		<div className={styles.shell}>
@@ -127,7 +143,7 @@ const CrmAppShell = ({ children }: PropsWithChildren) => {
 					<CrmNavigation ariaLabel="Основная навигация CRM" />
 				</div>
 				<p className={styles.sidebarCaption}>
-					Интерфейс работает на локальных демо-данных
+					WinCRM · рабочее пространство
 				</p>
 			</aside>
 
@@ -135,35 +151,32 @@ const CrmAppShell = ({ children }: PropsWithChildren) => {
 				<header className={styles.topbar}>
 					<CrmMobileNavigation key={pathname} />
 
-					<form
-						className={styles.searchForm}
-						role="search"
-						onSubmit={handleSearch}
+					<div
+						className={styles.sectionContext}
+						aria-label="Текущий раздел"
 					>
-						<label className={styles.visuallyHidden} htmlFor="crm-search">
-							Поиск по CRM
-						</label>
-						<input
-							id="crm-search"
-							name="query"
-							type="search"
-							autoComplete="off"
-							className={styles.searchInput}
-							placeholder="Поиск по CRM"
-							value={searchQuery}
-							onChange={event => setSearchQuery(event.target.value)}
-						/>
-						<button
-							type="submit"
-							className={styles.searchButton}
-							aria-label="Найти"
-						>
-							<AppIcon name="search" size={18} />
-						</button>
-					</form>
+						<span className={styles.productName}>WinCRM</span>
+						<span className={styles.sectionName}>{section}</span>
+					</div>
 
-					<div className={styles.prototypeBadge}>
-						<StatusBadge tone="info">Локальный прототип</StatusBadge>
+					<div
+						className={styles.accessContext}
+						aria-label="Доступ к рабочему пространству"
+					>
+						<StatusBadge
+							tone={
+								access.state === 'ACTIVE'
+									? 'success'
+									: access.state === 'GRACE'
+										? 'warning'
+										: 'neutral'
+							}
+						>
+							{accessLabel}
+						</StatusBadge>
+						<StatusBadge tone="neutral" showDot={false}>
+							{membershipLabel}
+						</StatusBadge>
 					</div>
 				</header>
 
