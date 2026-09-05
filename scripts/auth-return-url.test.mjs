@@ -31,6 +31,21 @@ const createStorage = () => {
 	}
 }
 
+test('preserves a WinCRM invitation path through the existing origin allowlist', () => {
+	const invitationId = '11111111-1111-4111-8111-111111111111'
+	for (const [origin, options] of [
+		['https://crm.winwidget.ru', productionOptions],
+		['http://localhost:3001', localOptions]
+	]) {
+		const url = `${origin}/invitations/${invitationId}`
+		assert.equal(authReturn.getSafeAuthReturnUrl(url, options), url)
+		assert.equal(
+			authReturn.withAuthReturnUrl('/login', url, options),
+			`/login?returnUrl=${encodeURIComponent(url)}`
+		)
+	}
+})
+
 test('accepts only the exact production WinCRM origin', () => {
 	assert.equal(
 		authReturn.getSafeAuthReturnUrl(
