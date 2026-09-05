@@ -134,7 +134,7 @@ export type AcceptanceCommand = AcceptanceCommandBase &
 		| {
 				operation: 'accept'
 				contact:
-					| { mode: 'CREATE_FROM_ENTRY' }
+					| { mode: 'CREATE_FROM_ENTRY'; name?: string }
 					| { mode: 'EXISTING'; contactId: string }
 				deal: {
 					title: string

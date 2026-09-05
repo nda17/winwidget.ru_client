@@ -15,6 +15,7 @@ import toast from 'react-hot-toast'
 import { sourceWebhookUrl } from '../model/source-credential'
 import type { IntakeAccess } from '../model/use-intake-access'
 import { SourceEditor } from './SourceEditor'
+import { WidgetSourcesPanel } from './WidgetSourcesPanel'
 import styles from './SourcesPanel.module.scss'
 
 export const SourcesPanel = ({ access }: { access: IntakeAccess }) => {
@@ -232,20 +233,15 @@ export const SourcesPanel = ({ access }: { access: IntakeAccess }) => {
 					аналитике или открытых логах.
 				</p>
 			</section>
-			<section
-				className={styles.documentation}
-				aria-label="Виджеты WinWidget"
-			>
-				<h3>Виджеты WinWidget</h3>
-				<p>
-					Виджеты — самостоятельный продукт. Нативное подключение к WinCRM
-					будет опциональным для ваших виджетов с оплаченной EASY / HARD;
-					автоматического подключения и переноса истории нет.
-				</p>
-				<Button disabled title="Нативный connector ещё не подключён">
-					Подключение виджетов — скоро
-				</Button>
-			</section>
+			<WidgetSourcesPanel
+				key={[
+					access.workspaceId,
+					access.session?.userId,
+					access.revision,
+					access.scopeKey
+				].join(':')}
+				access={access}
+			/>
 			{selected && access.session ? (
 				<SourceEditor
 					key={`${access.workspaceId}:${access.session?.userId}:${selected.operation}:${selected.source?.id ?? 'new'}`}

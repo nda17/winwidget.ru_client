@@ -160,6 +160,33 @@ const csvText = (
 	].join('\r\n') +
 	'\r\n'
 describe('Export metadata and body validation', () => {
+	it('exports native sourceId and null name through the original 20-column schema without a payload', () => {
+		const row = {
+			...rows.inbox,
+			origin: 'WIDGET',
+			sourceId: id,
+			name: null
+		}
+		const json = jsonBytes('inbox', [row])
+		expect(() =>
+			validateExportBody(json, metadata('inbox', 'json', json.length))
+		).not.toThrow()
+		const csv = new TextEncoder().encode(csvText('inbox', [row]))
+		expect(() =>
+			validateExportBody(csv, metadata('inbox', 'csv', csv.length))
+		).not.toThrow()
+		expect(exportColumns.inbox).toHaveLength(20)
+		expect(exportColumns.inbox).not.toContain('payload')
+		for (const invalid of [
+			{ ...row, payload: {} },
+			{ ...row, origin: 'API' }
+		]) {
+			const bytes = jsonBytes('inbox', [invalid])
+			expect(() =>
+				validateExportBody(bytes, metadata('inbox', 'json', bytes.length))
+			).toThrow()
+		}
+	})
 	it('binds metadata before reading to the exact subject digest, workspace, entity and filename', () => {
 		expect(
 			parseExportHeaders(

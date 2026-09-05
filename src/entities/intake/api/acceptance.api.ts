@@ -2,7 +2,12 @@ import {
 	authenticatedRequest,
 	invalidContractError
 } from '@/shared/api/authenticated-http-client'
-import { isUuidV4 } from '@/shared/lib/contract'
+import {
+	hasExactKeys,
+	isNonEmptyString,
+	isRecord,
+	isUuidV4
+} from '@/shared/lib/contract'
 import {
 	parseAcceptanceResponse,
 	type AcceptanceCommand
@@ -34,6 +39,23 @@ export const mutateInboxAcceptance = async (
 	accessToken: string,
 	command: AcceptanceCommand
 ) => {
+	if (command.operation === 'accept') {
+		const contact: unknown = command.contact
+		if (
+			!isRecord(contact) ||
+			!(
+				(contact.mode === 'EXISTING' &&
+					hasExactKeys(contact, ['mode', 'contactId']) &&
+					isUuidV4(contact.contactId)) ||
+				(contact.mode === 'CREATE_FROM_ENTRY' &&
+					(hasExactKeys(contact, ['mode']) ||
+						(hasExactKeys(contact, ['mode', 'name']) &&
+							isNonEmptyString(contact.name, 200) &&
+							contact.name === contact.name.trim())))
+			)
+		)
+			throw invalidContractError()
+	}
 	const base = {
 		schemaVersion: 1,
 		workspaceId: safeId(command.workspaceId),
@@ -63,7 +85,12 @@ export const mutateInboxAcceptance = async (
 											mode: 'EXISTING',
 											contactId: safeId(command.contact.contactId)
 										}
-									: { mode: 'CREATE_FROM_ENTRY' },
+									: {
+											mode: 'CREATE_FROM_ENTRY',
+											...(command.contact.name !== undefined
+												? { name: command.contact.name }
+												: {})
+										},
 							deal: {
 								title: command.deal.title,
 								currency: command.deal.currency,

@@ -22,6 +22,7 @@ import type { IntakeAccess } from '../model/use-intake-access'
 import { useIntakeCommand } from '../model/use-intake-command'
 import { useInboxAcceptance } from '../model/use-inbox-acceptance'
 import { InboxAcceptancePanel } from './InboxAcceptancePanel'
+import { WidgetDetailsPanel } from './WidgetDetailsPanel'
 import styles from './IntakeForms.module.scss'
 
 interface Props {
@@ -228,7 +229,7 @@ export const InboxEditor = ({ access, id, onClose, onSaved }: Props) => {
 									{[
 										['Тема', entry.title],
 										['Статус', statusName[entry.status]],
-										['Клиент', entry.name],
+										['Клиент', entry.name ?? 'Имя не передано'],
 										['Телефон', entry.phone ?? '—'],
 										['Email', entry.email ?? '—'],
 										[
@@ -237,7 +238,9 @@ export const InboxEditor = ({ access, id, onClose, onSaved }: Props) => {
 												? 'Добавлено вручную'
 												: entry.origin === 'CSV'
 													? 'Импорт CSV'
-													: `API · ${entry.sourceId}`
+													: entry.origin === 'WIDGET'
+														? 'Виджет WinWidget'
+														: `API · ${entry.sourceId}`
 										],
 										[
 											'Получено',
@@ -254,6 +257,9 @@ export const InboxEditor = ({ access, id, onClose, onSaved }: Props) => {
 										</div>
 									))}
 								</dl>
+								{entry.origin === 'WIDGET' ? (
+									<WidgetDetailsPanel access={access} entry={entry} />
+								) : null}
 								<InboxAcceptancePanel
 									key={access.scopeKey}
 									access={access}

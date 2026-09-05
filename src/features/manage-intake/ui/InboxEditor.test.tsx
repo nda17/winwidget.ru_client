@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
+	act,
 	cleanup,
 	fireEvent,
 	render,
@@ -19,6 +20,10 @@ import {
 import { AuthenticatedApiError } from '@/shared/api/authenticated-http-client'
 import type { IntakeAccess } from '../model/use-intake-access'
 import { InboxEditor } from './InboxEditor'
+import { InboxAcceptancePanel } from './InboxAcceptancePanel'
+import type { InboxAcceptanceContext } from '../model/use-inbox-acceptance'
+import { resetSessionStore, useSessionStore } from '@/entities/session'
+import toast from 'react-hot-toast'
 import { listSalesPipelines } from '@/entities/sales'
 import { listCustomers } from '@/entities/customer'
 import {
@@ -306,6 +311,195 @@ const fillAcceptance = async () => {
 	)
 }
 describe('Inbox acceptance workflow UI', () => {
+	it('requires an explicit name only when creating a missing-name widget contact', async () => {
+		vi.mocked(getInboxEntry).mockResolvedValue({
+			...entry,
+			origin: 'WIDGET',
+			sourceId: workspaceId,
+			name: null
+		})
+		vi.mocked(mutateInboxAcceptance).mockResolvedValue({
+			schemaVersion: 1,
+			acceptance: acceptance()
+		})
+		mount(entry.id)
+		expect(await screen.findByText('Имя не передано')).toBeTruthy()
+		expect(screen.getByText('Виджет WinWidget')).toBeTruthy()
+		await fillAcceptance()
+		const name = screen.getByRole('textbox', {
+			name: 'Имя нового контакта'
+		})
+		expect(name).toHaveProperty('value', '')
+		expect(
+			screen.getByRole('button', { name: 'Начать обработку' })
+		).toHaveProperty('disabled', true)
+		fireEvent.change(name, { target: { value: '  ' } })
+		expect(
+			screen.getByRole('button', { name: 'Начать обработку' })
+		).toHaveProperty('disabled', true)
+		fireEvent.change(name, { target: { value: ' Иван Петров ' } })
+		fireEvent.click(
+			screen.getByRole('button', { name: 'Начать обработку' })
+		)
+		await screen.findByText('Ожидает обработки')
+		expect(
+			vi.mocked(mutateInboxAcceptance).mock.calls[0][1]
+		).toMatchObject({
+			contact: { mode: 'CREATE_FROM_ENTRY', name: 'Иван Петров' }
+		})
+		expect(screen.getByText('Имя не передано')).toBeTruthy()
+	})
+	it('does not send a name override for a named widget entry or explicit existing contact', async () => {
+		vi.mocked(getInboxEntry).mockResolvedValue({
+			...entry,
+			origin: 'WIDGET',
+			sourceId: workspaceId
+		})
+		vi.mocked(mutateInboxAcceptance).mockResolvedValue({
+			schemaVersion: 1,
+			acceptance: acceptance()
+		})
+		mount(entry.id)
+		await fillAcceptance()
+		expect(
+			screen.queryByRole('textbox', { name: 'Имя нового контакта' })
+		).toBeNull()
+		fireEvent.click(
+			screen.getByRole('button', { name: 'Начать обработку' })
+		)
+		await screen.findByText('Ожидает обработки')
+		expect(
+			vi.mocked(mutateInboxAcceptance).mock.calls[0][1]
+		).toMatchObject({ contact: { mode: 'CREATE_FROM_ENTRY' } })
+		expect(
+			vi.mocked(mutateInboxAcceptance).mock.calls[0][1]
+		).not.toHaveProperty('contact.name')
+	})
+	it('does not rename an existing contact selected for an unnamed widget entry', async () => {
+		vi.mocked(getInboxEntry).mockResolvedValue({
+			...entry,
+			origin: 'WIDGET',
+			sourceId: workspaceId,
+			name: null
+		})
+		vi.mocked(listCustomers).mockResolvedValue({
+			schemaVersion: 1,
+			page: 1,
+			pageSize: 20,
+			total: 1,
+			items: [
+				{
+					kind: 'contacts',
+					id: workspaceId,
+					workspaceId,
+					name: 'Существующий клиент',
+					notes: null,
+					phone: null,
+					email: null,
+					companyId: null,
+					createdBySubject: 'owner',
+					teamId: null,
+					version: 1,
+					archivedAt: null,
+					createdAt: entry.receivedAt,
+					updatedAt: entry.updatedAt
+				}
+			]
+		})
+		vi.mocked(mutateInboxAcceptance).mockResolvedValue({
+			schemaVersion: 1,
+			acceptance: acceptance()
+		})
+		mount(entry.id)
+		await fillAcceptance()
+		fireEvent.change(screen.getByRole('combobox', { name: 'Контакт' }), {
+			target: { value: 'EXISTING' }
+		})
+		expect(
+			screen.queryByRole('textbox', { name: 'Имя нового контакта' })
+		).toBeNull()
+		fireEvent.click(
+			await screen.findByRole('button', { name: /Существующий клиент/ })
+		)
+		fireEvent.click(
+			screen.getByRole('button', { name: 'Начать обработку' })
+		)
+		await screen.findByText('Ожидает обработки')
+		expect(
+			vi.mocked(mutateInboxAcceptance).mock.calls[0][1]
+		).toMatchObject({
+			contact: { mode: 'EXISTING', contactId: workspaceId }
+		})
+		expect(
+			vi.mocked(mutateInboxAcceptance).mock.calls[0][1]
+		).not.toHaveProperty('contact.name')
+	})
+	it('preserves the confirmed name and UUID through remount and UNKNOWN then 401', async () => {
+		vi.mocked(getInboxEntry).mockResolvedValue({
+			...entry,
+			origin: 'WIDGET',
+			sourceId: workspaceId,
+			name: null
+		})
+		vi.mocked(mutateInboxAcceptance)
+			.mockRejectedValueOnce(
+				new AuthenticatedApiError('temporary', 'Результат неизвестен')
+			)
+			.mockRejectedValueOnce(
+				new AuthenticatedApiError('unauthorized', 'Сессия не подтверждена')
+			)
+			.mockResolvedValueOnce({
+				schemaVersion: 1,
+				acceptance: acceptance()
+			})
+		const view = (visible: boolean) => (
+			<QueryClientProvider client={client}>
+				<PendingCommandProvider owner={commandOwner('owner', 1)}>
+					{visible ? (
+						<InboxEditor
+							access={access()}
+							id={entry.id}
+							onClose={vi.fn()}
+							onSaved={vi.fn()}
+						/>
+					) : null}
+				</PendingCommandProvider>
+			</QueryClientProvider>
+		)
+		const rendered = render(view(true))
+		await fillAcceptance()
+		fireEvent.change(
+			screen.getByRole('textbox', { name: 'Имя нового контакта' }),
+			{ target: { value: 'Иван Петров' } }
+		)
+		fireEvent.click(
+			screen.getByRole('button', { name: 'Начать обработку' })
+		)
+		await screen.findByRole('button', { name: 'Повторить тот же запрос' })
+		const initial = vi.mocked(mutateInboxAcceptance).mock.calls[0][1]
+		rendered.rerender(view(false))
+		rendered.rerender(view(true))
+		fireEvent.click(
+			await screen.findByRole('button', {
+				name: 'Повторить тот же запрос'
+			})
+		)
+		await screen.findByText('Сессия не подтверждена')
+		expect(
+			screen.queryByRole('textbox', { name: 'Имя нового контакта' })
+		).toBeNull()
+		fireEvent.click(
+			screen.getByRole('button', { name: 'Повторить тот же запрос' })
+		)
+		await screen.findByText('Ожидает обработки')
+		const calls = vi.mocked(mutateInboxAcceptance).mock.calls
+		expect(calls).toHaveLength(3)
+		expect(calls[1][1]).toBe(initial)
+		expect(calls[2][1]).toBe(initial)
+		expect(initial).toMatchObject({
+			contact: { mode: 'CREATE_FROM_ENTRY', name: 'Иван Петров' }
+		})
+	})
 	it('does not interpret a failed state read as absence; reject remains disabled', async () => {
 		vi.mocked(getInboxAcceptance).mockRejectedValue(new Error('offline'))
 		mount(entry.id)
@@ -481,5 +675,137 @@ describe('Inbox acceptance workflow UI', () => {
 			screen.getByRole('button', { name: 'Начать обработку' })
 		).toHaveProperty('disabled', true)
 		expect(mutateInboxAcceptance).not.toHaveBeenCalled()
+	})
+})
+
+describe('Inbox acceptance refresh owner boundary', () => {
+	beforeEach(() => {
+		useSessionStore.setState({
+			status: 'authenticated',
+			session: access().session,
+			sessionRevision: 1
+		})
+		Object.defineProperty(navigator, 'onLine', {
+			configurable: true,
+			value: true
+		})
+	})
+	afterEach(resetSessionStore)
+	const setup = () => {
+		let resolve!: (result: { isSuccess: boolean }) => void
+		const refetch = vi.fn().mockReturnValue(
+			new Promise<{ isSuccess: boolean }>(done => {
+				resolve = done
+			})
+		)
+		const resetError = vi.fn()
+		const context = {
+			query: {
+				isError: true,
+				isSuccess: false,
+				isFetching: false,
+				refetch
+			},
+			command: { resetError }
+		} as unknown as InboxAcceptanceContext
+		const view = (currentAccess = access(), id = entry.id) => (
+			<InboxAcceptancePanel
+				access={currentAccess}
+				entry={{ ...entry, id, workspaceId: currentAccess.workspaceId }}
+				context={context}
+				competingCommand={false}
+			/>
+		)
+		const rendered = render(view())
+		const start = () =>
+			fireEvent.click(
+				screen.getByRole('button', { name: 'Проверить обработку' })
+			)
+		return { ...rendered, view, start, resolve, refetch, resetError }
+	}
+	it.each([true, false])(
+		'handles a settled refresh only for its current owner (success=%s)',
+		async isSuccess => {
+			const test = setup()
+			test.start()
+			await act(async () => test.resolve({ isSuccess }))
+			expect(test.refetch).toHaveBeenCalledOnce()
+			if (isSuccess) {
+				expect(test.resetError).toHaveBeenCalledOnce()
+				expect(toast).toHaveBeenCalledWith(
+					'Состояние обработки обновлено. Проверьте его перед новой командой.'
+				)
+				expect(toast.error).not.toHaveBeenCalled()
+			} else {
+				expect(test.resetError).not.toHaveBeenCalled()
+				expect(toast.error).toHaveBeenCalledWith(
+					'Не удалось обновить состояние обработки'
+				)
+			}
+		}
+	)
+	it.each([
+		'unmount',
+		'session',
+		'token',
+		'revision',
+		'workspace',
+		'scope',
+		'entry',
+		'permissions'
+	] as const)(
+		'ignores a late refresh after %s changes',
+		async boundary => {
+			const test = setup()
+			test.start()
+			expect(test.refetch).toHaveBeenCalledOnce()
+			if (boundary === 'unmount') test.unmount()
+			else if (boundary === 'session')
+				useSessionStore.getState().setAuthenticated({
+					userId: 'another-user',
+					accessToken: 'another-session'
+				})
+			else if (boundary === 'token')
+				useSessionStore.setState({
+					session: { userId: 'owner', accessToken: 'new-token' }
+				})
+			else if (boundary === 'revision')
+				useSessionStore.setState({ sessionRevision: 2 })
+			else if (boundary === 'workspace')
+				test.rerender(test.view({ ...access(), workspaceId: entry.id }))
+			else if (boundary === 'scope')
+				test.rerender(test.view({ ...access(), scopeKey: 'manager:own' }))
+			else if (boundary === 'entry')
+				test.rerender(test.view(access(), workspaceId))
+			else test.rerender(test.view({ ...access(), canRead: false }))
+			await act(async () => test.resolve({ isSuccess: true }))
+			expect(test.resetError).not.toHaveBeenCalled()
+			expect(toast).not.toHaveBeenCalled()
+			expect(toast.error).not.toHaveBeenCalled()
+			expect(toast.success).not.toHaveBeenCalled()
+		}
+	)
+	it('does not toast a failed refresh from an old session or log out its replacement', async () => {
+		const test = setup()
+		test.start()
+		useSessionStore.getState().setAuthenticated({
+			userId: 'another-user',
+			accessToken: 'another-session'
+		})
+		await act(async () => test.resolve({ isSuccess: false }))
+		expect(test.resetError).not.toHaveBeenCalled()
+		expect(toast.error).not.toHaveBeenCalled()
+		expect(useSessionStore.getState()).toMatchObject({
+			status: 'authenticated',
+			session: { userId: 'another-user', accessToken: 'another-session' }
+		})
+	})
+	it('does not start a refresh after session ownership has already changed', () => {
+		const test = setup()
+		useSessionStore.getState().setAnonymous()
+		test.start()
+		expect(test.refetch).not.toHaveBeenCalled()
+		expect(test.resetError).not.toHaveBeenCalled()
+		expect(toast).not.toHaveBeenCalled()
 	})
 })

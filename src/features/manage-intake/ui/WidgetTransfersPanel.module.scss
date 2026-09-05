@@ -1,0 +1,45 @@
+.panel {
+	@apply flex min-w-0 flex-col gap-4;
+}
+.notice {
+	@apply rounded-xl border border-crm-border bg-crm-surface-muted p-4 text-sm leading-relaxed text-crm-muted;
+}
+.entries {
+	@apply flex min-w-0 flex-col gap-4;
+}
+.entry {
+	@apply flex min-w-0 flex-col gap-3 rounded-2xl border border-crm-border bg-crm-surface p-4;
+}
+.entryHeader {
+	@apply flex min-w-0 flex-wrap items-start justify-between gap-3;
+}
+.title {
+	@apply min-w-0 flex-1 break-words text-sm font-semibold text-crm-text;
+}
+.description {
+	@apply text-sm leading-relaxed text-crm-muted;
+}
+.details {
+	@apply grid min-w-0 gap-3 text-xs sm:grid-cols-2;
+}
+.details div {
+	@apply flex min-w-0 flex-col gap-1;
+}
+.details dt {
+	@apply text-crm-muted;
+}
+.details dd {
+	@apply m-0 break-words text-crm-text;
+}
+.identifier {
+	@apply break-all font-mono;
+}
+.actions {
+	@apply flex flex-wrap items-center gap-3;
+}
+.pagination {
+	@apply flex flex-wrap items-center justify-end gap-3 text-sm text-crm-muted;
+}
+.error {
+	@apply flex flex-col gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm leading-relaxed text-red-700;
+}

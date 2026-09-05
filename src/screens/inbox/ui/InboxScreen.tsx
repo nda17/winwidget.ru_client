@@ -83,7 +83,7 @@ const InboxScreen = () => {
 					onClick={() => setSelected({ id: entry.id })}
 				>
 					<strong>{entry.title}</strong>
-					<span>{entry.name}</span>
+					<span>{entry.name ?? 'Имя не передано'}</span>
 				</button>
 			)
 		},
@@ -101,7 +101,9 @@ const InboxScreen = () => {
 			id: 'origin',
 			header: 'Источник',
 			render: entry =>
-				({ MANUAL: 'Вручную', API: 'API', CSV: 'CSV' })[entry.origin]
+				({ MANUAL: 'Вручную', API: 'API', CSV: 'CSV', WIDGET: 'Виджет' })[
+					entry.origin
+				]
 		},
 		{
 			id: 'status',
@@ -194,7 +196,7 @@ const InboxScreen = () => {
 					aria-pressed={tab === 'sources'}
 					onClick={() => setTab('sources')}
 				>
-					API-источники
+					Источники
 				</Button>
 			</div>
 			{tab === 'sources' ? (

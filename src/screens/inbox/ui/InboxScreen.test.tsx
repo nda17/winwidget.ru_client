@@ -105,6 +105,19 @@ const view = () => (
 	</QueryClientProvider>
 )
 describe('Inbox CSV integration', () => {
+	it('labels native entries without fabricating an absent customer name or fetching detail payloads', async () => {
+		vi.mocked(listInbox).mockResolvedValue({
+			schemaVersion: 1,
+			page: 1,
+			pageSize: 25,
+			total: 1,
+			items: [{ ...entry, origin: 'WIDGET', sourceId: id, name: null }]
+		})
+		render(view())
+		expect(await screen.findByText('Имя не передано')).toBeTruthy()
+		expect(screen.getByText('Виджет')).toBeTruthy()
+		expect(screen.queryByText('Данные виджета')).toBeNull()
+	})
 	it('shows CSV as a distinct origin and refreshes the real server list after import', async () => {
 		render(view())
 		await screen.findByText('CSV обращение')
@@ -134,7 +147,7 @@ describe('Inbox CSV integration', () => {
 		).toHaveProperty('disabled', true)
 		access = { ...access, canWrite: true }
 		rendered.rerender(view())
-		fireEvent.click(screen.getByRole('button', { name: 'API-источники' }))
+		fireEvent.click(screen.getByRole('button', { name: 'Источники' }))
 		expect(
 			screen.getByRole('button', { name: 'Импорт CSV' })
 		).toHaveProperty('disabled', true)

@@ -7,16 +7,13 @@ import {
 } from '@/shared/lib/contract'
 
 export type InboxStatus = 'NEW' | 'ACCEPTED' | 'REJECTED'
-export interface InboxEntry {
+interface InboxEntryBase {
 	id: string
 	workspaceId: string
 	title: string
-	name: string
 	phone: string | null
 	email: string | null
 	message: string | null
-	origin: 'MANUAL' | 'API' | 'CSV'
-	sourceId: string | null
 	status: InboxStatus
 	createdBySubject: string
 	teamId: string | null
@@ -29,6 +26,12 @@ export interface InboxEntry {
 	acceptedAt: string | null
 	rejectedAt: string | null
 }
+export type InboxEntry = InboxEntryBase &
+	(
+		| { origin: 'MANUAL' | 'CSV'; name: string; sourceId: null }
+		| { origin: 'API'; name: string; sourceId: string }
+		| { origin: 'WIDGET'; name: string | null; sourceId: string }
+	)
 export interface IntakeSource {
 	id: string
 	workspaceId: string
@@ -110,7 +113,10 @@ export const parseInboxEntry = (
 		]) ||
 		!scoped(value, workspaceId) ||
 		!isNonEmptyString(value.title, 200) ||
-		!isNonEmptyString(value.name, 200) ||
+		!(
+			isNonEmptyString(value.name, 200) ||
+			(value.origin === 'WIDGET' && value.name === null)
+		) ||
 		!(
 			value.phone === null ||
 			(typeof value.phone === 'string' &&
@@ -133,7 +139,10 @@ export const parseInboxEntry = (
 	if (
 		!(value.origin === 'MANUAL' && value.sourceId === null) &&
 		!(value.origin === 'CSV' && value.sourceId === null) &&
-		!(value.origin === 'API' && isUuidV4(value.sourceId))
+		!(
+			(value.origin === 'API' || value.origin === 'WIDGET') &&
+			isUuidV4(value.sourceId)
+		)
 	)
 		return null
 	const untouched =

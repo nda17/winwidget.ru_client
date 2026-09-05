@@ -38,6 +38,57 @@ beforeEach(() => {
 	})
 })
 describe('Acceptance API actor-free, versioned commands', () => {
+	it('sends the exact explicitly confirmed name without normalizing a pending retry', async () => {
+		const command: AcceptanceCommand = {
+			operation: 'accept',
+			workspaceId,
+			entryId,
+			commandId,
+			expectedVersion: 4,
+			contact: { mode: 'CREATE_FROM_ENTRY', name: 'Иван Петров' },
+			deal: {
+				title: 'Продажа',
+				currency: 'RUB',
+				amountMinor: 0,
+				pipelineId: workspaceId,
+				stageId: entryId,
+				nextTask: { title: 'Позвонить', dueAt: date }
+			}
+		}
+		await mutateInboxAcceptance('session', command)
+		await mutateInboxAcceptance('session', command)
+		const calls = vi.mocked(authenticatedRequest).mock.calls
+		expect(calls[0][0].data).toMatchObject({
+			commandId,
+			contact: { mode: 'CREATE_FROM_ENTRY', name: 'Иван Петров' }
+		})
+		expect(calls[1][0].data).toEqual(calls[0][0].data)
+	})
+	it.each([
+		{ mode: 'CREATE_FROM_ENTRY', name: null },
+		{ mode: 'CREATE_FROM_ENTRY', name: '' },
+		{ mode: 'CREATE_FROM_ENTRY', name: ' ' },
+		{ mode: 'CREATE_FROM_ENTRY', name: ' Иван ' },
+		{ mode: 'CREATE_FROM_ENTRY', name: 'x'.repeat(201) },
+		{ mode: 'CREATE_FROM_ENTRY', name: 'Иван', extra: true },
+		{ mode: 'EXISTING', contactId: entryId, name: 'Переименование' },
+		{ mode: 'unknown' }
+	])(
+		'rejects invalid confirmed names or ambiguous contact choices before HTTP',
+		async contact => {
+			await expect(
+				mutateInboxAcceptance('session', {
+					operation: 'accept',
+					workspaceId,
+					entryId,
+					commandId,
+					expectedVersion: 1,
+					contact
+				} as AcceptanceCommand)
+			).rejects.toThrow('invalid contract')
+			expect(authenticatedRequest).not.toHaveBeenCalled()
+		}
+	)
 	it('reads only the requested workspace/entry state', async () => {
 		await getInboxAcceptance('session', workspaceId, entryId)
 		expect(authenticatedRequest).toHaveBeenCalledWith({

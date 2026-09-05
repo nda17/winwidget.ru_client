@@ -51,6 +51,44 @@ describe('Intake exact workspace-bound contracts', () => {
 		expect(parseInboxEntry(entry, workspaceId)).toEqual(entry)
 		expect(parseIntakeSource(source, workspaceId)).toEqual(source)
 	})
+	it('permits nullable names only for native WIDGET with a managed source, preserving exact 20 keys', () => {
+		for (const name of [null, 'Клиент']) {
+			const value = { ...entry, origin: 'WIDGET', sourceId: id, name }
+			expect(parseInboxEntry(value, workspaceId)).toEqual(value)
+			expect(Object.keys(value)).toHaveLength(20)
+		}
+		for (const origin of ['MANUAL', 'API', 'CSV'])
+			expect(
+				parseInboxEntry(
+					{
+						...entry,
+						origin,
+						sourceId: origin === 'API' ? id : null,
+						name: null
+					},
+					workspaceId
+				)
+			).toBeNull()
+		for (const name of ['', ' ', 0, 'x'.repeat(201)])
+			expect(
+				parseInboxEntry(
+					{ ...entry, origin: 'WIDGET', sourceId: id, name },
+					workspaceId
+				)
+			).toBeNull()
+		expect(
+			parseInboxEntry(
+				{
+					...entry,
+					origin: 'WIDGET',
+					sourceId: id,
+					name: null,
+					payload: {}
+				},
+				workspaceId
+			)
+		).toBeNull()
+	})
 	it('accepts additive CSV origin only without an API source while retaining original fields', () => {
 		expect(
 			parseInboxEntry({ ...entry, origin: 'CSV' }, workspaceId)

@@ -7,9 +7,10 @@ import {
 	type AcceptanceStatus
 } from '@/entities/intake'
 import { listSalesPipelines } from '@/entities/sales'
+import { useSessionStore } from '@/entities/session'
 import { Button, ScreenState, SelectField, TextField } from '@/shared/ui'
 import { useQuery } from '@tanstack/react-query'
-import { useState, type FormEvent } from 'react'
+import { useLayoutEffect, useRef, useState, type FormEvent } from 'react'
 import toast from 'react-hot-toast'
 import type { InboxAcceptanceContext } from '../model/use-inbox-acceptance'
 import type { IntakeAccess } from '../model/use-intake-access'
@@ -54,6 +55,24 @@ export const InboxAcceptancePanel = ({
 	const [editing, setEditing] = useState(false)
 	const [confirmRecovery, setConfirmRecovery] = useState(false)
 	const { query, row, command } = context
+	const refreshOwner = useRef<object | null>(null)
+	useLayoutEffect(() => {
+		refreshOwner.current = {}
+		return () => {
+			refreshOwner.current = null
+		}
+	}, [
+		access.workspaceId,
+		access.session?.userId,
+		access.session?.accessToken,
+		access.revision,
+		access.scopeKey,
+		access.canRead,
+		access.permissions.isSuccess,
+		access.permissions.isFetching,
+		access.permissions.data?.state,
+		entry.id
+	])
 	const admin = access.sourceManager
 	const fresh =
 		access.canRead &&
@@ -89,7 +108,33 @@ export const InboxAcceptancePanel = ({
 		setConfirmRecovery(false)
 	}
 	const refresh = async () => {
+		const owner = refreshOwner.current
+		const current = () => {
+			const state = useSessionStore.getState()
+			return (
+				owner !== null &&
+				refreshOwner.current === owner &&
+				access.canRead &&
+				access.permissions.isSuccess &&
+				!access.permissions.isFetching &&
+				entry.workspaceId === access.workspaceId &&
+				access.session !== null &&
+				state.status === 'authenticated' &&
+				state.session !== null &&
+				state.session.userId === access.session.userId &&
+				state.session.accessToken === access.session.accessToken &&
+				state.sessionRevision === access.revision
+			)
+		}
+		if (
+			!current() ||
+			!access.online ||
+			!navigator.onLine ||
+			query.isFetching
+		)
+			return
 		const result = await query.refetch()
+		if (!current()) return
 		if (result.isSuccess) {
 			command.resetError()
 			toast(
@@ -286,8 +331,10 @@ const AcceptanceForm = ({
 		'EXISTING'
 	)
 	const [selected, setSelected] = useState<Customer | null>(null)
-	const [searchInput, setSearchInput] = useState(entry.name)
-	const [search, setSearch] = useState(entry.name)
+	const [searchInput, setSearchInput] = useState(entry.name ?? '')
+	const [search, setSearch] = useState(entry.name ?? '')
+	const [confirmedName, setConfirmedName] = useState('')
+	const needsName = entry.origin === 'WIDGET' && entry.name === null
 	const [page, setPage] = useState(1)
 	const [title, setTitle] = useState(entry.title)
 	const [amount, setAmount] = useState('0')
@@ -336,7 +383,10 @@ const AcceptanceForm = ({
 		!!canReadReferences &&
 		pipelines.isSuccess &&
 		!pipelines.isFetching &&
-		(mode === 'CREATE_FROM_ENTRY' ||
+		((mode === 'CREATE_FROM_ENTRY' &&
+			(!needsName ||
+				(confirmedName.trim().length > 0 &&
+					confirmedName.trim().length <= 200))) ||
 			(!!selected && contacts.isSuccess && !contacts.isFetching))
 	const submit = (event: FormEvent) => {
 		event.preventDefault()
@@ -364,7 +414,9 @@ const AcceptanceForm = ({
 			commandId: crypto.randomUUID(),
 			expectedVersion: entry.version,
 			contact:
-				mode === 'EXISTING' ? { mode, contactId: selected!.id } : { mode },
+				mode === 'EXISTING'
+					? { mode, contactId: selected!.id }
+					: { mode, ...(needsName ? { name: confirmedName.trim() } : {}) },
 			deal: {
 				title: title.trim(),
 				currency: 'RUB',
@@ -400,11 +452,28 @@ const AcceptanceForm = ({
 					<option value="CREATE_FROM_ENTRY">Создать из обращения</option>
 				</SelectField>
 				{mode === 'CREATE_FROM_ENTRY' ? (
-					<p className={styles.notice}>
-						Создадим новый контакт «{entry.name}» с телефоном и email из
-						обращения. Автоматического объединения нет. Проверьте, не
-						существует ли этот клиент уже.
-					</p>
+					<>
+						{needsName ? (
+							<TextField
+								label="Имя нового контакта"
+								required
+								maxLength={200}
+								value={confirmedName}
+								onChange={event => setConfirmedName(event.target.value)}
+								hint="Виджет не передал имя. Укажите проверенное имя клиента или выберите существующий контакт."
+							/>
+						) : null}
+						<p className={styles.notice}>
+							{needsName
+								? 'Создадим контакт с указанным вами именем'
+								: `Создадим новый контакт «${entry.name}»`}{' '}
+							с телефоном и email из обращения. Автоматического объединения
+							нет. Проверьте, не существует ли этот клиент уже.
+							{needsName
+								? ' Исходное обращение сохранится без переданного имени.'
+								: ''}
+						</p>
+					</>
 				) : (
 					<>
 						<div className={styles.row}>
