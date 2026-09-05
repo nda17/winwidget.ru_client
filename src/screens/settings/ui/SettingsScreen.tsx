@@ -23,7 +23,7 @@ import {
 	type DataTableColumn
 } from '@/shared/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import toast from 'react-hot-toast'
 import styles from './SettingsScreen.module.scss'
 
@@ -43,6 +43,7 @@ const invitationStatuses = {
 const date = (value: string) => new Date(value).toLocaleDateString('ru-RU')
 
 const SettingsScreen = () => {
+	const reasonPrefix = useId()
 	const context = useTeamSession()
 	const { workspace, session, sessionRevision } = context
 	const [tab, setTab] = useState<TeamCollection>('members')
@@ -93,6 +94,8 @@ const SettingsScreen = () => {
 				  context.permissions.data?.role !== 'OWNER'
 				? 'Только владелец управляет администраторами CRM'
 				: undefined
+	const reasonId = (row: TeamRow) =>
+		`${reasonPrefix}-${row.kind}-${row.id}`
 	const open = (kind: TeamEditorSelection['kind'], record?: TeamRow) =>
 		setSelected({ kind, record })
 	const refresh = async () => {
@@ -131,21 +134,20 @@ const SettingsScreen = () => {
 	) => {
 		const reason = protectedReason(row)
 		return (
-			<span title={reason}>
-				<Button
-					size="sm"
-					variant="secondary"
-					disabled={
-						!!reason ||
-						disabled ||
-						!visible ||
-						!(revoke ? context.canRevoke : context.canManage)
-					}
-					onClick={() => open(kind, row)}
-				>
-					{label}
-				</Button>
-			</span>
+			<Button
+				size="sm"
+				variant="secondary"
+				aria-describedby={reason ? reasonId(row) : undefined}
+				disabled={
+					!!reason ||
+					disabled ||
+					!visible ||
+					!(revoke ? context.canRevoke : context.canManage)
+				}
+				onClick={() => open(kind, row)}
+			>
+				{label}
+			</Button>
 		)
 	}
 	const columns: DataTableColumn<TeamRow>[] = [
@@ -280,7 +282,9 @@ const SettingsScreen = () => {
 						)
 					)}
 					{protectedReason(row) ? (
-						<p className={styles.muted}>{protectedReason(row)}</p>
+						<p id={reasonId(row)} className={styles.muted}>
+							{protectedReason(row)}
+						</p>
 					) : null}
 				</div>
 			)

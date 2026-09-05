@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { PropsWithChildren } from 'react'
 import { useState } from 'react'
-import { Toaster } from 'react-hot-toast'
+import { ToastProvider } from '@/shared/ui/toast-provider'
 import { useSessionStore } from '@/entities/session'
 import {
 	commandOwner,
@@ -43,14 +43,15 @@ const AppProviders = ({ children }: PropsWithChildren) => {
 
 	return (
 		<QueryClientProvider client={queryClient}>
-			<PendingCommandProvider
-				owner={owner}
-				readOwner={readCommandOwner}
-				subscribeOwner={subscribeCommandOwner}
-			>
-				{children}
-			</PendingCommandProvider>
-			<Toaster position="top-right" />
+			<ToastProvider>
+				<PendingCommandProvider
+					owner={owner}
+					readOwner={readCommandOwner}
+					subscribeOwner={subscribeCommandOwner}
+				>
+					{children}
+				</PendingCommandProvider>
+			</ToastProvider>
 		</QueryClientProvider>
 	)
 }

@@ -5,6 +5,7 @@ import { useEffect, useId, useRef } from 'react'
 import type { MouseEvent, ReactNode, RefObject } from 'react'
 
 import { AppIcon } from '../app-icon'
+import { useModalToastHost } from '../toast-provider/ToastProvider'
 import styles from './Drawer.module.scss'
 
 export type DrawerSide = 'left' | 'right'
@@ -61,6 +62,7 @@ export const Drawer = ({
 	const previouslyFocusedElementRef = useRef<HTMLElement | null>(null)
 	const titleId = useId()
 	const descriptionId = useId()
+	const registerToastHost = useModalToastHost()
 
 	useEffect(() => {
 		const dialog = dialogRef.current
@@ -77,6 +79,7 @@ export const Drawer = ({
 
 		if (!dialog.open) dialog.showModal()
 		acquireBodyLock()
+		const releaseToastHost = registerToastHost(dialog)
 
 		const focusFrame = window.requestAnimationFrame(() => {
 			const focusTarget =
@@ -86,6 +89,7 @@ export const Drawer = ({
 
 		return () => {
 			window.cancelAnimationFrame(focusFrame)
+			releaseToastHost()
 			if (dialog.open) dialog.close()
 			releaseBodyLock()
 
@@ -94,7 +98,7 @@ export const Drawer = ({
 				previouslyFocusedElement.focus()
 			}
 		}
-	}, [initialFocusRef, isOpen])
+	}, [initialFocusRef, isOpen, registerToastHost])
 
 	const handleBackdropClick = (event: MouseEvent<HTMLDialogElement>) => {
 		if (event.target === event.currentTarget) onClose()

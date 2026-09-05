@@ -162,12 +162,39 @@ describe('Real CRM team settings', () => {
 		)
 		render(view())
 		await screen.findByText('Анна')
+		const reason = screen.getByText(
+			'Только владелец управляет администраторами CRM'
+		)
+		for (const name of ['Роль', 'Отделы', 'Отключить']) {
+			const button = within(reason.parentElement!).getByRole('button', {
+				name
+			})
+			expect(button).toHaveProperty('disabled', true)
+			expect(button.getAttribute('aria-describedby')).toBe(reason.id)
+			fireEvent.click(button)
+		}
+		expect(reason.hidden).toBe(false)
 		expect(
-			screen.getByRole('button', { name: 'Отключить' })
-		).toHaveProperty('disabled', true)
-		expect(
-			screen.getByText('Только владелец управляет администраторами CRM')
-		).toBeTruthy()
+			screen.getAllByText('Только владелец управляет администраторами CRM')
+		).toHaveLength(1)
+		expect(screen.queryByText('Редактор команды')).toBeNull()
+	})
+	it('associates the existing visible own-access explanation with every protected action', async () => {
+		context.session.userId = 'member'
+		render(view())
+		await screen.findByText('Анна')
+		const reason = screen.getByText(
+			'Собственный доступ и владелец не редактируются'
+		)
+		for (const name of ['Роль', 'Отделы', 'Отключить']) {
+			const button = within(reason.parentElement!).getByRole('button', {
+				name
+			})
+			expect(button.getAttribute('aria-describedby')).toBe(reason.id)
+			expect(button).toHaveProperty('disabled', true)
+		}
+		expect(reason.id).not.toBe('')
+		expect(reason.hidden).toBe(false)
 	})
 	it('uses server paging and switches collections without loading all members', async () => {
 		vi.mocked(listTeamRecords).mockImplementation(

@@ -247,7 +247,8 @@ export const parseWidgetLeadSnapshot = (
 						/^(0|[1-9][0-9]{0,11})\.[0-9]{2}$/.test(
 							details.calculatedPrice
 						) &&
-						['RUB', 'EUR', 'USD'].includes(String(details.currency))
+						typeof details.currency === 'string' &&
+						['RUB', 'EUR', 'USD'].includes(details.currency)
 				)
 				unique(
 					list(details.answers).map(raw => {

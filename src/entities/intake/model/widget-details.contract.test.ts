@@ -198,6 +198,28 @@ describe('Widgets six-type stored snapshot contract', () => {
 			expect(parseWidgetLeadSnapshot(calc)).toBeNull()
 		}
 	})
+	it.each(['RUB', 'EUR', 'USD'])(
+		'preserves valid scalar calculator currency %s',
+		currency => {
+			const value = {
+				...snapshot('CALCULATOR'),
+				details: { ...details.CALCULATOR, currency }
+			}
+			expect(parseWidgetLeadSnapshot(value)).toEqual(value)
+		}
+	)
+	it.each([
+		{ currency: ['RUB'] },
+		{ currency: [['RUB']] },
+		{ currency: { code: 'RUB' } }
+	])('rejects nonscalar calculator currency %j', ({ currency }) => {
+		expect(
+			parseWidgetLeadSnapshot({
+				...snapshot('CALCULATOR'),
+				details: { ...details.CALCULATOR, currency }
+			})
+		).toBeNull()
+	})
 	it('enforces the exact 256 KiB UTF-8 boundary without truncating emoji', () => {
 		const value = snapshot('QUIZ')
 		if (value.details.type !== 'QUIZ') throw new Error('fixture')

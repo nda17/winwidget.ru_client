@@ -15,7 +15,7 @@
 }
 
 .control {
-	@apply w-full rounded-xl border border-crm-border bg-crm-surface px-3.5 py-2.5 text-sm text-crm-text outline-none transition-colors placeholder:text-crm-muted/60 hover:border-crm-border-strong focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-crm-surface-muted disabled:text-crm-muted;
+	@apply w-full rounded-xl border border-crm-border bg-crm-surface px-3.5 py-2.5 text-sm text-crm-text outline-none transition-colors placeholder:text-crm-muted hover:border-crm-border-strong focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-crm-surface-muted disabled:text-crm-muted;
 }
 
 .control[aria-invalid='true'] {
