@@ -51,12 +51,14 @@ export const SourceEditor = ({
 					? 'Источник создан. Сохраните секретный ключ.'
 					: 'Ключ заменён. Старый ключ больше не действует.'
 			)
-		}
+		},
+		`source:${source?.id ?? 'new'}`
 	)
 	const denied =
+		!command.uncertain &&
 		!!command.error &&
 		['unauthorized', 'forbidden'].includes(command.error.kind)
-	const conflict = command.error?.kind === 'conflict'
+	const conflict = !command.uncertain && command.error?.kind === 'conflict'
 	const editable =
 		access.canManageSources && !command.locked && !denied && !conflict
 	const close = () => {
@@ -225,7 +227,12 @@ export const SourceEditor = ({
 				) : (
 					<form
 						className={styles.form}
-						onSubmit={event => void submit(event)}
+						onSubmit={event => {
+							if (command.uncertain) {
+								event.preventDefault()
+								void command.retry()
+							} else void submit(event)
+						}}
 						noValidate
 					>
 						{operation === 'create' ? (

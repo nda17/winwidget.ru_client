@@ -37,7 +37,9 @@ const knownPermissions = new Set([
 	'intake:write',
 	'intake:manage-sources',
 	'intake:export',
-	'access:manage-team'
+	'access:manage-team',
+	'access:read-team',
+	'access:revoke-access'
 ])
 
 export const parseCrmPermissions = (
@@ -91,7 +93,8 @@ export const parseCrmPermissions = (
 			item =>
 				!item.endsWith(':read') &&
 				!item.endsWith(':export') &&
-				item !== 'sales:analytics'
+				item !== 'sales:analytics' &&
+				item !== 'access:read-team'
 		)
 	)
 		return null
@@ -112,12 +115,43 @@ export const parseCrmPermissions = (
 				'customers:merge',
 				'sales:manage-pipelines',
 				'intake:manage-sources',
-				'access:manage-team'
+				'access:manage-team',
+				'access:read-team',
+				'access:revoke-access'
 			].includes(item)
 		)
 	)
 		return null
 	return value as unknown as CrmPermissions
+}
+
+export const crmPermissionScope = (
+	permissions: CrmPermissions | undefined
+) =>
+	permissions
+		? JSON.stringify([
+				permissions.role,
+				permissions.dataScope,
+				[...permissions.teamIds].sort(),
+				[...permissions.permissions].sort()
+			])
+		: 'unconfirmed'
+
+export const getCrmPermissions = async (
+	accessToken: string,
+	workspaceId: string
+) => {
+	const result = parseCrmPermissions(
+		await authenticatedRequest({
+			accessToken,
+			method: 'GET',
+			url: '/crm/access/permissions',
+			params: { workspaceId }
+		}),
+		workspaceId
+	)
+	if (!result) throw invalidContractError()
+	return result
 }
 
 export const useCrmPermissions = (
@@ -135,16 +169,11 @@ export const useCrmPermissions = (
 		enabled: !!session,
 		queryFn: async () => {
 			if (!session) throw invalidContractError()
-			const result = parseCrmPermissions(
-				await authenticatedRequest({
-					accessToken: session.accessToken,
-					method: 'GET',
-					url: '/crm/access/permissions',
-					params: { workspaceId }
-				}),
+			const result = await getCrmPermissions(
+				session.accessToken,
 				workspaceId
 			)
-			if (!result) throw invalidContractError()
+			if (result.subject !== session.userId) throw invalidContractError()
 			return result
 		},
 		retry: false,

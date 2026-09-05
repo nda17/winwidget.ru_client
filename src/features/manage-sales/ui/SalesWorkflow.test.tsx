@@ -1,4 +1,10 @@
 import { listCustomers, type Customer } from '@/entities/customer'
+import { useSessionStore } from '@/entities/session'
+import { getCrmPermissions } from '@/entities/crm-access'
+import {
+	PendingCommandProvider,
+	commandOwner
+} from '@/shared/lib/pending-command'
 import {
 	getSalesDeal,
 	listSalesTimeline,
@@ -24,6 +30,7 @@ import { DealDetailsDrawer } from './DealDetailsDrawer'
 import { CompleteTaskDrawer } from './CompleteTaskDrawer'
 
 vi.mock('@/entities/customer', () => ({ listCustomers: vi.fn() }))
+vi.mock('@/entities/crm-access', () => ({ getCrmPermissions: vi.fn() }))
 vi.mock('@/entities/sales', () => ({
 	getSalesDeal: vi.fn(),
 	listSalesTimeline: vi.fn(),
@@ -109,6 +116,16 @@ let client: QueryClient
 let context: ReturnType<typeof useSalesSession>
 beforeEach(() => {
 	vi.clearAllMocks()
+	useSessionStore.setState({
+		status: 'authenticated',
+		session: { accessToken: 'token', userId: 'actor' },
+		sessionRevision: 1
+	})
+	vi.mocked(getCrmPermissions).mockResolvedValue({
+		subject: 'actor',
+		state: 'ACTIVE',
+		permissions: ['sales:write']
+	} as never)
 	Object.defineProperties(HTMLDialogElement.prototype, {
 		showModal: {
 			configurable: true,
@@ -172,7 +189,11 @@ afterEach(() => {
 })
 const mount = (children: ReactNode) =>
 	render(
-		<QueryClientProvider client={client}>{children}</QueryClientProvider>
+		<QueryClientProvider client={client}>
+			<PendingCommandProvider owner={commandOwner('actor', 1)}>
+				{children}
+			</PendingCommandProvider>
+		</QueryClientProvider>
 	)
 
 describe('Sales workflow forms', () => {

@@ -16,6 +16,10 @@ import {
 import { AuthenticatedApiError } from '@/shared/api/authenticated-http-client'
 import type { IntakeAccess } from '../model/use-intake-access'
 import { InboxEditor } from './InboxEditor'
+import {
+	PendingCommandProvider,
+	commandOwner
+} from '@/shared/lib/pending-command'
 
 vi.mock('@/entities/intake', () => ({
 	getInboxEntry: vi.fn(),
@@ -102,12 +106,14 @@ const mount = (id?: string, write = true) => {
 	const onClose = vi.fn()
 	render(
 		<QueryClientProvider client={client}>
-			<InboxEditor
-				access={access(write)}
-				id={id}
-				onClose={onClose}
-				onSaved={vi.fn()}
-			/>
+			<PendingCommandProvider owner={commandOwner('owner', 1)}>
+				<InboxEditor
+					access={access(write)}
+					id={id}
+					onClose={onClose}
+					onSaved={vi.fn()}
+				/>
+			</PendingCommandProvider>
 		</QueryClientProvider>
 	)
 	return onClose

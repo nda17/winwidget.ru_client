@@ -47,6 +47,7 @@ const InboxScreen = () => {
 			access.workspaceId,
 			access.session?.userId,
 			access.revision,
+			access.scopeKey,
 			page,
 			search,
 			status

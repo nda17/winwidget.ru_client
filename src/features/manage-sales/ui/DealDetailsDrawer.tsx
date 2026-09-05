@@ -267,7 +267,9 @@ export const DealDetailsDrawer = ({
 				void detail.refetch()
 				void history.refetch()
 			}
-		}
+		},
+		`deal:${id}`,
+		context.scopeKey
 	)
 	return (
 		<Drawer

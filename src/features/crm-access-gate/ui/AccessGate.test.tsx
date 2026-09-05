@@ -15,6 +15,11 @@ import { useSessionStore } from '@/entities/session'
 import { useCrmWorkspaceAccess } from '@/entities/crm-access'
 import { CrmAppShell } from '@/widgets/crm-app-shell'
 import { AuthenticatedApiError } from '@/shared/api/authenticated-http-client'
+import {
+	PendingCommandProvider,
+	commandOwner,
+	useMemoryCommand
+} from '@/shared/lib/pending-command'
 
 import {
 	activateCrmTrial,
@@ -122,11 +127,20 @@ const installationResponse = {
 
 let queryClient: QueryClient
 
-const Wrapper = ({ children }: PropsWithChildren) => (
-	<QueryClientProvider client={queryClient}>
-		{children}
-	</QueryClientProvider>
-)
+const Wrapper = ({ children }: PropsWithChildren) => {
+	const { session, sessionRevision } = useSessionStore()
+	return (
+		<QueryClientProvider client={queryClient}>
+			<PendingCommandProvider
+				owner={
+					session ? commandOwner(session.userId, sessionRevision) : null
+				}
+			>
+				{children}
+			</PendingCommandProvider>
+		</QueryClientProvider>
+	)
+}
 
 const WorkspacePermissions = () => {
 	const { state, canWrite, canExport } = useCrmWorkspaceAccess()
@@ -140,6 +154,193 @@ const WorkspacePermissions = () => {
 }
 
 describe('AccessGate', () => {
+	it.each([
+		['trial', 'success'],
+		['trial', 'unauthorized'],
+		['onboarding', 'success'],
+		['onboarding', 'unauthorized']
+	] as const)(
+		'ignores an old %s %s callback after a different session was established',
+		async (flow, outcome) => {
+			let finish!: () => void
+			const initial =
+				flow === 'trial'
+					? {
+							...base,
+							state: 'NOT_ACTIVATED' as const,
+							entitlementStatus: 'NOT_ACTIVATED' as const,
+							entitlement: null,
+							access: null
+						}
+					: onboardingAccess
+			vi.mocked(getCrmAccessBootstrap)
+				.mockReset()
+				.mockResolvedValueOnce(initial)
+				.mockResolvedValue(activeAccess)
+			vi.mocked(getPipelineTemplates)
+				.mockReset()
+				.mockResolvedValue(catalog)
+			if (flow === 'trial')
+				vi.mocked(activateCrmTrial).mockImplementationOnce(
+					() =>
+						new Promise((resolve, reject) => {
+							finish = () =>
+								outcome === 'success'
+									? resolve({ ...onboardingAccess, activated: true })
+									: reject(
+											new AuthenticatedApiError('unauthorized', 'old 401')
+										)
+						})
+				)
+			else
+				vi.mocked(installCrmTemplate).mockImplementationOnce(
+					() =>
+						new Promise((resolve, reject) => {
+							finish = () =>
+								outcome === 'success'
+									? resolve(installationResponse)
+									: reject(
+											new AuthenticatedApiError('unauthorized', 'old 401')
+										)
+						})
+				)
+			render(
+				<AccessGate>
+					<div>new session workspace</div>
+				</AccessGate>,
+				{ wrapper: Wrapper }
+			)
+			if (flow === 'trial')
+				fireEvent.click(
+					await screen.findByRole('button', {
+						name: 'Попробовать бесплатно 5 дней'
+					})
+				)
+			else {
+				fireEvent.click(
+					await screen.findByRole('radio', { name: templateRadioName })
+				)
+				fireEvent.click(
+					screen.getByRole('button', {
+						name: `Создать воронку «${template.name}»`
+					})
+				)
+			}
+			await waitFor(() => expect(finish).toBeTypeOf('function'))
+			act(() =>
+				useSessionStore
+					.getState()
+					.setAuthenticated({ userId: 'user-2', accessToken: 'new-token' })
+			)
+			await screen.findByText('new session workspace')
+			vi.mocked(toast.success).mockClear()
+			vi.mocked(toast.error).mockClear()
+			await act(async () => {
+				finish()
+				await Promise.resolve()
+			})
+			expect(useSessionStore.getState()).toMatchObject({
+				status: 'authenticated',
+				session: { userId: 'user-2', accessToken: 'new-token' }
+			})
+			expect(
+				queryClient.getQueryData(crmAccessQueryKey('user-2', 2))
+			).toEqual(activeAccess)
+			expect(
+				queryClient.getQueryData(crmAccessQueryKey('user-1', 1))
+			).toEqual(initial)
+			expect(toast.success).not.toHaveBeenCalled()
+			expect(toast.error).not.toHaveBeenCalled()
+		}
+	)
+	it.each(['unknown', 'late-success'])(
+		'preserves a command through a real fail-closed gate unmount (%s) without automatic replay',
+		async outcome => {
+			let finish!: () => void
+			let reopen!: () => void
+			const send = vi
+				.fn()
+				.mockImplementationOnce(
+					() =>
+						new Promise((resolve, reject) => {
+							finish = () =>
+								outcome === 'unknown'
+									? reject(
+											new AuthenticatedApiError('temporary', 'Unknown')
+										)
+									: resolve({ id: 'saved' })
+						})
+				)
+				.mockResolvedValueOnce({ id: 'saved' })
+			const saved = vi.fn()
+			vi.mocked(getCrmAccessBootstrap)
+				.mockResolvedValueOnce(activeAccess)
+				.mockImplementationOnce(
+					() =>
+						new Promise(resolve => {
+							reopen = () => resolve(activeAccess)
+						})
+				)
+			const Editor = () => {
+				const access = useCrmWorkspaceAccess()
+				const command = useMemoryCommand(
+					{ owner: commandOwner('user-1', 1), workspaceId },
+					'probe:new',
+					access.canWrite,
+					async () => 'token',
+					send,
+					saved
+				)
+				return (
+					<button
+						disabled={command.running}
+						onClick={() =>
+							void command.execute(() => ({
+								commandId: crypto.randomUUID(),
+								name: 'original'
+							}))
+						}
+					>
+						{command.uncertain ? 'Повторить команду' : 'Создать запись'}
+					</button>
+				)
+			}
+			render(
+				<AccessGate>
+					<Editor />
+				</AccessGate>,
+				{ wrapper: Wrapper }
+			)
+			fireEvent.click(
+				await screen.findByRole('button', { name: 'Создать запись' })
+			)
+			await waitFor(() => expect(send).toHaveBeenCalledTimes(1))
+			const original = send.mock.calls[0][1]
+			act(() => {
+				void queryClient.invalidateQueries({
+					queryKey: crmAccessQueryKey('user-1', 1)
+				})
+			})
+			await waitFor(() =>
+				expect(
+					screen.queryByRole('button', { name: 'Создать запись' })
+				).toBeNull()
+			)
+			await act(async () => {
+				finish()
+				await Promise.resolve()
+			})
+			expect(saved).not.toHaveBeenCalled()
+			act(() => reopen())
+			const retry = await screen.findByRole('button', {
+				name: 'Повторить команду'
+			})
+			expect(send).toHaveBeenCalledTimes(1)
+			fireEvent.click(retry)
+			await waitFor(() => expect(saved).toHaveBeenCalledTimes(1))
+			expect(send.mock.calls[1][1]).toBe(original)
+		}
+	)
 	beforeEach(() => {
 		vi.clearAllMocks()
 		Object.defineProperties(HTMLDialogElement.prototype, {
@@ -659,7 +860,7 @@ describe('AccessGate', () => {
 		const firstCommand = vi.mocked(installCrmTemplate).mock.calls[0][1]
 		act(() => {
 			queryClient.setQueryData(
-				pipelineTemplatesQueryKey('user-1', workspaceId),
+				[...pipelineTemplatesQueryKey('user-1', workspaceId), 1],
 				{ ...catalog, catalogRevision: 2, templates: [] }
 			)
 		})

@@ -16,6 +16,10 @@ import {
 	installCrmTemplate
 } from '../../api/crm-access.api'
 import { pipelineTemplatesQueryKey } from '../../model/crm-access.queries'
+import {
+	sessionOwnedRequest,
+	type SessionOwnedRequest
+} from '../../model/session-owned-request'
 import type {
 	CrmTemplateInstallationResponse,
 	InstallCrmTemplateCommand
@@ -42,6 +46,7 @@ export const CrmOnboarding = ({
 	onRevalidateAccess
 }: CrmOnboardingProps) => {
 	const session = useSessionStore(state => state.session)
+	const sessionRevision = useSessionStore(state => state.sessionRevision)
 	const setAnonymous = useSessionStore(state => state.setAnonymous)
 	const fieldsetId = useId()
 	const errorRef = useRef<HTMLDivElement>(null)
@@ -59,24 +64,37 @@ export const CrmOnboarding = ({
 	const [inlineError, setInlineError] = useState<string>()
 	const isOwner = access.membership.role === 'OWNER'
 	const templates = useQuery({
-		queryKey: pipelineTemplatesQueryKey(
-			session?.userId ?? '',
-			access.selectedWorkspaceId
-		),
-		queryFn: () => getPipelineTemplates(session!.accessToken),
+		queryKey: [
+			...pipelineTemplatesQueryKey(
+				session?.userId ?? '',
+				access.selectedWorkspaceId
+			),
+			sessionRevision
+		],
+		queryFn: async () => {
+			const request = sessionOwnedRequest(
+				session,
+				sessionRevision,
+				undefined,
+				token => getPipelineTemplates(token)
+			)
+			try {
+				return await request.execute()
+			} catch (error) {
+				if (
+					request.isCurrent() &&
+					error instanceof AuthenticatedApiError &&
+					error.kind === 'unauthorized'
+				) {
+					toast.error('Сессия завершена. Переходим к авторизации.')
+					setAnonymous()
+				}
+				throw error
+			}
+		},
 		enabled: Boolean(session),
 		retry: false
 	})
-
-	useEffect(() => {
-		if (
-			templates.error instanceof AuthenticatedApiError &&
-			templates.error.kind === 'unauthorized'
-		) {
-			toast.error('Сессия завершена. Переходим к авторизации.')
-			setAnonymous()
-		}
-	}, [setAnonymous, templates.error])
 
 	useEffect(() => {
 		if (inlineError) errorRef.current?.focus()
@@ -87,9 +105,14 @@ export const CrmOnboarding = ({
 	)
 
 	const installation = useMutation({
-		mutationFn: (command: InstallCrmTemplateCommand) =>
-			installCrmTemplate(session!.accessToken, command),
-		onSuccess: result => {
+		mutationFn: (
+			request: SessionOwnedRequest<
+				InstallCrmTemplateCommand,
+				CrmTemplateInstallationResponse
+			>
+		) => request.execute(),
+		onSuccess: (result, request) => {
+			if (!request.isCurrent()) return
 			const toastOptions = toastIdRef.current
 				? { id: toastIdRef.current }
 				: undefined
@@ -106,7 +129,8 @@ export const CrmOnboarding = ({
 			)
 			onInstalled(result)
 		},
-		onError: error => {
+		onError: (error, request) => {
+			if (!request.isCurrent()) return
 			const toastOptions = toastIdRef.current
 				? { id: toastIdRef.current }
 				: undefined
@@ -178,7 +202,8 @@ export const CrmOnboarding = ({
 			)
 			toast.error('Не удалось подтвердить установку шаблона', toastOptions)
 		},
-		onSettled: () => {
+		onSettled: (_result, _error, request) => {
+			if (!request.isCurrent()) return
 			requestPendingRef.current = false
 		}
 	})
@@ -299,7 +324,14 @@ export const CrmOnboarding = ({
 							? 'Повторяем установку выбранного шаблона'
 							: `Создаём воронку «${templateToInstall.name}»`
 					)
-					installation.mutate(commandRef.current)
+					installation.mutate(
+						sessionOwnedRequest(
+							session,
+							sessionRevision,
+							commandRef.current,
+							installCrmTemplate
+						)
+					)
 				}}
 			>
 				<fieldset

@@ -2,7 +2,8 @@
 
 import {
 	useCrmPermissions,
-	useCrmWorkspaceAccess
+	useCrmWorkspaceAccess,
+	crmPermissionScope
 } from '@/entities/crm-access'
 import { useSessionStore } from '@/entities/session'
 
@@ -16,6 +17,8 @@ export const useSalesSession = () => {
 	)
 	const canRead =
 		!!session &&
+		!permissions.isFetching &&
+		permissions.data?.subject === session?.userId &&
 		!!permissions.data &&
 		!permissions.isError &&
 		permissions.data.permissions.includes('sales:read') &&
@@ -26,10 +29,12 @@ export const useSalesSession = () => {
 		!permissions.isFetching &&
 		permissions.data?.state !== 'READ_ONLY' &&
 		permissions.data?.permissions.includes('sales:write') === true
+	const scopeKey = crmPermissionScope(permissions.data)
 	const key = [
 		workspace.workspaceId,
 		session?.userId,
-		sessionRevision
+		sessionRevision,
+		scopeKey
 	] as const
 	return {
 		workspace,
@@ -38,6 +43,7 @@ export const useSalesSession = () => {
 		permissions,
 		canRead,
 		canWrite,
-		key
+		key,
+		scopeKey
 	}
 }

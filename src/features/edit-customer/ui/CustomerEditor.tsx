@@ -1,6 +1,11 @@
 'use client'
 
 import { useSessionStore } from '@/entities/session'
+import { getCrmPermissions } from '@/entities/crm-access'
+import {
+	commandOwner,
+	useMemoryCommand
+} from '@/shared/lib/pending-command'
 import {
 	findCustomerDuplicates,
 	getCustomer,
@@ -20,7 +25,7 @@ import {
 	TextareaField
 } from '@/shared/ui'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useRef, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import styles from './CustomerEditor.module.scss'
@@ -30,6 +35,7 @@ interface EditorProps {
 	kind: CustomerKind
 	id?: string
 	canWrite: boolean
+	scopeKey?: string
 	onClose: () => void
 	onSaved: () => void
 }
@@ -53,6 +59,7 @@ export const CustomerEditor = (props: EditorProps) => {
 			props.workspaceId,
 			session?.userId,
 			revision,
+			props.scopeKey,
 			props.kind,
 			props.id
 		],
@@ -114,6 +121,7 @@ const CustomerForm = ({
 	kind,
 	id,
 	canWrite,
+	scopeKey,
 	onClose,
 	onSaved,
 	record,
@@ -121,12 +129,10 @@ const CustomerForm = ({
 }: EditorProps & { record?: Customer; reload: () => void }) => {
 	const session = useSessionStore(state => state.session)
 	const revision = useSessionStore(state => state.sessionRevision)
-	const [command, setCommand] = useState<CustomerMutation | null>(null)
 	const [archiveConfirm, setArchiveConfirm] = useState(false)
 	const [companySearch, setCompanySearch] = useState('')
 	const [companyTerm, setCompanyTerm] = useState('')
 	const [companyPage, setCompanyPage] = useState(1)
-	const immediateLock = useRef(false)
 	const form = useForm<Draft>({
 		defaultValues: {
 			name: record?.name ?? '',
@@ -145,6 +151,7 @@ const CustomerForm = ({
 			workspaceId,
 			session?.userId,
 			revision,
+			scopeKey,
 			companyTerm,
 			companyPage
 		],
@@ -169,6 +176,7 @@ const CustomerForm = ({
 			workspaceId,
 			session?.userId,
 			revision,
+			scopeKey,
 			linkedCompanyId
 		],
 		enabled: !!linkedCompanyId && !!session,
@@ -182,30 +190,56 @@ const CustomerForm = ({
 		retry: false,
 		gcTime: 0
 	})
-	const mutation = useMutation({
-		mutationFn: (pending: CustomerMutation) =>
-			mutateCustomer(session!.accessToken, pending),
-		retry: false,
-		onSuccess: (_, completed) => {
-			setCommand(null)
+	const memory = useMemoryCommand<CustomerMutation, Customer>(
+		{
+			owner: commandOwner(session?.userId, revision),
+			workspaceId,
+			view: scopeKey
+		},
+		`customers:${kind}:${id ?? 'new'}`,
+		canWrite,
+		async () => {
+			if (!session || !navigator.onLine)
+				throw new AuthenticatedApiError(
+					'temporary',
+					'Нет подключения к сети.'
+				)
+			const permissions = await getCrmPermissions(
+				session.accessToken,
+				workspaceId
+			)
+			const current = useSessionStore.getState()
+			if (
+				!current.session ||
+				current.session.accessToken !== session.accessToken ||
+				current.sessionRevision !== revision ||
+				permissions.subject !== current.session.userId
+			)
+				throw new AuthenticatedApiError(
+					'unauthorized',
+					'Сессия изменилась.'
+				)
+			if (
+				permissions.state === 'READ_ONLY' ||
+				!permissions.permissions.includes('customers:write')
+			)
+				throw new AuthenticatedApiError(
+					'forbidden',
+					'Изменения недоступны для текущей роли или подписки.'
+				)
+			return current.session.accessToken
+		},
+		mutateCustomer,
+		(_, completed) => {
 			toast.success(
 				completed.archive ? 'Запись архивирована' : 'Изменения сохранены'
 			)
 			onSaved()
 			onClose()
-		},
-		onError: error => {
-			if (
-				error instanceof AuthenticatedApiError &&
-				error.kind !== 'temporary'
-			)
-				setCommand(null)
-			toast.error(error.message)
-		},
-		onSettled: () => {
-			immediateLock.current = false
 		}
-	})
+	)
+	const mutation = { error: memory.error, isPending: memory.running }
+	const command = memory.uncertain
 	const duplicates = useMutation({
 		mutationFn: ({ phone, email }: { phone: string; email: string }) =>
 			findCustomerDuplicates(
@@ -217,9 +251,10 @@ const CustomerForm = ({
 		onError: error => toast.error(error.message)
 	})
 	const authorizationDenied =
+		!memory.uncertain &&
 		mutation.error instanceof AuthenticatedApiError &&
 		['unauthorized', 'forbidden'].includes(mutation.error.kind)
-	const locked = mutation.isPending || command !== null
+	const locked = memory.locked
 	const editable = canWrite && !locked && !authorizationDenied
 	const close = () => {
 		if (locked) {
@@ -231,25 +266,19 @@ const CustomerForm = ({
 		onClose()
 	}
 	const dispatch = (pending: CustomerMutation) => {
-		if (
-			!canWrite ||
-			authorizationDenied ||
-			!session ||
-			immediateLock.current
-		)
+		if (!canWrite || authorizationDenied || !session || memory.running)
 			return
-		immediateLock.current = true
-		setCommand(pending)
-		mutation.mutate(pending)
+		void memory.execute(() => pending)
 	}
 	const submit = (event: FormEvent<HTMLFormElement>) => {
+		if (memory.uncertain) {
+			event.preventDefault()
+			void memory.execute()
+			return
+		}
 		void form.handleSubmit(
 			draft => {
 				if (!canWrite || authorizationDenied || conflict) return
-				if (command) {
-					dispatch(command)
-					return
-				}
 				const nullable = (value: string) => value.trim() || null
 				dispatch({
 					kind,
@@ -297,6 +326,7 @@ const CustomerForm = ({
 		name: 'companyId'
 	})
 	const conflict =
+		!memory.uncertain &&
 		mutation.error instanceof AuthenticatedApiError &&
 		mutation.error.kind === 'conflict'
 	return (
@@ -327,7 +357,12 @@ const CustomerForm = ({
 				</>
 			}
 		>
-			<form id="customer-editor" className={styles.form} onSubmit={submit}>
+			<form
+				id="customer-editor"
+				className={styles.form}
+				onSubmit={submit}
+				noValidate
+			>
 				{mutation.error ? (
 					<div className={styles.notice} role="alert">
 						<p>{mutation.error.message}</p>
@@ -347,8 +382,10 @@ const CustomerForm = ({
 										window.confirm(
 											'Загрузить актуальную карточку? Несохранённый черновик будет сброшен.'
 										)
-									)
+									) {
+										memory.reset()
 										reload()
+									}
 								}}
 							>
 								Загрузить актуальную версию

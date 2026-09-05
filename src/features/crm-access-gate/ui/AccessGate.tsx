@@ -22,6 +22,10 @@ import {
 	getCrmAccessBootstrap
 } from '../api/crm-access.api'
 import { crmAccessQueryKey } from '../model/crm-access.queries'
+import {
+	sessionOwnedRequest,
+	type SessionOwnedRequest
+} from '../model/session-owned-request'
 import styles from './AccessGate.module.scss'
 import { CrmOnboarding } from './onboarding/CrmOnboarding'
 
@@ -69,6 +73,9 @@ export const AccessGate = ({ children }: PropsWithChildren) => {
 	const [workspaceId, setWorkspaceId] = useState<string>()
 	const [choice, setChoice] = useState('')
 	const commandIdRef = useRef<string | undefined>(undefined)
+	useEffect(() => {
+		commandIdRef.current = undefined
+	}, [session?.userId, sessionRevision])
 	const accessKey = crmAccessQueryKey(
 		session?.userId ?? '',
 		sessionRevision,
@@ -85,16 +92,31 @@ export const AccessGate = ({ children }: PropsWithChildren) => {
 	useEffect(() => {
 		if (
 			access.error instanceof AuthenticatedApiError &&
-			access.error.kind === 'unauthorized'
+			access.error.kind === 'unauthorized' &&
+			useSessionStore.getState().session?.userId === session?.userId &&
+			useSessionStore.getState().session?.accessToken ===
+				session?.accessToken &&
+			useSessionStore.getState().sessionRevision === sessionRevision
 		)
 			setAnonymous()
-	}, [access.error, setAnonymous])
+	}, [
+		access.error,
+		setAnonymous,
+		session?.userId,
+		session?.accessToken,
+		sessionRevision
+	])
 
 	const trial = useMutation({
-		mutationFn: (command: { workspaceId: string; commandId: string }) =>
-			activateCrmTrial(session!.accessToken, command),
-		onSuccess: result => {
-			queryClient.setQueryData(accessKey, result)
+		mutationFn: (
+			request: SessionOwnedRequest<
+				{ workspaceId: string; commandId: string },
+				Awaited<ReturnType<typeof activateCrmTrial>>
+			> & { accessKey: ReturnType<typeof crmAccessQueryKey> }
+		) => request.execute(),
+		onSuccess: (result, request) => {
+			if (!request.isCurrent()) return
+			queryClient.setQueryData(request.accessKey, result)
 			commandIdRef.current = undefined
 			toast.success(
 				result.activated
@@ -102,7 +124,8 @@ export const AccessGate = ({ children }: PropsWithChildren) => {
 					: 'Доступ уже активирован'
 			)
 		},
-		onError: error => {
+		onError: (error, request) => {
+			if (!request.isCurrent()) return
 			if (
 				error instanceof AuthenticatedApiError &&
 				error.kind === 'unauthorized'
@@ -212,6 +235,7 @@ export const AccessGate = ({ children }: PropsWithChildren) => {
 		return (
 			<div className={styles.gate}>
 				<CrmOnboarding
+					key={`${session.userId}:${sessionRevision}:${data.selectedWorkspaceId}`}
 					access={data}
 					accessRevalidating={access.isFetching}
 					accessValidationFailed={access.isError}
@@ -247,8 +271,16 @@ export const AccessGate = ({ children }: PropsWithChildren) => {
 								if (access.isFetching) return
 								commandIdRef.current ??= crypto.randomUUID()
 								trial.mutate({
-									workspaceId: data.selectedWorkspaceId,
-									commandId: commandIdRef.current
+									accessKey,
+									...sessionOwnedRequest(
+										session,
+										sessionRevision,
+										{
+											workspaceId: data.selectedWorkspaceId,
+											commandId: commandIdRef.current
+										},
+										activateCrmTrial
+									)
 								})
 							}}
 						>

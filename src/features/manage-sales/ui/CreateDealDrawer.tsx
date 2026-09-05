@@ -79,7 +79,9 @@ export const CreateDealDrawer = ({
 		() => {
 			onSaved()
 			onClose()
-		}
+		},
+		'deal:new',
+		context.scopeKey
 	)
 	const options = contacts.data?.items || []
 	const choosePipeline = (id: string) => {

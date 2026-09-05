@@ -5,11 +5,40 @@ import {
 } from '@/entities/sales'
 import { AuthenticatedApiError } from '@/shared/api/authenticated-http-client'
 import { resetSessionStore, useSessionStore } from '@/entities/session'
-import { act, cleanup, renderHook } from '@testing-library/react'
+import {
+	act,
+	cleanup,
+	waitFor,
+	renderHook as baseRenderHook,
+	type RenderHookOptions
+} from '@testing-library/react'
+import type { PropsWithChildren } from 'react'
+import {
+	PendingCommandProvider,
+	commandOwner
+} from '@/shared/lib/pending-command'
+import { getCrmPermissions } from '@/entities/crm-access'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useSalesCommand } from './use-sales-command'
 
 vi.mock('@/entities/sales', () => ({ mutateSales: vi.fn() }))
+vi.mock('@/entities/crm-access', () => ({ getCrmPermissions: vi.fn() }))
+const TestProvider = ({ children }: PropsWithChildren) => {
+	const { session, sessionRevision } = useSessionStore()
+	return (
+		<PendingCommandProvider
+			owner={
+				session ? commandOwner(session.userId, sessionRevision) : null
+			}
+		>
+			{children}
+		</PendingCommandProvider>
+	)
+}
+const renderHook = <Result, Props>(
+	callback: (props: Props) => Result,
+	options?: RenderHookOptions<Props>
+) => baseRenderHook(callback, { ...options, wrapper: TestProvider })
 vi.mock('react-hot-toast', () => ({
 	default: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() })
 }))
@@ -26,6 +55,14 @@ describe('useSalesCommand durable retry within the active form', () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
 		resetSessionStore()
+		useSessionStore
+			.getState()
+			.setAuthenticated({ accessToken: 'token', userId: 'actor' })
+		vi.mocked(getCrmPermissions).mockResolvedValue({
+			subject: 'actor',
+			state: 'ACTIVE',
+			permissions: ['sales:write']
+		} as never)
 	})
 	afterEach(cleanup)
 	it('keeps the exact UUID and immutable request on an ambiguous response', async () => {
@@ -67,7 +104,7 @@ describe('useSalesCommand durable retry within the active form', () => {
 			first = result.current.execute(mutation)
 			void result.current.execute(mutation)
 		})
-		expect(mutate).toHaveBeenCalledTimes(1)
+		await waitFor(() => expect(mutate).toHaveBeenCalledTimes(1))
 		expect(result.current.pending).toBe(true)
 		await act(async () => {
 			resolve(savedDeal)
@@ -153,6 +190,7 @@ describe('useSalesCommand durable retry within the active form', () => {
 		act(() => {
 			pending = result.current.execute(mutation)
 		})
+		await waitFor(() => expect(mutate).toHaveBeenCalledTimes(1))
 		act(() =>
 			useSessionStore.setState({
 				session: { accessToken: 'new-token', userId: 'new-actor' },

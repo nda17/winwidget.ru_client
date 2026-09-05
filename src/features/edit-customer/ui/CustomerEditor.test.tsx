@@ -14,6 +14,11 @@ import {
 	type Customer
 } from '@/entities/customer'
 import { useSessionStore } from '@/entities/session'
+import { getCrmPermissions } from '@/entities/crm-access'
+import {
+	PendingCommandProvider,
+	commandOwner
+} from '@/shared/lib/pending-command'
 import { AuthenticatedApiError } from '@/shared/api/authenticated-http-client'
 import { CustomerEditor } from './CustomerEditor'
 
@@ -23,6 +28,7 @@ vi.mock('@/entities/customer', () => ({
 	mutateCustomer: vi.fn(),
 	findCustomerDuplicates: vi.fn()
 }))
+vi.mock('@/entities/crm-access', () => ({ getCrmPermissions: vi.fn() }))
 vi.mock('react-hot-toast', () => ({
 	default: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() })
 }))
@@ -80,6 +86,11 @@ beforeEach(() => {
 	})
 	vi.mocked(getCustomer).mockResolvedValue(contact)
 	vi.mocked(mutateCustomer).mockResolvedValue(contact)
+	vi.mocked(getCrmPermissions).mockResolvedValue({
+		subject: 'user-1',
+		state: 'ACTIVE',
+		permissions: ['customers:write']
+	} as never)
 })
 afterEach(() => {
 	cleanup()
@@ -90,14 +101,16 @@ const mount = (canWrite = true, id?: string) => {
 	const onClose = vi.fn()
 	render(
 		<QueryClientProvider client={client}>
-			<CustomerEditor
-				workspaceId={workspaceId}
-				kind="contacts"
-				id={id}
-				canWrite={canWrite}
-				onSaved={onSaved}
-				onClose={onClose}
-			/>
+			<PendingCommandProvider owner={commandOwner('user-1', 1)}>
+				<CustomerEditor
+					workspaceId={workspaceId}
+					kind="contacts"
+					id={id}
+					canWrite={canWrite}
+					onSaved={onSaved}
+					onClose={onClose}
+				/>
+			</PendingCommandProvider>
 		</QueryClientProvider>
 	)
 	return { onSaved, onClose }

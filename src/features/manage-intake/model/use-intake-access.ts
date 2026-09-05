@@ -2,7 +2,8 @@
 
 import {
 	useCrmPermissions,
-	useCrmWorkspaceAccess
+	useCrmWorkspaceAccess,
+	crmPermissionScope
 } from '@/entities/crm-access'
 import { useSessionStore } from '@/entities/session'
 import { AuthenticatedApiError } from '@/shared/api/authenticated-http-client'
@@ -32,7 +33,7 @@ export const useIntakeAccess = () => {
 	)
 	const confirmed = permissions.isSuccess && !permissions.isFetching
 	const canRead =
-		permissions.isSuccess &&
+		confirmed &&
 		permissions.data.subject === session?.userId &&
 		permissions.data.permissions.includes('intake:read')
 	const sourceManager =
@@ -59,9 +60,11 @@ export const useIntakeAccess = () => {
 			)
 		const result = await permissions.refetch()
 		if (result.error) throw result.error
-		const current = useSessionStore.getState().session
+		const currentState = useSessionStore.getState()
+		const current = currentState.session
 		if (
 			!current ||
+			currentState.sessionRevision !== revision ||
 			current.userId !== session.userId ||
 			result.data?.subject !== current.userId
 		)
@@ -81,6 +84,7 @@ export const useIntakeAccess = () => {
 		return current.accessToken
 	}
 	return {
+		scopeKey: crmPermissionScope(permissions.data),
 		workspaceId: workspace.workspaceId,
 		session,
 		revision,

@@ -4,8 +4,27 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { PropsWithChildren } from 'react'
 import { useState } from 'react'
 import { Toaster } from 'react-hot-toast'
+import { useSessionStore } from '@/entities/session'
+import {
+	commandOwner,
+	PendingCommandProvider
+} from '@/shared/lib/pending-command'
+
+const readCommandOwner = () => {
+	const { session, sessionRevision, status } = useSessionStore.getState()
+	return status === 'authenticated' && session
+		? commandOwner(session.userId, sessionRevision)
+		: null
+}
+const subscribeCommandOwner = (notify: (owner: string | null) => void) =>
+	useSessionStore.subscribe(() => notify(readCommandOwner()))
 
 const AppProviders = ({ children }: PropsWithChildren) => {
+	const { session, sessionRevision, status } = useSessionStore()
+	const owner =
+		status === 'authenticated' && session
+			? commandOwner(session.userId, sessionRevision)
+			: null
 	const [queryClient] = useState(
 		() =>
 			new QueryClient({
@@ -24,7 +43,13 @@ const AppProviders = ({ children }: PropsWithChildren) => {
 
 	return (
 		<QueryClientProvider client={queryClient}>
-			{children}
+			<PendingCommandProvider
+				owner={owner}
+				readOwner={readCommandOwner}
+				subscribeOwner={subscribeCommandOwner}
+			>
+				{children}
+			</PendingCommandProvider>
 			<Toaster position="top-right" />
 		</QueryClientProvider>
 	)

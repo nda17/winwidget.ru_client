@@ -1,7 +1,7 @@
 import {
 	cleanup,
 	fireEvent,
-	render,
+	render as baseRender,
 	screen,
 	waitFor
 } from '@testing-library/react'
@@ -10,6 +10,18 @@ import { mutateIntakeSource, type IntakeSource } from '@/entities/intake'
 import { AuthenticatedApiError } from '@/shared/api/authenticated-http-client'
 import type { IntakeAccess } from '../model/use-intake-access'
 import { SourceEditor } from './SourceEditor'
+import {
+	PendingCommandProvider,
+	commandOwner
+} from '@/shared/lib/pending-command'
+import type { ReactElement, PropsWithChildren } from 'react'
+const TestProvider = ({ children }: PropsWithChildren) => (
+	<PendingCommandProvider owner={commandOwner('owner', 1)}>
+		{children}
+	</PendingCommandProvider>
+)
+const render = (ui: ReactElement) =>
+	baseRender(ui, { wrapper: TestProvider })
 
 vi.mock('@/entities/intake', () => ({ mutateIntakeSource: vi.fn() }))
 vi.mock('@/shared/config/runtime', () => ({
@@ -40,6 +52,7 @@ const access = () =>
 		canRead: true,
 		online: true,
 		session: { userId: 'owner', accessToken: 'session-token' },
+		revision: 1,
 		authorize: vi.fn().mockResolvedValue('session-token'),
 		permissions: { isSuccess: true, isError: false, refetch: vi.fn() }
 	}) as unknown as IntakeAccess
@@ -69,6 +82,44 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('SourceEditor', () => {
+	it('recovers the original private key after a complete editor remount, even with an empty new form', async () => {
+		vi.mocked(mutateIntakeSource)
+			.mockRejectedValueOnce(
+				new AuthenticatedApiError('temporary', 'Unknown')
+			)
+			.mockResolvedValueOnce(source)
+		const props = {
+			access: access(),
+			operation: 'create' as const,
+			onClose: vi.fn(),
+			onSaved: vi.fn()
+		}
+		const view = render(<SourceEditor {...props} />)
+		fireEvent.change(
+			screen.getByRole('textbox', { name: 'Название источника' }),
+			{ target: { value: 'Первоначальный источник' } }
+		)
+		fireEvent.click(
+			screen.getByRole('button', { name: 'Создать источник' })
+		)
+		await screen.findByRole('button', { name: 'Повторить тот же запрос' })
+		const original = vi.mocked(mutateIntakeSource).mock.calls[0][1]
+		view.rerender(<div>Доступ проверяется</div>)
+		view.rerender(<SourceEditor {...props} />)
+		expect(
+			screen.getByRole('textbox', { name: 'Название источника' })
+		).toHaveProperty('value', '')
+		expect(vi.mocked(mutateIntakeSource)).toHaveBeenCalledTimes(1)
+		fireEvent.click(
+			screen.getByRole('button', { name: 'Повторить тот же запрос' })
+		)
+		await screen.findByRole('button', { name: 'Скопировать ключ' })
+		expect(vi.mocked(mutateIntakeSource).mock.calls[1][1]).toBe(original)
+		if (original.operation !== 'create') throw new Error('Expected create')
+		expect(document.body.textContent).not.toContain(original.token)
+		fireEvent.click(screen.getByRole('button', { name: 'Показать ключ' }))
+		expect(document.body.textContent).toContain(original.token)
+	})
 	it('retains an uncertain key privately while a temporary permission check hides the editor', async () => {
 		vi.mocked(mutateIntakeSource)
 			.mockRejectedValueOnce(

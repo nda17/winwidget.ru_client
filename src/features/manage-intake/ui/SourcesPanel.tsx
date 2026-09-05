@@ -29,6 +29,7 @@ export const SourcesPanel = ({ access }: { access: IntakeAccess }) => {
 			access.workspaceId,
 			access.session?.userId,
 			access.revision,
+			access.scopeKey,
 			page
 		],
 		enabled: access.sourceManager && !!access.session,

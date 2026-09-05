@@ -55,7 +55,9 @@ export const CompleteTaskDrawer = ({
 		() => {
 			onSaved()
 			onClose()
-		}
+		},
+		`deal:${task.dealId}`,
+		context.scopeKey
 	)
 	const submit = (event: FormEvent) => {
 		event.preventDefault()
@@ -90,8 +92,8 @@ export const CompleteTaskDrawer = ({
 			}}
 			title="Завершить действие"
 			description={
-				context.canRead && !detail.isError
-					? `${task.title} · ${salesDate(task.dueAt)}`
+				context.canRead && !detail.isError && current?.id === task.id
+					? `${current.title} · ${salesDate(current.dueAt)}`
 					: 'Проверка задачи и следующего действия'
 			}
 			footer={

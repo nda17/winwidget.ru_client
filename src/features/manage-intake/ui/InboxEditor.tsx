@@ -62,6 +62,7 @@ export const InboxEditor = ({ access, id, onClose, onSaved }: Props) => {
 			access.workspaceId,
 			access.session?.userId,
 			access.revision,
+			access.scopeKey,
 			id
 		],
 		enabled: !!id && access.canRead,
@@ -77,6 +78,7 @@ export const InboxEditor = ({ access, id, onClose, onSaved }: Props) => {
 			access.workspaceId,
 			access.session?.userId,
 			access.revision,
+			access.scopeKey,
 			id,
 			historyPage
 		],
@@ -100,12 +102,14 @@ export const InboxEditor = ({ access, id, onClose, onSaved }: Props) => {
 			toast.success(id ? 'Обращение отклонено' : 'Обращение создано')
 			onSaved()
 			onClose()
-		}
+		},
+		`inbox:${id ?? 'new'}`
 	)
 	const denied =
+		!command.uncertain &&
 		command.error &&
 		['unauthorized', 'forbidden'].includes(command.error.kind)
-	const conflict = command.error?.kind === 'conflict'
+	const conflict = !command.uncertain && command.error?.kind === 'conflict'
 	const editable =
 		access.canWrite && !command.locked && !denied && !conflict
 	const close = () => {
@@ -187,6 +191,20 @@ export const InboxEditor = ({ access, id, onClose, onSaved }: Props) => {
 					/>
 				) : (
 					<>
+						{id && command.uncertain ? (
+							<div className={styles.notice} role="alert">
+								<p>
+									Есть сохранённая команда с неподтверждённым результатом.
+									Новая команда не будет создана.
+								</p>
+								<Button
+									disabled={!access.canWrite || command.running}
+									onClick={() => void command.retry()}
+								>
+									Повторить тот же запрос
+								</Button>
+							</div>
+						) : null}
 						{entry ? (
 							<>
 								<dl className={styles.details}>
@@ -238,10 +256,18 @@ export const InboxEditor = ({ access, id, onClose, onSaved }: Props) => {
 								) : null}
 							</>
 						) : null}
-						{!id || (rejecting && entry?.status === 'NEW') ? (
+						{!id ||
+						(rejecting &&
+							!command.uncertain &&
+							entry?.status === 'NEW') ? (
 							<form
 								className={styles.form}
-								onSubmit={event => void submit(event)}
+								onSubmit={event => {
+									if (command.uncertain) {
+										event.preventDefault()
+										void command.retry()
+									} else void submit(event)
+								}}
 								noValidate
 							>
 								{!id ? (

@@ -2,7 +2,8 @@
 
 import {
 	useCrmPermissions,
-	useCrmWorkspaceAccess
+	useCrmWorkspaceAccess,
+	crmPermissionScope
 } from '@/entities/crm-access'
 import {
 	listCustomers,
@@ -31,9 +32,12 @@ const ContactsScreen = () => {
 	const session = useSessionStore(state => state.session)
 	const revision = useSessionStore(state => state.sessionRevision)
 	const permissions = useCrmPermissions(workspaceId, session, revision)
+	const scopeKey = crmPermissionScope(permissions.data)
 	const confirmed = permissions.isSuccess && !permissions.isFetching
 	const canRead =
-		confirmed && permissions.data.permissions.includes('customers:read')
+		confirmed &&
+		permissions.data.subject === session?.userId &&
+		permissions.data.permissions.includes('customers:read')
 	const canWrite =
 		canRead &&
 		subscriptionCanWrite &&
@@ -53,6 +57,7 @@ const ContactsScreen = () => {
 			workspaceId,
 			session?.userId,
 			revision,
+			scopeKey,
 			kind,
 			search,
 			page
@@ -334,6 +339,7 @@ const ContactsScreen = () => {
 					kind={selected.kind}
 					id={selected.id}
 					canWrite={canWrite}
+					scopeKey={scopeKey}
 					onClose={() => setSelected(null)}
 					onSaved={() => {
 						void queryClient.invalidateQueries({

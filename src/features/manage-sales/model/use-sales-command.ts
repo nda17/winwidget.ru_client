@@ -6,88 +6,105 @@ import {
 	type SalesDeal,
 	type SalesMutation
 } from '@/entities/sales'
+import { getCrmPermissions } from '@/entities/crm-access'
 import { AuthenticatedApiError } from '@/shared/api/authenticated-http-client'
 import { useSessionStore } from '@/entities/session'
-import { useRef, useState } from 'react'
+import {
+	commandOwner,
+	useMemoryCommand
+} from '@/shared/lib/pending-command'
 import toast from 'react-hot-toast'
 
 export const useSalesCommand = (
 	workspaceId: string,
 	accessToken: string,
 	enabled: boolean,
-	onSuccess: (deal: SalesDeal) => void
+	onSuccess: (deal: SalesDeal) => void,
+	intent = 'deal:new',
+	view?: string
 ) => {
-	const sessionRevision = useSessionStore(state => state.sessionRevision)
-	const inFlight = useRef(false)
-	const saved = useRef<SalesCommand | null>(null)
-	const [pending, setPending] = useState(false)
-	const [error, setError] = useState<AuthenticatedApiError | null>(null)
-	const ambiguous = error?.kind === 'temporary'
-	const blocked = !!error && error.kind !== 'validation' && !ambiguous
-
-	const execute = async (mutation?: SalesMutation) => {
-		if (!enabled || inFlight.current || blocked) return
-		if (!saved.current) {
-			if (!mutation) return
-			saved.current = {
-				workspaceId,
-				commandId: crypto.randomUUID(),
-				mutation: structuredClone(mutation)
-			}
-		}
-		inFlight.current = true
-		setPending(true)
-		setError(null)
-		let completed: SalesDeal | null = null
-		try {
-			const deal = await mutateSales(accessToken, saved.current)
-			saved.current = null
-			toast.success('Изменения сохранены')
-			completed = deal
-		} catch (cause) {
-			const failure =
-				cause instanceof AuthenticatedApiError
-					? cause
-					: new AuthenticatedApiError(
-							'temporary',
-							'Не удалось подтвердить сохранение. Повторите тот же запрос.'
-						)
-			if (failure.kind !== 'temporary') saved.current = null
-			setError(failure)
-			toast.error(failure.message)
+	const { session, sessionRevision } = useSessionStore()
+	const owner = commandOwner(session?.userId, sessionRevision)
+	const command = useMemoryCommand<SalesCommand, SalesDeal>(
+		{ owner, workspaceId, view },
+		`sales:${intent}`,
+		enabled,
+		async () => {
+			if (!navigator.onLine)
+				throw new AuthenticatedApiError(
+					'temporary',
+					'Нет подключения к сети.'
+				)
+			const permissions = await getCrmPermissions(accessToken, workspaceId)
+			const current = useSessionStore.getState()
 			if (
-				failure.kind === 'unauthorized' &&
-				useSessionStore.getState().session?.accessToken === accessToken &&
-				useSessionStore.getState().sessionRevision === sessionRevision
+				!current.session ||
+				current.session.accessToken !== accessToken ||
+				current.sessionRevision !== sessionRevision ||
+				permissions.subject !== current.session.userId
 			)
-				useSessionStore.getState().setAnonymous()
-		} finally {
-			inFlight.current = false
-			setPending(false)
+				throw new AuthenticatedApiError(
+					'unauthorized',
+					'Сессия изменилась.'
+				)
+			if (
+				permissions.state === 'READ_ONLY' ||
+				!permissions.permissions.includes('sales:write')
+			)
+				throw new AuthenticatedApiError(
+					'forbidden',
+					'Изменения недоступны для текущей роли или подписки.'
+				)
+			return current.session.accessToken
+		},
+		async (token, pending) => {
+			try {
+				return await mutateSales(token, pending)
+			} catch (error) {
+				const current = useSessionStore.getState()
+				if (
+					error instanceof AuthenticatedApiError &&
+					error.kind === 'unauthorized' &&
+					current.session?.accessToken === token &&
+					current.sessionRevision === sessionRevision
+				)
+					current.setAnonymous()
+				throw error
+			}
+		},
+		result => {
+			toast.success('Изменения сохранены')
+			onSuccess(result)
 		}
-		if (completed) onSuccess(completed)
+	)
+	const execute = async (mutation?: SalesMutation) => {
+		if (blocked) return
+		await command.execute(
+			mutation
+				? () => ({ workspaceId, commandId: crypto.randomUUID(), mutation })
+				: undefined
+		)
 	}
-	const resetAfterReview = () => {
-		if (inFlight.current || saved.current) return
-		setError(null)
-		toast('Данные обновлены. Проверьте форму перед сохранением.')
-	}
-	const canClose = () => {
-		if (inFlight.current || saved.current) {
+	const blocked =
+		!!command.error &&
+		command.error.kind !== 'validation' &&
+		!command.uncertain
+	return {
+		execute,
+		pending: command.running,
+		error: command.error,
+		ambiguous: command.uncertain,
+		blocked,
+		canRetry: enabled && !command.running && !blocked,
+		locked: command.locked || blocked || !enabled,
+		resetAfterReview: () => {
+			if (command.reset())
+				toast('Данные обновлены. Проверьте форму перед сохранением.')
+		},
+		canClose: () => {
+			if (!command.locked) return true
 			toast('Сначала подтвердите результат сохранения повторным запросом.')
 			return false
 		}
-		return true
-	}
-	return {
-		execute,
-		pending,
-		error,
-		ambiguous,
-		blocked,
-		canRetry: enabled && !pending && !blocked,
-		locked: pending || ambiguous || blocked || !enabled,
-		resetAfterReview,
-		canClose
 	}
 }
