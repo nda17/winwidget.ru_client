@@ -7,6 +7,7 @@ import {
 	type TeamRow
 } from '@/entities/crm-team'
 import { useSessionStore } from '@/entities/session'
+import { CrmCommercialPolicyCard } from '@/features/view-crm-commercial-policy'
 import {
 	TeamEditor,
 	useTeamSession,
@@ -313,6 +314,7 @@ const SettingsScreen = () => {
 					</div>
 				}
 			/>
+			<CrmCommercialPolicyCard />
 			{!context.confirmed ? (
 				<ScreenState
 					variant={context.permissions.isError ? 'error' : 'loading'}

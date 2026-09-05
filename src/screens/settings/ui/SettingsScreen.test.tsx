@@ -12,6 +12,9 @@ import { listTeamRecords, type TeamPage } from '@/entities/crm-team'
 import { useTeamSession } from '@/features/manage-team'
 import SettingsScreen from './SettingsScreen'
 
+vi.mock('@/features/view-crm-commercial-policy', () => ({
+	CrmCommercialPolicyCard: () => <div>Опубликованные условия WinCRM</div>
+}))
 vi.mock('@/entities/crm-team', async original => ({
 	...(await original<object>()),
 	listTeamRecords: vi.fn()
@@ -134,6 +137,7 @@ describe('Real CRM team settings', () => {
 		)
 		expect(listTeamRecords).not.toHaveBeenCalled()
 		expect(screen.queryByText('Анна')).toBeNull()
+		expect(screen.getByText('Опубликованные условия WinCRM')).toBeTruthy()
 	})
 	it('hides previously loaded employees during fresh permission verification', async () => {
 		const mounted = render(view())
