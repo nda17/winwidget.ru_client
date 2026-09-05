@@ -3,7 +3,8 @@
 import {
 	getInboxEntry,
 	listIntakeActivities,
-	mutateInbox
+	mutateInbox,
+	type IntakeActivity
 } from '@/entities/intake'
 import {
 	Button,
@@ -19,6 +20,8 @@ import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import type { IntakeAccess } from '../model/use-intake-access'
 import { useIntakeCommand } from '../model/use-intake-command'
+import { useInboxAcceptance } from '../model/use-inbox-acceptance'
+import { InboxAcceptancePanel } from './InboxAcceptancePanel'
 import styles from './IntakeForms.module.scss'
 
 interface Props {
@@ -40,6 +43,15 @@ const statusName = {
 	NEW: 'Новое',
 	ACCEPTED: 'Принято в работу',
 	REJECTED: 'Отклонено'
+}
+const activityName: Record<IntakeActivity['action'], string> = {
+	CREATED: 'Обращение создано',
+	REJECTED: 'Обращение отклонено',
+	ACCEPTANCE_REQUESTED: 'Запрошено принятие в работу',
+	ACCEPTANCE_RETRIED: 'Запрошена повторная обработка',
+	ACCEPTANCE_RECOVERY_REQUESTED: 'Запрошена безопасная остановка',
+	ACCEPTANCE_CANCELLED: 'Обработка остановлена',
+	ACCEPTED: 'Обращение принято в работу'
 }
 
 export const InboxEditor = ({ access, id, onClose, onSaved }: Props) => {
@@ -105,15 +117,20 @@ export const InboxEditor = ({ access, id, onClose, onSaved }: Props) => {
 		},
 		`inbox:${id ?? 'new'}`
 	)
+	const acceptance = useInboxAcceptance(access, id)
 	const denied =
 		!command.uncertain &&
 		command.error &&
 		['unauthorized', 'forbidden'].includes(command.error.kind)
 	const conflict = !command.uncertain && command.error?.kind === 'conflict'
 	const editable =
-		access.canWrite && !command.locked && !denied && !conflict
+		access.canWrite &&
+		!command.locked &&
+		!denied &&
+		!conflict &&
+		!acceptance.blocksEntry
 	const close = () => {
-		if (command.locked) {
+		if (command.locked || acceptance.command.locked) {
 			toast(
 				'Сначала повторите запрос с неизвестным результатом. Сохранены те же поля и ключ команды.'
 			)
@@ -123,7 +140,7 @@ export const InboxEditor = ({ access, id, onClose, onSaved }: Props) => {
 	}
 	const submit = form.handleSubmit(
 		draft => {
-			if (!access.canWrite || denied || conflict) return
+			if (!editable) return
 			void command.run(() =>
 				id
 					? {
@@ -235,21 +252,30 @@ export const InboxEditor = ({ access, id, onClose, onSaved }: Props) => {
 										</div>
 									))}
 								</dl>
+								<InboxAcceptancePanel
+									key={access.scopeKey}
+									access={access}
+									entry={entry}
+									context={acceptance}
+									competingCommand={command.locked || rejecting}
+								/>
 								{entry.status === 'NEW' ? (
 									<div className={styles.actions}>
-										<Button
-											disabled
-											title="Будет доступно после подключения создания контакта и сделки"
-										>
-											Принять в работу — скоро
-										</Button>
 										{access.canWrite && !rejecting ? (
 											<Button
 												variant="danger"
-												disabled={command.locked}
+												disabled={command.locked || acceptance.blocksEntry}
 												onClick={() => setRejecting(true)}
 											>
 												Отклонить
+											</Button>
+										) : null}
+										{rejecting && !command.locked ? (
+											<Button
+												variant="secondary"
+												onClick={() => setRejecting(false)}
+											>
+												Отменить отклонение
 											</Button>
 										) : null}
 									</div>
@@ -370,7 +396,12 @@ export const InboxEditor = ({ access, id, onClose, onSaved }: Props) => {
 								<Button
 									type="submit"
 									isLoading={command.running}
-									disabled={!access.canWrite || !!denied || conflict}
+									disabled={
+										!access.canWrite ||
+										!!denied ||
+										conflict ||
+										acceptance.blocksEntry
+									}
 								>
 									{command.uncertain
 										? 'Повторить тот же запрос'
@@ -404,11 +435,7 @@ export const InboxEditor = ({ access, id, onClose, onSaved }: Props) => {
 										<ol>
 											{history.data.items.map(item => (
 												<li key={item.id}>
-													<strong>
-														{item.action === 'CREATED'
-															? 'Обращение создано'
-															: 'Обращение отклонено'}
-													</strong>
+													<strong>{activityName[item.action]}</strong>
 													{new Date(item.createdAt).toLocaleString(
 														'ru-RU'
 													)}{' '}
@@ -459,7 +486,7 @@ export const InboxEditor = ({ access, id, onClose, onSaved }: Props) => {
 				) : null}
 				<Button
 					variant="secondary"
-					disabled={command.running}
+					disabled={command.running || acceptance.command.running}
 					onClick={close}
 				>
 					Закрыть

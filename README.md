@@ -5,7 +5,8 @@
 
 ## Текущий статус
 
-Сейчас реализован локальный contract-neutral frontend-фундамент:
+Сейчас реализованы локальный frontend-фундамент и первые реальные CRM-сценарии.
+Это ещё не завершённый MVP и не production-релиз:
 
 - фирменные design tokens и базовый UI kit;
 - адаптивный `AppShell` с sidebar, topbar и мобильной навигацией;
@@ -13,8 +14,17 @@
   «Аналитика» и «Настройки»;
 - переиспользуемые таблица, readonly Kanban, drawer и поля форм;
 - loading, empty, error, read-only и permission-denied состояния;
-- CRM-доменные демонстрационные экраны по-прежнему используют только
-  синтетические локальные fixtures без persistence и финальных DTO;
+- контакты/компании, сделки, следующие действия, входящие и агрегированная
+  аналитика работают через собственные CRM API; поиск и пагинация серверные,
+  данные и query keys ограничены пользователем, workspace и текущими правами;
+- ручное создание/отклонение обращений и управление API-источниками используют
+  UUID-команды, CAS и точные runtime parsers без утечки ключа источника;
+- принятие обращения запускает durable workflow: явный выбор существующего
+  контакта или создание из обращения, сделка в открытом этапе и обязательная
+  первая задача. Ответ `202` означает только принятие запроса; завершение,
+  повтор и безопасная остановка показываются по состоянию `crm-intake`;
+- приглашения/управление командой, CSV, экспорт, оплата и native Widgets
+  connector ещё не завершены; их наличие нельзя выводить из UI-каркасов;
 - frontend entry/session gate через существующий Identity refresh contract:
   рабочее пространство не рендерится до проверки, `401` переводит на общий
   вход, а сетевые и серверные ошибки остаются на retry-экране;
@@ -148,16 +158,16 @@ docker run --rm -p 3001:3000 wincrm-client:local
 
 ```text
 src/app       Next.js routes, layouts и providers
-src/screens   композиция contract-neutral CRM-экранов и локальные fixtures
+src/screens   композиция CRM-экранов
 src/features  пользовательские CRM-действия
 src/entities  workspace, contact, deal, task и другие доменные модели
 src/shared    UI kit и общие библиотеки
 src/widgets   AppShell и крупные самостоятельные UI-блоки
 ```
 
-В `entities` находятся строгие runtime parsers сессии, CRM access и каталога
-шаблонов. В `features` изолированы session bootstrap и CRM access gate. DTO
-остальных CRM-разделов заранее не создаются.
+В `entities` находятся строгие runtime parsers сессии, CRM access, каталога и
+подключённых доменных API. В `features` изолированы entry/access gates и
+пользовательские команды; DTO добавляются только по согласованным контрактам.
 
 Текущее направление зависимостей:
 `app → screens/features/widgets → entities/shared`. Срезы экспортируют публичный
@@ -199,22 +209,32 @@ frontend не используется. Текущий bootstrap-экран не
 
 Workflow не содержит SSH, production secrets, Compose или VPS deploy.
 
-## Будущие integration gates
+## Оставшиеся integration gates
 
-До подключения остальных CRM endpoint необходимо отдельно согласовать и
-реализовать:
+Перед выпуском необходимо завершить и проверить:
 
 - последующие onboarding-команды после установки выбранного шаблона;
-- единый Gateway prefix `/api/v1/crm/**` с точной маршрутизацией групп ресурсов
+- production Gateway prefix `/api/v1/crm/**` с точной маршрутизацией групп ресурсов
   на `crm-access`, `crm-intake`, `crm-customers`, `crm-sales` и существующий
-  Reporting;
+  сервисы; internal workflow endpoints не публикуются;
 - CORS origin для локального `http://localhost:3001` и production
   `https://crm.winwidget.ru`;
 - приём валидированного `returnUrl` всеми способами входа на `winwidget.ru`;
 - защиту от concurrent refresh race между вкладками и поддоменами;
-- tenant-scoped React Query keys вида
-  `['crm', workspaceId, resource, filters]`;
-- fail-closed permissions и cross-workspace negative tests.
+- сквозные проверки fail-closed permissions, cross-workspace изоляции и
+  адаптивности в браузере на реальном локальном стеке.
+
+Команды с неизвестным результатом сохраняются в memory-only coordinator
+выше access gates: повтор отправляет тот же UUID и immutable payload после
+свежей авторизации. Новая команда не создаётся из-за последующего `401`,
+`403` или `409`. Полный reload/переход на login пока не имеет отдельного
+recovery contract; JWT, PII и ключи источников не переносятся в browser storage.
+
+Входящие блокируют конкурирующее отклонение, пока workflow активен либо его
+состояние не удалось прочитать. `CANCELLED` не удаляет уже созданный контакт;
+новая попытка требует явного выбора контакта. Owner/CRM Admin могут запросить
+остановку, инициатор или администратор — повтор разрешённых сервером состояний.
+В `READ_ONLY` эти изменения запрещены, просмотр состояния сохраняется.
 
 Текущий frontend gate вызывает `POST /api/v1/auth/refresh` с credentials и
 хранит полученный access token только в памяти вкладки. Он считает

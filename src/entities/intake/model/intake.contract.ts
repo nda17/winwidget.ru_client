@@ -49,7 +49,14 @@ export interface IntakeActivity {
 	entityKind: 'entry'
 	commandId: string
 	actorSubject: string
-	action: 'CREATED' | 'REJECTED'
+	action:
+		| 'CREATED'
+		| 'REJECTED'
+		| 'ACCEPTANCE_REQUESTED'
+		| 'ACCEPTANCE_RETRIED'
+		| 'ACCEPTANCE_RECOVERY_REQUESTED'
+		| 'ACCEPTANCE_CANCELLED'
+		| 'ACCEPTED'
 	entityVersion: number
 	createdAt: string
 }
@@ -217,7 +224,15 @@ export const parseIntakeActivity = (
 		value.entityKind !== 'entry' ||
 		!isUuidV4(value.commandId) ||
 		!isNonEmptyString(value.actorSubject, 256) ||
-		!['CREATED', 'REJECTED'].includes(String(value.action)) ||
+		![
+			'CREATED',
+			'REJECTED',
+			'ACCEPTANCE_REQUESTED',
+			'ACCEPTANCE_RETRIED',
+			'ACCEPTANCE_RECOVERY_REQUESTED',
+			'ACCEPTANCE_CANCELLED',
+			'ACCEPTED'
+		].includes(String(value.action)) ||
 		!version(value.entityVersion) ||
 		!isIsoDate(value.createdAt)
 	)
