@@ -6,15 +6,27 @@ import {
 	useQueryClient
 } from '@tanstack/react-query'
 import type { PropsWithChildren } from 'react'
-import { useEffect, useRef, useState } from 'react'
+import {
+	Suspense,
+	useEffect,
+	useLayoutEffect,
+	useRef,
+	useState
+} from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 
 import {
 	canOpenCrmWorkspace,
+	getCrmPermissions,
 	CrmWorkspaceAccessProvider
 } from '@/entities/crm-access'
 import { useSessionStore } from '@/entities/session'
-import { AuthenticatedApiError } from '@/shared/api/authenticated-http-client'
+import {
+	AuthenticatedApiError,
+	invalidContractError
+} from '@/shared/api/authenticated-http-client'
+import { isUuidV4 } from '@/shared/lib/contract'
 import { Button, ScreenState, SelectField } from '@/shared/ui'
 
 import {
@@ -65,27 +77,118 @@ const blockedCopy = {
 	SUSPENDED: ['Доступ приостановлен', 'Рабочая область закрыта.']
 } as const
 
-export const AccessGate = ({ children }: PropsWithChildren) => {
+export const AccessGate = ({ children }: PropsWithChildren) => (
+	<Suspense
+		fallback={
+			<div className={styles.gate}>
+				<ScreenState
+					variant="loading"
+					title="Проверяем рабочее пространство"
+				/>
+			</div>
+		}
+	>
+		<WorkspaceAccessGate>{children}</WorkspaceAccessGate>
+	</Suspense>
+)
+
+const WorkspaceAccessGate = ({ children }: PropsWithChildren) => {
 	const session = useSessionStore(state => state.session)
 	const sessionRevision = useSessionStore(state => state.sessionRevision)
 	const setAnonymous = useSessionStore(state => state.setAnonymous)
 	const queryClient = useQueryClient()
-	const [workspaceId, setWorkspaceId] = useState<string>()
-	const [choice, setChoice] = useState('')
+	const searchParams = useSearchParams()
+	const pathname = usePathname()
+	const router = useRouter()
+	const targets = searchParams.getAll('workspaceId')
+	const invalidTarget =
+		targets.length > 1 || (targets.length === 1 && !isUuidV4(targets[0]))
+	const selectionOwner = JSON.stringify([session?.userId, sessionRevision])
+	const requestedWorkspaceId =
+		targets.length === 1 && !invalidTarget ? targets[0] : undefined
+	const [selection, setSelection] = useState<{
+		owner: string
+		id?: string
+		query?: string
+	}>({
+		owner: selectionOwner,
+		id: requestedWorkspaceId,
+		query: requestedWorkspaceId
+	})
+	// Keep the validated choice through sidebar links that omit the query, but
+	// never reuse a previous account's selection. Adjust before rendering children.
+	if (
+		selection.owner !== selectionOwner ||
+		selection.query !== requestedWorkspaceId
+	)
+		setSelection({
+			owner: selectionOwner,
+			id:
+				requestedWorkspaceId ??
+				(selection.owner === selectionOwner ? selection.id : undefined),
+			query: requestedWorkspaceId
+		})
+	const workspaceId =
+		requestedWorkspaceId ??
+		(selection.owner === selectionOwner ? selection.id : undefined)
+	const selectWorkspace = (selected?: string) => {
+		setSelection({
+			owner: selectionOwner,
+			id: selected,
+			query: requestedWorkspaceId
+		})
+		const nextParams = new URLSearchParams(searchParams.toString())
+		if (selected) nextParams.set('workspaceId', selected)
+		else nextParams.delete('workspaceId')
+		router.replace(
+			`${pathname}${nextParams.size ? `?${nextParams.toString()}` : ''}`,
+			{ scroll: false }
+		)
+	}
+	const choiceScope = JSON.stringify([selectionOwner, workspaceId])
+	const [choice, setChoice] = useState({ scope: choiceScope, value: '' })
 	const commandIdRef = useRef<string | undefined>(undefined)
 	useEffect(() => {
 		commandIdRef.current = undefined
-	}, [session?.userId, sessionRevision])
+	}, [session?.userId, sessionRevision, workspaceId])
 	const accessKey = crmAccessQueryKey(
 		session?.userId ?? '',
 		sessionRevision,
 		workspaceId
 	)
+	const accessScope = JSON.stringify([accessKey, invalidTarget])
+	const currentAccessScope = useRef<string | null>(null)
+	useLayoutEffect(() => {
+		currentAccessScope.current = accessScope
+		return () => {
+			currentAccessScope.current = null
+		}
+	}, [accessScope])
 	const access = useQuery({
 		queryKey: accessKey,
-		queryFn: () =>
-			getCrmAccessBootstrap(session!.accessToken, workspaceId),
-		enabled: Boolean(session),
+		queryFn: async () => {
+			const bootstrap = await getCrmAccessBootstrap(
+				session!.accessToken,
+				workspaceId
+			)
+			if (workspaceId) {
+				if (
+					bootstrap.state === 'WORKSPACE_SELECTION_REQUIRED' ||
+					bootstrap.selectedWorkspaceId !== workspaceId
+				)
+					throw invalidContractError()
+				if (canOpenCrmWorkspace(bootstrap)) {
+					const permissions = await getCrmPermissions(
+						session!.accessToken,
+						workspaceId
+					)
+					if (permissions.subject !== session!.userId)
+						throw invalidContractError()
+				}
+			}
+			return bootstrap
+		},
+		enabled: Boolean(session) && !invalidTarget,
 		retry: false
 	})
 
@@ -112,10 +215,17 @@ export const AccessGate = ({ children }: PropsWithChildren) => {
 			request: SessionOwnedRequest<
 				{ workspaceId: string; commandId: string },
 				Awaited<ReturnType<typeof activateCrmTrial>>
-			> & { accessKey: ReturnType<typeof crmAccessQueryKey> }
+			> & {
+				accessKey: ReturnType<typeof crmAccessQueryKey>
+				accessScope: string
+			}
 		) => request.execute(),
 		onSuccess: (result, request) => {
-			if (!request.isCurrent()) return
+			if (
+				!request.isCurrent() ||
+				currentAccessScope.current !== request.accessScope
+			)
+				return
 			queryClient.setQueryData(request.accessKey, result)
 			commandIdRef.current = undefined
 			toast.success(
@@ -125,7 +235,11 @@ export const AccessGate = ({ children }: PropsWithChildren) => {
 			)
 		},
 		onError: (error, request) => {
-			if (!request.isCurrent()) return
+			if (
+				!request.isCurrent() ||
+				currentAccessScope.current !== request.accessScope
+			)
+				return
 			if (
 				error instanceof AuthenticatedApiError &&
 				error.kind === 'unauthorized'
@@ -143,7 +257,31 @@ export const AccessGate = ({ children }: PropsWithChildren) => {
 			}
 		}
 	})
+	const currentTrial = trial.variables?.accessScope === accessScope
+	const trialFailed = currentTrial && trial.isError
+	const trialPending = currentTrial && trial.isPending
 
+	if (invalidTarget)
+		return (
+			<div className={styles.gate}>
+				<ScreenState
+					variant="permission"
+					title="Некорректное рабочее пространство"
+					description="Ссылка не содержит единственный допустимый идентификатор. Личное пространство не выбирается автоматически."
+					action={
+						<Button
+							variant="secondary"
+							onClick={() => {
+								toast('Переходим к выбору рабочего пространства')
+								selectWorkspace()
+							}}
+						>
+							Выбрать пространство
+						</Button>
+					}
+				/>
+			</div>
+		)
 	if (!session || access.isPending)
 		return (
 			<div className={styles.gate}>
@@ -177,7 +315,10 @@ export const AccessGate = ({ children }: PropsWithChildren) => {
 			</div>
 		)
 	if (data.state === 'WORKSPACE_SELECTION_REQUIRED') {
-		const selected = choice || data.workspaces[0]?.workspaceId || ''
+		const selected =
+			(choice.scope === choiceScope ? choice.value : '') ||
+			data.workspaces[0]?.workspaceId ||
+			''
 		return (
 			<div className={styles.gate}>
 				<div className={styles.panel}>
@@ -195,13 +336,18 @@ export const AccessGate = ({ children }: PropsWithChildren) => {
 								return
 							toast('Проверяем доступ рабочего пространства')
 							if (workspaceId === selected) void access.refetch()
-							else setWorkspaceId(selected)
+							else selectWorkspace(selected)
 						}}
 					>
 						<SelectField
 							label="Рабочее пространство"
 							value={selected}
-							onChange={event => setChoice(event.target.value)}
+							onChange={event =>
+								setChoice({
+									scope: choiceScope,
+									value: event.target.value
+								})
+							}
 						>
 							{data.workspaces.map(item => (
 								<option value={item.workspaceId} key={item.workspaceId}>
@@ -255,7 +401,7 @@ export const AccessGate = ({ children }: PropsWithChildren) => {
 					variant="permission"
 					title="WinCRM ещё не активирована"
 					description={
-						trial.isError
+						trialFailed
 							? 'Запустить бесплатный период не удалось. Повторите запрос: будет использован тот же идентификатор команды.'
 							: data.membership.role === 'OWNER'
 								? 'Бесплатный период запускается только по вашему явному действию.'
@@ -266,12 +412,13 @@ export const AccessGate = ({ children }: PropsWithChildren) => {
 							disabled={
 								data.membership.role !== 'OWNER' || access.isFetching
 							}
-							isLoading={trial.isPending || access.isFetching}
+							isLoading={trialPending || access.isFetching}
 							onClick={() => {
 								if (access.isFetching) return
 								commandIdRef.current ??= crypto.randomUUID()
 								trial.mutate({
 									accessKey,
+									accessScope,
 									...sessionOwnedRequest(
 										session,
 										sessionRevision,
@@ -284,7 +431,7 @@ export const AccessGate = ({ children }: PropsWithChildren) => {
 								})
 							}}
 						>
-							{trial.isError
+							{trialFailed
 								? 'Повторить запуск бесплатных 5 дней'
 								: 'Попробовать бесплатно 5 дней'}
 						</Button>

@@ -12,7 +12,10 @@ import toast from 'react-hot-toast'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useSessionStore } from '@/entities/session'
-import { useCrmWorkspaceAccess } from '@/entities/crm-access'
+import {
+	getCrmPermissions,
+	useCrmWorkspaceAccess
+} from '@/entities/crm-access'
 import { CrmAppShell } from '@/widgets/crm-app-shell'
 import { AuthenticatedApiError } from '@/shared/api/authenticated-http-client'
 import {
@@ -39,7 +42,31 @@ vi.mock('../api/crm-access.api', () => ({
 	getPipelineTemplates: vi.fn(),
 	installCrmTemplate: vi.fn()
 }))
-vi.mock('next/navigation', () => ({ usePathname: () => '/inbox' }))
+vi.mock('@/entities/crm-access', async importOriginal => ({
+	...(await importOriginal<typeof import('@/entities/crm-access')>()),
+	getCrmPermissions: vi.fn()
+}))
+vi.mock('next/navigation', async () => {
+	const React = await import('react')
+	return {
+		usePathname: () => '/inbox',
+		useSearchParams: () => {
+			const [search, setSearch] = React.useState(window.location.search)
+			React.useEffect(() => {
+				const update = () => setSearch(window.location.search)
+				window.addEventListener('popstate', update)
+				return () => window.removeEventListener('popstate', update)
+			}, [])
+			return new URLSearchParams(search)
+		},
+		useRouter: () => ({
+			replace: (url: string) => {
+				window.history.replaceState({}, '', url)
+				window.dispatchEvent(new PopStateEvent('popstate'))
+			}
+		})
+	}
+})
 vi.mock('react-hot-toast', () => ({
 	default: Object.assign(vi.fn(), {
 		loading: vi.fn(() => 'install-toast'),
@@ -154,6 +181,123 @@ const WorkspacePermissions = () => {
 }
 
 describe('AccessGate', () => {
+	it.each([
+		['workspace', 'success'],
+		['workspace', 'unauthorized'],
+		['unmount', 'success'],
+		['unmount', 'unauthorized']
+	] as const)(
+		'ignores late Trial %s/%s effects without overwriting another workspace command',
+		async (boundary, outcome) => {
+			const nextWorkspace = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+			const inactive = (target: string) => ({
+				...base,
+				selectedWorkspaceId: target,
+				workspaces: [
+					{ workspaceId: target, membershipId, role: 'OWNER' as const }
+				],
+				state: 'NOT_ACTIVATED' as const,
+				entitlementStatus: 'NOT_ACTIVATED' as const,
+				entitlement: null,
+				access: null
+			})
+			window.history.replaceState(
+				{},
+				'',
+				`/inbox?workspaceId=${workspaceId}`
+			)
+			vi.mocked(getCrmAccessBootstrap).mockImplementation(
+				async (_token, target) => inactive(target!)
+			)
+			let finish!: () => void
+			vi.mocked(activateCrmTrial)
+				.mockImplementationOnce(
+					() =>
+						new Promise((resolve, reject) => {
+							finish = () =>
+								outcome === 'success'
+									? resolve({ ...onboardingAccess, activated: true })
+									: reject(
+											new AuthenticatedApiError(
+												'unauthorized',
+												'old workspace 401'
+											)
+										)
+						})
+				)
+				.mockRejectedValue(
+					new AuthenticatedApiError('temporary', 'new workspace unknown')
+				)
+			const rendered = render(
+				<AccessGate>
+					<div>workspace</div>
+				</AccessGate>,
+				{ wrapper: Wrapper }
+			)
+			fireEvent.click(
+				await screen.findByRole('button', {
+					name: 'Попробовать бесплатно 5 дней'
+				})
+			)
+			await waitFor(() =>
+				expect(activateCrmTrial).toHaveBeenCalledTimes(1)
+			)
+			if (boundary === 'unmount') rendered.unmount()
+			else {
+				act(() => {
+					window.history.replaceState(
+						{},
+						'',
+						`/inbox?workspaceId=${nextWorkspace}`
+					)
+					window.dispatchEvent(new PopStateEvent('popstate'))
+				})
+				const nextTrial = await screen.findByRole('button', {
+					name: 'Попробовать бесплатно 5 дней'
+				})
+				expect(nextTrial).toHaveProperty('disabled', false)
+				fireEvent.click(nextTrial)
+				await screen.findByRole('button', {
+					name: 'Повторить запуск бесплатных 5 дней'
+				})
+			}
+			vi.mocked(toast.success).mockClear()
+			vi.mocked(toast.error).mockClear()
+			await act(async () => {
+				finish()
+				await Promise.resolve()
+			})
+			expect(useSessionStore.getState().status).toBe('authenticated')
+			expect(
+				queryClient.getQueryData(
+					crmAccessQueryKey('user-1', 1, workspaceId)
+				)
+			).toEqual(inactive(workspaceId))
+			expect(toast.success).not.toHaveBeenCalled()
+			expect(toast.error).not.toHaveBeenCalled()
+			if (boundary === 'workspace') {
+				expect(
+					queryClient.getQueryData(
+						crmAccessQueryKey('user-1', 1, nextWorkspace)
+					)
+				).toEqual(inactive(nextWorkspace))
+				fireEvent.click(
+					screen.getByRole('button', {
+						name: 'Повторить запуск бесплатных 5 дней'
+					})
+				)
+				await waitFor(() =>
+					expect(activateCrmTrial).toHaveBeenCalledTimes(3)
+				)
+				expect(vi.mocked(activateCrmTrial).mock.calls[2][1]).toEqual(
+					vi.mocked(activateCrmTrial).mock.calls[1][1]
+				)
+				expect(
+					vi.mocked(activateCrmTrial).mock.calls[1][1].commandId
+				).not.toBe(vi.mocked(activateCrmTrial).mock.calls[0][1].commandId)
+			}
+		}
+	)
 	it.each([
 		['trial', 'success'],
 		['trial', 'unauthorized'],
@@ -343,6 +487,7 @@ describe('AccessGate', () => {
 	)
 	beforeEach(() => {
 		vi.clearAllMocks()
+		window.history.replaceState({}, '', '/inbox')
 		Object.defineProperties(HTMLDialogElement.prototype, {
 			showModal: {
 				configurable: true,
@@ -376,6 +521,155 @@ describe('AccessGate', () => {
 		Reflect.deleteProperty(HTMLDialogElement.prototype, 'showModal')
 		Reflect.deleteProperty(HTMLDialogElement.prototype, 'close')
 		queryClient.clear()
+	})
+
+	it.each(['bad-id', `${workspaceId}&workspaceId=${workspaceId}`])(
+		'rejects malformed or repeated target before default workspace lookup: %s',
+		target => {
+			window.history.replaceState({}, '', `/inbox?workspaceId=${target}`)
+			render(
+				<AccessGate>
+					<div>Protected target</div>
+				</AccessGate>,
+				{ wrapper: Wrapper }
+			)
+			expect(
+				screen.getByText('Некорректное рабочее пространство')
+			).toBeTruthy()
+			expect(getCrmAccessBootstrap).not.toHaveBeenCalled()
+			expect(screen.queryByText('Protected target')).toBeNull()
+		}
+	)
+	it('opens the exact requested member workspace only after bootstrap and admission, without personal Trial', async () => {
+		window.history.replaceState(
+			{},
+			'',
+			`/inbox?workspaceId=${workspaceId}`
+		)
+		vi.mocked(getCrmAccessBootstrap).mockResolvedValue({
+			...activeAccess,
+			membership: { membershipId, role: 'MEMBER' }
+		})
+		vi.mocked(getCrmPermissions).mockResolvedValue({
+			subject: 'user-1',
+			role: 'MANAGER'
+		} as never)
+		render(
+			<AccessGate>
+				<div>Protected target</div>
+			</AccessGate>,
+			{ wrapper: Wrapper }
+		)
+		await screen.findByText('Protected target')
+		expect(getCrmAccessBootstrap).toHaveBeenCalledWith(
+			'token',
+			workspaceId
+		)
+		expect(getCrmAccessBootstrap).not.toHaveBeenCalledWith(
+			'token',
+			undefined
+		)
+		expect(getCrmPermissions).toHaveBeenCalledWith('token', workspaceId)
+		expect(activateCrmTrial).not.toHaveBeenCalled()
+	})
+	it('does not substitute a personal workspace if the target is foreign or no CRM role is admitted', async () => {
+		window.history.replaceState(
+			{},
+			'',
+			`/inbox?workspaceId=${workspaceId}`
+		)
+		vi.mocked(getCrmAccessBootstrap).mockResolvedValue(activeAccess)
+		vi.mocked(getCrmPermissions).mockRejectedValue(
+			new AuthenticatedApiError('forbidden', 'No admitted CRM role')
+		)
+		render(
+			<AccessGate>
+				<div>Protected target</div>
+			</AccessGate>,
+			{ wrapper: Wrapper }
+		)
+		await screen.findByText('CRM временно недоступна')
+		expect(screen.queryByText('Protected target')).toBeNull()
+		expect(getCrmAccessBootstrap).not.toHaveBeenCalledWith(
+			'token',
+			undefined
+		)
+		expect(activateCrmTrial).not.toHaveBeenCalled()
+	})
+	it('keeps the chosen workspace across sidebar links but not across a new session', async () => {
+		window.history.replaceState(
+			{},
+			'',
+			`/inbox?workspaceId=${workspaceId}`
+		)
+		vi.mocked(getCrmAccessBootstrap).mockResolvedValue(activeAccess)
+		vi.mocked(getCrmPermissions).mockResolvedValue({
+			subject: 'user-1',
+			role: 'MANAGER'
+		} as never)
+		render(
+			<AccessGate>
+				<div>Protected target</div>
+			</AccessGate>,
+			{ wrapper: Wrapper }
+		)
+		await screen.findByText('Protected target')
+		act(() => {
+			window.history.replaceState({}, '', '/contacts')
+			window.dispatchEvent(new PopStateEvent('popstate'))
+		})
+		expect(screen.getByText('Protected target')).toBeTruthy()
+		expect(getCrmAccessBootstrap).not.toHaveBeenCalledWith(
+			'token',
+			undefined
+		)
+		vi.mocked(getCrmAccessBootstrap).mockResolvedValue({
+			schemaVersion: 1,
+			state: 'WORKSPACE_SELECTION_REQUIRED',
+			selectedWorkspaceId: null,
+			workspaces: []
+		})
+		act(() =>
+			useSessionStore
+				.getState()
+				.setAuthenticated({ userId: 'user-2', accessToken: 'new-token' })
+		)
+		await screen.findByText('Выберите рабочее пространство')
+		expect(getCrmAccessBootstrap).toHaveBeenCalledWith(
+			'new-token',
+			undefined
+		)
+		expect(screen.queryByText('Protected target')).toBeNull()
+	})
+	it('updates the validated target query after an explicit workspace choice', async () => {
+		vi.mocked(getCrmAccessBootstrap).mockImplementation(
+			async (_token, target) =>
+				target
+					? activeAccess
+					: {
+							schemaVersion: 1,
+							state: 'WORKSPACE_SELECTION_REQUIRED',
+							selectedWorkspaceId: null,
+							workspaces: base.workspaces
+						}
+		)
+		vi.mocked(getCrmPermissions).mockResolvedValue({
+			subject: 'user-1',
+			role: 'OWNER'
+		} as never)
+		render(
+			<AccessGate>
+				<div>Protected target</div>
+			</AccessGate>,
+			{ wrapper: Wrapper }
+		)
+		fireEvent.click(
+			await screen.findByRole('button', { name: 'Продолжить' })
+		)
+		await screen.findByText('Protected target')
+		expect(
+			new URLSearchParams(window.location.search).getAll('workspaceId')
+		).toEqual([workspaceId])
 	})
 
 	it('renders confirmed ACTIVE content', async () => {
