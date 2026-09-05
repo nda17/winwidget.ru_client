@@ -20,6 +20,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import toast from 'react-hot-toast'
 import styles from './TasksScreen.module.scss'
+import { ExportRecordsControl } from '@/features/export-records'
 
 const TasksScreen = () => {
 	const context = useSalesSession()
@@ -109,9 +110,12 @@ const TasksScreen = () => {
 				title="Задачи"
 				description="Ближайшие и просроченные действия по открытым сделкам. После завершения запланируйте следующий шаг."
 				actions={
-					<Button variant="secondary" onClick={() => void reload()}>
-						Обновить
-					</Button>
+					<>
+						<ExportRecordsControl entity="tasks" />
+						<Button variant="secondary" onClick={() => void reload()}>
+							Обновить
+						</Button>
+					</>
 				}
 			/>
 			{context.permissions.isError ? (

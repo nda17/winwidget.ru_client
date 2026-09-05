@@ -27,6 +27,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import toast from 'react-hot-toast'
 import styles from './InboxScreen.module.scss'
+import { ExportRecordsControl } from '@/features/export-records'
 
 const statusName = {
 	NEW: 'Новое',
@@ -147,6 +148,10 @@ const InboxScreen = () => {
 				description="Ручные и внешние обращения вашего рабочего пространства. Проверяйте детали и историю, прежде чем продолжить работу с клиентом."
 				actions={
 					<div className={styles.tabs}>
+						<ExportRecordsControl
+							entity="inbox"
+							disabled={denied || tab !== 'inbox'}
+						/>
 						<Button
 							variant="secondary"
 							disabled={

@@ -12,6 +12,7 @@ import {
 } from '@/entities/customer'
 import { useSessionStore } from '@/entities/session'
 import { CustomerEditor } from '@/features/edit-customer'
+import { ExportRecordsControl } from '@/features/export-records'
 import { AuthenticatedApiError } from '@/shared/api/authenticated-http-client'
 import {
 	AppIcon,
@@ -161,13 +162,19 @@ const ContactsScreen = () => {
 				title="Контакты и компании"
 				description="Вся информация о клиентах — в одном месте. Добавляйте контакты, связывайте их с компаниями и сохраняйте важные детали."
 				actions={
-					<Button
-						disabled={!canWrite || permissionError}
-						leadingIcon={<AppIcon name="plus" size={18} />}
-						onClick={() => setSelected({ kind })}
-					>
-						{kind === 'contacts' ? 'Новый контакт' : 'Новая компания'}
-					</Button>
+					<>
+						<ExportRecordsControl
+							entity={kind}
+							disabled={permissionError}
+						/>
+						<Button
+							disabled={!canWrite || permissionError}
+							leadingIcon={<AppIcon name="plus" size={18} />}
+							onClick={() => setSelected({ kind })}
+						>
+							{kind === 'contacts' ? 'Новый контакт' : 'Новая компания'}
+						</Button>
+					</>
 				}
 			/>
 			<div

@@ -28,6 +28,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import toast from 'react-hot-toast'
 import styles from './DealsScreen.module.scss'
+import { ExportRecordsControl } from '@/features/export-records'
 
 const DealsScreen = () => {
 	const context = useSalesSession()
@@ -160,6 +161,7 @@ const DealsScreen = () => {
 				description="Клиенты, этапы продаж и следующее действие по каждой открытой сделке."
 				actions={
 					<>
+						<ExportRecordsControl entity="deals" />
 						<Button
 							variant="secondary"
 							onClick={() => void reload()}
