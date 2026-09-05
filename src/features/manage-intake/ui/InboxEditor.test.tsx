@@ -173,6 +173,12 @@ const mount = (
 	return onClose
 }
 describe('InboxEditor real command states', () => {
+	it('renders CSV provenance without inventing an API source identifier', async () => {
+		vi.mocked(getInboxEntry).mockResolvedValue({ ...entry, origin: 'CSV' })
+		mount(entry.id, false)
+		expect(await screen.findByText('Импорт CSV')).toBeTruthy()
+		expect(screen.queryByText('API · null')).toBeNull()
+	})
 	it('keeps read-only record/history visible and never offers fake acceptance', async () => {
 		mount(entry.id, false)
 		await screen.findByText('Запрос QA')

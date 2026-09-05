@@ -7,6 +7,7 @@ import {
 } from '@/entities/intake'
 import {
 	InboxEditor,
+	CsvImportDrawer,
 	SourcesPanel,
 	useIntakeAccess
 } from '@/features/manage-intake'
@@ -41,6 +42,7 @@ const InboxScreen = () => {
 	const [status, setStatus] = useState<InboxStatus | ''>('NEW')
 	const [page, setPage] = useState(1)
 	const [selected, setSelected] = useState<{ id?: string } | null>(null)
+	const [importing, setImporting] = useState(false)
 	const query = useQuery({
 		queryKey: [
 			'crm-inbox',
@@ -97,7 +99,8 @@ const InboxScreen = () => {
 		{
 			id: 'origin',
 			header: 'Источник',
-			render: entry => (entry.origin === 'MANUAL' ? 'Вручную' : 'API')
+			render: entry =>
+				({ MANUAL: 'Вручную', API: 'API', CSV: 'CSV' })[entry.origin]
 		},
 		{
 			id: 'status',
@@ -143,13 +146,30 @@ const InboxScreen = () => {
 				title="Входящие"
 				description="Ручные и внешние обращения вашего рабочего пространства. Проверяйте детали и историю, прежде чем продолжить работу с клиентом."
 				actions={
-					<Button
-						disabled={!access.canWrite || denied || tab !== 'inbox'}
-						leadingIcon={<AppIcon name="plus" size={18} />}
-						onClick={() => setSelected({})}
-					>
-						Новое обращение
-					</Button>
+					<div className={styles.tabs}>
+						<Button
+							variant="secondary"
+							disabled={
+								!access.canWrite ||
+								access.permissions.data?.role === 'ANALYST' ||
+								denied ||
+								tab !== 'inbox'
+							}
+							onClick={() => {
+								toast('Открываем проверку CSV')
+								setImporting(true)
+							}}
+						>
+							Импорт CSV
+						</Button>
+						<Button
+							disabled={!access.canWrite || denied || tab !== 'inbox'}
+							leadingIcon={<AppIcon name="plus" size={18} />}
+							onClick={() => setSelected({})}
+						>
+							Новое обращение
+						</Button>
+					</div>
 				}
 			/>
 			<div
@@ -291,6 +311,13 @@ const InboxScreen = () => {
 					access={access}
 					id={selected.id}
 					onClose={() => setSelected(null)}
+					onSaved={onSaved}
+				/>
+			) : null}
+			{importing && access.session ? (
+				<CsvImportDrawer
+					access={access}
+					onClose={() => setImporting(false)}
 					onSaved={onSaved}
 				/>
 			) : null}

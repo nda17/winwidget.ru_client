@@ -235,7 +235,9 @@ export const InboxEditor = ({ access, id, onClose, onSaved }: Props) => {
 											'Источник',
 											entry.origin === 'MANUAL'
 												? 'Добавлено вручную'
-												: `API · ${entry.sourceId}`
+												: entry.origin === 'CSV'
+													? 'Импорт CSV'
+													: `API · ${entry.sourceId}`
 										],
 										[
 											'Получено',

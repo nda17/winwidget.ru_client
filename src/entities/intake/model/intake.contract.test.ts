@@ -51,6 +51,23 @@ describe('Intake exact workspace-bound contracts', () => {
 		expect(parseInboxEntry(entry, workspaceId)).toEqual(entry)
 		expect(parseIntakeSource(source, workspaceId)).toEqual(source)
 	})
+	it('accepts additive CSV origin only without an API source while retaining original fields', () => {
+		expect(
+			parseInboxEntry({ ...entry, origin: 'CSV' }, workspaceId)
+		).toEqual({ ...entry, origin: 'CSV' })
+		expect(
+			parseInboxEntry(
+				{ ...entry, origin: 'CSV', sourceId: id },
+				workspaceId
+			)
+		).toBeNull()
+		expect(
+			parseInboxEntry(
+				{ ...entry, origin: 'CSV', importId: id },
+				workspaceId
+			)
+		).toBeNull()
+	})
 	it.each([
 		{ ...entry, workspaceId: id },
 		{ ...entry, version: 0 },

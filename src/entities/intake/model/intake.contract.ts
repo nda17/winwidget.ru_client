@@ -15,7 +15,7 @@ export interface InboxEntry {
 	phone: string | null
 	email: string | null
 	message: string | null
-	origin: 'MANUAL' | 'API'
+	origin: 'MANUAL' | 'API' | 'CSV'
 	sourceId: string | null
 	status: InboxStatus
 	createdBySubject: string
@@ -132,6 +132,7 @@ export const parseInboxEntry = (
 		return null
 	if (
 		!(value.origin === 'MANUAL' && value.sourceId === null) &&
+		!(value.origin === 'CSV' && value.sourceId === null) &&
 		!(value.origin === 'API' && isUuidV4(value.sourceId))
 	)
 		return null
