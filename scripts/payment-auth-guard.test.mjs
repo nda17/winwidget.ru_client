@@ -1,11 +1,11 @@
+import { resolveWorkspaceSource } from './resolve-workspace-source.mjs'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import ts from 'typescript'
 
-const pricingPath = new URL(
-	'../src/screens/payment/ui/pricing/Pricing.tsx',
-	import.meta.url
+const pricingPath = resolveWorkspaceSource(
+	'src/screens/payment/ui/pricing/Pricing.tsx'
 )
 
 const sourceText = await readFile(pricingPath, 'utf8')

@@ -1,12 +1,20 @@
-# Winwidget — фронтенд
+# WinWidget Frontends
 
-Фронтенд-приложение коммерческого сервиса Winwidget: публичный сайт, авторизация,
-личный кабинет, административная панель, настройка виджетов, единая страница
-заявок и публичные страницы предпросмотра.
+Монорепозиторий `winwidget.ru_frontends` на базе существующего
+`winwidget.ru_client`: четыре независимых Next.js приложения, единая установка
+pnpm и общие build-time пакеты. Это не единый frontend runtime.
 
-Приложение построено на Next.js 14 с App Router, использует архитектуру
-Feature-Sliced Design (FSD), адаптированную под Next.js App Router, и
-взаимодействует с бэкендом через HTTP API.
+| Приложение         | Назначение и production URL                                                       | Локальный порт |
+| ------------------ | --------------------------------------------------------------------------------- | -------------- |
+| `apps/landing`     | Лендинг WinWidget: `winwidget.ru`                                                 | 3000           |
+| `apps/widgets`     | Рабочее приложение WinWidget: прежние `/cabinet`, auth, payment, заявки и preview | 3002           |
+| `apps/admin-panel` | Общая админка WinWidget и WinCRM: `/admin`                                        | 3003           |
+| `apps/crm`         | WinCRM: `crm.winwidget.ru`                                                        | 3001           |
+
+Первые три приложения сохраняют Next.js 14 / React 18. CRM сохраняет собственные
+Next.js 16 / React 19 и FSD-границы; объединение репозиториев не обновляет
+платформенные зависимости существующего продукта. Детали CRM — в
+[apps/crm/README.md](apps/crm/README.md).
 
 ## Технологический стек
 
@@ -60,19 +68,17 @@ Feature-Sliced Design (FSD), адаптированную под Next.js App Rou
 ## Структура слоёв
 
 ```text
-src/
-├── app/          # маршруты, макеты, метаданные, провайдеры и оболочка приложения
-├── screens/      # композиции полноценных экранов
-├── features/     # пользовательские сценарии и действия
-├── entities/     # бизнес-сущности, их model, api и ui
-├── shared/
-│   ├── api/      # клиенты Axios, перехватчики и хранилище токенов
-│   ├── assets/   # общие изображения
-│   ├── config/   # конфигурация API и маршрутов
-│   ├── lib/      # независимые хуки, хранилища и вспомогательные функции
-│   ├── types/    # общие типы и глобальные декларации
-│   └── ui/       # переиспользуемые компоненты интерфейса
-└── middleware.ts # обязательная точка входа промежуточного ПО Next.js
+apps/
+├── landing/src/{app,screens}
+├── widgets/src/{app,screens,middleware.ts}
+├── admin-panel/src/{app,screens,middleware.ts}
+└── crm/src/{app,screens,widgets,features,entities,shared}
+packages/
+└── winwidget-web/src/{app,screens,features,entities,shared}
+public/                 # исходные общие public assets первых трёх приложений
+scripts/                # проверки, синхронизация assets, упаковка и deploy
+pnpm-workspace.yaml
+pnpm-lock.yaml          # единственный lockfile
 ```
 
 Направление зависимостей:
@@ -84,7 +90,7 @@ app -> screens -> features -> entities -> shared
 Стандартный FSD-слой `pages` заменён на `screens`, потому что маршрутизация
 принадлежит Next.js App Router в `src/app`.
 
-FSD-слой `widgets` намеренно не используется. В этом проекте слово «виджет»
+В первых трёх приложениях FSD-слой `widgets` намеренно не используется. Здесь слово «виджет»
 уже обозначает продуктовую сущность Winwidget и отдельные исполняемые скрипты,
 поэтому архитектурный слой с тем же именем создавал бы двусмысленные пути и
 нейминг. Крупные экранные композиции находятся в `screens`, бизнес-сущность —
@@ -155,9 +161,25 @@ FSD-слой `widgets` намеренно не используется. В эт
 клиентского `index.ts`, например через `server.ts` и `actions.ts`. Это не
 позволяет случайно включить серверный код в клиентскую сборку.
 
-## Маршруты Next.js
+## Независимость приложений и маршруты
 
-`src/app` отвечает за URL, макеты, метаданные и инициализацию приложения.
+В `apps/*` находятся собственные routes, layouts и экраны. Общий
+`packages/winwidget-web` используется при сборке первых трёх приложений:
+UI, auth/API primitives и редактор виджета с прежними owner/admin adapters.
+Он не запускает сервер, не владеет маршрутами и не импортирует `apps/*`.
+Приложения не импортируют друг друга; у CRM отдельные зависимости и FSD.
+
+У каждого приложения собственные `public`, `.next`, standalone image и
+readiness `/__frontend/health`. Админка не загружает редактируемые marketing
+HTML, affiliate tracker, cookie banner или landing footer.
+
+Для первых трёх зон используются уникальные asset prefixes
+`/_frontends/{landing,widgets,admin-panel}`. Между зонами `ZoneLink` и
+`useZoneRouter` выполняют полную навигацию документа; внутри зоны сохраняют
+Next navigation. Пути и query/hash старого кабинета, auth, admin и оплаты
+остаются прежними. CRM работает на собственном домене без asset prefix.
+
+`apps/<app>/src/app` отвечает за URL, макеты, метаданные и инициализацию приложения.
 Файлы маршрутов остаются тонкими и подключают экраны из `src/screens`.
 
 Публичные маршруты предпросмотра:
@@ -196,7 +218,10 @@ pnpm install --frozen-lockfile
 ## Настройка окружения
 
 ```bash
-cp .env.example .env.local
+cp .env.example apps/landing/.env.local
+cp .env.example apps/widgets/.env.local
+cp .env.example apps/admin-panel/.env.local
+cp apps/crm/.env.example apps/crm/.env.local
 ```
 
 Для авторизованных маршрутов настройте серверную проверку токена доступа:
@@ -225,17 +250,23 @@ catch-all маршрута и резервного backend upstream нет.
 ## Запуск сервера разработки
 
 ```bash
-pnpm dev
+pnpm dev:landing
+pnpm dev:widgets
+pnpm dev:admin-panel
+pnpm dev:crm
 ```
 
-Фронтенд будет доступен на
-[http://localhost:3000](http://localhost:3000).
+Запускайте приложения в отдельных терминалах. Порты указаны в таблице выше.
+`pnpm dev` запускает лендинг. Прямые порты позволяют проверять отдельное
+приложение; для сквозного auth и межзонных переходов нужен локальный proxy
+с той же маршрутизацией, что в tracked Nginx. Не проверяйте эти переходы
+между произвольными портами без proxy и согласованного CORS Gateway.
 
 ## Сборка для production
 
 ```bash
 pnpm build
-pnpm start
+pnpm --filter @winwidget/widgets start --port 3002
 ```
 
 ## Переменные окружения
@@ -262,14 +293,15 @@ pnpm start
 
 ## Команды
 
-| Команда                  | Назначение                                  |
-| ------------------------ | ------------------------------------------- |
-| `pnpm dev`               | Запуск development-сервера                  |
-| `pnpm build`             | Production-сборка                           |
-| `pnpm start`             | Запуск предварительно собранного приложения |
-| `pnpm lint`              | Проверка ESLint                             |
-| `pnpm exec tsc --noEmit` | Проверка TypeScript без генерации файлов    |
-| `pnpm format`            | Форматирование файлов через Prettier        |
+| Команда          | Назначение                                          |
+| ---------------- | --------------------------------------------------- |
+| `pnpm dev`       | Запуск лендинга; остальные приложения — `dev:<app>` |
+| `pnpm build`     | Независимые сборки всех четырёх приложений          |
+| `pnpm start`     | Запуск предварительно собранного лендинга           |
+| `pnpm lint`      | Проверка ESLint                                     |
+| `pnpm typecheck` | Проверка TypeScript приложений и общего пакета      |
+| `pnpm test`      | Общие контрактные проверки и тесты CRM              |
+| `pnpm format`    | Форматирование файлов через Prettier                |
 
 `pnpm format` изменяет файлы.
 
@@ -315,7 +347,8 @@ pnpm start
 
 - Компонентные стили размещаются в SCSS Modules.
 - Tailwind-директивы в SCSS оформляются через `@apply`.
-- `tailwind.config.ts` сканирует весь `src`.
+- Tailwind каждого приложения сканирует собственный `src` и, где нужен,
+  общий `packages/winwidget-web/src`; CRM не сканирует соседние приложения.
 - Глобальные стили добавляются только при необходимости.
 - После рефакторинга удаляйте неиспользуемые и остаточные стили.
 - При кастомной стрелке `select` отключайте системную через
@@ -355,6 +388,18 @@ pnpm start
 Перед коммитом Husky и lint-staged форматируют затронутые файлы и запускают
 ESLint для TypeScript-кода.
 
+В CRM React types привязаны к собственным `node_modules/@types` через
+`.d.ts` aliases: TypeScript не подхватывает React 18 из соседних зависимостей,
+а webpack пропускает declaration aliases и использует настоящий React 19.
+Корневой Husky единственный; ближайшая настройка lint-staged CRM сохраняет
+собственный ESLint 9. Вложенные workflow, Dockerfile и lockfile CRM не нужны.
+
+Общие public assets синхронизирует `scripts/sync-public.mjs` перед dev/build/start.
+Источник и SHA-256 перечислены в `scripts/public-assets.manifest.json`;
+неизвестные файлы, symlinks и изменение ранее сгенерированного файла блокируют
+перезапись. После изменения исходного public выполните
+`node scripts/sync-public.mjs --generate-manifest` и проверьте diff манифеста.
+
 ---
 
 ## Проверки и тестирование
@@ -363,7 +408,8 @@ ESLint для TypeScript-кода.
 
 ```bash
 pnpm lint
-pnpm exec tsc --noEmit
+pnpm typecheck
+pnpm test
 pnpm build
 ```
 
@@ -383,10 +429,7 @@ pnpm build
 ## Рекомендуемый формат веток
 
 ```bash
-feature/auth-login
-feature/cards-page
-fix/header-layout
-refactor/user-store
+dev_3.0.0/feature/frontend-monorepo
 ```
 
 ## Соглашение о сообщениях коммитов
@@ -399,20 +442,30 @@ refactor: split card widget
 
 ## CI/CD и production-развертывание
 
-Рабочий процесс `.github/workflows/deploy-production.yml` запускается вручную
-или при отправке изменений в ветку `prod`.
+`.github/workflows/ci.yml` проверяет точный SHA без production-доступов:
+контракты и общий пакет, затем четыре независимые app jobs с typecheck/lint,
+CRM tests/format и отдельной Docker standalone сборкой.
 
 Этап проверки выполняет:
 
 ```text
 pnpm install --frozen-lockfile
-pnpm exec tsc --noEmit
+pnpm typecheck
 pnpm build
 ```
 
-После успешной проверки развертывание выполняется по SSH. Скрипт
-`scripts/deploy-production.sh` собирает автономный Docker-контейнер и проверяет
-его работоспособность.
+Dockerfile требует `FRONTEND_APP=landing|widgets|admin-panel|crm` и exact
+`APP_REVISION`. После установки зависимостей сборка выполняется без сети;
+runtime содержит только выбранное приложение и работает не от root.
+Robots/sitemap используют актуальный редактируемый контент во время запроса,
+а не запекают fallback при недоступном API на этапе сборки.
+
+Production deployment — отдельный gated workflow и controller. Все четыре
+контейнера размещаются на текущем frontend VPS; это не запускает backend
+deploy. До переключения обязательны green exact-SHA CI, сохранение прежних
+контейнеров/hashed assets, четыре readiness проверки и согласованный
+immutable Nginx artifact. CRM DNS/TLS должны быть готовы. Платежи CRM остаются
+выключенными; публикация frontend не означает выпуск CRM backend/MVP.
 
 Последовательность production-релиза:
 

@@ -1,15 +1,14 @@
+import { resolveWorkspaceSource } from './resolve-workspace-source.mjs'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import ts from 'typescript'
 
-const defaultsPath = new URL(
-	'../src/entities/home-page-content/model/home-page-content.defaults.ts',
-	import.meta.url
+const defaultsPath = resolveWorkspaceSource(
+	'src/entities/home-page-content/model/home-page-content.defaults.ts'
 )
-const editorPath = new URL(
-	'../src/screens/admin/ui/content-settings/home-content-editor/HomeContentEditor.tsx',
-	import.meta.url
+const editorPath = resolveWorkspaceSource(
+	'src/screens/admin/ui/content-settings/home-content-editor/HomeContentEditor.tsx'
 )
 
 const defaultsSource = await readFile(defaultsPath, 'utf8')

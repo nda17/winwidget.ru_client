@@ -1,0 +1,68 @@
+.panel {
+	@apply flex min-w-0 flex-col gap-4 rounded-2xl border border-crm-border bg-crm-surface-muted p-4 sm:p-5;
+}
+.header {
+	@apply flex flex-col items-start gap-3 sm:flex-row sm:justify-between;
+}
+.header > div {
+	@apply min-w-0 flex-1;
+}
+.header h3 {
+	@apply font-bold text-crm-text;
+}
+.header p {
+	@apply mt-1 text-xs leading-relaxed text-crm-muted;
+}
+.header button {
+	@apply max-w-full shrink-0 whitespace-normal;
+}
+.source {
+	@apply flex min-w-0 flex-col items-start gap-2 text-xs text-crm-muted;
+}
+.source strong {
+	@apply break-words text-sm font-semibold text-crm-text;
+}
+.badge {
+	@apply rounded-full border border-crm-border bg-crm-surface px-3 py-1 font-medium text-crm-text;
+}
+.fields {
+	@apply grid min-w-0 grid-cols-1 gap-4 text-sm sm:grid-cols-2;
+}
+.fields > div {
+	@apply min-w-0;
+}
+.fields dt {
+	@apply mb-1 text-xs font-medium text-crm-muted;
+}
+.fields dd {
+	@apply whitespace-pre-wrap break-words text-crm-text;
+}
+.fields dd.amount {
+	@apply text-lg font-bold tabular-nums;
+}
+.notice {
+	@apply whitespace-pre-wrap break-words text-xs leading-relaxed text-crm-muted;
+}
+.panel h4 {
+	@apply text-sm font-semibold text-crm-text;
+}
+.answers {
+	@apply flex max-h-96 min-w-0 flex-col gap-3 overflow-y-auto text-sm;
+}
+.answers > li {
+	@apply min-w-0 rounded-xl border border-crm-border bg-crm-surface p-3;
+}
+.answers strong,
+.answers p,
+.answers ul {
+	@apply block whitespace-pre-wrap break-words;
+}
+.answers strong {
+	@apply mb-2 font-medium text-crm-text;
+}
+.answers ul {
+	@apply list-inside list-disc space-y-1;
+}
+.raw {
+	@apply mt-2 block break-words font-mono text-xs text-crm-muted;
+}

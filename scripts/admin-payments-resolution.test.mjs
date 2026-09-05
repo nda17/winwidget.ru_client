@@ -1,32 +1,27 @@
+import { resolveWorkspaceSource } from './resolve-workspace-source.mjs'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import ts from 'typescript'
 
 const paths = {
-	adminPayments: new URL(
-		'../src/screens/admin/ui/payments/AdminPayments.tsx',
-		import.meta.url
+	adminPayments: resolveWorkspaceSource(
+		'src/screens/admin/ui/payments/AdminPayments.tsx'
 	),
-	paymentsApi: new URL(
-		'../src/features/manage-payments/api/payments.api.ts',
-		import.meta.url
+	paymentsApi: resolveWorkspaceSource(
+		'src/features/manage-payments/api/payments.api.ts'
 	),
-	billingSettingsApi: new URL(
-		'../src/entities/billing-settings/api/billing-settings.api.ts',
-		import.meta.url
+	billingSettingsApi: resolveWorkspaceSource(
+		'src/entities/billing-settings/api/billing-settings.api.ts'
 	),
-	billingSettingsTypes: new URL(
-		'../src/entities/billing-settings/model/billing-settings.types.ts',
-		import.meta.url
+	billingSettingsTypes: resolveWorkspaceSource(
+		'src/entities/billing-settings/model/billing-settings.types.ts'
 	),
-	eventLogApi: new URL(
-		'../src/features/view-event-log/api/event-log.api.ts',
-		import.meta.url
+	eventLogApi: resolveWorkspaceSource(
+		'src/features/view-event-log/api/event-log.api.ts'
 	),
-	eventLogUi: new URL(
-		'../src/screens/admin/ui/event-log/AdminEventLog.tsx',
-		import.meta.url
+	eventLogUi: resolveWorkspaceSource(
+		'src/screens/admin/ui/event-log/AdminEventLog.tsx'
 	)
 }
 

@@ -1,11 +1,11 @@
+import { resolveWorkspaceSource } from './resolve-workspace-source.mjs'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import ts from 'typescript'
 
-const sourceUrl = new URL(
-	'../src/features/admin-crm/model/crm-template-catalog.contract.ts',
-	import.meta.url
+const sourceUrl = resolveWorkspaceSource(
+	'src/features/admin-crm/model/crm-template-catalog.contract.ts'
 )
 const source = await readFile(sourceUrl, 'utf8')
 const compiled = ts.transpileModule(source, {
@@ -95,9 +95,8 @@ test('rejects unknown fields at every catalog contract level', () => {
 })
 
 const pricingSource = await readFile(
-	new URL(
-		'../src/features/admin-crm/model/crm-pricing.contract.ts',
-		import.meta.url
+	resolveWorkspaceSource(
+		'src/features/admin-crm/model/crm-pricing.contract.ts'
 	),
 	'utf8'
 )

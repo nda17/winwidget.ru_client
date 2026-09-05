@@ -1,0 +1,87 @@
+.shell {
+	@apply min-h-screen bg-crm-bg text-crm-text lg:grid lg:grid-cols-[17rem_minmax(0,1fr)];
+}
+
+.skipLink {
+	@apply fixed left-4 top-0 z-[100] -translate-y-full rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white shadow-lg transition-transform focus:top-4 focus:translate-y-0 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 motion-reduce:transition-none;
+}
+
+.sidebar {
+	@apply hidden min-h-screen border-r border-crm-border bg-crm-surface lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col;
+}
+
+.sidebarBrand {
+	@apply flex min-h-20 items-center border-b border-crm-border px-5;
+}
+
+.sidebarNavigation {
+	@apply min-h-0 flex-1 overflow-y-auto px-3 py-5;
+}
+
+.navigationList {
+	@apply flex flex-col gap-1;
+}
+
+.navigationLink {
+	@apply flex min-h-11 items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-sm font-medium text-crm-muted transition-colors hover:border-crm-border hover:bg-crm-surface-muted hover:text-crm-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-crm-surface;
+}
+
+.navigationLinkActive {
+	@apply border-primary/20 bg-primary/10 font-semibold text-primary;
+}
+
+.navigationIcon {
+	@apply flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-crm-surface-muted text-primary transition-colors;
+}
+
+.navigationLinkActive .navigationIcon {
+	@apply bg-primary/20 text-primary;
+}
+
+.sidebarCaption {
+	@apply m-3 rounded-xl border border-crm-border bg-crm-surface-muted px-3 py-3 text-xs leading-5 text-crm-muted;
+}
+
+.workspace {
+	@apply min-w-0;
+}
+
+.topbar {
+	@apply sticky top-0 z-30 flex min-h-16 flex-wrap items-center gap-3 border-b border-crm-border bg-crm-surface/95 px-4 py-3 backdrop-blur sm:px-6;
+}
+
+.mobileMenuButton {
+	@apply flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-crm-border bg-crm-surface text-primary transition-colors hover:border-crm-border-strong hover:bg-crm-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 lg:hidden;
+}
+
+.sectionContext {
+	@apply flex min-w-0 flex-1 flex-col gap-0.5;
+}
+
+.productName {
+	@apply text-xs font-medium text-crm-muted;
+}
+
+.sectionName {
+	@apply break-words text-sm font-semibold text-crm-text;
+}
+
+.accessContext {
+	@apply flex max-w-full basis-full flex-wrap items-center gap-2 border-t border-crm-border pt-3 sm:ml-auto sm:basis-auto sm:border-0 sm:pt-0;
+}
+
+.content {
+	@apply flex min-w-0 flex-col gap-6 p-4 outline-none sm:p-6 xl:p-8;
+}
+
+.content:focus-visible {
+	@apply ring-2 ring-inset ring-primary;
+}
+
+.mobileNavigation {
+	@apply flex min-h-full flex-col gap-6;
+}
+
+.mobileCaption {
+	@apply mt-auto rounded-xl border border-crm-border bg-crm-surface-muted px-3 py-3 text-xs leading-5 text-crm-muted;
+}

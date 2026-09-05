@@ -1,0 +1,334 @@
+'use client'
+
+import {
+	listInbox,
+	type InboxEntry,
+	type InboxStatus
+} from '@/entities/intake'
+import {
+	InboxEditor,
+	CsvImportDrawer,
+	SourcesPanel,
+	useIntakeAccess
+} from '@/features/manage-intake'
+import { AuthenticatedApiError } from '@/shared/api/authenticated-http-client'
+import {
+	AppIcon,
+	Button,
+	DataTable,
+	PageHeader,
+	ScreenState,
+	SelectField,
+	StatusBadge,
+	TextField,
+	type DataTableColumn
+} from '@/shared/ui'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState, type FormEvent } from 'react'
+import toast from 'react-hot-toast'
+import styles from './InboxScreen.module.scss'
+import { ExportRecordsControl } from '@/features/export-records'
+
+const statusName = {
+	NEW: 'Новое',
+	ACCEPTED: 'Принято',
+	REJECTED: 'Отклонено'
+}
+const InboxScreen = () => {
+	const access = useIntakeAccess()
+	const client = useQueryClient()
+	const [tab, setTab] = useState<'inbox' | 'sources'>('inbox')
+	const [searchDraft, setSearchDraft] = useState('')
+	const [search, setSearch] = useState('')
+	const [status, setStatus] = useState<InboxStatus | ''>('NEW')
+	const [page, setPage] = useState(1)
+	const [selected, setSelected] = useState<{ id?: string } | null>(null)
+	const [importing, setImporting] = useState(false)
+	const query = useQuery({
+		queryKey: [
+			'crm-inbox',
+			access.workspaceId,
+			access.session?.userId,
+			access.revision,
+			access.scopeKey,
+			page,
+			search,
+			status
+		],
+		enabled: tab === 'inbox' && access.canRead && !!access.session,
+		queryFn: () =>
+			listInbox(
+				access.session!.accessToken,
+				access.workspaceId,
+				page,
+				25,
+				search,
+				status
+			),
+		retry: false,
+		gcTime: 0,
+		refetchOnWindowFocus: false
+	})
+	const denied =
+		query.error instanceof AuthenticatedApiError &&
+		['unauthorized', 'forbidden'].includes(query.error.kind)
+	const columns: DataTableColumn<InboxEntry>[] = [
+		{
+			id: 'title',
+			header: 'Обращение',
+			render: entry => (
+				<button
+					type="button"
+					className={styles.entryButton}
+					onClick={() => setSelected({ id: entry.id })}
+				>
+					<strong>{entry.title}</strong>
+					<span>{entry.name ?? 'Имя не передано'}</span>
+				</button>
+			)
+		},
+		{
+			id: 'contact',
+			header: 'Контакт',
+			render: entry => (
+				<div className={styles.contact}>
+					<span>{entry.phone ?? '—'}</span>
+					<span>{entry.email ?? '—'}</span>
+				</div>
+			)
+		},
+		{
+			id: 'origin',
+			header: 'Источник',
+			render: entry =>
+				({ MANUAL: 'Вручную', API: 'API', CSV: 'CSV', WIDGET: 'Виджет' })[
+					entry.origin
+				]
+		},
+		{
+			id: 'status',
+			header: 'Статус',
+			render: entry => (
+				<StatusBadge
+					tone={
+						entry.status === 'NEW'
+							? 'accent'
+							: entry.status === 'ACCEPTED'
+								? 'success'
+								: 'neutral'
+					}
+				>
+					{statusName[entry.status]}
+				</StatusBadge>
+			)
+		},
+		{
+			id: 'received',
+			header: 'Получено',
+			render: entry => new Date(entry.receivedAt).toLocaleString('ru-RU')
+		}
+	]
+	const searchSubmit = (event: FormEvent) => {
+		event.preventDefault()
+		setPage(1)
+		setSearch(searchDraft.trim())
+		toast('Поиск применён')
+	}
+	const onSaved = () => {
+		void client.invalidateQueries({
+			queryKey: ['crm-inbox', access.workspaceId]
+		})
+		void client.invalidateQueries({
+			queryKey: ['crm-intake-history', access.workspaceId]
+		})
+	}
+	return (
+		<div className={styles.screen}>
+			<PageHeader
+				eyebrow="Обработка обращений"
+				title="Входящие"
+				description="Ручные и внешние обращения вашего рабочего пространства. Проверяйте детали и историю, прежде чем продолжить работу с клиентом."
+				actions={
+					<div className={styles.tabs}>
+						<ExportRecordsControl
+							entity="inbox"
+							disabled={denied || tab !== 'inbox'}
+						/>
+						<Button
+							variant="secondary"
+							disabled={
+								!access.canWrite ||
+								access.permissions.data?.role === 'ANALYST' ||
+								denied ||
+								tab !== 'inbox'
+							}
+							onClick={() => {
+								toast('Открываем проверку CSV')
+								setImporting(true)
+							}}
+						>
+							Импорт CSV
+						</Button>
+						<Button
+							disabled={!access.canWrite || denied || tab !== 'inbox'}
+							leadingIcon={<AppIcon name="plus" size={18} />}
+							onClick={() => setSelected({})}
+						>
+							Новое обращение
+						</Button>
+					</div>
+				}
+			/>
+			<div
+				className={styles.tabs}
+				role="group"
+				aria-label="Обращения и интеграции"
+			>
+				<Button
+					variant={tab === 'inbox' ? 'primary' : 'secondary'}
+					aria-pressed={tab === 'inbox'}
+					onClick={() => setTab('inbox')}
+				>
+					Обращения
+				</Button>
+				<Button
+					variant={tab === 'sources' ? 'primary' : 'secondary'}
+					aria-pressed={tab === 'sources'}
+					onClick={() => setTab('sources')}
+				>
+					Источники
+				</Button>
+			</div>
+			{tab === 'sources' ? (
+				<SourcesPanel
+					key={`${access.workspaceId}:${access.session?.userId}`}
+					access={access}
+				/>
+			) : !access.permissions.isSuccess ? (
+				<ScreenState
+					variant={access.permissions.isError ? 'error' : 'loading'}
+					description={access.permissions.error?.message}
+					action={
+						access.permissions.isError ? (
+							<Button onClick={() => void access.permissions.refetch()}>
+								Повторить проверку доступа
+							</Button>
+						) : undefined
+					}
+				/>
+			) : !access.canRead ? (
+				<ScreenState
+					variant="permission"
+					description="Ваша CRM-роль не предоставляет доступ к обращениям."
+				/>
+			) : denied ? (
+				<ScreenState
+					variant="permission"
+					description="Доступ к обращениям больше не подтверждён."
+				/>
+			) : (
+				<section
+					className={styles.panel}
+					aria-label="Список входящих обращений"
+				>
+					<div className={styles.panelHeader}>
+						<h2 className={styles.panelTitle}>Обращения</h2>
+						<form className={styles.search} onSubmit={searchSubmit}>
+							<TextField
+								label="Поиск обращений"
+								labelHidden
+								placeholder="Тема, имя, телефон, email"
+								maxLength={200}
+								value={searchDraft}
+								onChange={event => setSearchDraft(event.target.value)}
+							/>
+							<SelectField
+								label="Статус обращения"
+								labelHidden
+								value={status}
+								onChange={event => {
+									setStatus(event.target.value as InboxStatus | '')
+									setPage(1)
+									toast('Фильтр статуса применён')
+								}}
+							>
+								<option value="">Все статусы</option>
+								<option value="NEW">Новые</option>
+								<option value="ACCEPTED">Принятые</option>
+								<option value="REJECTED">Отклонённые</option>
+							</SelectField>
+							<Button variant="secondary" type="submit">
+								Найти
+							</Button>
+						</form>
+					</div>
+					{query.isError ? (
+						<ScreenState
+							variant="error"
+							description={query.error.message}
+							action={
+								<Button onClick={() => void query.refetch()}>
+									Повторить
+								</Button>
+							}
+						/>
+					) : query.isPending || query.isFetching ? (
+						<ScreenState variant="loading" />
+					) : (
+						<>
+							<DataTable
+								caption="Входящие обращения выбранного рабочего пространства"
+								columns={columns}
+								rows={query.data.items}
+								getRowKey={entry => entry.id}
+								embedded
+								emptyMessage={
+									search
+										? 'По вашему запросу ничего не найдено'
+										: 'Обращений с выбранным статусом пока нет'
+								}
+							/>
+							<div className={styles.pagination}>
+								<span>Всего: {query.data.total}</span>
+								<Button
+									variant="secondary"
+									disabled={page === 1}
+									onClick={() => setPage(value => value - 1)}
+								>
+									Назад
+								</Button>
+								<span>
+									{page} / {Math.max(1, Math.ceil(query.data.total / 25))}
+								</span>
+								<Button
+									variant="secondary"
+									disabled={page * 25 >= query.data.total}
+									onClick={() => setPage(value => value + 1)}
+								>
+									Далее
+								</Button>
+							</div>
+						</>
+					)}
+				</section>
+			)}
+			{selected && access.session ? (
+				<InboxEditor
+					key={`${access.workspaceId}:${access.session?.userId}:${selected.id ?? 'new'}`}
+					access={access}
+					id={selected.id}
+					onClose={() => setSelected(null)}
+					onSaved={onSaved}
+				/>
+			) : null}
+			{importing && access.session ? (
+				<CsvImportDrawer
+					access={access}
+					onClose={() => setImporting(false)}
+					onSaved={onSaved}
+				/>
+			) : null}
+		</div>
+	)
+}
+export default InboxScreen

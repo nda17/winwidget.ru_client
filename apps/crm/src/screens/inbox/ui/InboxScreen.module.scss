@@ -1,0 +1,33 @@
+.screen {
+	@apply flex flex-col gap-6;
+}
+.tabs {
+	@apply flex flex-wrap gap-3;
+}
+.panel {
+	@apply overflow-hidden rounded-panel border border-crm-border bg-crm-surface shadow-panel;
+}
+.panelHeader {
+	@apply flex flex-wrap items-center justify-between gap-4 border-b border-crm-border p-5 lg:p-6;
+}
+.panelTitle {
+	@apply text-lg font-bold text-crm-text;
+}
+.search {
+	@apply flex w-full flex-col gap-3 sm:flex-row sm:items-end lg:w-auto;
+}
+.entryButton {
+	@apply flex flex-col items-start gap-1 rounded-lg text-left transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+}
+.entryButton strong {
+	@apply font-semibold;
+}
+.entryButton span {
+	@apply text-sm text-crm-muted;
+}
+.contact {
+	@apply flex flex-col gap-1 text-sm;
+}
+.pagination {
+	@apply flex flex-wrap items-center justify-end gap-3 border-t border-crm-border p-5 text-sm text-crm-muted;
+}

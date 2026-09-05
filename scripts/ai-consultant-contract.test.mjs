@@ -1,9 +1,10 @@
+import { resolveWorkspaceSource } from './resolve-workspace-source.mjs'
 import assert from 'node:assert/strict'
 import { access, readFile } from 'node:fs/promises'
 import test from 'node:test'
 
 const readSource = relativePath =>
-	readFile(new URL(`../${relativePath}`, import.meta.url), 'utf8')
+	readFile(resolveWorkspaceSource(relativePath), 'utf8')
 
 const [
 	apiSource,
@@ -254,8 +255,6 @@ test('legacy owner modules and dedicated lead screen are deleted', async () => {
 	]
 
 	for (const deletedPath of deletedPaths) {
-		await assert.rejects(
-			access(new URL(`../${deletedPath}`, import.meta.url))
-		)
+		await assert.rejects(access(resolveWorkspaceSource(deletedPath)))
 	}
 })

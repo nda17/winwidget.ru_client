@@ -1,0 +1,130 @@
+name: Frontends CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - prod
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontends-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  HUSKY: '0'
+  NEXT_TELEMETRY_DISABLED: '1'
+  NEXT_PUBLIC_MODE: production
+  NEXT_PUBLIC_SITE_URL: https://winwidget.ru
+  NEXT_PUBLIC_PRODUCTION_HOST: https://api.winwidget.ru
+  NEXT_PUBLIC_WIDGETS_HOST: ''
+  NEXT_PUBLIC_API_URL: https://api.winwidget.ru/api/v1
+  NEXT_PUBLIC_RECAPTCHA_SITE_KEY: ci-placeholder-site-key
+  NEXT_PUBLIC_RECAPTCHA_HOST: https://www.recaptcha.net
+  NEXT_PUBLIC_APP_URL: https://crm.winwidget.ru
+  NEXT_PUBLIC_MAIN_APP_URL: https://winwidget.ru
+  NEXT_PUBLIC_WINCRM_BILLING_ENABLED: 'false'
+
+jobs:
+  contracts:
+    name: Workspace contracts and shared package
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+      # These are local contract tests. The similarly named standalone
+      # verify-auth-settings-contract.mjs calls production and is NOT run here.
+      - name: Test root contracts, auth return and packaging
+        run: node --test scripts/*.test.mjs
+      - name: Type check shared consumers' source package
+        run: pnpm --filter @winwidget/winwidget-web run typecheck
+      - name: Lint shared source package
+        run: pnpm exec eslint packages/winwidget-web/src
+
+  application:
+    name: Verify ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: landing
+            package: '@winwidget/landing'
+          - app: widgets
+            package: '@winwidget/widgets'
+          - app: admin-panel
+            package: '@winwidget/admin-panel'
+          - app: crm
+            package: wincrm-client
+    env:
+      FRONTEND_APP: ${{ matrix.app }}
+      APP_REVISION: ${{ github.sha }}
+      IMAGE: winwidget-${{ matrix.app }}:ci-${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check CRM formatting
+        if: matrix.app == 'crm'
+        run: pnpm --filter wincrm-client run format:check
+      - name: Run all CRM tests
+        if: matrix.app == 'crm'
+        run: pnpm --filter wincrm-client run test
+      - name: Type check application
+        run: pnpm --filter '${{ matrix.package }}' run typecheck
+      - name: Lint application
+        run: pnpm --filter '${{ matrix.package }}' run lint
+      # This is also the application build: the Dockerfile runs its own build
+      # script (CRM: --webpack), with network disabled after dependency install.
+      - name: Build independent standalone image
+        run: |
+          docker build \
+            --build-arg FRONTEND_APP="$FRONTEND_APP" \
+            --build-arg APP_REVISION="$APP_REVISION" \
+            --build-arg NEXT_PUBLIC_MODE="$NEXT_PUBLIC_MODE" \
+            --build-arg NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
+            --build-arg NEXT_PUBLIC_PRODUCTION_HOST="$NEXT_PUBLIC_PRODUCTION_HOST" \
+            --build-arg NEXT_PUBLIC_WIDGETS_HOST="$NEXT_PUBLIC_WIDGETS_HOST" \
+            --build-arg NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" \
+            --build-arg NEXT_PUBLIC_RECAPTCHA_SITE_KEY="$NEXT_PUBLIC_RECAPTCHA_SITE_KEY" \
+            --build-arg NEXT_PUBLIC_RECAPTCHA_HOST="$NEXT_PUBLIC_RECAPTCHA_HOST" \
+            --build-arg NEXT_PUBLIC_APP_URL="$NEXT_PUBLIC_APP_URL" \
+            --build-arg NEXT_PUBLIC_MAIN_APP_URL="$NEXT_PUBLIC_MAIN_APP_URL" \
+            --build-arg NEXT_PUBLIC_WINCRM_BILLING_ENABLED=false \
+            --tag "$IMAGE" .
+      - name: Check exact revision and runtime ownership
+        run: |
+          docker image inspect "$IMAGE" | node --input-type=module -e '
+            import assert from "node:assert/strict";
+            import { readFileSync } from "node:fs";
+            const [image] = JSON.parse(readFileSync(0, "utf8"));
+            const { Config: config } = image;
+            assert.match(process.env.APP_REVISION, /^[a-f0-9]{40}$/);
+            assert.equal(config.Labels["org.opencontainers.image.revision"], process.env.APP_REVISION);
+            assert.equal(config.Labels["ru.winwidget.frontend.app"], process.env.FRONTEND_APP);
+            assert.equal(config.User, "nextjs");
+            assert.deepEqual(config.Cmd, ["node", "container-entrypoint.mjs"]);
+            assert.ok(config.Env.includes(`FRONTEND_APP=${process.env.FRONTEND_APP}`));
+            assert.ok(config.Env.includes(`APP_REVISION=${process.env.APP_REVISION}`));
+            console.log("Exact frontend image revision and ownership verified");
+          '
+          docker run --rm --network none "$IMAGE" node container-entrypoint.mjs --verify

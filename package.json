@@ -1,13 +1,16 @@
 {
-	"name": "winwidget-client",
+	"name": "winwidget-frontends",
+	"packageManager": "pnpm@9.15.9",
 	"version": "0.1.0",
 	"private": true,
 	"license": "UNLICENSED",
 	"scripts": {
-		"dev": "next dev",
-		"build": "next build",
-		"start": "next start",
-		"lint": "next lint",
+		"dev": "pnpm run dev:landing",
+		"build": "pnpm run build:frontends",
+		"start": "pnpm --filter @winwidget/landing start",
+		"lint": "pnpm -r run lint && eslint packages/winwidget-web/src",
+		"typecheck": "pnpm -r run typecheck",
+		"test": "node --test scripts/*.test.mjs && pnpm --filter wincrm-client test",
 		"test:home-page-content": "node --test scripts/home-page-content-normalization.test.mjs",
 		"test:payment-auth": "node --test scripts/payment-auth-guard.test.mjs",
 		"test:auth-return": "node --test scripts/auth-return-url.test.mjs",
@@ -15,8 +18,14 @@
 		"test:admin-crm": "node --test scripts/admin-crm-contract.test.mjs",
 		"test:ai-consultant": "node --test scripts/ai-consultant-contract.test.mjs",
 		"test:widget-preview": "node --test scripts/widget-live-preview.test.mjs",
-		"format": "prettier --write --no-error-on-unmatched-pattern \"src/**/*.{ts,tsx,scss}\" \"*.{js,mjs,ts,json}\"",
-		"prepare": "husky"
+		"format": "prettier --write --no-error-on-unmatched-pattern \"apps/{landing,widgets,admin-panel}/src/**/*.{ts,tsx,scss}\" \"packages/*/src/**/*.{ts,tsx,scss}\" \"*.{js,mjs,ts,json}\" && pnpm --filter wincrm-client format",
+		"prepare": "husky",
+		"dev:landing": "pnpm --filter @winwidget/landing dev",
+		"dev:widgets": "pnpm --filter @winwidget/widgets dev",
+		"dev:admin-panel": "pnpm --filter @winwidget/admin-panel dev",
+		"dev:crm": "pnpm --filter wincrm-client dev",
+		"build:frontends": "pnpm -r --filter './apps/*' build",
+		"typecheck:frontends": "pnpm -r --filter './apps/*' typecheck"
 	},
 	"lint-staged": {
 		"*.{ts,tsx,js,mjs,json,scss,md}": "prettier --write",

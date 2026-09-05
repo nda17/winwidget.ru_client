@@ -1,0 +1,33 @@
+{
+	"name": "@winwidget/admin-panel",
+	"version": "0.1.0",
+	"private": true,
+	"license": "UNLICENSED",
+	"scripts": {
+		"sync:public": "node ../../scripts/sync-public.mjs admin-panel",
+		"dev": "pnpm run sync:public && next dev --port 3003",
+		"build": "pnpm run sync:public && next build",
+		"start": "pnpm run sync:public && next start",
+		"lint": "next lint",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@winwidget/winwidget-web": "workspace:*",
+		"next": "^14.2.23",
+		"react": "^18.3.1",
+		"react-dom": "^18.3.1"
+	},
+	"devDependencies": {
+		"@types/node": "^20.17.12",
+		"@types/react": "^18.3.18",
+		"@types/react-dom": "^18.3.5",
+		"autoprefixer": "^10.4.20",
+		"eslint": "^8.57.1",
+		"eslint-config-next": "^14.2.23",
+		"eslint-plugin-jsx-a11y": "^6.10.2",
+		"postcss": "^8.4.49",
+		"sass": "^1.83.1",
+		"tailwindcss": "^3.4.17",
+		"typescript": "^5.7.3"
+	}
+}

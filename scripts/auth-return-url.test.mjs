@@ -1,11 +1,11 @@
+import { resolveWorkspaceSource } from './resolve-workspace-source.mjs'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import ts from 'typescript'
 
-const modulePath = new URL(
-	'../src/shared/lib/auth-return-url.ts',
-	import.meta.url
+const modulePath = resolveWorkspaceSource(
+	'src/shared/lib/auth-return-url.ts'
 )
 const sourceText = await readFile(modulePath, 'utf8')
 const { outputText } = ts.transpileModule(sourceText, {
@@ -182,9 +182,8 @@ test('stores a short-lived same-tab intent and rejects tampering', () => {
 
 test('OAuth completion uses validated same-tab intent, not callback query', async () => {
 	const socialAuthSource = await readFile(
-		new URL(
-			'../src/screens/auth/ui/social-auth/SocialAuth.tsx',
-			import.meta.url
+		resolveWorkspaceSource(
+			'src/screens/auth/ui/social-auth/SocialAuth.tsx'
 		),
 		'utf8'
 	)
@@ -201,7 +200,7 @@ test('OAuth completion uses validated same-tab intent, not callback query', asyn
 
 test('all interactive auth completions use the guarded navigation helper', async () => {
 	const authFormSource = await readFile(
-		new URL('../src/features/auth/model/useAuthForm.ts', import.meta.url),
+		resolveWorkspaceSource('src/features/auth/model/useAuthForm.ts'),
 		'utf8'
 	)
 	const navigationCalls =
@@ -223,9 +222,8 @@ test('all interactive auth completions use the guarded navigation helper', async
 
 test('auth page toggles keep only a validated returnUrl', async () => {
 	const authToggleSource = await readFile(
-		new URL(
-			'../src/features/auth/ui/auth-form/auth-toggle/AuthToggle.tsx',
-			import.meta.url
+		resolveWorkspaceSource(
+			'src/features/auth/ui/auth-form/auth-toggle/AuthToggle.tsx'
 		),
 		'utf8'
 	)
@@ -244,7 +242,7 @@ test('auth page toggles keep only a validated returnUrl', async () => {
 
 test('already authenticated auth pages redirect only through the validator', async () => {
 	const middlewareSource = await readFile(
-		new URL('../src/app/middlewares/authMiddleware.ts', import.meta.url),
+		resolveWorkspaceSource('src/app/middlewares/authMiddleware.ts'),
 		'utf8'
 	)
 

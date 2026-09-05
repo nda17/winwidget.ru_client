@@ -1,0 +1,59 @@
+.screen {
+	@apply flex min-w-0 flex-col gap-6;
+}
+
+.reportScope {
+	@apply flex flex-wrap items-center justify-between gap-3 text-sm text-crm-muted;
+}
+
+.metricGrid {
+	@apply grid grid-cols-1 gap-4 md:grid-cols-3;
+}
+
+.metricCard {
+	@apply flex min-w-0 flex-col items-start rounded-panel border border-crm-border bg-crm-surface p-5 shadow-panel lg:p-6;
+
+	> strong {
+		@apply mt-6 max-w-full break-words text-4xl font-bold tracking-tight text-crm-text;
+	}
+
+	> small {
+		@apply mt-2 text-xs leading-5 text-crm-muted;
+	}
+}
+
+.metricCaption {
+	@apply mt-1 text-xs text-crm-muted;
+}
+
+.metricAmount {
+	@apply mt-6 w-full break-words border-t border-crm-border pt-4 text-xl font-semibold text-crm-text;
+}
+
+.summaryPanel {
+	@apply flex flex-col justify-between gap-6 rounded-panel border border-primary/15 bg-primary/5 p-5 sm:flex-row sm:items-center lg:p-6;
+
+	h2 {
+		@apply text-lg font-bold text-crm-text;
+	}
+
+	p {
+		@apply mt-2 max-w-xl text-sm leading-6 text-crm-muted;
+	}
+}
+
+.summaryValue {
+	@apply flex shrink-0 flex-col gap-2 sm:items-end;
+
+	strong {
+		@apply text-4xl font-bold tracking-tight text-primary;
+	}
+
+	span {
+		@apply text-xs text-crm-muted;
+	}
+}
+
+.footnote {
+	@apply text-xs leading-5 text-crm-muted;
+}

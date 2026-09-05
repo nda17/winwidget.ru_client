@@ -1,30 +1,25 @@
+import { resolveWorkspaceSource } from './resolve-workspace-source.mjs'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 
-const previewPath = new URL(
-	'../src/features/edit-widget-settings/ui/shared/WidgetLivePreview.tsx',
-	import.meta.url
+const previewPath = resolveWorkspaceSource(
+	'src/features/edit-widget-settings/ui/shared/WidgetLivePreview.tsx'
 )
-const stylesPath = new URL(
-	'../src/features/edit-widget-settings/ui/shared/WidgetLivePreview.module.scss',
-	import.meta.url
+const stylesPath = resolveWorkspaceSource(
+	'src/features/edit-widget-settings/ui/shared/WidgetLivePreview.module.scss'
 )
-const widgetSettingsPath = new URL(
-	'../src/screens/widget-settings/ui/WidgetSettings.tsx',
-	import.meta.url
+const widgetSettingsPath = resolveWorkspaceSource(
+	'src/screens/widget-settings/ui/WidgetSettings.tsx'
 )
-const widgetSettingsStylesPath = new URL(
-	'../src/screens/widget-settings/ui/WidgetSettings.module.scss',
-	import.meta.url
+const widgetSettingsStylesPath = resolveWorkspaceSource(
+	'src/screens/widget-settings/ui/WidgetSettings.module.scss'
 )
-const callbackTypesPath = new URL(
-	'../src/entities/site-widget/model/callback.types.ts',
-	import.meta.url
+const callbackTypesPath = resolveWorkspaceSource(
+	'src/entities/site-widget/model/callback.types.ts'
 )
-const callbackSettingsPath = new URL(
-	'../src/features/edit-widget-settings/ui/callback/CallbackSettingsModal.tsx',
-	import.meta.url
+const callbackSettingsPath = resolveWorkspaceSource(
+	'src/features/edit-widget-settings/ui/callback/CallbackSettingsModal.tsx'
 )
 
 const [

@@ -1,0 +1,133 @@
+{
+	"schemaVersion": 1,
+	"files": [
+		{
+			"source": "apps/landing/src/app/apple-icon.png",
+			"sha256": "c24bb1eb55cb70ac0c0c4b4ca3968a9c2ab037de1647deccdd1159afa707cc3a"
+		},
+		{
+			"source": "apps/landing/src/app/favicon.ico",
+			"sha256": "54c249ac1ae33f4c720075e33ed430e715e3539b0bba595c63d6068fcc43892b"
+		},
+		{
+			"source": "apps/landing/src/app/icon.png",
+			"sha256": "be9b676e07f385a1d67ea1ca6d89452f194c0c58586ddc0c9466edeb0b36949a"
+		},
+		{
+			"source": "public/Chat.svg",
+			"sha256": "1c63749cb065b0f43a6edd4ffc79239ba509b518c24abc0f0a23568a2ce0fa36"
+		},
+		{
+			"source": "public/Danger.svg",
+			"sha256": "71881a961806674f8f0a4ecd4e14c7b2a8c7af1e69d4f6170fa5fe5f023fe8fe"
+		},
+		{
+			"source": "public/Document.svg",
+			"sha256": "c15c1b02ccdc0d9ad6d74df3ec14784cec5aa9f91df1548458d26ab0e2868626"
+		},
+		{
+			"source": "public/Heart.svg",
+			"sha256": "d2422abe26b26b3e325ffbf38c4896b3cf360743660ec1dd8ef4e228d03561ed"
+		},
+		{
+			"source": "public/Info.svg",
+			"sha256": "97145963312315b7113a13cf26d31ef9e7c539d3cca133485da9b460a1f9c168"
+		},
+		{
+			"source": "public/Search.svg",
+			"sha256": "d2f9e49a23ddb66457eb2c0d5160b0a99c2b864e7875edba94bd72797fefe576"
+		},
+		{
+			"source": "public/Setting.svg",
+			"sha256": "b4bd6d20ce355111b200a8d336706a219d1d52face671886b4b316fc6320e472"
+		},
+		{
+			"source": "public/Star.svg",
+			"sha256": "e1c442fbf1b7e4e06a46bd130058f0347614fb9b08867c63548a0ebd6d0c1253"
+		},
+		{
+			"source": "public/arrow-1.svg",
+			"sha256": "022eab276d00f9a2065801d0bd1234fb00a3c643ce160aecdeb7dd99ebb9455c"
+		},
+		{
+			"source": "public/arrow-2.svg",
+			"sha256": "7792b1faefb963027d6205949537d66a736379ee81fe56a2f1820daac73fa2fb"
+		},
+		{
+			"source": "public/avatar-default.png",
+			"sha256": "4c5258eba1cec5ec2f1f35e48bb428a8d8b603ff0a36854809afb559ea53f2b4"
+		},
+		{
+			"source": "public/favicon-16x16.png",
+			"sha256": "ea895d6039b2c33e72bf6a2a6da2ee6e5e601d5239d9807ac7f3060f469903a8"
+		},
+		{
+			"source": "public/favicon-32x32.png",
+			"sha256": "96b68cec8a55d4e710cb7ae274ed1b919d3932be8c91a2d9871bd1905228212d"
+		},
+		{
+			"source": "public/icon-192x192.png",
+			"sha256": "b91d93511b930c0782d7101af3b80990c719b4eaded658dc32276691b799b99c"
+		},
+		{
+			"source": "public/icon-512x512.png",
+			"sha256": "be9b676e07f385a1d67ea1ca6d89452f194c0c58586ddc0c9466edeb0b36949a"
+		},
+		{
+			"source": "public/images/tools/ai-consultant-button.png",
+			"sha256": "7ec2b58d9301831c8895fd1542489ad7eb0dc252b5512542b8cd238043dcbe80"
+		},
+		{
+			"source": "public/images/tools/calculator-button.png",
+			"sha256": "3fe79f65ede4e80f4dce8de2bb3eebbb92fc8c988f41917ab89779093b8db6a8"
+		},
+		{
+			"source": "public/images/tools/calculator-widget-preview.png",
+			"sha256": "23da89062209da91c79622a381da77b01992a93148cadc8351c9fa3f5270b0c8"
+		},
+		{
+			"source": "public/images/tools/callback-button.png",
+			"sha256": "eb88f07ec19d993dba5f5e311e7dd1a2de108b6fa71aea570f8421188cb2d052"
+		},
+		{
+			"source": "public/images/tools/callback-widget-preview.png",
+			"sha256": "b0ec54a72270f11fe111a0c5929f149ebfe40f51754006301abdc6036490d47e"
+		},
+		{
+			"source": "public/images/tools/quiz-button.png",
+			"sha256": "2d65c10a919a0599722dd71a5b8747f918604d6c5fe898622c619931933ab182"
+		},
+		{
+			"source": "public/images/tools/quiz-widget-preview.png",
+			"sha256": "f55515da45e2529e61e7f85db10c9c9ba6c558227ab6ff7af06e4e8da72283d2"
+		},
+		{
+			"source": "public/images/tools/stop-offer-button.png",
+			"sha256": "32c450fb0e521de96e1e52518f69b4f3fc2d70f17d8519c32d749142f095dc61"
+		},
+		{
+			"source": "public/images/tools/stop-offer-widget-preview.png",
+			"sha256": "b6ba6447315c9673139ff69e52a369bcd44ac4e044bc119938926b6d0fc544b5"
+		},
+		{
+			"source": "public/images/tools/timer-button.png",
+			"sha256": "bdea7c21b9b31b664c3b223d705be779e88cde094b21339122bd6380d96b22e0"
+		},
+		{
+			"source": "public/images/tools/timer-widget-preview.png",
+			"sha256": "6f03353f7b3b1603713dc839902d6156cc5b8f9da6409e9ca087b4510d7a006c"
+		},
+		{
+			"source": "public/images/tools/wheel-gift-button.png",
+			"sha256": "c12be900c7abf0ca4dab3513dc0bceb503f856438f601c2a7215b272afe17b15"
+		},
+		{
+			"source": "public/images/tools/wheel-widget-preview.png",
+			"sha256": "693d5d85432a5c637ec5ac596b3cb3aedef6b759de574dfe0c5ef5b8bb69b8f4"
+		},
+		{
+			"source": "public/og-image.png",
+			"sha256": "40b0ff43d23cf415a7a9a49495754a8737ce2cb641253a263dd433a98e387551"
+		}
+	]
+}

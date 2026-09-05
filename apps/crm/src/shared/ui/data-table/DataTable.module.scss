@@ -1,0 +1,56 @@
+.wrapper {
+	@apply w-full overflow-hidden rounded-2xl border border-crm-border bg-crm-surface;
+}
+
+.embedded {
+	@apply rounded-none border-0;
+}
+
+.scrollArea {
+	@apply w-full overflow-x-auto;
+}
+
+.scrollArea:focus-visible,
+.scrollArea:focus-within {
+	@apply outline-none ring-2 ring-inset ring-primary/20;
+}
+
+.table {
+	@apply w-full min-w-[720px] border-collapse text-left text-sm text-crm-text;
+}
+
+.caption {
+	@apply sr-only;
+}
+
+.headerRow {
+	@apply bg-crm-surface-muted;
+}
+
+.headerCell {
+	@apply border-b border-crm-border px-4 py-3 text-xs font-bold uppercase tracking-[0.06em] text-crm-muted;
+}
+
+.bodyRow:last-child .cell {
+	@apply border-b-0;
+}
+
+.cell {
+	@apply border-b border-crm-border px-4 py-3 align-middle text-sm;
+}
+
+.alignLeft {
+	@apply text-left;
+}
+
+.alignCenter {
+	@apply text-center;
+}
+
+.alignRight {
+	@apply text-right;
+}
+
+.emptyCell {
+	@apply px-6 py-12 text-center text-sm text-crm-muted;
+}

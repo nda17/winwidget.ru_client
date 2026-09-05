@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+	*,
+	*::before,
+	*::after {
+		@apply box-border;
+	}
+
+	html,
+	body {
+		@apply min-h-full;
+	}
+
+	html {
+		@apply overflow-y-scroll [scrollbar-gutter:stable];
+	}
+
+	html.crm-drawer-scroll-lock {
+		@apply overflow-hidden;
+	}
+
+	body {
+		@apply m-0 bg-crm-bg font-sans text-crm-text antialiased;
+	}
+
+	a {
+		@apply text-inherit no-underline;
+	}
+
+	button,
+	input,
+	select,
+	textarea {
+		@apply font-sans;
+	}
+
+	button,
+	select {
+		@apply cursor-pointer;
+	}
+
+	button:disabled,
+	select:disabled,
+	input:disabled,
+	textarea:disabled {
+		@apply cursor-not-allowed;
+	}
+
+	:focus-visible {
+		@apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-crm-surface;
+	}
+
+	::selection {
+		@apply bg-primary/20 text-crm-text;
+	}
+}

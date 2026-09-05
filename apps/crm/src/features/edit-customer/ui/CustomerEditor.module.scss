@@ -1,0 +1,27 @@
+.form {
+	@apply flex flex-col gap-5;
+}
+.notice {
+	@apply flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900;
+}
+.hint {
+	@apply text-xs leading-relaxed text-crm-muted;
+}
+.secondarySection {
+	@apply flex flex-col items-start gap-3;
+	ul {
+		@apply mt-2 list-inside list-disc space-y-1;
+	}
+}
+.companySearch {
+	@apply grid grid-cols-1 items-end gap-2 sm:grid-cols-[minmax(0,1fr)_auto];
+}
+.pickerNavigation {
+	@apply flex flex-wrap items-center gap-2;
+}
+.metadata {
+	@apply flex flex-col gap-1 border-t border-crm-border pt-4 text-xs text-crm-muted;
+}
+.archive {
+	@apply flex flex-col gap-3 border-t border-crm-border pt-4 text-sm text-crm-muted;
+}
