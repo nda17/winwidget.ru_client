@@ -116,10 +116,10 @@ test('every existing main application page belongs to its build-time zone', () =
 				withFileTypes: true
 			})) {
 				if (entry.isDirectory())
-					collect(new URL(`${entry.name}/`, directory), [
-						...parts,
-						entry.name
-					])
+					collect(
+						new URL(`${encodeURIComponent(entry.name)}/`, directory),
+						[...parts, entry.name]
+					)
 				else if (entry.name === 'page.tsx') {
 					const route =
 						'/' +
