@@ -18,6 +18,7 @@ import {
 } from '@/entities/crm-access'
 import { CrmAppShell } from '@/widgets/crm-app-shell'
 import { AuthenticatedApiError } from '@/shared/api/authenticated-http-client'
+import { getRuntimeConfig } from '@/shared/config/runtime'
 import {
 	PendingCommandProvider,
 	commandOwner,
@@ -35,6 +36,8 @@ import {
 	pipelineTemplatesQueryKey
 } from '../model/crm-access.queries'
 import { AccessGate } from './AccessGate'
+
+vi.mock('@/shared/config/runtime', () => ({ getRuntimeConfig: vi.fn() }))
 
 vi.mock('../api/crm-access.api', () => ({
 	activateCrmTrial: vi.fn(),
@@ -181,6 +184,64 @@ const WorkspacePermissions = () => {
 }
 
 describe('AccessGate', () => {
+	it.each([false, true])(
+		'gates the billing navigation without changing Trial activation (enabled=%s)',
+		async enabled => {
+			vi.mocked(getRuntimeConfig).mockReturnValue({
+				wincrmBillingEnabled: enabled
+			} as never)
+			vi.mocked(getCrmAccessBootstrap).mockResolvedValue({
+				...base,
+				state: 'NOT_ACTIVATED',
+				entitlementStatus: 'NOT_ACTIVATED',
+				entitlement: null,
+				access: null
+			})
+			render(
+				<AccessGate>
+					<div>workspace</div>
+				</AccessGate>,
+				{ wrapper: Wrapper }
+			)
+			await screen.findByRole('button', {
+				name: 'Попробовать бесплатно 5 дней'
+			})
+			const link = screen.queryByRole('link', {
+				name: 'Подписка и оплата WinCRM'
+			})
+			expect(!!link).toBe(enabled)
+			if (link)
+				expect(link.getAttribute('href')).toBe(
+					`/billing?workspaceId=${workspaceId}`
+				)
+			expect(activateCrmTrial).not.toHaveBeenCalled()
+		}
+	)
+	it('never exposes released billing navigation to a non-owner membership', async () => {
+		vi.mocked(getRuntimeConfig).mockReturnValue({
+			wincrmBillingEnabled: true
+		} as never)
+		vi.mocked(getCrmAccessBootstrap).mockResolvedValue({
+			...base,
+			membership: { membershipId, role: 'MEMBER' },
+			state: 'NOT_ACTIVATED',
+			entitlementStatus: 'NOT_ACTIVATED',
+			entitlement: null,
+			access: null
+		})
+		render(
+			<AccessGate>
+				<div>workspace</div>
+			</AccessGate>,
+			{ wrapper: Wrapper }
+		)
+		await screen.findByRole('button', {
+			name: 'Попробовать бесплатно 5 дней'
+		})
+		expect(
+			screen.queryByRole('link', { name: 'Подписка и оплата WinCRM' })
+		).toBeNull()
+	})
 	it.each([
 		['workspace', 'success'],
 		['workspace', 'unauthorized'],
@@ -487,6 +548,13 @@ describe('AccessGate', () => {
 	)
 	beforeEach(() => {
 		vi.clearAllMocks()
+		vi.mocked(getRuntimeConfig).mockReturnValue({
+			mode: 'development',
+			appOrigin: 'http://localhost:3001',
+			mainAppOrigin: 'http://localhost:3000',
+			apiBaseUrl: 'http://localhost:4100/api/v1',
+			wincrmBillingEnabled: false
+		})
 		window.history.replaceState({}, '', '/inbox')
 		Object.defineProperties(HTMLDialogElement.prototype, {
 			showModal: {

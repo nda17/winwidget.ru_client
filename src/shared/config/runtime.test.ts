@@ -3,12 +3,43 @@ import { describe, expect, it } from 'vitest'
 import { resolveRuntimeConfig } from './runtime'
 
 describe('resolveRuntimeConfig', () => {
+	it.each([undefined, 'false'])(
+		'keeps paid billing off by default and on explicit false',
+		flag => {
+			expect(
+				resolveRuntimeConfig({
+					NODE_ENV: 'test',
+					NEXT_PUBLIC_WINCRM_BILLING_ENABLED: flag
+				}).wincrmBillingEnabled
+			).toBe(false)
+		}
+	)
+	it('requires explicit true to enable the paid billing UI', () => {
+		expect(
+			resolveRuntimeConfig({
+				NODE_ENV: 'test',
+				NEXT_PUBLIC_WINCRM_BILLING_ENABLED: 'true'
+			}).wincrmBillingEnabled
+		).toBe(true)
+	})
+	it.each(['', '1', '0', 'TRUE', 'False', 'yes', ' true ', 'false\n'])(
+		'rejects ambiguous paid billing flag values',
+		flag => {
+			expect(() =>
+				resolveRuntimeConfig({
+					NODE_ENV: 'test',
+					NEXT_PUBLIC_WINCRM_BILLING_ENABLED: flag
+				})
+			).toThrow('NEXT_PUBLIC_WINCRM_BILLING_ENABLED must be true or false')
+		}
+	)
 	it('uses safe local defaults outside production', () => {
 		expect(resolveRuntimeConfig({ NODE_ENV: 'test' })).toEqual({
 			mode: 'development',
 			appOrigin: 'http://localhost:3001',
 			mainAppOrigin: 'http://localhost:3000',
-			apiBaseUrl: 'http://localhost:4100/api/v1'
+			apiBaseUrl: 'http://localhost:4100/api/v1',
+			wincrmBillingEnabled: false
 		})
 	})
 
@@ -24,7 +55,8 @@ describe('resolveRuntimeConfig', () => {
 			mode: 'production',
 			appOrigin: 'https://crm.winwidget.ru',
 			mainAppOrigin: 'https://winwidget.ru',
-			apiBaseUrl: 'https://api.winwidget.ru/api/v1'
+			apiBaseUrl: 'https://api.winwidget.ru/api/v1',
+			wincrmBillingEnabled: false
 		})
 	})
 

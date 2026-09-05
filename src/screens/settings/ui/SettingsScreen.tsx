@@ -8,6 +8,8 @@ import {
 } from '@/entities/crm-team'
 import { useSessionStore } from '@/entities/session'
 import { CrmCommercialPolicyCard } from '@/features/view-crm-commercial-policy'
+import { BillingEntryCard } from '@/features/manage-crm-billing'
+import { getRuntimeConfig } from '@/shared/config/runtime'
 import {
 	TeamEditor,
 	useTeamSession,
@@ -319,6 +321,13 @@ const SettingsScreen = () => {
 				}
 			/>
 			<CrmCommercialPolicyCard />
+			{workspace.membership.role === 'OWNER' &&
+			getRuntimeConfig().wincrmBillingEnabled ? (
+				<BillingEntryCard
+					key={`${session?.userId}:${sessionRevision}:${workspace.workspaceId}`}
+					workspaceId={workspace.workspaceId}
+				/>
+			) : null}
 			{!context.confirmed ? (
 				<ScreenState
 					variant={context.permissions.isError ? 'error' : 'loading'}

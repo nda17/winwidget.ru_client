@@ -1,0 +1,73 @@
+.content {
+	@apply flex min-w-0 flex-col gap-6;
+}
+.columns {
+	@apply grid min-w-0 gap-6 lg:grid-cols-2;
+}
+.card {
+	@apply min-w-0 rounded-2xl border border-crm-border bg-crm-surface p-4 sm:p-6;
+}
+.sectionHeading {
+	@apply mb-4 flex flex-wrap items-center justify-between gap-3;
+
+	h2,
+	h3 {
+		@apply min-w-0 break-words text-lg font-semibold text-crm-text;
+	}
+}
+.tag {
+	@apply rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600;
+}
+.quote {
+	@apply min-w-0 rounded-xl border border-sky-200 bg-sky-50 p-4 sm:p-5;
+}
+.facts {
+	@apply flex min-w-0 flex-col gap-3;
+
+	> div {
+		@apply grid min-w-0 gap-1 sm:grid-cols-2 sm:gap-4;
+	}
+	dt {
+		@apply min-w-0 break-words text-sm text-crm-muted;
+	}
+	dd {
+		@apply min-w-0 break-words text-sm font-medium text-crm-text sm:text-right;
+	}
+}
+.amount {
+	@apply tabular-nums;
+}
+.note {
+	@apply mt-4 text-sm leading-6 text-crm-muted;
+}
+.meta {
+	@apply mt-3 text-xs leading-5 text-crm-muted;
+}
+.form {
+	@apply flex min-w-0 flex-col gap-4;
+}
+.fields {
+	@apply grid min-w-0 gap-4 sm:grid-cols-2;
+}
+.actions {
+	@apply flex flex-wrap items-center gap-3;
+}
+.consent {
+	@apply flex items-start gap-3 rounded-xl border border-crm-border p-4 text-sm leading-6 text-crm-text;
+
+	input {
+		@apply mt-1 h-4 w-4 shrink-0 accent-sky-600;
+	}
+}
+.terms {
+	@apply whitespace-pre-wrap break-words text-sm leading-6 text-crm-muted;
+}
+.notice {
+	@apply rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950;
+}
+.error {
+	@apply rounded-xl border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-900;
+}
+.link {
+	@apply inline-flex min-h-10 items-center gap-2 rounded-lg font-medium text-sky-700 underline underline-offset-4 outline-none focus-visible:ring-2 focus-visible:ring-sky-500;
+}

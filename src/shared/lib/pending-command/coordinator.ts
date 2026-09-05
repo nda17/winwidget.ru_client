@@ -26,6 +26,7 @@ export interface CommandSnapshot {
 export interface CommandCapsule {
 	readonly commandId: string
 	execute: (accessToken: string) => Promise<void>
+	recover?: (accessToken: string) => Promise<void>
 	deliver: (consume: (result: unknown, command: unknown) => void) => void
 	destroy: () => void
 }
@@ -38,7 +39,8 @@ const freeze = <T>(value: T): T => {
 }
 export const commandCapsule = <C extends { commandId: string }, R>(
 	input: C,
-	send: (token: string, command: C) => Promise<R>
+	send: (token: string, command: C) => Promise<R>,
+	recover?: (token: string, command: C) => Promise<R>
 ): CommandCapsule => {
 	let command: C | null = freeze(structuredClone(input))
 	let result: R | undefined
@@ -50,6 +52,16 @@ export const commandCapsule = <C extends { commandId: string }, R>(
 			const received = await send(token, command)
 			if (!destroyed) result = received
 		},
+		...(recover
+			? {
+					async recover(token: string) {
+						if (!command || destroyed)
+							throw new Error('Command unavailable')
+						const received = await recover(token, command)
+						if (!destroyed) result = received
+					}
+				}
+			: {}),
 		deliver(consume) {
 			if (!destroyed && command) consume(result, command)
 		},
@@ -122,12 +134,16 @@ export class PendingCommandCoordinator {
 		scope: CommandScope,
 		intent: string,
 		authorize: () => Promise<string>,
-		prepare?: () => CommandCapsule
+		prepare?: () => CommandCapsule,
+		mode: 'execute' | 'recover' = 'execute'
 	) {
 		if (!this.current(scope)) return
 		const key = this.#key(scope, intent)
 		let entry = this.#entries.get(key)
 		if (entry?.snapshot.status === 'running') return
+		// Recovery is opt-in and can only operate on the original private capsule.
+		// It cannot substitute a new command body, UUID or another session's intent.
+		if (mode === 'recover' && !entry?.capsule?.recover) return
 		if (!entry && this.#entries.size >= 32)
 			throw new AuthenticatedApiError(
 				'temporary',
@@ -155,7 +171,8 @@ export class PendingCommandCoordinator {
 				commandId: active.capsule.commandId
 			}
 			dispatched = true
-			await active.capsule.execute(token)
+			if (mode === 'recover') await active.capsule.recover!(token)
+			else await active.capsule.execute(token)
 			if (!this.current(scope) || this.#entries.get(key) !== active) return
 			active.snapshot = {
 				...active.snapshot,

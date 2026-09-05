@@ -7,3 +7,12 @@
 .form {
 	@apply mt-6 flex flex-col gap-4;
 }
+.actions {
+	@apply flex flex-wrap items-center justify-center gap-3;
+}
+.onboardingContent {
+	@apply flex w-full max-w-2xl flex-col items-center gap-4;
+}
+.billingLink {
+	@apply inline-flex min-h-10 items-center rounded-lg px-2 text-sm font-medium text-sky-700 underline underline-offset-4 outline-none focus-visible:ring-2 focus-visible:ring-sky-500;
+}

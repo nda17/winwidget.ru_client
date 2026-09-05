@@ -10,10 +10,16 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { listTeamRecords, type TeamPage } from '@/entities/crm-team'
 import { useTeamSession } from '@/features/manage-team'
+import { getRuntimeConfig } from '@/shared/config/runtime'
 import SettingsScreen from './SettingsScreen'
+
+vi.mock('@/shared/config/runtime', () => ({ getRuntimeConfig: vi.fn() }))
 
 vi.mock('@/features/view-crm-commercial-policy', () => ({
 	CrmCommercialPolicyCard: () => <div>Опубликованные условия WinCRM</div>
+}))
+vi.mock('@/features/manage-crm-billing', () => ({
+	BillingEntryCard: () => <div>Управление оплатой владельца</div>
 }))
 vi.mock('@/entities/crm-team', async original => ({
 	...(await original<object>()),
@@ -30,7 +36,11 @@ const workspaceId = '11111111-1111-4111-8111-111111111111'
 const id = '22222222-2222-4222-8222-222222222222'
 const now = '2026-09-05T12:00:00.000Z'
 const makeContext = () => ({
-	workspace: { workspaceId, canWrite: true },
+	workspace: {
+		workspaceId,
+		canWrite: true,
+		membership: { role: 'OWNER' }
+	},
 	session: { userId: 'owner', accessToken: 'token' },
 	sessionRevision: 1,
 	confirmed: true,
@@ -75,6 +85,9 @@ const roster = (page = 1, pageSize = 20): TeamPage => ({
 })
 beforeEach(() => {
 	vi.clearAllMocks()
+	vi.mocked(getRuntimeConfig).mockReturnValue({
+		wincrmBillingEnabled: false
+	} as never)
 	context = makeContext()
 	vi.mocked(useTeamSession).mockImplementation(() => context as never)
 	queryClient = new QueryClient({
@@ -97,6 +110,32 @@ const view = () => (
 	</QueryClientProvider>
 )
 describe('Real CRM team settings', () => {
+	it.each([false, true])(
+		'gates the owner billing card independently of the read-only commercial card (enabled=%s)',
+		async enabled => {
+			vi.mocked(getRuntimeConfig).mockReturnValue({
+				wincrmBillingEnabled: enabled
+			} as never)
+			render(view())
+			await screen.findByText('Анна')
+			expect(
+				screen.getByText('Опубликованные условия WinCRM')
+			).toBeTruthy()
+			expect(!!screen.queryByText('Управление оплатой владельца')).toBe(
+				enabled
+			)
+		}
+	)
+	it('does not mount owner billing UI for a CRM administrator even when released', async () => {
+		vi.mocked(getRuntimeConfig).mockReturnValue({
+			wincrmBillingEnabled: true
+		} as never)
+		context.workspace.membership.role = 'MEMBER'
+		context.permissions.data.role = 'CRM_ADMIN'
+		render(view())
+		await screen.findByText('Анна')
+		expect(screen.queryByText('Управление оплатой владельца')).toBeNull()
+	})
 	it('renders actual quota and owner-inclusive explanation without demo workspace controls', async () => {
 		render(view())
 		await screen.findByText('Анна')

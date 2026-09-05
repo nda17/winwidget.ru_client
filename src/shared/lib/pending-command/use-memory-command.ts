@@ -12,7 +12,8 @@ export const useMemoryCommand = <C extends { commandId: string }, R>(
 	enabled: boolean,
 	authorize: () => Promise<string>,
 	send: (token: string, command: C) => Promise<R>,
-	onSuccess: (result: R, command: C) => void
+	onSuccess: (result: R, command: C) => void,
+	recover?: (token: string, command: C) => Promise<R>
 ) => {
 	const { coordinator, snapshot } = usePendingCommand(scope, intent)
 	const mounted = useRef(true)
@@ -35,7 +36,7 @@ export const useMemoryCommand = <C extends { commandId: string }, R>(
 		current.current.intent === intent &&
 		coordinator.current(scope)
 	const relevant = () => sameObserver() && current.current.enabled
-	const execute = async (build?: () => C) => {
+	const execute = async (build?: () => C, recovering = false) => {
 		if (!enabled || !relevant()) return
 		try {
 			// Late results are revalidated by replaying the original command, not
@@ -52,7 +53,8 @@ export const useMemoryCommand = <C extends { commandId: string }, R>(
 						)
 					return token
 				},
-				build ? () => commandCapsule(build(), send) : undefined
+				build ? () => commandCapsule(build(), send, recover) : undefined,
+				recovering ? 'recover' : 'execute'
 			)
 			if (!relevant()) return
 			const state = coordinator.get(scope, intent)
@@ -82,6 +84,7 @@ export const useMemoryCommand = <C extends { commandId: string }, R>(
 			: null
 	return {
 		execute,
+		recover: () => execute(undefined, true),
 		error,
 		running: snapshot.status === 'running',
 		uncertain: snapshot.uncertain || received,

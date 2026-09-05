@@ -7,7 +7,8 @@ const config: RuntimeConfig = {
 	mode: 'production',
 	appOrigin: 'https://crm.winwidget.ru',
 	mainAppOrigin: 'https://winwidget.ru',
-	apiBaseUrl: 'https://api.winwidget.ru/api/v1'
+	apiBaseUrl: 'https://api.winwidget.ru/api/v1',
+	wincrmBillingEnabled: false
 }
 
 describe('buildLoginUrl', () => {

@@ -22,6 +22,8 @@ import {
 	CrmWorkspaceAccessProvider
 } from '@/entities/crm-access'
 import { useSessionStore } from '@/entities/session'
+import { billingHref } from '@/entities/crm-billing'
+import { getRuntimeConfig } from '@/shared/config/runtime'
 import {
 	AuthenticatedApiError,
 	invalidContractError
@@ -377,21 +379,39 @@ const WorkspaceAccessGate = ({ children }: PropsWithChildren) => {
 				{children}
 			</CrmWorkspaceAccessProvider>
 		)
+	const billingUrl = billingHref(data.selectedWorkspaceId)
+	const billingLink =
+		getRuntimeConfig().wincrmBillingEnabled &&
+		data.membership.role === 'OWNER' &&
+		!access.isFetching &&
+		!access.isError &&
+		billingUrl ? (
+			<a
+				href={billingUrl}
+				className={styles.billingLink}
+				onClick={() => toast('Открываем управление подпиской WinCRM')}
+			>
+				Подписка и оплата WinCRM
+			</a>
+		) : null
 	if (data.state === 'ONBOARDING')
 		return (
 			<div className={styles.gate}>
-				<CrmOnboarding
-					key={`${session.userId}:${sessionRevision}:${data.selectedWorkspaceId}`}
-					access={data}
-					accessRevalidating={access.isFetching}
-					accessValidationFailed={access.isError}
-					onInstalled={result => {
-						queryClient.setQueryData(accessKey, result.access)
-					}}
-					onRevalidateAccess={() => {
-						void access.refetch()
-					}}
-				/>
+				<div className={styles.onboardingContent}>
+					<CrmOnboarding
+						key={`${session.userId}:${sessionRevision}:${data.selectedWorkspaceId}`}
+						access={data}
+						accessRevalidating={access.isFetching}
+						accessValidationFailed={access.isError}
+						onInstalled={result => {
+							queryClient.setQueryData(accessKey, result.access)
+						}}
+						onRevalidateAccess={() => {
+							void access.refetch()
+						}}
+					/>
+					{billingLink}
+				</div>
 			</div>
 		)
 	if (data.state === 'NOT_ACTIVATED')
@@ -408,33 +428,36 @@ const WorkspaceAccessGate = ({ children }: PropsWithChildren) => {
 								: 'Запустить бесплатный период может только владелец рабочего пространства.'
 					}
 					action={
-						<Button
-							disabled={
-								data.membership.role !== 'OWNER' || access.isFetching
-							}
-							isLoading={trialPending || access.isFetching}
-							onClick={() => {
-								if (access.isFetching) return
-								commandIdRef.current ??= crypto.randomUUID()
-								trial.mutate({
-									accessKey,
-									accessScope,
-									...sessionOwnedRequest(
-										session,
-										sessionRevision,
-										{
-											workspaceId: data.selectedWorkspaceId,
-											commandId: commandIdRef.current
-										},
-										activateCrmTrial
-									)
-								})
-							}}
-						>
-							{trialFailed
-								? 'Повторить запуск бесплатных 5 дней'
-								: 'Попробовать бесплатно 5 дней'}
-						</Button>
+						<div className={styles.actions}>
+							<Button
+								disabled={
+									data.membership.role !== 'OWNER' || access.isFetching
+								}
+								isLoading={trialPending || access.isFetching}
+								onClick={() => {
+									if (access.isFetching) return
+									commandIdRef.current ??= crypto.randomUUID()
+									trial.mutate({
+										accessKey,
+										accessScope,
+										...sessionOwnedRequest(
+											session,
+											sessionRevision,
+											{
+												workspaceId: data.selectedWorkspaceId,
+												commandId: commandIdRef.current
+											},
+											activateCrmTrial
+										)
+									})
+								}}
+							>
+								{trialFailed
+									? 'Повторить запуск бесплатных 5 дней'
+									: 'Попробовать бесплатно 5 дней'}
+							</Button>
+							{billingLink}
+						</div>
 					}
 				/>
 			</div>
@@ -454,16 +477,19 @@ const WorkspaceAccessGate = ({ children }: PropsWithChildren) => {
 				title={copy[0]}
 				description={copy[1]}
 				action={
-					<Button
-						variant="secondary"
-						isLoading={access.isFetching}
-						onClick={() => {
-							toast('Обновляем состояние доступа')
-							void access.refetch()
-						}}
-					>
-						Обновить статус
-					</Button>
+					<div className={styles.actions}>
+						<Button
+							variant="secondary"
+							isLoading={access.isFetching}
+							onClick={() => {
+								toast('Обновляем состояние доступа')
+								void access.refetch()
+							}}
+						>
+							Обновить статус
+						</Button>
+						{billingLink}
+					</div>
 				}
 			/>
 		</div>
